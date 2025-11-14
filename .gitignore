@@ -1,0 +1,36 @@
+# Osiris OS - Git Ignore
+
+# Build artifacts
+build/
+*.iso
+
+# Output directory (ISOs are generated, not committed)
+output/
+
+# Docker build cache
+.docker/
+
+# Temporary files
+*.tmp
+*.log
+*~
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Keep config directory structure but ignore generated content
+config/binary
+config/bootstrap
+config/chroot
+config/common
+config/source
+config/binary_*
+config/chroot_*
