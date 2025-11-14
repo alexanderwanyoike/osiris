@@ -1,0 +1,21 @@
+# GNOME Desktop Environment - Core only, no bloat
+gnome-core
+gnome-terminal
+nautilus
+gdm3
+
+# Display server
+xserver-xorg
+xwayland
+
+# Essential system utilities
+network-manager-gnome
+pipewire-audio
+firmware-linux-free
+firmware-linux-nonfree
+
+# Browser
+firefox-esr
+
+# Note: VSCode and Ollama installed via hooks (not in Debian repos)
+# Note: PipeWire is used instead of PulseAudio (required by GNOME Core)
