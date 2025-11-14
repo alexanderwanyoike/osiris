@@ -1,0 +1,36 @@
+#!/bin/bash
+# Simple auto-login configuration
+
+set -e
+
+echo "=== Setting up live user ==="
+
+# Create user named 'user' (matches live-build default)
+useradd -m -s /bin/bash -G sudo,audio,video,plugdev,netdev,input user 2>/dev/null || true
+
+# No password
+passwd -d user
+
+# Passwordless sudo
+echo "user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/user
+chmod 0440 /etc/sudoers.d/user
+
+# Auto-start Sway
+cat > /home/user/.bash_profile <<'EOF'
+if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+    exec sway
+fi
+EOF
+
+chown user:user /home/user/.bash_profile
+
+# Configure getty for auto-login
+mkdir -p /etc/systemd/system/getty@tty1.service.d
+cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<'EOF'
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin user --noclear %I $TERM
+Type=idle
+EOF
+
+echo "✓ User 'user' configured with auto-login to Sway"

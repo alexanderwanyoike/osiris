@@ -1,0 +1,51 @@
+# Sway Wayland Compositor (i3-like, actually in Debian repos!)
+sway
+swayidle
+swaylock
+
+brightnessctl
+wireplumber
+
+# Status bar
+waybar
+
+# Terminal
+foot
+
+# App launcher
+wofi
+
+# File manager
+thunar
+
+# Network
+network-manager-gnome
+
+# Audio
+pipewire-audio
+
+# Firmware
+firmware-linux-free
+firmware-linux-nonfree
+
+# Notifications
+mako-notifier
+
+# Screenshot
+grim
+slurp
+
+# Wallpaper
+swaybg
+
+# Clipboard
+wl-clipboard
+
+# Browser
+firefox-esr
+
+# Utilities
+xdg-utils
+xdg-desktop-portal-wlr
+
+# Note: VSCode installed via hook

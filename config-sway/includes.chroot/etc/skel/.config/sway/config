@@ -1,0 +1,110 @@
+# Osiris Sway Configuration - Minimal
+
+# Logo key
+set $mod Mod4
+
+# Terminal
+set $term foot
+
+# App launcher
+set $menu wofi --show drun
+
+# Wallpaper (solid color fallback)
+output * bg #1e1e2e solid_color
+
+# Autostart
+exec mako
+exec nm-applet
+
+# Input configuration
+input type:keyboard {
+    xkb_layout us
+}
+
+input type:touchpad {
+    natural_scroll enabled
+    tap enabled
+}
+
+# Gaps
+gaps inner 5
+gaps outer 10
+
+# Borders
+default_border pixel 2
+default_floating_border pixel 2
+
+# Colors
+client.focused          #89b4fa #89b4fa #1e1e2e #89b4fa #89b4fa
+client.focused_inactive #313244 #313244 #cdd6f4 #313244 #313244
+client.unfocused        #181825 #181825 #cdd6f4 #181825 #181825
+client.urgent           #f38ba8 #f38ba8 #1e1e2e #f38ba8 #f38ba8
+
+# Key bindings
+bindsym $mod+Return exec $term
+bindsym $mod+q kill
+bindsym $mod+d exec $menu
+bindsym $mod+b exec firefox
+bindsym $mod+e exec thunar
+bindsym $mod+Shift+c reload
+bindsym $mod+Shift+e exec swaymsg exit
+
+# Move focus
+bindsym $mod+Left focus left
+bindsym $mod+Down focus down
+bindsym $mod+Up focus up
+bindsym $mod+Right focus right
+
+# Move window
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+# Workspaces
+bindsym $mod+1 workspace number 1
+bindsym $mod+2 workspace number 2
+bindsym $mod+3 workspace number 3
+bindsym $mod+4 workspace number 4
+bindsym $mod+5 workspace number 5
+
+# Move to workspace
+bindsym $mod+Shift+1 move container to workspace number 1
+bindsym $mod+Shift+2 move container to workspace number 2
+bindsym $mod+Shift+3 move container to workspace number 3
+bindsym $mod+Shift+4 move container to workspace number 4
+bindsym $mod+Shift+5 move container to workspace number 5
+
+# Layout
+bindsym $mod+s layout stacking
+bindsym $mod+w layout tabbed
+bindsym $mod+t layout toggle split
+
+# Split
+bindsym $mod+v split toggle
+
+# Fullscreen
+bindsym $mod+f fullscreen
+
+# Floating
+bindsym $mod+Shift+space floating toggle
+bindsym $mod+space focus mode_toggle
+
+# Resize mode
+mode "resize" {
+    bindsym Left resize shrink width 10px
+    bindsym Down resize grow height 10px
+    bindsym Up resize shrink height 10px
+    bindsym Right resize grow width 10px
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+bindsym $mod+r mode "resize"
+
+# Screenshot
+bindsym Print exec grim ~/Pictures/screenshot.png
+
+# Status bar
+bar {
+    swaybar_command waybar
+}

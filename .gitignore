@@ -6,6 +6,7 @@ build/
 
 # Output directory (ISOs are generated, not committed)
 output/
+output-sway/
 
 # Generated config directory (built from config-gnome)
 config/
