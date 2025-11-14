@@ -7,6 +7,9 @@ build/
 # Output directory (ISOs are generated, not committed)
 output/
 
+# Generated config directory (built from config-gnome)
+config/
+
 # Docker build cache
 .docker/
 
@@ -25,12 +28,3 @@ Thumbs.db
 *.swp
 *.swo
 *~
-
-# Keep config directory structure but ignore generated content
-config/binary
-config/bootstrap
-config/chroot
-config/common
-config/source
-config/binary_*
-config/chroot_*
