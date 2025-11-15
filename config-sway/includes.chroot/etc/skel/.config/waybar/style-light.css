@@ -1,19 +1,41 @@
+/* Osiris Waybar - Light Mode */
+
 * {
-    font-family: "DejaVu Sans", monospace;
+    font-family: "JetBrains Mono", "Font Awesome 6 Free", monospace;
     font-size: 13px;
+    font-weight: 500;
 }
 
 window#waybar {
-    background-color: #FFFFFF;
+    background-color: rgba(255, 255, 255, 0.85);
     color: #000000;
-    border-bottom: 2px solid #000000;
+    transition-property: background-color;
+    transition-duration: 0.5s;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+window#waybar.hidden {
+    opacity: 0.2;
+}
+
+/* Workspaces */
+#workspaces {
+    margin: 0 8px;
 }
 
 #workspaces button {
-    padding: 0 12px;
-    color: #000000;
-    background: transparent;
+    padding: 0 10px;
+    background-color: transparent;
+    color: #666666;
     border: none;
+    border-radius: 8px;
+    margin: 4px 2px;
+    transition: all 0.3s ease;
+}
+
+#workspaces button:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: #000000;
 }
 
 #workspaces button.focused {
@@ -21,46 +43,110 @@ window#waybar {
     color: #FFFFFF;
 }
 
-#workspaces button:hover {
-    background-color: #EEEEEE;
-}
-
-#mode {
-    padding: 0 12px;
-    background-color: #000000;
+#workspaces button.urgent {
+    background-color: #FF0000;
     color: #FFFFFF;
 }
 
+/* Mode indicator */
+#mode {
+    background-color: #000000;
+    color: #FFFFFF;
+    padding: 0 12px;
+    margin: 4px 4px;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+/* Clock */
+#clock {
+    padding: 0 16px;
+    color: #000000;
+    font-weight: 600;
+}
+
+/* Theme toggle button */
 #custom-theme {
     padding: 0 12px;
+    margin: 4px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
     font-size: 16px;
+    transition: all 0.3s ease;
 }
 
 #custom-theme:hover {
-    background-color: #F5F5F5;
+    background-color: rgba(0, 0, 0, 0.2);
 }
 
-#clock,
-#battery,
-#network,
-#pulseaudio,
-#tray {
+/* Battery */
+#battery {
     padding: 0 12px;
+    margin: 4px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
 }
 
 #battery.charging {
-    color: #000000;
+    color: #00AA00;
+    background-color: rgba(0, 170, 0, 0.15);
 }
 
-#battery.warning {
-    color: #666666;
+#battery.warning:not(.charging) {
+    color: #CC8800;
+    background-color: rgba(204, 136, 0, 0.15);
 }
 
-#battery.critical {
-    color: #FFFFFF;
-    background-color: #FF0000;
+#battery.critical:not(.charging) {
+    color: #CC0000;
+    background-color: rgba(204, 0, 0, 0.15);
+    animation: blink 1s linear infinite;
+}
+
+@keyframes blink {
+    to {
+        opacity: 0.5;
+    }
+}
+
+/* Network */
+#network {
+    padding: 0 12px;
+    margin: 4px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
 }
 
 #network.disconnected {
-    color: #999999;
+    color: #CC0000;
+    background-color: rgba(204, 0, 0, 0.15);
+}
+
+/* Audio */
+#pulseaudio {
+    padding: 0 12px;
+    margin: 4px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+#pulseaudio.muted {
+    color: #CC0000;
+    background-color: rgba(204, 0, 0, 0.15);
+}
+
+/* System tray */
+#tray {
+    padding: 0 8px;
+    margin: 4px;
+}
+
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+    background-color: #FF0000;
+    border-radius: 8px;
 }
