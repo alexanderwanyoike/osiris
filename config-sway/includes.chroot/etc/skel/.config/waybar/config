@@ -5,7 +5,7 @@
     
     "modules-left": ["sway/workspaces", "sway/mode"],
     "modules-center": ["clock"],
-    "modules-right": ["pulseaudio", "network", "battery", "tray"],
+    "modules-right": ["custom/theme", "pulseaudio", "network", "battery", "tray"],
     
     "sway/workspaces": {
         "format": "{name}",
@@ -19,6 +19,12 @@
     "clock": {
         "format": "{:%H:%M   %Y-%m-%d}",
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+    },
+    
+    "custom/theme": {
+        "format": "🌓",
+        "tooltip": "Toggle Dark/Light Mode",
+        "on-click": "osiris-theme toggle"
     },
     
     "battery": {

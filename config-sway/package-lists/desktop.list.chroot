@@ -1,8 +1,3 @@
-# Sway Wayland Compositor (i3-like, actually in Debian repos!)
-sway
-swayidle
-swaylock
-
 brightnessctl
 wireplumber
 

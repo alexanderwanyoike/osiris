@@ -1,0 +1,66 @@
+* {
+    font-family: "DejaVu Sans", monospace;
+    font-size: 13px;
+}
+
+window#waybar {
+    background-color: #FFFFFF;
+    color: #000000;
+    border-bottom: 2px solid #000000;
+}
+
+#workspaces button {
+    padding: 0 12px;
+    color: #000000;
+    background: transparent;
+    border: none;
+}
+
+#workspaces button.focused {
+    background-color: #000000;
+    color: #FFFFFF;
+}
+
+#workspaces button:hover {
+    background-color: #EEEEEE;
+}
+
+#mode {
+    padding: 0 12px;
+    background-color: #000000;
+    color: #FFFFFF;
+}
+
+#custom-theme {
+    padding: 0 12px;
+    font-size: 16px;
+}
+
+#custom-theme:hover {
+    background-color: #F5F5F5;
+}
+
+#clock,
+#battery,
+#network,
+#pulseaudio,
+#tray {
+    padding: 0 12px;
+}
+
+#battery.charging {
+    color: #000000;
+}
+
+#battery.warning {
+    color: #666666;
+}
+
+#battery.critical {
+    color: #FFFFFF;
+    background-color: #FF0000;
+}
+
+#network.disconnected {
+    color: #999999;
+}

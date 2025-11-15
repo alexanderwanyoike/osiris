@@ -1,0 +1,5 @@
+cmake
+hwdata
+meson
+ninja-build
+wget

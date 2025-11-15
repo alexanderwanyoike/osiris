@@ -1,0 +1,89 @@
+#!/bin/bash
+# Set dark mode as default and install theme switcher
+
+set -e
+
+echo "=== Setting up Osiris theme system ==="
+
+# Create theme switcher script
+cat > /usr/local/bin/osiris-theme <<'SCRIPTEOF'
+#!/bin/bash
+# Osiris Theme Switcher for Sway
+
+CONFIG_DIR="$HOME/.config/sway"
+WAYBAR_DIR="$HOME/.config/waybar"
+THEME_FILE="$HOME/.config/osiris-theme"
+
+# Get current theme
+get_current_theme() {
+    if [ -f "$THEME_FILE" ]; then
+        cat "$THEME_FILE"
+    else
+        echo "dark"
+    fi
+}
+
+# Set theme
+set_theme() {
+    local theme=$1
+    
+    echo "Switching to $theme mode..."
+    
+    # Copy configs
+    cp "$CONFIG_DIR/config-$theme" "$CONFIG_DIR/config"
+    cp "$WAYBAR_DIR/style-$theme.css" "$WAYBAR_DIR/style.css"
+    
+    # Save current theme
+    echo "$theme" > "$THEME_FILE"
+    
+    # Reload
+    swaymsg reload
+    pkill waybar
+    waybar &
+    
+    echo "✓ $theme mode activated"
+}
+
+case "$1" in
+    dark)
+        set_theme "dark"
+        ;;
+    light)
+        set_theme "light"
+        ;;
+    toggle)
+        current=$(get_current_theme)
+        if [ "$current" = "dark" ]; then
+            set_theme "light"
+        else
+            set_theme "dark"
+        fi
+        ;;
+    *)
+        current=$(get_current_theme)
+        echo "Usage: osiris-theme [dark|light|toggle]"
+        echo "Current theme: $current"
+        exit 1
+        ;;
+esac
+SCRIPTEOF
+
+# Make it executable
+chmod +x /usr/local/bin/osiris-theme
+
+# Set dark mode as default in skel
+SKEL_SWAY="/etc/skel/.config/sway"
+SKEL_WAYBAR="/etc/skel/.config/waybar"
+
+if [ -f "$SKEL_SWAY/config-dark" ]; then
+    cp "$SKEL_SWAY/config-dark" "$SKEL_SWAY/config"
+fi
+
+if [ -f "$SKEL_WAYBAR/style-dark.css" ]; then
+    cp "$SKEL_WAYBAR/style-dark.css" "$SKEL_WAYBAR/style.css"
+fi
+
+# Create default theme marker
+echo "dark" > /etc/skel/.config/osiris-theme
+
+echo "✓ Theme system installed - dark mode is default"

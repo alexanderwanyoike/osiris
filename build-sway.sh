@@ -3,6 +3,10 @@
 
 set -e
 
+# Clean previous builds
+echo "Cleaning previous builds..."
+sudo rm -rf output-sway config
+
 echo "=== Building Osiris OS - Sway Edition ==="
 echo "Desktop: Sway"
 echo "Apps: Firefox, VSCode"
