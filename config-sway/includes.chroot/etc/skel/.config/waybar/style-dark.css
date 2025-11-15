@@ -1,0 +1,158 @@
+/* Osiris Waybar - Dark Mode */
+
+* {
+    font-family: "JetBrainsMono Nerd Font";
+    font-size: 13px;
+    font-weight: 500;
+}
+
+window#waybar {
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #FFFFFF;
+    transition-property: background-color;
+    transition-duration: 0.5s;
+}
+
+window#waybar {
+    background-color: rgba(0, 0, 0, 0.6);  /* ← More transparent (was 0.85) */
+    color: #FFFFFF;
+    transition-property: background-color;
+    transition-duration: 0.5s;
+}
+
+window#waybar.hidden {
+    opacity: 0.2;
+}
+
+/* Workspaces */
+#workspaces {
+    margin: 0 8px;
+}
+
+#workspaces button {
+    padding: 0 10px;
+    background-color: transparent;
+    color: #888888;
+    border: none;
+    border-radius: 8px;
+    margin: 4px 2px;
+    transition: all 0.3s ease;
+}
+
+#workspaces button:hover {
+    background-color: rgba(255, 255, 255, 0.15);  /* ← Slightly more visible */
+    color: #FFFFFF;
+}
+
+#workspaces button.focused {
+    background-color: rgba(255, 255, 255, 0.9);  /* ← Slightly transparent */
+    color: #000000;
+}
+
+#workspaces button.urgent {
+    background-color: #FF0000;
+    color: #FFFFFF;
+}
+
+/* Mode indicator */
+#mode {
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #000000;
+    padding: 0 12px;
+    margin: 4px 4px;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+/* Clock */
+#clock {
+    padding: 0 16px;
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+/* Theme toggle button */
+#custom-theme {
+    padding: 0 12px;
+    margin: 4px;
+    background-color: rgba(255, 255, 255, 0.15);  /* ← More visible */
+    border-radius: 8px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+#custom-theme:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Battery */
+#battery {
+    padding: 0 12px;
+    margin: 4px;
+    background-color: rgba(255, 255, 255, 0.15);  /* ← More visible */
+    border-radius: 8px;
+}
+
+#battery.charging {
+    color: #00FF00;
+    background-color: rgba(0, 255, 0, 0.2);
+}
+
+#battery.warning:not(.charging) {
+    color: #FFAA00;
+    background-color: rgba(255, 170, 0, 0.2);
+}
+
+#battery.critical:not(.charging) {
+    color: #FF0000;
+    background-color: rgba(255, 0, 0, 0.2);
+    animation: blink 1s linear infinite;
+}
+
+@keyframes blink {
+    to {
+        opacity: 0.5;
+    }
+}
+
+/* Network */
+#network {
+    padding: 0 12px;
+    margin: 4px;
+    background-color: rgba(255, 255, 255, 0.15);  /* ← More visible */
+    border-radius: 8px;
+}
+
+#network.disconnected {
+    color: #FF0000;
+    background-color: rgba(255, 0, 0, 0.2);
+}
+
+/* Audio */
+#pulseaudio {
+    padding: 0 12px;
+    margin: 4px;
+    background-color: rgba(255, 255, 255, 0.15);  /* ← More visible */
+    border-radius: 8px;
+}
+
+#pulseaudio.muted {
+    color: #FF0000;
+    background-color: rgba(255, 0, 0, 0.2);
+}
+
+/* System tray */
+#tray {
+    padding: 0 8px;
+    margin: 4px;
+}
+
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+    background-color: #FF0000;
+    border-radius: 8px;
+}

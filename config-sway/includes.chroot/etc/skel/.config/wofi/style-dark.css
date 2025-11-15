@@ -1,0 +1,60 @@
+/* Osiris Wofi - Dark Mode */
+
+window {
+    margin: 0px;
+    border: 2px solid #FFFFFF;
+    background-color: rgba(0, 0, 0, 0.9);
+    border-radius: 12px;
+}
+
+#input {
+    margin: 8px;
+    padding: 12px;
+    border: none;
+    color: #FFFFFF;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+#input:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    outline: none;
+}
+
+#inner-box {
+    margin: 8px;
+    border: none;
+    background-color: transparent;
+}
+
+#outer-box {
+    margin: 0px;
+    border: none;
+    background-color: transparent;
+}
+
+#scroll {
+    margin: 0px;
+    border: none;
+}
+
+#text {
+    margin: 4px;
+    padding: 8px 12px;
+    color: #FFFFFF;
+}
+
+#entry {
+    border-radius: 8px;
+    margin: 2px;
+}
+
+#entry:selected {
+    background-color: #FFFFFF;
+    color: #000000;
+}
+
+#entry:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
