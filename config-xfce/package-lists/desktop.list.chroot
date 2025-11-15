@@ -1,0 +1,23 @@
+# XFCE Desktop Environment - Minimal, no bloat
+xfce4
+xfce4-terminal
+thunar
+lightdm
+lightdm-gtk-greeter
+
+# Display server
+xserver-xorg
+xorg
+
+# Essential system utilities
+network-manager-gnome
+pulseaudio
+pavucontrol
+firmware-linux-free
+firmware-linux-nonfree
+
+# Browser
+firefox-esr
+
+# Note: VSCode installed via hook (not in Debian repos)
+# Note: Ollama will be opt-in through AI Control Panel later

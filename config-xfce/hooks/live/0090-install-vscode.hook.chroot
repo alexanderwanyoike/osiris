@@ -1,0 +1,18 @@
+#!/bin/bash
+# Install VSCode from Microsoft repo
+
+set -e
+
+echo "=== Installing VSCode ==="
+
+# Add Microsoft GPG key
+wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft.gpg
+
+# Add VSCode repo
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list
+
+# Install
+apt-get update
+apt-get install -y code
+
+echo "✓ VSCode installed"
