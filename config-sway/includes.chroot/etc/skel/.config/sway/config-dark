@@ -8,15 +8,15 @@ set $menu wofi --show drun
 
 ### SwayFX Effects
 blur enable
-blur_passes 3
-blur_radius 5
+blur_passes 2           # ← Reduced from 3
+blur_radius 3           # ← Reduced from 5
 
 corner_radius 12
 smart_corner_radius on
 
 shadows enable
 shadows_on_csd disable
-shadow_blur_radius 25
+shadow_blur_radius 20   # ← Reduced from 25
 shadow_color #00000099
 
 default_dim_inactive 0.1
@@ -67,8 +67,8 @@ client.unfocused        #222222 #000000 #888888 #222222 #222222
 client.urgent           #FFFFFF #FF0000 #FFFFFF #FFFFFF #FFFFFF
 
 ### Window Rules
-for_window [app_id="foot"] opacity 0.90, blur enable
-for_window [app_id="thunar"] opacity 0.92, blur enable
+for_window [app_id="foot"] opacity 0.75, blur enable          # ← Changed opacity
+for_window [app_id="thunar"] opacity 0.85, blur enable        # ← Changed opacity
 for_window [class="firefox"] opacity 0.95
 for_window [app_id="pavucontrol"] floating enable
 for_window [title="Picture-in-Picture"] floating enable, sticky enable

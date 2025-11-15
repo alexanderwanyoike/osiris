@@ -1,5 +1,6 @@
 {
     "layer": "top",
+    "position": "top",
     "height": 32,
     "spacing": 4,
     
@@ -8,8 +9,19 @@
     "modules-right": ["custom/theme", "pulseaudio", "network", "battery", "tray"],
     
     "sway/workspaces": {
-        "format": "{name}",
-        "disable-scroll": false
+        "disable-scroll": false,
+        "all-outputs": true,
+        "format": "{icon}",
+        "format-icons": {
+            "1": "",
+            "2": "",
+            "3": "",
+            "4": "",
+            "5": "",
+            "urgent": "",
+            "focused": "",
+            "default": ""
+        }
     },
     
     "sway/mode": {
@@ -17,14 +29,15 @@
     },
     
     "clock": {
-        "format": "{:%H:%M   %Y-%m-%d}",
+        "format": "{:%H:%M  %Y-%m-%d}",
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
     },
     
     "custom/theme": {
-        "format": "🌓",
-        "tooltip": "Toggle Dark/Light Mode",
-        "on-click": "osiris-theme toggle"
+        "format": "{}",
+        "exec": "echo ''",
+        "on-click": "osiris-theme toggle",
+        "tooltip": false
     },
     
     "battery": {
@@ -32,23 +45,24 @@
             "warning": 30,
             "critical": 15
         },
-        "format": "{capacity}% {icon}",
-        "format-charging": "{capacity}% ",
+        "format": "{icon}  {capacity}%",
+        "format-charging": "  {capacity}%",
+        "format-plugged": "  {capacity}%",
         "format-icons": ["", "", "", "", ""]
     },
     
     "network": {
-        "format-wifi": "{essid} ",
-        "format-ethernet": "Connected ",
-        "format-disconnected": "Disconnected ✗",
-        "tooltip-format": "{ifname}: {ipaddr}/{cidr}"
+        "format-wifi": "  {signalStrength}%",
+        "format-ethernet": "  Connected",
+        "format-disconnected": "  Disconnected",
+        "tooltip-format": "{ifname}: {ipaddr}"
     },
     
     "pulseaudio": {
-        "format": "{volume}% {icon}",
-        "format-muted": "🔇",
+        "format": "{icon}  {volume}%",
+        "format-muted": "  Muted",
         "format-icons": {
-            "default": ["🔈", "🔉", "🔊"]
+            "default": ["", "", ""]
         },
         "on-click": "pavucontrol"
     },
