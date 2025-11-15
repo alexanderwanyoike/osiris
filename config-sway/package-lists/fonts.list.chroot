@@ -1,0 +1,10 @@
+# Fonts for beautiful Osiris
+
+# JetBrains Mono (terminal and UI)
+fonts-jetbrains-mono
+
+# Font Awesome (icons in Waybar)
+fonts-font-awesome
+
+# Emoji support
+fonts-noto-color-emoji

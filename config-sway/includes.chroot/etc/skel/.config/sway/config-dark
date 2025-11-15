@@ -37,7 +37,7 @@ layer_effects "wofi" {
 }
 
 ### Wallpaper - Dark
-output * bg /usr/share/backgrounds/osiris/osiris-dark.jpg fill
+output * bg /usr/share/backgrounds/osiris/osiris-dark.png fill
 
 ### Autostart
 exec waybar

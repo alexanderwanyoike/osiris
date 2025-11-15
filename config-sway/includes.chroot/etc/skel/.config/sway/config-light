@@ -37,7 +37,7 @@ layer_effects "wofi" {
 }
 
 ### Wallpaper - Light
-output * bg /usr/share/backgrounds/osiris/osiris-light.jpg fill
+output * bg /usr/share/backgrounds/osiris/osiris-light.png fill
 
 ### Autostart
 exec waybar
