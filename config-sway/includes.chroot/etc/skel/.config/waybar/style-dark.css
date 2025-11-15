@@ -1,9 +1,16 @@
 /* Osiris Waybar - Dark Mode */
 
 * {
-    font-family: "JetBrains Mono", "Font Awesome 6 Free", monospace;
+    font-family: "JetBrainsMono Nerd Font";
     font-size: 13px;
     font-weight: 500;
+}
+
+window#waybar {
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #FFFFFF;
+    transition-property: background-color;
+    transition-duration: 0.5s;
 }
 
 window#waybar {

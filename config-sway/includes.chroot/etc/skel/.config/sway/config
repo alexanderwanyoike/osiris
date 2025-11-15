@@ -141,6 +141,7 @@ mode "resize" {
     bindsym Return mode "default"
     bindsym Escape mode "default"
 }
+
 bindsym $mod+r mode "resize"
 
 # Screenshot
@@ -154,3 +155,12 @@ bindsym XF86AudioMute exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
 # Brightness
 bindsym XF86MonBrightnessUp exec brightnessctl set +5%
 bindsym XF86MonBrightnessDown exec brightnessctl set 5%-
+
+### Window Rules
+for_window [app_id="foot"] opacity 0.70, blur disable     # ← No blur, more transparent
+for_window [app_id="thunar"] opacity 0.85, blur enable
+for_window [class="firefox"] opacity 0.95
+for_window [app_id="pavucontrol"] floating enable
+for_window [title="Picture-in-Picture"] floating enable, sticky enable
+
+exec autotiling -w 1 2 3 4 5     # ← Run autotiling on workspaces 1-5

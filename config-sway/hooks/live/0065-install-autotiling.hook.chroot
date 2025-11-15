@@ -1,0 +1,11 @@
+#!/bin/bash
+# Install autotiling for Sway
+
+set -e
+
+echo "=== Installing autotiling ==="
+
+# Install autotiling via pip
+pip3 install autotiling --break-system-packages
+
+echo "✓ autotiling installed"

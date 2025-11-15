@@ -11,17 +11,7 @@
     "sway/workspaces": {
         "disable-scroll": false,
         "all-outputs": true,
-        "format": "{icon}",
-        "format-icons": {
-            "1": "",
-            "2": "",
-            "3": "",
-            "4": "",
-            "5": "",
-            "urgent": "",
-            "focused": "",
-            "default": ""
-        }
+        "format": "{name}"
     },
     
     "sway/mode": {
@@ -29,13 +19,12 @@
     },
     
     "clock": {
-        "format": "{:%H:%M  %Y-%m-%d}",
+        "format": "{:%H:%M   %Y-%m-%d}",
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
     },
     
     "custom/theme": {
-        "format": "{}",
-        "exec": "echo ''",
+        "format": "Theme",
         "on-click": "osiris-theme toggle",
         "tooltip": false
     },
@@ -45,25 +34,21 @@
             "warning": 30,
             "critical": 15
         },
-        "format": "{icon}  {capacity}%",
-        "format-charging": "  {capacity}%",
-        "format-plugged": "  {capacity}%",
-        "format-icons": ["", "", "", "", ""]
+        "format": "BAT {capacity}%",
+        "format-charging": "CHG {capacity}%",
+        "format-plugged": "AC {capacity}%"
     },
     
     "network": {
-        "format-wifi": "  {signalStrength}%",
-        "format-ethernet": "  Connected",
-        "format-disconnected": "  Disconnected",
+        "format-wifi": "WiFi {signalStrength}%",
+        "format-ethernet": "ETH Connected",
+        "format-disconnected": "No Network",
         "tooltip-format": "{ifname}: {ipaddr}"
     },
     
     "pulseaudio": {
-        "format": "{icon}  {volume}%",
-        "format-muted": "  Muted",
-        "format-icons": {
-            "default": ["", "", ""]
-        },
+        "format": "VOL {volume}%",
+        "format-muted": "MUTE",
         "on-click": "pavucontrol"
     },
     

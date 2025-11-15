@@ -43,4 +43,6 @@ firefox-esr
 xdg-utils
 xdg-desktop-portal-wlr
 
+
+
 # Note: VSCode installed via hook

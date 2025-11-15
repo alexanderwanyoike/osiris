@@ -37,6 +37,9 @@ set_theme() {
     [ -f "$WOFI_DIR/style-$theme.css" ] && cp "$WOFI_DIR/style-$theme.css" "$WOFI_DIR/style.css"
     [ -f "$FOOT_DIR/foot-$theme.ini" ] && cp "$FOOT_DIR/foot-$theme.ini" "$FOOT_DIR/foot.ini"
     
+    # Update wofi config to point to correct stylesheet
+    sed -i "s|stylesheet=.*|stylesheet=$WOFI_DIR/style.css|g" "$WOFI_DIR/config"
+    
     # Save current theme
     echo "$theme" > "$THEME_FILE"
     
