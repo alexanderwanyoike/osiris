@@ -1,0 +1,27 @@
+#!/bin/bash
+# Configure LightDM for auto-login on live boot
+
+set -e
+
+echo "=== Configuring LightDM auto-login for live boot ==="
+
+# Create user named 'user' (matches live-build default)
+useradd -m -s /bin/bash -G sudo,audio,video,plugdev,netdev,input user 2>/dev/null || true
+
+# No password
+passwd -d user
+
+# Passwordless sudo
+echo "user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/user
+chmod 0440 /etc/sudoers.d/user
+
+# Configure LightDM for auto-login
+mkdir -p /etc/lightdm/lightdm.conf.d
+cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf <<'EOF'
+[Seat:*]
+autologin-user=user
+autologin-user-timeout=0
+autologin-session=xfce
+EOF
+
+echo "✓ LightDM configured for auto-login (user: user)"
