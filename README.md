@@ -1,13 +1,35 @@
 # Osiris OS
 
-A minimal Debian-based Linux distribution with both **Sway** and **XFCE** desktop environments.
+A minimalistic Linux distribution built for programmers who value stability and performance over flash.
+
+## Philosophy
+
+Osiris is designed for one purpose: **programming**. It's not flashy. It's not bloated. It's stable, fast, and gets out of your way.
+
+### Core Tenant: NO BLOAT
+
+Every package is intentional. Every feature earns its place. If you don't need it for coding or essential system operation, it's not here.
+
+### Two Desktop Environments, One Choice
+
+- **SwayFX (Wayland)**: Modern, GPU-accelerated compositor. Tiling workflow. Blazing fast.
+- **XFCE (X11)**: Traditional desktop. Battle-tested. Rock solid compatibility.
+
+Choose the tool that fits your workflow. Both are minimal. Both are fast.
+
+## What You Get
+
+Debian Trixie foundation. VSCode. Firefox. That's it. Everything else is up to you.
+
+No office suites. No games. No thousand-package "complete desktop experience" metapackages. Just a clean foundation for writing code.
 
 ## Features
 
-- **Dual Desktop**: Choose between Sway (Wayland) or XFCE (X11) at login
-- **Minimal & Fast**: Only essential packages, no bloat
-- **Modern Compositor**: SwayFX with theme switching (dark/light modes)
+- **Zero Bloat**: Only essential packages for development
+- **Dual Desktop**: SwayFX (Wayland) or XFCE (X11) - your choice at login
+- **Fast Boot**: Minimal services, maximum performance
 - **Developer Ready**: VSCode and Firefox ESR pre-installed
+- **Stable Foundation**: Debian Trixie (testing) - bleeding edge but reliable
 - **Live + Installer**: Boot live or install to disk
 
 ## Quick Start
