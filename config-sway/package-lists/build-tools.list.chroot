@@ -10,3 +10,10 @@ python3-pip
 python3-i3ipc
 
 unzip
+
+# build-essentials
+build-essential
+gcc
+g++
+
+sudo
