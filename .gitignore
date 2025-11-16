@@ -5,9 +5,7 @@ build/
 *.iso
 
 # Output directory (ISOs are generated, not committed)
-output/
-output-sway/
-output-xfce/
+output*/
 
 # Generated config directory (built from config-gnome)
 config/
