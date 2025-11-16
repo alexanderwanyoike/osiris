@@ -46,3 +46,6 @@ xdg-desktop-portal-wlr
 
 
 # Note: VSCode installed via hook
+
+# Display manager (for installed systems)
+ly
