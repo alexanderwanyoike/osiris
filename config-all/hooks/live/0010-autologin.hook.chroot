@@ -1,9 +1,9 @@
 #!/bin/bash
-# Configure LightDM for auto-login on live boot
+# Configure LightDM for auto-login with Sway and XFCE support
 
 set -e
 
-echo "=== Configuring LightDM auto-login for live boot ==="
+echo "=== Configuring LightDM auto-login for dual-desktop setup ==="
 
 # Create user named 'user' (matches live-build default)
 useradd -m -s /bin/bash -G sudo,audio,video,plugdev,netdev,input user 2>/dev/null || true
@@ -21,7 +21,7 @@ cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf <<'EOF'
 [Seat:*]
 autologin-user=user
 autologin-user-timeout=0
-autologin-session=xfce
 EOF
 
 echo "✓ LightDM configured for auto-login (user: user)"
+echo "✓ Both Sway and XFCE sessions available"

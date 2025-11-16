@@ -1,11 +1,13 @@
+# Sway/Wayland Components
 brightnessctl
 wireplumber
 
-# Status bar
+# Sway status bar
 waybar
 
-# Terminal
+# Terminals
 foot
+xfce4-terminal
 
 # App launcher
 wofi
@@ -16,8 +18,9 @@ thunar
 # Network
 network-manager-gnome
 
-# Audio
+# Audio - use pipewire for both
 pipewire-audio
+pavucontrol
 
 # Firmware
 firmware-linux-free
@@ -43,9 +46,13 @@ firefox-esr
 xdg-utils
 xdg-desktop-portal-wlr
 
+# Display manager - LightDM for both desktops
+lightdm
+lightdm-gtk-greeter
 
+# XFCE Desktop Environment
+xfce4
+xserver-xorg
+xorg
 
 # Note: VSCode installed via hook
-
-# Display manager (for installed systems)
-ly

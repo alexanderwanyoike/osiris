@@ -1,45 +1,99 @@
-# Osiris OS - Docker Build
+# Osiris OS
 
-Build Osiris ISO with one command using Docker.
+A minimalistic Linux distribution built for programmers who value stability and performance over flash.
+
+## Philosophy
+
+Osiris is designed for one purpose: **programming**. It's not flashy. It's not bloated. It's stable, fast, and gets out of your way.
+
+### Core Tenant: NO BLOAT
+
+Every package is intentional. Every feature earns its place. If you don't need it for coding or essential system operation, it's not here.
+
+### Two Desktop Environments, One Choice
+
+- **SwayFX (Wayland)**: Modern, GPU-accelerated compositor. Tiling workflow. Blazing fast.
+- **XFCE (X11)**: Traditional desktop. Battle-tested. Rock solid compatibility.
+
+Choose the tool that fits your workflow. Both are minimal. Both are fast.
+
+## What You Get
+
+Debian Trixie foundation. VSCode. Firefox. That's it. Everything else is up to you.
+
+No office suites. No games. No thousand-package "complete desktop experience" metapackages. Just a clean foundation for writing code.
+
+## Features
+
+- **Zero Bloat**: Only essential packages for development
+- **Dual Desktop**: SwayFX (Wayland) or XFCE (X11) - your choice at login
+- **Fast Boot**: Minimal services, maximum performance
+- **Developer Ready**: VSCode and Firefox ESR pre-installed
+- **Stable Foundation**: Debian Trixie (testing) - bleeding edge but reliable
+- **Live + Installer**: Boot live or install to disk
 
 ## Quick Start
 
 ```bash
+# Build the ISO
 chmod +x build.sh
 ./build.sh
 ```
 
-ISO will be in `output/` directory.
+ISO will be in `output/` directory (30-60 minute build time).
 
 ## Test the ISO
 
 ```bash
-qemu-system-x86_64 -enable-kvm -m 2048 -cdrom output/*.iso -boot d
+# QEMU
+qemu-system-x86_64 -enable-kvm -m 4096 -cdrom output/*.iso -boot d
+
+# VirtualBox
+# Create VM, mount ISO from output/ directory
 ```
 
-## Custom Configuration
+## What's Included
 
-To customize packages, create `config/` directory before building:
+### Desktop Environments
+- **Sway (Wayland)**: SwayFX, Waybar, Wofi, Foot terminal
+- **XFCE (X11)**: XFCE4 minimal desktop, traditional workflow
+
+### Applications
+- Firefox ESR
+- VSCode (installed from Microsoft repo)
+- Thunar file manager
+- NetworkManager
+
+### Features
+- LightDM with auto-login
+- Theme switching for Sway (`osiris-theme dark/light/toggle`)
+- Auto-tiling for Sway
+- Nerd Fonts
+
+## Live Boot
+
+- **Username**: `user`
+- **Password**: none
+- **Sudo**: passwordless
+- **Desktop**: Choose Sway or XFCE at LightDM greeter
+
+## Building
+
+Based on Debian Trixie (testing) using `live-build` in Docker.
 
 ```bash
-mkdir -p config/package-lists
-
-cat > config/package-lists/custom.list.chroot <<EOF
-systemd
-bash
-vim
-network-manager
-EOF
-
+# Build
 ./build.sh
+
+# Clean
+make clean
 ```
 
-The config will be automatically mounted and used.
+## Configuration
 
-## What It Does
+Customize by editing `config-all/`:
+- `hooks/live/` - Scripts run during build
+- `package-lists/` - Packages to install
+- `includes.chroot/` - Files to copy into ISO
 
-1. Builds Docker image with Debian Trixie + live-build
-2. Runs `lb config` and `lb build` inside container
-3. Outputs ISO to `output/` directory
-
-That's it! Simple and reproducible.
+See `CLAUDE.md` for detailed documentation.
