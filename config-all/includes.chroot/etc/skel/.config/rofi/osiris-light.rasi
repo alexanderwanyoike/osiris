@@ -1,0 +1,76 @@
+// Osiris OS - Rofi Light Theme
+// Pure minimalism - grayscale only
+
+* {
+  // Grayscale palette
+  bg: #ffffff;           // Pure white
+  bg-alt: #f5f5f5;       // Near white
+  fg: #000000;           // Pure black
+  fg-alt: #666666;       // Medium gray
+  border: #cccccc;       // Light gray
+  accent: #999999;       // Accent gray
+
+  background-color: @bg;
+  text-color: @fg;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  spacing: 0;
+}
+
+window {
+  width: 35%;
+  border-radius: 12px;
+  background-color: @bg;
+  border: 2px;
+  border-color: @border;
+}
+
+mainbox {
+  children: [inputbar, listview];
+}
+
+inputbar {
+  children: [prompt, entry];
+  background-color: @bg-alt;
+  padding: 12px;
+  border-radius: 12px 12px 0 0;
+}
+
+prompt {
+  text-color: @fg;
+  padding: 0 8px 0 0;
+}
+
+entry {
+  text-color: @fg;
+  placeholder-color: @fg-alt;
+}
+
+listview {
+  lines: 8;
+  columns: 1;
+  fixed-height: true;
+  padding: 8px;
+}
+
+element {
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+element selected {
+  background-color: @bg-alt;
+  text-color: @fg;
+  border: 1px;
+  border-color: @accent;
+}
+
+element-icon {
+  size: 24px;
+  padding: 0 8px 0 0;
+}
+
+element-text {
+  text-color: inherit;
+}

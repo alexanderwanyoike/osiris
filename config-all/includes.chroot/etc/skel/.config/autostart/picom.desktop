@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Picom
+Comment=Compositor for XFCE (blur, transparency, rounded corners)
+Exec=picom --config ~/.config/picom/picom.conf
+Icon=compton
+Terminal=false
+Categories=Utility;
+X-GNOME-Autostart-enabled=true
+OnlyShowIn=XFCE;

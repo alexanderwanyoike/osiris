@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Plank
+Comment=Minimal dock for XFCE
+Exec=plank
+Icon=plank
+Terminal=false
+Categories=Utility;
+X-GNOME-Autostart-enabled=true
+OnlyShowIn=XFCE;

@@ -1,0 +1,16 @@
+// Osiris OS - Rofi Configuration
+// Launcher for XFCE matching Wofi aesthetic
+
+configuration {
+  modi: "drun,window,run";
+  show-icons: true;
+  font: "JetBrains Mono Nerd Font 11";
+  drun-display-format: "{name}";
+  display-drun: "  Apps";
+  display-window: "  Windows";
+  display-run: "  Run";
+  disable-history: false;
+  sidebar-mode: false;
+}
+
+@theme "osiris-dark"
