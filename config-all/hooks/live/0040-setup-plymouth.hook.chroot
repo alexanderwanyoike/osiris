@@ -1,16 +1,55 @@
 #!/bin/bash
 set -e
 
-echo "Setting up Plymouth boot splash..."
+echo "=== Setting up Plymouth boot splash ==="
+
+# Verify theme files exist
+echo "  → Checking Plymouth theme files..."
+if [ ! -f /usr/share/plymouth/themes/osiris/osiris.plymouth ]; then
+    echo "  ✗ ERROR: osiris.plymouth not found!"
+    exit 1
+fi
+if [ ! -f /usr/share/plymouth/themes/osiris/animation-0001.png ]; then
+    echo "  ✗ ERROR: animation-0001.png not found!"
+    exit 1
+fi
+echo "  ✓ All theme files present"
+
+# List theme files for debugging
+echo "  → Theme files:"
+ls -lh /usr/share/plymouth/themes/osiris/
 
 # Set Osiris theme as default
+echo "  → Setting Osiris as default theme..."
 update-alternatives --install /usr/share/plymouth/themes/default.plymouth \
   default.plymouth /usr/share/plymouth/themes/osiris/osiris.plymouth 100
 
 update-alternatives --set default.plymouth \
   /usr/share/plymouth/themes/osiris/osiris.plymouth
 
+# Verify it was set
+echo "  → Verifying default theme..."
+update-alternatives --display default.plymouth | head -5
+
+# Update Plymouth configuration
+echo "  → Configuring Plymouth..."
+mkdir -p /etc/plymouth
+cat > /etc/plymouth/plymouthd.conf <<'EOF'
+[Daemon]
+Theme=osiris
+ShowDelay=0
+DeviceTimeout=8
+EOF
+
+echo "  ✓ Plymouth configuration created"
+
 # Update initramfs to include Plymouth
+echo "  → Updating initramfs (this may take a moment)..."
 update-initramfs -u
 
-echo "Plymouth configured successfully"
+echo ""
+echo "✓ Plymouth configured successfully"
+echo "  Theme: Osiris (two-step module)"
+echo "  Logo: 200x200 transparent PNG"
+echo "  Background: Dark (#1a1a1a)"
+echo "  Progress bar: White on dark grey"
