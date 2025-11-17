@@ -1,0 +1,20 @@
+#!/bin/bash
+# Sway session wrapper for LightDM
+
+# Log file for debugging
+LOG_FILE="$HOME/sway-session.log"
+
+echo "=== Sway session starting at $(date) ===" > "$LOG_FILE"
+
+# Set up environment
+export XDG_SESSION_TYPE=wayland
+export XDG_CURRENT_DESKTOP=sway
+export XDG_SESSION_DESKTOP=sway
+
+# Log environment
+echo "Environment:" >> "$LOG_FILE"
+env >> "$LOG_FILE"
+
+# Start sway and capture any errors
+echo "=== Starting sway ===" >> "$LOG_FILE"
+exec /usr/local/bin/sway >> "$LOG_FILE" 2>&1

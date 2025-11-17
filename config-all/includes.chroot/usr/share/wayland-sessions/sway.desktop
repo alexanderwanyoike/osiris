@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Sway
 Comment=SwayFX - An i3-compatible Wayland compositor with effects
-Exec=sway
+Exec=/usr/local/bin/sway-session
 Type=Application
 DesktopNames=sway
