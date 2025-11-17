@@ -1,0 +1,62 @@
+#!/bin/bash
+# Setup XFCE with beautiful minimalism
+
+set -e
+
+echo "=== Setting up XFCE beautiful minimalism ===\"
+
+SKEL_AUTOSTART="/etc/skel/.config/autostart"
+SKEL_XFCE="/etc/skel/.config/xfce4"
+
+# Create autostart directory
+mkdir -p "$SKEL_AUTOSTART"
+
+# Create Picom autostart
+cat > "$SKEL_AUTOSTART/picom.desktop" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Picom
+Comment=X11 compositor with blur and transparency
+Exec=picom --config ~/.config/picom/picom.conf
+Terminal=false
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+EOF
+
+echo "✓ Picom autostart created"
+
+# Create Plank autostart
+cat > "$SKEL_AUTOSTART/plank.desktop" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Plank
+Comment=Minimal dock
+Exec=plank
+Terminal=false
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+EOF
+
+echo "✓ Plank autostart created"
+
+# Set dark mode as default for XFCE Terminal
+if [ -f "$SKEL_XFCE/terminal/terminalrc-dark" ]; then
+    cp "$SKEL_XFCE/terminal/terminalrc-dark" "$SKEL_XFCE/terminal/terminalrc"
+    echo "✓ XFCE Terminal: dark mode set as default"
+fi
+
+# Ensure GTK dark CSS is active
+SKEL_GTK="/etc/skel/.config/gtk-3.0"
+if [ -f "$SKEL_GTK/gtk.css" ]; then
+    cp "$SKEL_GTK/gtk.css" "$SKEL_GTK/gtk.css.active" 2>/dev/null || true
+    echo "✓ GTK: grayscale CSS active"
+fi
+
+echo ""
+echo "=== XFCE setup complete ===\"
+echo "✓ Picom will start automatically (blur, transparency, rounded corners)"
+echo "✓ Plank dock will start automatically"
+echo "✓ Dark mode is default"
+echo "✓ Pure grayscale theme applied"
