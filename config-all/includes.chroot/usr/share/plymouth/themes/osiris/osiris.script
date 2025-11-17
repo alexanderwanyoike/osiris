@@ -1,0 +1,21 @@
+# Osiris OS Plymouth Boot Splash Theme
+
+# Background - dark
+Window.SetBackgroundTopColor(0.10, 0.10, 0.10);
+Window.SetBackgroundBottomColor(0.10, 0.10, 0.10);
+
+# Logo
+logo.image = Image("logo.png");
+logo.sprite = Sprite(logo.image);
+logo.width = logo.image.GetWidth();
+logo.height = logo.image.GetHeight();
+logo.x = Window.GetX() + Window.GetWidth() / 2 - logo.width / 2;
+logo.y = Window.GetY() + Window.GetHeight() / 2 - logo.height / 2;
+logo.sprite.SetPosition(logo.x, logo.y, 0);
+
+# Simple spinner/progress indicator
+fun refresh_callback() {
+  # Animation can be added here if desired
+}
+
+Plymouth.SetRefreshFunction(refresh_callback);

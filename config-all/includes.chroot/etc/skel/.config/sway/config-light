@@ -60,11 +60,11 @@ gaps outer 12
 default_border pixel 2
 default_floating_border pixel 2
 
-### Colors - Pure White & Black
+### Colors - Pure White & Black (No colors!)
 client.focused          #000000 #FFFFFF #000000 #000000 #000000
 client.focused_inactive #CCCCCC #FFFFFF #666666 #CCCCCC #CCCCCC
 client.unfocused        #DDDDDD #FFFFFF #666666 #DDDDDD #DDDDDD
-client.urgent           #000000 #FF0000 #FFFFFF #000000 #000000
+client.urgent           #000000 #999999 #FFFFFF #000000 #000000
 
 ### Window Rules
 for_window [app_id="foot"] opacity 0.75, blur enable          

@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e
+
+echo "Setting up Plymouth boot splash..."
+
+# Set Osiris theme as default
+update-alternatives --install /usr/share/plymouth/themes/default.plymouth \
+  default.plymouth /usr/share/plymouth/themes/osiris/osiris.plymouth 100
+
+update-alternatives --set default.plymouth \
+  /usr/share/plymouth/themes/osiris/osiris.plymouth
+
+# Update initramfs to include Plymouth
+update-initramfs -u
+
+echo "Plymouth configured successfully"

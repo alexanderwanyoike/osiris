@@ -24,31 +24,31 @@
     },
     
     "custom/theme": {
-        "format": "Theme",
+        "format": "󰔎",
         "on-click": "osiris-theme toggle",
         "tooltip": false
     },
-    
+
     "battery": {
         "states": {
             "warning": 30,
             "critical": 15
         },
-        "format": "BAT {capacity}%",
-        "format-charging": "CHG {capacity}%",
-        "format-plugged": "AC {capacity}%"
+        "format": " {capacity}%",
+        "format-charging": "󰂄 {capacity}%",
+        "format-plugged": "󰚥 {capacity}%"
     },
-    
+
     "network": {
-        "format-wifi": "WiFi {signalStrength}%",
-        "format-ethernet": "ETH Connected",
-        "format-disconnected": "No Network",
+        "format-wifi": "󰖩 {signalStrength}%",
+        "format-ethernet": "󰈀 Connected",
+        "format-disconnected": "󰖪 Disconnected",
         "tooltip-format": "{ifname}: {ipaddr}"
     },
-    
+
     "pulseaudio": {
-        "format": "VOL {volume}%",
-        "format-muted": "MUTE",
+        "format": "󰕾 {volume}%",
+        "format-muted": "󰖁 Muted",
         "on-click": "pavucontrol"
     },
     

@@ -1,12 +1,14 @@
 # Sway/Wayland Components
 brightnessctl
 wireplumber
+libseat1
 
 # Sway status bar
 waybar
 
 # Terminals
 foot
+kitty
 xfce4-terminal
 
 # App launcher
@@ -40,7 +42,7 @@ swaybg
 wl-clipboard
 
 # Browser
-firefox-esr
+chromium
 
 # Utilities
 xdg-utils
@@ -50,9 +52,27 @@ xdg-desktop-portal-wlr
 lightdm
 lightdm-gtk-greeter
 
+# Boot splash
+plymouth
+plymouth-themes
+
+# Live CD support
+live-boot
+live-config
+live-config-systemd
+
 # XFCE Desktop Environment
 xfce4
 xserver-xorg
 xorg
+
+# Beautiful Minimalism Additions
+rofi
+plank
+picom
+neovim
+lxappearance
+arc-theme
+papirus-icon-theme
 
 # Note: VSCode installed via hook

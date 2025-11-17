@@ -8,12 +8,8 @@ echo "=== Setting up Osiris theme system ==="
 # Create theme switcher script
 cat > /usr/local/bin/osiris-theme <<'SCRIPTEOF'
 #!/bin/bash
-# Osiris Theme Switcher for Sway
+# Osiris Theme Switcher for Sway and XFCE
 
-CONFIG_DIR="$HOME/.config/sway"
-WAYBAR_DIR="$HOME/.config/waybar"
-WOFI_DIR="$HOME/.config/wofi"
-FOOT_DIR="$HOME/.config/foot"
 THEME_FILE="$HOME/.config/osiris-theme"
 
 # Get current theme
@@ -25,34 +21,102 @@ get_current_theme() {
     fi
 }
 
-# Set theme
-set_theme() {
+# Detect desktop environment
+detect_desktop() {
+    if [ "$XDG_CURRENT_DESKTOP" = "XFCE" ]; then
+        echo "xfce"
+    elif pgrep -x "sway" > /dev/null; then
+        echo "sway"
+    else
+        echo "unknown"
+    fi
+}
+
+# Set theme for Sway
+set_theme_sway() {
     local theme=$1
-    
-    echo "Switching to $theme mode..."
-    
-    # Copy all configs
-    [ -f "$CONFIG_DIR/config-$theme" ] && cp "$CONFIG_DIR/config-$theme" "$CONFIG_DIR/config"
-    [ -f "$WAYBAR_DIR/style-$theme.css" ] && cp "$WAYBAR_DIR/style-$theme.css" "$WAYBAR_DIR/style.css"
-    [ -f "$WOFI_DIR/style-$theme.css" ] && cp "$WOFI_DIR/style-$theme.css" "$WOFI_DIR/style.css"
-    [ -f "$FOOT_DIR/foot-$theme.ini" ] && cp "$FOOT_DIR/foot-$theme.ini" "$FOOT_DIR/foot.ini"
-    
-    # Update wofi config to point to correct stylesheet
-    sed -i "s|stylesheet=.*|stylesheet=$WOFI_DIR/style.css|g" "$WOFI_DIR/config"
-    
-    # Save current theme
-    echo "$theme" > "$THEME_FILE"
-    
+
+    # Sway components
+    [ -f "$HOME/.config/sway/config-$theme" ] && cp "$HOME/.config/sway/config-$theme" "$HOME/.config/sway/config"
+    [ -f "$HOME/.config/waybar/style-$theme.css" ] && cp "$HOME/.config/waybar/style-$theme.css" "$HOME/.config/waybar/style.css"
+    [ -f "$HOME/.config/wofi/style-$theme.css" ] && cp "$HOME/.config/wofi/style-$theme.css" "$HOME/.config/wofi/style.css"
+    [ -f "$HOME/.config/foot/foot-$theme.ini" ] && cp "$HOME/.config/foot/foot-$theme.ini" "$HOME/.config/foot/foot.ini"
+
+    # Update wofi config
+    sed -i "s|stylesheet=.*|stylesheet=$HOME/.config/wofi/style.css|g" "$HOME/.config/wofi/config"
+
     # Reload Sway and Waybar
-    swaymsg reload
+    swaymsg reload 2>/dev/null
     pkill waybar 2>/dev/null || true
-    waybar &
-    
-    echo "✓ $theme mode activated"
+    waybar & disown
+
     echo "  • Sway config updated"
     echo "  • Waybar reloaded"
     echo "  • Wofi theme updated"
-    echo "  • Foot theme updated (close and reopen terminals)"
+    echo "  • Foot theme updated"
+}
+
+# Set theme for XFCE
+set_theme_xfce() {
+    local theme=$1
+
+    # GTK theme
+    if [ "$theme" = "dark" ]; then
+        xfconf-query -c xsettings -p /Net/ThemeName -s "Arc-Dark"
+        xfconf-query -c xsettings -p /Net/IconThemeName -s "Papirus-Dark"
+        cp "$HOME/.config/gtk-3.0/gtk.css" "$HOME/.config/gtk-3.0/gtk.css.active" 2>/dev/null || true
+        xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitorVirtual1/workspace0/last-image -s "/usr/share/backgrounds/osiris/osiris-dark.png" 2>/dev/null || true
+    else
+        xfconf-query -c xsettings -p /Net/ThemeName -s "Arc"
+        xfconf-query -c xsettings -p /Net/IconThemeName -s "Papirus"
+        cp "$HOME/.config/gtk-3.0/gtk-light.css" "$HOME/.config/gtk-3.0/gtk.css.active" 2>/dev/null || true
+        xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitorVirtual1/workspace0/last-image -s "/usr/share/backgrounds/osiris/osiris-light.png" 2>/dev/null || true
+    fi
+
+    # Rofi theme
+    sed -i "s|@theme \"osiris-.*\"|@theme \"osiris-$theme\"|g" "$HOME/.config/rofi/config.rasi" 2>/dev/null || true
+
+    # XFCE Terminal (if config exists)
+    if [ -f "$HOME/.config/xfce4/terminal/terminalrc-$theme" ]; then
+        cp "$HOME/.config/xfce4/terminal/terminalrc-$theme" "$HOME/.config/xfce4/terminal/terminalrc"
+    fi
+
+    # Restart XFCE components
+    xfce4-panel -r 2>/dev/null || true
+
+    echo "  • GTK theme updated"
+    echo "  • Rofi theme updated"
+    echo "  • XFCE Terminal updated"
+    echo "  • Desktop wallpaper updated"
+}
+
+# Set theme
+set_theme() {
+    local theme=$1
+    local desktop=$(detect_desktop)
+
+    echo "Switching to $theme mode..."
+
+    # Save current theme
+    echo "$theme" > "$THEME_FILE"
+
+    # Apply theme based on desktop
+    case "$desktop" in
+        sway)
+            set_theme_sway "$theme"
+            ;;
+        xfce)
+            set_theme_xfce "$theme"
+            ;;
+        *)
+            echo "Warning: Could not detect desktop environment"
+            echo "Applying configs for both Sway and XFCE..."
+            set_theme_sway "$theme"
+            set_theme_xfce "$theme"
+            ;;
+    esac
+
+    echo "✓ $theme mode activated"
 }
 
 case "$1" in

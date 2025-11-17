@@ -1,0 +1,8 @@
+[Plymouth-Theme]
+Name=Osiris
+Description=Osiris OS Boot Splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/osiris
+ScriptFile=/usr/share/plymouth/themes/osiris/osiris.script

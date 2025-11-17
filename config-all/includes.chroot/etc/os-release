@@ -1,0 +1,10 @@
+NAME="Osiris OS"
+VERSION="1.0 (Trixie)"
+ID=osiris
+ID_LIKE=debian
+PRETTY_NAME="Osiris OS 1.0"
+VERSION_ID="1.0"
+VERSION_CODENAME=trixie
+HOME_URL="https://github.com/alexander/osiris"
+SUPPORT_URL="https://github.com/alexander/osiris/issues"
+BUG_REPORT_URL="https://github.com/alexander/osiris/issues"
