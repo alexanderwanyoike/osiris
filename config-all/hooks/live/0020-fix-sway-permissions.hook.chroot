@@ -1,0 +1,32 @@
+#!/bin/bash
+# Fix executable permissions for Sway session wrapper
+
+echo "=== Fixing Sway session wrapper permissions ==="
+
+# Check if the wrapper exists
+if [ -f /usr/local/bin/sway-session ]; then
+    echo "✓ Found sway-session wrapper"
+
+    # Show current permissions
+    ls -l /usr/local/bin/sway-session
+
+    # Change to directory and set proper permissions (755 = rwxr-xr-x)
+    cd /usr/local/bin || exit 1
+    chmod 755 sway-session
+
+    # Verify it worked
+    echo "✓ After chmod:"
+    ls -l /usr/local/bin/sway-session
+
+    # Also ensure the actual sway binary has proper permissions if it exists
+    if [ -f /usr/local/bin/sway ]; then
+        chmod 755 /usr/local/bin/sway
+        echo "✓ Set /usr/local/bin/sway permissions to 755"
+    fi
+else
+    echo "✗ WARNING: /usr/local/bin/sway-session not found!"
+    echo "  Listing /usr/local/bin contents:"
+    ls -la /usr/local/bin/ || echo "  Directory doesn't exist"
+fi
+
+echo "=== Sway permissions fix completed ==="
