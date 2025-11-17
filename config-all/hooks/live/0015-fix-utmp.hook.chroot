@@ -1,0 +1,21 @@
+#!/bin/bash
+# Fix utmp/wtmp for session tracking
+
+set -e
+
+echo "=== Setting up utmp/wtmp files ==="
+
+# Ensure utmp/wtmp files exist with correct permissions
+touch /var/run/utmp
+chmod 664 /var/run/utmp
+chgrp utmp /var/run/utmp
+
+touch /var/log/wtmp
+chmod 664 /var/log/wtmp
+chgrp utmp /var/log/wtmp
+
+touch /var/log/btmp
+chmod 660 /var/log/btmp
+chgrp utmp /var/log/btmp
+
+echo "✓ utmp/wtmp files configured"

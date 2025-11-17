@@ -1,0 +1,36 @@
+#!/bin/bash
+# Setup live user and autologin - direct approach
+
+set -e
+
+echo "=== Setting up live user and autologin ==="
+
+# Create autologin group
+groupadd -r autologin 2>/dev/null || true
+
+# Create user 'user' with essential groups only
+useradd -m -s /bin/bash -G sudo,audio,video,plugdev,netdev,autologin user
+
+# Disable password (allows login without password)
+passwd -d user
+
+# Also allow passwordless sudo
+echo "user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/user
+chmod 0440 /etc/sudoers.d/user
+
+# Create LightDM autologin configuration
+mkdir -p /etc/lightdm/lightdm.conf.d
+
+cat > /etc/lightdm/lightdm.conf.d/10-autologin.conf <<'EOF'
+[Seat:*]
+autologin-user=user
+autologin-user-timeout=0
+autologin-session=xfce
+pam-autologin-service=lightdm-autologin
+EOF
+
+echo "✓ User 'user' created with no password"
+echo "✓ User added to autologin group"
+echo "✓ LightDM autologin configured"
+echo "✓ Live CD will auto-login to XFCE"
+echo "✓ Manual login: username 'user', no password (just press Enter)"
