@@ -45,7 +45,7 @@ window#waybar.hidden {
 }
 
 #workspaces button.urgent {
-    background-color: #FF0000;
+    background-color: #666666;
     color: #FFFFFF;
 }
 
@@ -89,18 +89,18 @@ window#waybar.hidden {
 }
 
 #battery.charging {
-    color: #00AA00;
-    background-color: rgba(0, 170, 0, 0.2);
+    color: #333333;
+    background-color: rgba(51, 51, 51, 0.2);
 }
 
 #battery.warning:not(.charging) {
-    color: #CC8800;
-    background-color: rgba(204, 136, 0, 0.2);
+    color: #666666;
+    background-color: rgba(102, 102, 102, 0.2);
 }
 
 #battery.critical:not(.charging) {
-    color: #CC0000;
-    background-color: rgba(204, 0, 0, 0.2);
+    color: #999999;
+    background-color: rgba(153, 153, 153, 0.2);
     animation: blink 1s linear infinite;
 }
 
@@ -119,8 +119,8 @@ window#waybar.hidden {
 }
 
 #network.disconnected {
-    color: #CC0000;
-    background-color: rgba(204, 0, 0, 0.2);
+    color: #999999;
+    background-color: rgba(153, 153, 153, 0.2);
 }
 
 /* Audio */
@@ -132,8 +132,8 @@ window#waybar.hidden {
 }
 
 #pulseaudio.muted {
-    color: #CC0000;
-    background-color: rgba(204, 0, 0, 0.2);
+    color: #999999;
+    background-color: rgba(153, 153, 153, 0.2);
 }
 
 /* System tray */
@@ -148,6 +148,6 @@ window#waybar.hidden {
 
 #tray > .needs-attention {
     -gtk-icon-effect: highlight;
-    background-color: #FF0000;
+    background-color: #999999;
     border-radius: 8px;
 }
