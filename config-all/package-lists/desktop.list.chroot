@@ -1,13 +1,14 @@
 # Sway/Wayland Components
 brightnessctl
 wireplumber
+libseat1
 
 # Sway status bar
 waybar
 
 # Terminals
 foot
-xfce4-terminal
+kitty
 
 # App launcher
 wofi
@@ -40,7 +41,7 @@ swaybg
 wl-clipboard
 
 # Browser
-firefox-esr
+chromium
 
 # Utilities
 xdg-utils
@@ -50,17 +51,23 @@ xdg-desktop-portal-wlr
 lightdm
 lightdm-gtk-greeter
 
+# Live CD support
+live-boot
+live-config
+live-config-systemd
+
 # XFCE Desktop Environment
 xfce4
 xserver-xorg
 xorg
 
 # Beautiful Minimalism Additions
-rofi                    # Launcher for XFCE (matches Wofi)
-plank                   # Minimal dock for XFCE
-picom                   # Compositor for XFCE (blur, transparency, rounded corners)
-neovim                  # Modern vim for programmers
-lxappearance            # GTK theme manager
-arc-theme               # Base GTK theme (will override to grayscale)
+rofi
+plank
+picom
+neovim
+lxappearance
+arc-theme
+papirus-icon-theme               
 
 # Note: VSCode installed via hook
