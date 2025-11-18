@@ -46,6 +46,7 @@ chromium
 
 # Utilities
 xdg-utils
+xdg-user-dirs
 xdg-desktop-portal-wlr
 
 # Display manager - LightDM for both desktops
