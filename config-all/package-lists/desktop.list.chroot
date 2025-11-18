@@ -62,7 +62,8 @@ live-config
 live-config-systemd
 calamares
 calamares-settings-debian
-policykit-1
+polkitd
+pkexec
 
 # XFCE Desktop Environment
 xfce4
