@@ -11,7 +11,7 @@ mkdir -p "$LIGHTDM_GTK_DIR"
 cat > "$LIGHTDM_GTK_DIR/settings.ini" <<'EOF'
 [Settings]
 gtk-theme-name=Adwaita-dark
-gtk-icon-theme-name=Papirus-Dark
+gtk-icon-theme-name=elementary-xfce-dark
 gtk-font-name=Sans 11
 gtk-cursor-theme-name=Adwaita
 gtk-cursor-theme-size=24

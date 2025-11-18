@@ -3,8 +3,8 @@ set -e
 
 echo "=== Updating icon caches and desktop database ==="
 
-# Update GTK icon cache for Papirus themes
-for theme in /usr/share/icons/Papirus* ; do
+# Update GTK icon cache for elementary-xfce themes
+for theme in /usr/share/icons/elementary-xfce* ; do
     if [ -d "$theme" ]; then
         echo "Updating cache for $(basename $theme)..."
         gtk-update-icon-cache -f -t "$theme" 2>/dev/null || true

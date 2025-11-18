@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+
+echo "=== Generating cracklib password dictionary ==="
+
+# Generate cracklib dictionary for password strength checking
+# This is needed for Calamares password validation
+if command -v update-cracklib >/dev/null 2>&1; then
+    echo "Running update-cracklib..."
+    update-cracklib 2>&1 || true
+    echo "✓ Cracklib dictionary generated"
+else
+    echo "⚠ Warning: update-cracklib command not found"
+fi
+
+# Verify dictionary was created
+if [ -f /var/cache/cracklib/cracklib_dict.pwd ]; then
+    echo "✓ Dictionary file exists"
+else
+    echo "⚠ Warning: Dictionary file not created"
+fi
+
+echo "✓ Cracklib dictionary setup complete"

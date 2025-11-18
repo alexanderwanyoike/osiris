@@ -16,17 +16,6 @@ if [ -f "/etc/lightdm/lightdm.conf.d/50-slick-greeter.conf" ]; then
     echo "✓ Fixed /etc/lightdm/lightdm.conf.d/50-slick-greeter.conf"
 fi
 
-# Desktop files
-if [ -f "/usr/share/applications/install-osiris.desktop" ]; then
-    chmod 644 /usr/share/applications/install-osiris.desktop
-    echo "✓ Fixed /usr/share/applications/install-osiris.desktop"
-fi
-
-if [ -f "/etc/skel/Desktop/install-osiris.desktop" ]; then
-    chmod 644 /etc/skel/Desktop/install-osiris.desktop
-    echo "✓ Fixed /etc/skel/Desktop/install-osiris.desktop"
-fi
-
 # Session files
 if [ -f "/usr/share/xsessions/xfce.desktop" ]; then
     chmod 644 /usr/share/xsessions/xfce.desktop
