@@ -4,62 +4,23 @@ set -e
 echo "=== Setting up Plymouth boot splash ==="
 
 # Verify theme files exist
-echo "  → Checking Plymouth theme files..."
 if [ ! -f /usr/share/plymouth/themes/osiris/osiris.plymouth ]; then
     echo "  ✗ ERROR: osiris.plymouth not found!"
     exit 1
 fi
-if [ ! -f /usr/share/plymouth/themes/osiris/osiris.script ]; then
-    echo "  ✗ ERROR: osiris.script not found!"
+if [ ! -f /usr/share/plymouth/themes/osiris/watermark.png ]; then
+    echo "  ✗ ERROR: watermark.png not found!"
     exit 1
 fi
-if [ ! -f /usr/share/plymouth/themes/osiris/logo.png ]; then
-    echo "  ✗ ERROR: logo.png not found!"
-    exit 1
-fi
-echo "  ✓ All theme files present"
+echo "  ✓ Theme files present"
 
-# List theme files for debugging
-echo "  → Theme files:"
-ls -lh /usr/share/plymouth/themes/osiris/
-
-# Set Osiris theme as default
-echo "  → Setting Osiris as default theme..."
-update-alternatives --install /usr/share/plymouth/themes/default.plymouth \
-  default.plymouth /usr/share/plymouth/themes/osiris/osiris.plymouth 100
-
-update-alternatives --set default.plymouth \
-  /usr/share/plymouth/themes/osiris/osiris.plymouth
-
-# Explicitly create the symlink to ensure it persists
-echo "  → Creating default.plymouth symlink..."
-ln -sf /usr/share/plymouth/themes/osiris/osiris.plymouth /usr/share/plymouth/themes/default.plymouth
-
-# Verify it was set
-echo "  → Verifying default theme..."
-if [ -L /usr/share/plymouth/themes/default.plymouth ]; then
-    echo "  ✓ Symlink exists: $(readlink /usr/share/plymouth/themes/default.plymouth)"
-else
-    echo "  ✗ WARNING: Symlink was not created!"
-fi
-
-# Update Plymouth configuration - Edit the defaults file that Debian actually reads
-echo "  → Configuring Plymouth..."
+# Configure Plymouth defaults
 if [ -f /usr/share/plymouth/plymouthd.defaults ]; then
     sed -i 's/^Theme=.*/Theme=osiris/' /usr/share/plymouth/plymouthd.defaults
     echo "  ✓ Updated plymouthd.defaults"
-else
-    mkdir -p /usr/share/plymouth
-    cat > /usr/share/plymouth/plymouthd.defaults <<'EOF'
-[Daemon]
-Theme=osiris
-ShowDelay=0
-DeviceTimeout=8
-EOF
-    echo "  ✓ Created plymouthd.defaults"
 fi
 
-# Also create the conf file as backup
+# Create plymouthd.conf
 mkdir -p /etc/plymouth
 cat > /etc/plymouth/plymouthd.conf <<'EOF'
 [Daemon]
@@ -67,64 +28,36 @@ Theme=osiris
 ShowDelay=0
 DeviceTimeout=8
 EOF
+echo "  ✓ Created plymouthd.conf"
 
-echo "  ✓ Plymouth configuration created"
-
-# Ensure Plymouth is enabled in initramfs
-echo "  → Ensuring Plymouth modules in initramfs..."
+# Enable framebuffer in initramfs
 mkdir -p /etc/initramfs-tools/conf.d
 echo "FRAMEBUFFER=y" > /etc/initramfs-tools/conf.d/splash
 
-# Create initramfs hook to ensure default.plymouth symlink is created
-echo "  → Creating initramfs hook for Plymouth symlink..."
+# Create initramfs hook to copy default.plymouth
 mkdir -p /etc/initramfs-tools/hooks
 cat > /etc/initramfs-tools/hooks/plymouth-theme-osiris <<'EOFHOOK'
 #!/bin/sh
 PREREQ="plymouth"
-prereqs()
-{
-    echo "$PREREQ"
-}
+prereqs() { echo "$PREREQ"; }
+case $1 in prereqs) prereqs; exit 0 ;; esac
 
-case $1 in
-prereqs)
-    prereqs
-    exit 0
-    ;;
-esac
-
-# Create the default.plymouth symlink in the initramfs
-if [ -d "${DESTDIR}/usr/share/plymouth/themes/osiris" ]; then
-    ln -sf osiris/osiris.plymouth "${DESTDIR}/usr/share/plymouth/themes/default.plymouth"
-    echo "Plymouth: Created default.plymouth symlink to osiris"
+# Copy default.plymouth into initramfs
+if [ -f "/usr/share/plymouth/themes/default.plymouth" ]; then
+    cp /usr/share/plymouth/themes/default.plymouth \
+       "${DESTDIR}/usr/share/plymouth/themes/default.plymouth"
 fi
 EOFHOOK
 
 chmod +x /etc/initramfs-tools/hooks/plymouth-theme-osiris
-echo "  ✓ Plymouth theme initramfs hook created"
+echo "  ✓ Initramfs hook created"
 
-# Test if Plymouth can read the theme
-echo "  → Testing Plymouth theme..."
-if plymouth-set-default-theme --list | grep -q osiris; then
-    echo "  ✓ Osiris theme is registered"
-else
-    echo "  ✗ WARNING: Osiris theme not found in theme list!"
-fi
-
-# Explicitly set the theme
-echo "  → Setting Plymouth theme via plymouth-set-default-theme..."
-plymouth-set-default-theme -R osiris || echo "  ✗ Failed to set theme!"
-
-echo "  → Current Plymouth theme:"
-plymouth-set-default-theme || echo "  ✗ Could not determine theme"
-
-# Update initramfs to include Plymouth
-echo "  → Updating initramfs (this may take a moment)..."
+# Update initramfs
+echo "  → Updating initramfs..."
 update-initramfs -u
 
 echo ""
-echo "✓ Plymouth configured successfully"
-echo "  Theme: Osiris (script module)"
-echo "  Logo: Centered on dark background"
+echo "✓ Plymouth configured"
+echo "  Theme: Osiris (two-step module)"
+echo "  Logo: watermark.png"
 echo "  Background: Dark (#1a1a1a)"
-echo "  Progress bar: White animated bar"
