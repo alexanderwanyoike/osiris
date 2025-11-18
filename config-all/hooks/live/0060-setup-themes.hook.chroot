@@ -45,6 +45,16 @@ set_theme_sway() {
     # Update wofi config
     sed -i "s|stylesheet=.*|stylesheet=$HOME/.config/wofi/style.css|g" "$HOME/.config/wofi/config"
 
+    # GTK icon theme (for GTK apps in Sway)
+    mkdir -p "$HOME/.config/gtk-3.0"
+    if [ "$theme" = "dark" ]; then
+        gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark' 2>/dev/null || true
+        echo -e "[Settings]\ngtk-icon-theme-name=Papirus-Dark" > "$HOME/.config/gtk-3.0/settings.ini"
+    else
+        gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Light' 2>/dev/null || true
+        echo -e "[Settings]\ngtk-icon-theme-name=Papirus-Light" > "$HOME/.config/gtk-3.0/settings.ini"
+    fi
+
     # Reload Sway and Waybar
     swaymsg reload 2>/dev/null
     pkill waybar 2>/dev/null || true
@@ -54,6 +64,7 @@ set_theme_sway() {
     echo "  • Waybar reloaded"
     echo "  • Wofi theme updated"
     echo "  • Foot theme updated"
+    echo "  • GTK icon theme updated"
 }
 
 # Set theme for XFCE
@@ -68,7 +79,7 @@ set_theme_xfce() {
         xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitorVirtual1/workspace0/last-image -s "/usr/share/backgrounds/osiris/osiris-dark.png" 2>/dev/null || true
     else
         xfconf-query -c xsettings -p /Net/ThemeName -s "Arc"
-        xfconf-query -c xsettings -p /Net/IconThemeName -s "Papirus"
+        xfconf-query -c xsettings -p /Net/IconThemeName -s "Papirus-Light"
         cp "$HOME/.config/gtk-3.0/gtk-light.css" "$HOME/.config/gtk-3.0/gtk.css.active" 2>/dev/null || true
         xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitorVirtual1/workspace0/last-image -s "/usr/share/backgrounds/osiris/osiris-light.png" 2>/dev/null || true
     fi

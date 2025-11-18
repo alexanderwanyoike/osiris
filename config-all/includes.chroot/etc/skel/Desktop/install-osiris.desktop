@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Install Osiris OS
+GenericName=System Installer
+Comment=Install Osiris OS to your computer
+Exec=pkexec debian-installer-launcher
+Icon=system-software-install
+Terminal=false
+Categories=System;Settings;
+Keywords=install;installer;setup;osiris;
+StartupNotify=true

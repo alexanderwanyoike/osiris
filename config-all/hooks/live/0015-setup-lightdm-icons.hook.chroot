@@ -1,0 +1,47 @@
+#!/bin/bash
+set -e
+
+echo "=== Setting up LightDM greeter configuration ==="
+
+# Create GTK config directory for lightdm user
+LIGHTDM_GTK_DIR="/var/lib/lightdm/.config/gtk-3.0"
+mkdir -p "$LIGHTDM_GTK_DIR"
+
+# Create GTK settings for lightdm greeter
+cat > "$LIGHTDM_GTK_DIR/settings.ini" <<'EOF'
+[Settings]
+gtk-theme-name=Adwaita-dark
+gtk-icon-theme-name=Papirus-Dark
+gtk-font-name=Sans 11
+gtk-cursor-theme-name=Adwaita
+gtk-cursor-theme-size=24
+gtk-toolbar-style=GTK_TOOLBAR_BOTH
+gtk-toolbar-icon-size=GTK_ICON_SIZE_LARGE_TOOLBAR
+gtk-button-images=1
+gtk-menu-images=1
+gtk-enable-event-sounds=1
+gtk-enable-input-feedback-sounds=1
+gtk-xft-antialias=1
+gtk-xft-hinting=1
+gtk-xft-hintstyle=hintfull
+gtk-xft-rgba=rgb
+EOF
+
+# Set proper ownership for lightdm user
+chown -R lightdm:lightdm /var/lib/lightdm/.config 2>/dev/null || true
+
+# Ensure backgrounds directory has proper permissions
+if [ -d "/usr/share/backgrounds/osiris" ]; then
+    chmod 755 /usr/share/backgrounds/osiris
+    chmod 644 /usr/share/backgrounds/osiris/*.png 2>/dev/null || true
+    echo "✓ Background permissions set"
+fi
+
+# Verify slick-greeter configuration exists
+if [ -f "/etc/lightdm/slick-greeter.conf" ]; then
+    echo "✓ Slick-greeter configuration found"
+else
+    echo "⚠ Warning: /etc/lightdm/slick-greeter.conf not found"
+fi
+
+echo "✓ LightDM greeter configuration complete"
