@@ -60,7 +60,9 @@ plymouth-themes
 live-boot
 live-config
 live-config-systemd
-debian-installer-launcher
+calamares
+calamares-settings-debian
+policykit-1
 
 # XFCE Desktop Environment
 xfce4
@@ -74,7 +76,7 @@ picom
 neovim
 lxappearance
 arc-theme
-papirus-icon-theme
+elementary-xfce-icon-theme
 
 # Icon theme infrastructure
 hicolor-icon-theme
