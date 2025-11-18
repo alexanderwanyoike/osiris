@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build and install SwayFX for Debian (official method)
+# Build and install SwayFX for Osiris OS (official method)
 
 set -e
 

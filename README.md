@@ -1,4 +1,13 @@
-# Osiris OS
+```
+   ██████╗ ███████╗██╗██████╗ ██╗███████╗    ██████╗ ███████╗
+  ██╔═══██╗██╔════╝██║██╔══██╗██║██╔════╝   ██╔═══██╗██╔════╝
+  ██║   ██║███████╗██║██████╔╝██║███████╗   ██║   ██║███████╗
+  ██║   ██║╚════██║██║██╔══██╗██║╚════██║   ██║   ██║╚════██║
+  ╚██████╔╝███████║██║██║  ██║██║███████║   ╚██████╔╝███████║
+   ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═╝╚═╝╚══════╝    ╚═════╝ ╚══════╝
+
+          A minimal, polished Linux distribution
+```
 
 A minimalistic Linux distribution built for programmers who value stability and performance over flash.
 
@@ -28,7 +37,7 @@ No office suites. No games. No thousand-package "complete desktop experience" me
 - **Zero Bloat**: Only essential packages for development
 - **Dual Desktop**: SwayFX (Wayland) or XFCE (X11) - your choice at login
 - **Fast Boot**: Minimal services, maximum performance
-- **Developer Ready**: VSCode and Firefox ESR pre-installed
+- **Developer Ready**: VSCode and Chromium pre-installed
 - **Stable Foundation**: Debian Trixie (testing) - bleeding edge but reliable
 - **Live + Installer**: Boot live or install to disk
 

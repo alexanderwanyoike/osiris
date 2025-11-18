@@ -33,13 +33,15 @@ fi
 # Run the build with config mounted
 echo ""
 echo "Starting ISO build (this will take 30-60 minutes)..."
+echo "Build log will be saved to output/build.log"
 docker run --rm --privileged \
     -v "$(pwd)/output:/build" \
     -v "$(pwd)/config:/build/config" \
-    osiris-builder
+    osiris-builder 2>&1 | tee output/build.log
 
 echo ""
 echo "✓ Build complete!"
+echo "✓ Build log saved to output/build.log"
 echo ""
 echo "ISO: $(ls output/*.iso 2>/dev/null || echo 'Not found - check output directory')"
 echo ""

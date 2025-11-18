@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+echo "Customizing Osiris OS branding..."
+
+# Set GRUB distributor name
+if [ -f /etc/default/grub ]; then
+    if grep -q "GRUB_DISTRIBUTOR=" /etc/default/grub; then
+        sed -i 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="Osiris OS"/' /etc/default/grub
+    else
+        echo 'GRUB_DISTRIBUTOR="Osiris OS"' >> /etc/default/grub
+    fi
+fi
+
+# Create motd
+cat > /etc/motd <<'EOF'
+Welcome to Osiris OS - A minimal, polished Linux experience
+
+Choose your desktop:
+  - Sway (Wayland) - Modern tiling compositor
+  - XFCE (X11) - Traditional desktop environment
+
+Theme switching: osiris-theme [dark|light]
+
+EOF
+
+echo "Branding customization complete"

@@ -1,0 +1,68 @@
+#!/bin/bash
+set -e
+
+echo "=== Setting up Plymouth boot splash ==="
+
+# Verify theme files exist
+if [ ! -f /usr/share/plymouth/themes/osiris/osiris.plymouth ]; then
+    echo "  ✗ ERROR: osiris.plymouth not found!"
+    exit 1
+fi
+if [ ! -f /usr/share/plymouth/themes/osiris/watermark.png ]; then
+    echo "  ✗ ERROR: watermark.png not found!"
+    exit 1
+fi
+echo "  ✓ Theme files present"
+
+# Configure Plymouth defaults
+if [ -f /usr/share/plymouth/plymouthd.defaults ]; then
+    sed -i 's/^Theme=.*/Theme=osiris/' /usr/share/plymouth/plymouthd.defaults
+    echo "  ✓ Updated plymouthd.defaults"
+fi
+
+# Create plymouthd.conf
+mkdir -p /etc/plymouth
+cat > /etc/plymouth/plymouthd.conf <<'EOF'
+[Daemon]
+Theme=osiris
+ShowDelay=0
+DeviceTimeout=8
+EOF
+echo "  ✓ Created plymouthd.conf"
+
+# Set default Plymouth theme using update-alternatives
+update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth /usr/share/plymouth/themes/osiris/osiris.plymouth 150 --slave /usr/share/plymouth/themes/default.script default.script /usr/share/plymouth/themes/osiris/osiris.script
+update-alternatives --set default.plymouth /usr/share/plymouth/themes/osiris/osiris.plymouth
+echo "  ✓ Set Osiris as default Plymouth theme"
+
+# Enable framebuffer in initramfs
+mkdir -p /etc/initramfs-tools/conf.d
+echo "FRAMEBUFFER=y" > /etc/initramfs-tools/conf.d/splash
+
+# Create initramfs hook to copy default.plymouth
+mkdir -p /etc/initramfs-tools/hooks
+cat > /etc/initramfs-tools/hooks/plymouth-theme-osiris <<'EOFHOOK'
+#!/bin/sh
+PREREQ="plymouth"
+prereqs() { echo "$PREREQ"; }
+case $1 in prereqs) prereqs; exit 0 ;; esac
+
+# Copy default.plymouth into initramfs
+if [ -f "/usr/share/plymouth/themes/default.plymouth" ]; then
+    cp /usr/share/plymouth/themes/default.plymouth \
+       "${DESTDIR}/usr/share/plymouth/themes/default.plymouth"
+fi
+EOFHOOK
+
+chmod +x /etc/initramfs-tools/hooks/plymouth-theme-osiris
+echo "  ✓ Initramfs hook created"
+
+# Update initramfs
+echo "  → Updating initramfs..."
+update-initramfs -u
+
+echo ""
+echo "✓ Plymouth configured"
+echo "  Theme: Osiris (two-step module)"
+echo "  Logo: watermark.png"
+echo "  Background: Dark (#1a1a1a)"

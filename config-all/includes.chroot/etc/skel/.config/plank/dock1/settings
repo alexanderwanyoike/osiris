@@ -1,0 +1,27 @@
+[PlankDockPreferences]
+# Osiris OS - Plank Dock Configuration
+# Minimal, transparent dock for XFCE
+
+# Position: 0=bottom, 1=top, 2=left, 3=right
+Position=3
+Alignment=center
+ItemsAlignment=center
+
+# Theme - Transparent for minimal aesthetic
+Theme=Transparent
+
+# Icon size
+IconSize=48
+
+# Hide mode: 0=none, 1=auto, 2=dodge active, 3=dodge maximized, 4=window-dodge
+HideMode=1
+UnhideDelay=0
+
+# Behavior
+CurrentWorkspaceOnly=false
+LockItems=false
+ZoomEnabled=true
+ZoomPercent=120
+
+# Appearance
+DockItems=
