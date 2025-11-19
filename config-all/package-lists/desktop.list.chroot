@@ -53,9 +53,12 @@ cracklib-runtime
 squashfs-tools
 
 # Bootloader (needed for Calamares to install GRUB)
-grub-pc
-grub-efi-amd64
+# Using -bin packages to avoid conflicts between BIOS and UEFI
+grub-pc-bin
+grub-efi-amd64-bin
+grub-efi-amd64-signed
 grub-common
+efibootmgr
 os-prober
 
 # Display manager - LightDM for both desktops
