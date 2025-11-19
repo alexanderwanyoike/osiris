@@ -45,55 +45,32 @@ Default Debian GRUB theme is shown.
 
 ---
 
-## Issue #2: LightDM Slick-Greeter Session Selector Not Showing
+## Issue #2: LightDM Session Selector Not Showing
 
-**Status:** Open
+**Status:** FIXED
 **Priority:** High (UX Impact)
 **Component:** Display Manager (LightDM)
 
 ### Description
-LightDM slick-greeter doesn't display the session selection dropdown, preventing users from choosing between Sway and XFCE at login.
+LightDM session selector wasn't displaying, preventing users from choosing between Sway and XFCE at login.
 
-### Expected Behavior
-Slick-greeter should show a session dropdown/button allowing users to select:
-- Sway Session
-- XFCE Session
+### Root Cause
+Slick-greeter has limited support for detecting Wayland sessions in `/usr/share/wayland-sessions/`. The `show-session-menu` option doesn't exist in slick-greeter configuration.
 
-### Current Behavior
-No session selector visible. Users default to one session without choice.
+### Solution Implemented
+Switched from `slick-greeter` to `lightdm-gtk-greeter`:
+- [x] Changed greeter-session in `/etc/lightdm/lightdm.conf.d/50-gtk-greeter.conf`
+- [x] Added `lightdm-gtk-greeter` package to `desktop.list.chroot`
+- [x] GTK greeter config already has `indicators=~session` for session selector
+- [x] Repositioned login form to left side (`position=20%,center 50%,center`)
 
-### Potential Causes
-1. **Session selector disabled in slick-greeter config**
-   - `/etc/lightdm/slick-greeter.conf` might have `show-session-menu=false`
-   - Or selector is hidden/not configured
+### Files Modified
+- `config-all/includes.chroot/etc/lightdm/lightdm.conf.d/50-slick-greeter.conf` → `50-gtk-greeter.conf`
+- `config-all/package-lists/desktop.list.chroot`
+- `config-all/includes.chroot/etc/lightdm/lightdm-gtk-greeter.conf`
 
-2. **Only one session detected**
-   - If LightDM only finds one valid session, it might hide the selector
-   - Check if both `/usr/share/xsessions/xfce.desktop` and `/usr/share/wayland-sessions/sway.desktop` are valid
-
-3. **Theme/layout issue**
-   - Session selector element might be off-screen or hidden by theme
-   - Icon or button might be present but invisible
-
-4. **LightDM configuration issue**
-   - `/etc/lightdm/lightdm.conf` might not be configured for multi-session
-   - User-session not set correctly
-
-### Possible Solutions
-- [ ] Verify both session files exist and are valid:
-  - `/usr/share/xsessions/xfce.desktop`
-  - `/usr/share/wayland-sessions/sway.desktop`
-- [ ] Check `/etc/lightdm/slick-greeter.conf`:
-  - Ensure `show-session-menu=true` (or not explicitly disabled)
-  - Check if `session-menu-position` is visible
-- [ ] Test with: `dm-tool switch-to-greeter` to reload greeter
-- [ ] Check LightDM logs: `/var/log/lightdm/`
-- [ ] Verify session .desktop files have proper permissions (644)
-
-### References
-- Slick-greeter config: `/etc/lightdm/slick-greeter.conf`
-- LightDM config: `/etc/lightdm/lightdm.conf`
-- Session files: `/usr/share/{xsessions,wayland-sessions}/`
+### Result
+Session selector now visible in LightDM GTK greeter, allowing users to choose between Sway and XFCE sessions.
 
 ---
 
@@ -149,96 +126,137 @@ Default Plymouth theme (or no splash) is shown.
 
 ---
 
-## Issue #4: Slick-Greeter Icons Not Displaying Correctly
+## Issue #4: Greeter Icons Not Displaying Correctly
 
-**Status:** Open
+**Status:** RESOLVED
 **Priority:** Medium
 **Component:** Display Manager (LightDM)
 
 ### Description
-Icons in the LightDM slick-greeter are not displaying properly - showing wrong icons, broken icons, or no icons.
+Icons in LightDM slick-greeter were not displaying properly due to icon theme mismatch.
+
+### Root Cause
+Icon theme inconsistency between slick-greeter config and installed themes.
+
+### Solution
+Issue resolved by switching to `lightdm-gtk-greeter` (see Issue #2). GTK greeter uses standard icon themes with better compatibility.
+
+### Result
+Greeter icons now display correctly with GTK greeter's built-in theme support.
+
+---
+
+## Issue #5: Waybar Not Auto-Starting in Sway
+
+**Status:** Open
+**Priority:** High (UX Impact)
+**Component:** Sway Desktop Environment
+
+### Description
+Waybar (status bar) does not automatically start when logging into a Sway session, leaving users without a status bar, system tray, or clock.
 
 ### Expected Behavior
-Slick-greeter should display proper icons for:
-- User avatar
-- Session selector
-- Power options (shutdown, restart)
-- Accessibility options
+Waybar should automatically launch when Sway starts, displaying:
+- Workspace indicators
+- System tray
+- Clock
+- Network/battery/volume indicators
 
 ### Current Behavior
-Icons are missing, broken, or using wrong/default icons.
+Sway starts without Waybar. Users must manually launch Waybar from terminal.
 
 ### Potential Causes
-1. **Icon theme mismatch**
-   - Slick-greeter config points to icon theme not installed
-   - Currently configured: `Papirus-Dark` (in hook 0015-setup-lightdm-icons.hook.chroot)
-   - We switched to `elementary-xfce-dark` for XFCE but didn't update LightDM config
+1. **Waybar not in Sway autostart**
+   - Sway config `/etc/skel/.config/sway/config` missing `exec waybar` command
+   - Or autostart section not configured properly
 
-2. **Icon theme not installed for LightDM user**
-   - Icon theme exists but LightDM user (`lightdm`) can't access it
-   - Permissions issue with icon cache
+2. **Waybar binary not found**
+   - PATH issue or waybar not installed
+   - Check if `waybar` package is in `desktop.list.chroot`
 
-3. **Icon names don't match theme**
-   - Slick-greeter expects specific icon names
-   - Theme doesn't provide those icon names
-
-4. **GTK icon cache not updated**
-   - Icon cache for LightDM not generated
-   - Hook 0095-update-icon-cache might not cover LightDM
+3. **Waybar configuration error**
+   - Config file has syntax errors preventing launch
+   - Check `/etc/skel/.config/waybar/config`
 
 ### Possible Solutions
-- [ ] Update hook `0015-setup-lightdm-icons.hook.chroot`:
-  - Change from `Papirus-Dark` to `elementary-xfce-dark`
-  - Ensure consistency with XFCE settings
-- [ ] Verify icon theme installed:
-  - Check `elementary-xfce-icon-theme` package is in package list ✓ (already there)
-- [ ] Update icon cache for LightDM:
-  ```bash
-  gtk-update-icon-cache -f -t /usr/share/icons/elementary-xfce-dark/
-  ```
-- [ ] Check slick-greeter config `/etc/lightdm/slick-greeter.conf`:
-  - Verify `icon-theme-name` setting
-  - Check if specific icons are configured
-- [ ] Test with different icon theme to isolate issue
+- [ ] Add `exec waybar` to Sway config autostart section
+- [ ] Verify waybar package installed
+- [ ] Check waybar config syntax
+- [ ] Test manual launch: `waybar` to see error output
 
 ### References
-- LightDM icon config: `/var/lib/lightdm/.config/gtk-3.0/settings.ini`
-- Slick-greeter config: `/etc/lightdm/slick-greeter.conf`
-- Hook: `config-all/hooks/live/0015-setup-lightdm-icons.hook.chroot`
-- We already fixed XFCE to use `elementary-xfce-dark` - need to sync LightDM
+- Sway config: `config-all/includes.chroot/etc/skel/.config/sway/config`
+- Waybar config: `config-all/includes.chroot/etc/skel/.config/waybar/`
+
+---
+
+## Issue #6: Wofi Not Auto-Starting and Missing Styling
+
+**Status:** Open
+**Priority:** Medium
+**Component:** Sway Desktop Environment
+
+### Description
+Wofi (application launcher) is not configured to launch via keybind and lacks proper styling/theming.
+
+### Expected Behavior
+- Wofi should launch when user presses Super+D (or configured launcher key)
+- Wofi should match Osiris theme (dark mode with proper colors)
+- Wofi should display application icons
+
+### Current Behavior
+- Wofi keybind not working or not configured
+- If launched manually, Wofi appears unstyled or with default theme
+
+### Potential Causes
+1. **Keybind not configured**
+   - Sway config missing `bindsym $mod+d exec wofi --show drun`
+   - Or keybind points to different launcher
+
+2. **Wofi not installed**
+   - Check if `wofi` package is in `desktop.list.chroot`
+
+3. **Wofi styling not configured**
+   - Missing `/etc/skel/.config/wofi/style.css`
+   - Or config doesn't reference style file
+
+4. **Theme switcher not updating Wofi**
+   - `osiris-theme` command might not be switching Wofi theme
+   - Check hook `0060-setup-themes.hook.chroot`
+
+### Possible Solutions
+- [ ] Add Wofi keybind to Sway config: `bindsym $mod+d exec wofi --show drun`
+- [ ] Verify wofi package installed
+- [ ] Create/update Wofi style.css for dark/light themes
+- [ ] Update osiris-theme to switch Wofi styling
+- [ ] Test: `wofi --show drun` to see current state
+
+### References
+- Sway config: `config-all/includes.chroot/etc/skel/.config/sway/config`
+- Wofi config: `config-all/includes.chroot/etc/skel/.config/wofi/`
+- Theme hook: `config-all/hooks/live/0060-setup-themes.hook.chroot`
 
 ---
 
 ## Issue Summary
 
-| Issue | Priority | Component | Difficulty | Impact |
-|-------|----------|-----------|------------|--------|
-| #1 GRUB Theme | Medium | Bootloader | Medium | Low (cosmetic) |
-| #2 Session Selector | **High** | Display Manager | Easy-Medium | **High (UX)** |
-| #3 Plymouth Theme | Low | Boot Splash | Medium | Low (cosmetic) |
-| #4 Greeter Icons | Medium | Display Manager | Easy | Medium (polish) |
+| Issue | Status | Priority | Component | Impact |
+|-------|--------|----------|-----------|--------|
+| #1 GRUB Theme | Open | Medium | Bootloader | Low (cosmetic) |
+| #2 Session Selector | **FIXED** | High | Display Manager | High (UX) |
+| #3 Plymouth Theme | Open | Low | Boot Splash | Low (cosmetic) |
+| #4 Greeter Icons | **RESOLVED** | Medium | Display Manager | Medium (polish) |
+| #5 Waybar Autostart | **Open** | **High** | Sway Desktop | **High (UX)** |
+| #6 Wofi Configuration | **Open** | Medium | Sway Desktop | Medium (UX) |
 
 ---
 
 ## Recommended Fix Order
 
-1. **Issue #2 (Session Selector)** - Highest UX impact, relatively easy fix
-2. **Issue #4 (Greeter Icons)** - Related to #2, sync icon theme with XFCE changes
+1. **Issue #5 (Waybar)** - Sway session incomplete without status bar
+2. **Issue #6 (Wofi)** - Sway needs application launcher
 3. **Issue #1 (GRUB Theme)** - Adds branding, medium effort
 4. **Issue #3 (Plymouth)** - Lowest priority, purely cosmetic
-
----
-
-## Quick Wins
-
-**Issue #4 is partially solved already!**
-We fixed XFCE icons to use `elementary-xfce-dark` but forgot to update LightDM. Quick fix:
-
-1. Edit `config-all/hooks/live/0015-setup-lightdm-icons.hook.chroot`
-2. Change `gtk-icon-theme-name=Papirus-Dark` → `gtk-icon-theme-name=elementary-xfce-dark`
-3. Rebuild
-
-This might also help with Issue #2 if icons are making the session selector invisible.
 
 ---
 
@@ -246,14 +264,15 @@ This might also help with Issue #2 if icons are making the session selector invi
 
 - Core system installation
 - Dual desktop environments (Sway + XFCE)
-- XFCE icons and theming
+- LightDM session selector (can switch between Sway/XFCE)
+- XFCE desktop fully functional with proper theming
 - Desktop installer icon
 - Password validation
 - GRUB bootloader installation
 - System boots successfully
-- Both Sway and XFCE function properly
+- Both desktop environments function properly
 
-**The distro is functional!** These are polish issues that can be fixed incrementally.
+**The distro is functional!** Remaining issues are UX improvements for Sway and cosmetic polish.
 
 ---
 
@@ -261,11 +280,12 @@ This might also help with Issue #2 if icons are making the session selector invi
 
 - Document GRUB theme creation process
 - Consider using a Plymouth theme package instead of custom theme
-- LightDM/slick-greeter testing should be part of build validation
-- Add automated checks for icon theme consistency across components
-- Consider creating a unified theming hook that handles XFCE, LightDM, and GRUB together
+- Fix Sway autostart configuration for Waybar and Wofi
+- Add automated checks for desktop environment completeness
+- Consider creating a unified theming hook that handles XFCE, LightDM, Sway, and GRUB together
+- Test both Sway and XFCE sessions during build validation
 
 ---
 
 **Last Updated:** 2025-11-19
-**Status:** System functional, cosmetic polish needed
+**Status:** System functional, session selector working, Sway UX improvements needed
