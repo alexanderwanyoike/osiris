@@ -41,6 +41,19 @@ EOF
 
 echo "✓ Plank autostart created"
 
+# Create Calamares installer icon autostart (with proper trust handling for XFCE 4.18)
+cat > "$SKEL_AUTOSTART/calamares-installer-icon.desktop" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Create Installer Icon
+Exec=sh -c 'DESK=$(xdg-user-dir DESKTOP); cp /usr/share/applications/calamares-install-debian.desktop "$DESK/"; chmod +x "$DESK/calamares-install-debian.desktop"; sleep 2; gio set --type=string "$DESK/calamares-install-debian.desktop" metadata::xfce-exe-checksum "$(sha256sum "$DESK/calamares-install-debian.desktop" | cut -f1 -d" ")" 2>/dev/null || true'
+StartupNotify=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+EOF
+
+echo "✓ Calamares installer icon autostart created"
+
 # Copy autostart files to live user (user is created in hook 0010)
 USER_AUTOSTART="/home/user/.config/autostart"
 if [ -d "/home/user" ]; then
@@ -55,6 +68,11 @@ if [ -d "/home/user" ]; then
         echo "  → Copied plank.desktop"
     else
         echo "  ✗ Failed to copy plank.desktop"
+    fi
+    if cp "$SKEL_AUTOSTART/calamares-installer-icon.desktop" "$USER_AUTOSTART/" 2>&1; then
+        echo "  → Copied calamares-installer-icon.desktop"
+    else
+        echo "  ✗ Failed to copy calamares-installer-icon.desktop"
     fi
     chown -R user:user /home/user/.config/autostart
     echo "✓ Autostart files copied to live user"

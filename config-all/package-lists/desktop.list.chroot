@@ -46,7 +46,20 @@ chromium
 
 # Utilities
 xdg-utils
+xdg-user-dirs
 xdg-desktop-portal-wlr
+wamerican
+cracklib-runtime
+squashfs-tools
+
+# Bootloader (needed for Calamares to install GRUB)
+# Using -bin packages to avoid conflicts between BIOS and UEFI
+grub-pc-bin
+grub-efi-amd64-bin
+grub-efi-amd64-signed
+grub-common
+efibootmgr
+os-prober
 
 # Display manager - LightDM for both desktops
 lightdm
@@ -60,7 +73,10 @@ plymouth-themes
 live-boot
 live-config
 live-config-systemd
-debian-installer-launcher
+calamares
+calamares-settings-debian
+polkitd
+pkexec
 
 # XFCE Desktop Environment
 xfce4
@@ -74,7 +90,7 @@ picom
 neovim
 lxappearance
 arc-theme
-papirus-icon-theme
+elementary-xfce-icon-theme
 
 # Icon theme infrastructure
 hicolor-icon-theme
