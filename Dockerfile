@@ -1,3 +1,4 @@
+# check=skip=JSONArgsRecommended
 # Osiris OS - ISO Builder (Live + Installer Support)
 FROM debian:trixie
 

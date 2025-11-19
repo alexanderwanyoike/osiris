@@ -48,6 +48,9 @@ chromium
 xdg-utils
 xdg-user-dirs
 xdg-desktop-portal-wlr
+wamerican
+cracklib-runtime
+squashfs-tools
 
 # Display manager - LightDM for both desktops
 lightdm
