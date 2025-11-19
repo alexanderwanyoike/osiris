@@ -3,6 +3,14 @@
 ## Overview
 Osiris is a custom Debian-based Linux distribution built using `live-build`. It provides a minimal, polished desktop experience with **both Sway (Wayland) and XFCE (X11)** desktop environments in a single ISO. Users can choose which desktop to use at login.
 
+## Code Style Guidelines
+
+**IMPORTANT**: This project maintains a professional, technical tone:
+- **NO EMOJIS** - Do not use emojis in code, documentation, commit messages, or any project files
+- Keep all communication clear, technical, and professional
+- Documentation should be clean and readable without decorative elements
+- Focus on technical accuracy and clarity
+
 ## Project Architecture
 
 ### Build System
