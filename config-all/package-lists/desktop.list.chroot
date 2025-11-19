@@ -64,6 +64,7 @@ os-prober
 # Display manager - LightDM for both desktops
 lightdm
 slick-greeter
+lightdm-gtk-greeter
 
 # Boot splash
 plymouth
