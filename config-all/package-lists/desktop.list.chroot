@@ -52,6 +52,12 @@ wamerican
 cracklib-runtime
 squashfs-tools
 
+# Bootloader (needed for Calamares to install GRUB)
+grub-pc
+grub-efi-amd64
+grub-common
+os-prober
+
 # Display manager - LightDM for both desktops
 lightdm
 slick-greeter
