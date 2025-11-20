@@ -10,7 +10,7 @@ mkdir -p /usr/share/fonts/truetype/nerd-fonts
 
 # Download JetBrains Mono Nerd Font
 cd /tmp
-wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/JetBrainsMono.zip
+wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/JetBrainsMono.zip
 
 # Extract
 unzip -q JetBrainsMono.zip -d /usr/share/fonts/truetype/nerd-fonts/

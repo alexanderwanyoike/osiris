@@ -49,3 +49,4 @@ echo "Test with:"
 echo "  qemu-system-x86_64 -enable-kvm -m 4096 -cdrom output/*.iso -boot d"
 echo ""
 echo "At LightDM login, select either Sway or XFCE session"
+echo -e "\a" # Beep to notify completion

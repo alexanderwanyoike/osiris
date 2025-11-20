@@ -1,0 +1,29 @@
+#!/bin/bash
+set -e
+
+echo "Installing latest Neovim (AppImage)..."
+
+# Download latest Neovim AppImage
+echo "Downloading Neovim AppImage..."
+wget https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage -O /tmp/nvim.appimage
+
+# Make it executable
+chmod +x /tmp/nvim.appimage
+
+# Extract AppImage (avoid FUSE issues in chroot)
+echo "Extracting AppImage..."
+cd /tmp
+./nvim.appimage --appimage-extract
+
+# Move to final location
+mv /tmp/squashfs-root /opt/nvim
+rm /tmp/nvim.appimage
+
+# Create symlink
+ln -sf /opt/nvim/AppRun /usr/local/bin/nvim
+
+# Verify installation
+echo "Verifying installation..."
+/usr/local/bin/nvim --version | head -1
+
+echo "Neovim installed successfully"
