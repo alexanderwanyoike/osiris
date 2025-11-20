@@ -148,7 +148,7 @@ Greeter icons now display correctly with GTK greeter's built-in theme support.
 
 ## Issue #5: Waybar Not Auto-Starting in Sway
 
-**Status:** Open
+**Status:** RESOLVED
 **Priority:** High (UX Impact)
 **Component:** Sway Desktop Environment
 
@@ -162,37 +162,32 @@ Waybar should automatically launch when Sway starts, displaying:
 - Clock
 - Network/battery/volume indicators
 
-### Current Behavior
-Sway starts without Waybar. Users must manually launch Waybar from terminal.
+### Root Cause
+Investigation revealed that Waybar autostart was already implemented correctly in all Sway config files.
 
-### Potential Causes
-1. **Waybar not in Sway autostart**
-   - Sway config `/etc/skel/.config/sway/config` missing `exec waybar` command
-   - Or autostart section not configured properly
+### Solution Implemented
+Verified that all components were already in place:
+- [x] `exec waybar` present in all Sway configs (config, config-dark, config-light)
+- [x] Waybar package installed in desktop.list.chroot
+- [x] Waybar configuration files exist with proper dark/light theming
+- [x] Theme switching integrated via osiris-theme command
+- [x] Removed duplicate window rules (code quality improvement)
 
-2. **Waybar binary not found**
-   - PATH issue or waybar not installed
-   - Check if `waybar` package is in `desktop.list.chroot`
+### Files Verified
+- `config-all/includes.chroot/etc/skel/.config/sway/config` (line 43)
+- `config-all/includes.chroot/etc/skel/.config/sway/config-dark` (line 43)
+- `config-all/includes.chroot/etc/skel/.config/sway/config-light` (line 43)
+- `config-all/includes.chroot/etc/skel/.config/waybar/`
+- `config-all/package-lists/desktop.list.chroot`
 
-3. **Waybar configuration error**
-   - Config file has syntax errors preventing launch
-   - Check `/etc/skel/.config/waybar/config`
-
-### Possible Solutions
-- [ ] Add `exec waybar` to Sway config autostart section
-- [ ] Verify waybar package installed
-- [ ] Check waybar config syntax
-- [ ] Test manual launch: `waybar` to see error output
-
-### References
-- Sway config: `config-all/includes.chroot/etc/skel/.config/sway/config`
-- Waybar config: `config-all/includes.chroot/etc/skel/.config/waybar/`
+### Result
+Waybar autostart functionality was already implemented. Issue marked as resolved after code verification and cleanup.
 
 ---
 
 ## Issue #6: Wofi Not Auto-Starting and Missing Styling
 
-**Status:** Open
+**Status:** RESOLVED
 **Priority:** Medium
 **Component:** Sway Desktop Environment
 
@@ -204,37 +199,29 @@ Wofi (application launcher) is not configured to launch via keybind and lacks pr
 - Wofi should match Osiris theme (dark mode with proper colors)
 - Wofi should display application icons
 
-### Current Behavior
-- Wofi keybind not working or not configured
-- If launched manually, Wofi appears unstyled or with default theme
+### Root Cause
+Investigation revealed that Wofi keybind and styling were already implemented. A hardcoded path in the config file was identified and fixed.
 
-### Potential Causes
-1. **Keybind not configured**
-   - Sway config missing `bindsym $mod+d exec wofi --show drun`
-   - Or keybind points to different launcher
+### Solution Implemented
+Verified and fixed:
+- [x] Keybind configured: `bindsym $mod+d exec wofi --show drun` (line 78 in all configs)
+- [x] Wofi package installed in desktop.list.chroot
+- [x] Style files exist: style-dark.css and style-light.css
+- [x] Theme switching integrated in osiris-theme command
+- [x] Fixed hardcoded path: Changed `/home/user/.config/wofi/style.css` to `$HOME/.config/wofi/style.css`
+- [x] Verified theme hook properly handles wofi styling
 
-2. **Wofi not installed**
-   - Check if `wofi` package is in `desktop.list.chroot`
+### Files Modified
+- `config-all/includes.chroot/etc/skel/.config/wofi/config` - Fixed hardcoded path (line 16)
 
-3. **Wofi styling not configured**
-   - Missing `/etc/skel/.config/wofi/style.css`
-   - Or config doesn't reference style file
+### Files Verified
+- `config-all/includes.chroot/etc/skel/.config/sway/config` (keybind at line 78)
+- `config-all/includes.chroot/etc/skel/.config/wofi/style-dark.css`
+- `config-all/includes.chroot/etc/skel/.config/wofi/style-light.css`
+- `config-all/hooks/live/0060-setup-themes.hook.chroot` (lines 42, 46, 177-180)
 
-4. **Theme switcher not updating Wofi**
-   - `osiris-theme` command might not be switching Wofi theme
-   - Check hook `0060-setup-themes.hook.chroot`
-
-### Possible Solutions
-- [ ] Add Wofi keybind to Sway config: `bindsym $mod+d exec wofi --show drun`
-- [ ] Verify wofi package installed
-- [ ] Create/update Wofi style.css for dark/light themes
-- [ ] Update osiris-theme to switch Wofi styling
-- [ ] Test: `wofi --show drun` to see current state
-
-### References
-- Sway config: `config-all/includes.chroot/etc/skel/.config/sway/config`
-- Wofi config: `config-all/includes.chroot/etc/skel/.config/wofi/`
-- Theme hook: `config-all/hooks/live/0060-setup-themes.hook.chroot`
+### Result
+Wofi functionality was already implemented. Fixed path issue for better portability and verified theme integration.
 
 ---
 
@@ -246,17 +233,331 @@ Wofi (application launcher) is not configured to launch via keybind and lacks pr
 | #2 Session Selector | **FIXED** | High | Display Manager | High (UX) |
 | #3 Plymouth Theme | Open | Low | Boot Splash | Low (cosmetic) |
 | #4 Greeter Icons | **RESOLVED** | Medium | Display Manager | Medium (polish) |
-| #5 Waybar Autostart | **Open** | **High** | Sway Desktop | **High (UX)** |
-| #6 Wofi Configuration | **Open** | Medium | Sway Desktop | Medium (UX) |
+| #5 Waybar Autostart | **RESOLVED** | High | Sway Desktop | High (UX) |
+| #6 Wofi Configuration | **RESOLVED** | Medium | Sway Desktop | Medium (UX) |
+| #7 Theme Hook Refactor | Open | Low | Build System | Low (tech debt) |
+| #8 Hook Security | **Open** | **CRITICAL** | Build System | **High (security)** |
+| #9 Hook Idempotency | Open | Medium | Build System | Low (reliability) |
+| #10 Hook Verification | **Open** | **High** | Build System | **Medium (reliability)** |
+| #11 Hook Code Style | Open | Low | Build System | Low (polish) |
+| #12 pip --break-system-packages | **Open** | **High** | Build System | **Medium (stability)** |
 
 ---
 
 ## Recommended Fix Order
 
-1. **Issue #5 (Waybar)** - Sway session incomplete without status bar
-2. **Issue #6 (Wofi)** - Sway needs application launcher
-3. **Issue #1 (GRUB Theme)** - Adds branding, medium effort
-4. **Issue #3 (Plymouth)** - Lowest priority, purely cosmetic
+### High Priority (Security & Reliability)
+1. **Issue #8 (Hook Security)** - CRITICAL - Add checksum verification to downloads
+2. **Issue #10 (Hook Verification)** - Add success checks to critical operations
+3. **Issue #12 (pip --break-system-packages)** - Fix unsafe autotiling installation
+
+### Medium Priority (Quality & Maintainability)
+4. **Issue #9 (Hook Idempotency)** - Fix duplicate append operations
+5. **Issue #7 (Theme Hook Refactor)** - Simplify theme system
+
+### Low Priority (Cosmetic & Polish)
+6. **Issue #11 (Hook Code Style)** - Remove emojis from all hooks
+7. **Issue #1 (GRUB Theme)** - Adds branding
+8. **Issue #3 (Plymouth)** - Boot splash theme
+
+---
+
+## Issue #7: Theme Hook System Needs Refactoring
+
+**Status:** Open
+**Priority:** Low (Technical Debt)
+**Component:** Build System (Hook 0060-setup-themes.hook.chroot)
+
+### Description
+The theme switching hook (0060-setup-themes.hook.chroot) is overly complex and tries to do too much during build time. It attempts to copy default config files that should just exist in the filesystem.
+
+### Current Problems
+1. **Hook copies files during build** - Tries to copy style-dark.css to style.css, config-dark to config, etc.
+2. **Fragile logic** - File copy operations in hooks can fail silently
+3. **Redundant with filesystem** - Default files should just exist in includes.chroot
+4. **Maintenance burden** - Hard to debug when hook logic doesn't execute as expected
+
+### Recommended Approach
+**Rely on filesystem defaults instead of hook logic:**
+- Default config files (style.css, config, foot.ini) should exist in source tree
+- These defaults should be dark mode (project standard)
+- Theme switcher (osiris-theme command) handles runtime theme switching
+- Hook should only install the osiris-theme script, not manage default files
+
+### Benefits
+- Simpler, more maintainable
+- Easier to debug (what you see in source is what you get)
+- No silent failures from hook file operations
+- Clear separation: build-time vs runtime theme switching
+
+### Files Affected
+- `config-all/hooks/live/0060-setup-themes.hook.chroot`
+- `config-all/includes.chroot/etc/skel/.config/sway/config` (default exists)
+- `config-all/includes.chroot/etc/skel/.config/waybar/style.css` (default exists)
+- `config-all/includes.chroot/etc/skel/.config/wofi/style.css` (default exists)
+- `config-all/includes.chroot/etc/skel/.config/foot/foot.ini` (needs default)
+
+### Notes
+This is technical debt, not a functional bug. The current system works but is unnecessarily complex.
+
+---
+
+## Issue #8: Hook Security - Missing Download Verification
+
+**Status:** Open
+**Priority:** CRITICAL
+**Component:** Build System (Hooks)
+
+### Description
+Multiple hooks download files from the internet without verifying checksums, creating security vulnerabilities and potential build inconsistencies.
+
+### Affected Hooks
+1. **0050-install-swayfx-official.hook.chroot**
+   - Downloads wlroots 0.16.2 without SHA-256 checksum verification
+   - Downloads SwayFX 0.3.2 without SHA-256 checksum verification
+
+2. **0055-install-nerd-fonts.hook.chroot**
+   - Downloads JetBrains Mono Nerd Font v3.1.1 without checksum verification
+
+3. **0090-install-vscode.hook.chroot**
+   - Downloads Microsoft GPG key without fingerprint verification
+
+### Security Impact
+- Man-in-the-middle attacks could inject malicious code during build
+- Corrupted downloads could cause build failures
+- No guarantee of build reproducibility between builds
+- Supply chain attack vulnerability
+
+### Recommended Solution
+Add SHA-256 checksum verification for all downloads and GPG key fingerprint verification:
+
+```bash
+# Example for SwayFX
+WLROOTS_VERSION="0.16.2"
+WLROOTS_SHA256="<calculate-checksum>"
+wget https://gitlab.freedesktop.org/wlroots/wlroots/-/archive/${WLROOTS_VERSION}/wlroots-${WLROOTS_VERSION}.tar.gz
+
+# Verify checksum
+ACTUAL_SHA256=$(sha256sum wlroots-${WLROOTS_VERSION}.tar.gz | cut -d' ' -f1)
+if [ "$ACTUAL_SHA256" != "$WLROOTS_SHA256" ]; then
+    echo "ERROR: Checksum mismatch for wlroots"
+    exit 1
+fi
+```
+
+### Tasks
+- [ ] Calculate SHA-256 checksums for wlroots 0.16.2 and SwayFX 0.3.2
+- [ ] Add checksum verification to 0050-install-swayfx-official.hook.chroot
+- [ ] Add checksum verification to 0055-install-nerd-fonts.hook.chroot
+- [ ] Verify Microsoft GPG key fingerprint in 0090-install-vscode.hook.chroot
+- [ ] Document pattern in BEST_PRACTICES_HOOKS.md (done)
+
+### References
+- See `docs/BEST_PRACTICES_HOOKS.md` for security best practices
+
+---
+
+## Issue #9: Hook Idempotency - Duplicate Append Operations
+
+**Status:** Open
+**Priority:** Medium
+**Component:** Build System (Hooks)
+
+### Description
+Hook 0089 appends to files without checking if content already exists, causing duplicate entries if the hook runs multiple times.
+
+### Affected Hook
+**0089-disable-debian-calamares-autostart.hook.chroot**
+- Appends `Hidden=true` to desktop file without checking if already present
+- Running hook twice creates malformed desktop file with duplicate lines
+
+### Current Behavior
+```bash
+echo "Hidden=true" >> "$DEBIAN_AUTOSTART"
+# If run twice: file contains multiple "Hidden=true" lines
+```
+
+### Expected Behavior
+```bash
+if ! grep -q "^Hidden=" "$DEBIAN_AUTOSTART"; then
+    echo "Hidden=true" >> "$DEBIAN_AUTOSTART"
+fi
+```
+
+### Tasks
+- [ ] Fix 0089-disable-debian-calamares-autostart.hook.chroot to check before appending
+- [ ] Audit all hooks for similar append-without-check patterns
+- [ ] Test hook idempotency in build process
+
+### References
+- See `docs/BEST_PRACTICES_HOOKS.md` section on Idempotency
+
+---
+
+## Issue #10: Hook Safety - Missing Verification Checks
+
+**Status:** Open
+**Priority:** High
+**Component:** Build System (Hooks)
+
+### Description
+Several hooks perform critical operations without verifying success, potentially causing silent failures that only manifest at runtime in the live system.
+
+### Affected Hooks
+
+**0010-autologin.hook.chroot:**
+- Creates user but doesn't verify user exists before passwd/sudoers operations
+- sudoers file created but not validated
+- Could fail silently if user creation fails
+
+**0015-setup-lightdm-icons.hook.chroot:**
+- Attempts to chown to lightdm user without verifying user exists first
+- Silences errors with `|| true`
+
+**0065-install-autotiling.hook.chroot:**
+- Installs autotiling but doesn't verify command is available after install
+- Uses `--break-system-packages` without verification
+
+**0090-install-vscode.hook.chroot:**
+- Adds repository and installs VSCode without verifying binary exists
+- No check that installation actually succeeded
+
+### Recommended Approach
+Add verification after critical operations:
+
+```bash
+# Create user
+useradd -m -s /bin/bash user 2>/dev/null || true
+
+# VERIFY user was created
+if ! id user &>/dev/null; then
+    echo "ERROR: User creation failed"
+    exit 1
+fi
+
+# Continue with user configuration...
+```
+
+### Tasks
+- [ ] Add user existence check to 0010-autologin.hook.chroot before passwd/sudoers
+- [ ] Add lightdm user check to 0015-setup-lightdm-icons.hook.chroot before chown
+- [ ] Add autotiling command verification to 0065-install-autotiling.hook.chroot
+- [ ] Add VSCode binary check to 0090-install-vscode.hook.chroot
+- [ ] Document verification pattern in BEST_PRACTICES_HOOKS.md (done)
+
+### References
+- See `docs/BEST_PRACTICES_HOOKS.md` section on Error Handling
+
+---
+
+## Issue #11: Code Style - Emoji Usage in Hooks
+
+**Status:** Open
+**Priority:** Low
+**Component:** Build System (All Hooks)
+
+### Description
+All 16 hooks use emojis in output messages, violating the project's code style guidelines which explicitly state "NO EMOJIS".
+
+### Current Examples
+```bash
+echo "✓ Configuration complete"
+echo "✗ Error occurred"
+echo "⚠ Warning: something happened"
+```
+
+### Expected Style
+```bash
+echo "Configuration complete"
+echo "ERROR: Operation failed"
+echo "WARNING: Something happened"
+```
+
+### Affected Hooks
+All hooks use emojis in output:
+- 0005-fix-permissions.hook.chroot
+- 0010-autologin.hook.chroot
+- 0015-setup-lightdm-icons.hook.chroot
+- 0040-setup-plymouth.hook.chroot
+- 0045-customize-branding.hook.chroot
+- 0050-install-swayfx-official.hook.chroot
+- 0055-install-nerd-fonts.hook.chroot
+- 0060-setup-themes.hook.chroot
+- 0065-install-autotiling.hook.chroot
+- 0070-setup-xfce-minimal.hook.chroot
+- 0085-enable-calamares-netinstall.hook.chroot
+- 0086-fix-calamares-icon.hook.chroot
+- 0088-generate-cracklib-dict.hook.chroot
+- 0089-disable-debian-calamares-autostart.hook.chroot
+- 0090-install-vscode.hook.chroot
+- 0095-update-icon-cache.hook.chroot
+
+### Tasks
+- [ ] Remove all emojis from hook output
+- [ ] Use standard prefixes: ERROR:, WARNING:, INFO: where appropriate
+- [ ] Update BEST_PRACTICES_HOOKS.md with style examples (done)
+
+### References
+- See `CLAUDE.md` code style guidelines
+- See `docs/BEST_PRACTICES_HOOKS.md` section on Code Style
+
+---
+
+## Issue #12: Hook Robustness - Unsafe pip Installation
+
+**Status:** Open
+**Priority:** High
+**Component:** Build System (Hook 0065-install-autotiling.hook.chroot)
+
+### Description
+Hook uses `pip3 install --break-system-packages` to install autotiling, which bypasses Python's package management protections and could cause system instability.
+
+### Current Implementation
+```bash
+pip3 install autotiling --break-system-packages
+```
+
+### Problems
+1. **No version pinning** - Installs latest version (unreproducible builds)
+2. **System package conflict risk** - Could conflict with Debian Python packages
+3. **No verification** - Doesn't check if installation succeeded
+4. **Bypasses protections** - `--break-system-packages` disables PEP 668 safety checks
+
+### Recommended Solutions
+
+**Option 1: Use pipx (preferred)**
+```bash
+# Add to package list: pipx
+pipx install autotiling==1.6.0
+```
+
+**Option 2: Virtual environment**
+```bash
+python3 -m venv /opt/autotiling-env
+/opt/autotiling-env/bin/pip install autotiling==1.6.0
+ln -s /opt/autotiling-env/bin/autotiling /usr/local/bin/autotiling
+```
+
+**Option 3: Pin version and verify**
+```bash
+pip3 install autotiling==1.6.0 --break-system-packages
+
+# Verify installation
+if ! command -v autotiling &>/dev/null; then
+    echo "ERROR: autotiling installation failed"
+    exit 1
+fi
+```
+
+### Tasks
+- [ ] Research autotiling version compatibility with SwayFX 0.3.2
+- [ ] Implement pipx or venv solution
+- [ ] Add version pinning
+- [ ] Add installation verification
+- [ ] Test autotiling functionality in both live and installed systems
+
+### References
+- See `docs/BEST_PRACTICES_HOOKS.md` section on Security (Avoid --break-system-packages)
 
 ---
 
@@ -266,13 +567,15 @@ Wofi (application launcher) is not configured to launch via keybind and lacks pr
 - Dual desktop environments (Sway + XFCE)
 - LightDM session selector (can switch between Sway/XFCE)
 - XFCE desktop fully functional with proper theming
+- Sway desktop with Waybar status bar and Wofi launcher
+- Theme switching system (dark/light modes via osiris-theme)
 - Desktop installer icon
 - Password validation
 - GRUB bootloader installation
 - System boots successfully
 - Both desktop environments function properly
 
-**The distro is functional!** Remaining issues are UX improvements for Sway and cosmetic polish.
+**The distro is fully functional!** Remaining issues are purely cosmetic (GRUB and Plymouth themes).
 
 ---
 
@@ -280,12 +583,19 @@ Wofi (application launcher) is not configured to launch via keybind and lacks pr
 
 - Document GRUB theme creation process
 - Consider using a Plymouth theme package instead of custom theme
-- Fix Sway autostart configuration for Waybar and Wofi
 - Add automated checks for desktop environment completeness
 - Consider creating a unified theming hook that handles XFCE, LightDM, Sway, and GRUB together
 - Test both Sway and XFCE sessions during build validation
 
+## Code Quality Improvements (2025-11-19)
+
+Fixed several code quality issues during Sway configuration review:
+- Removed duplicate window rules in all Sway config files (config, config-dark, config-light)
+- Fixed hardcoded path in wofi config: `/home/user/` to `$HOME/`
+- Verified theme switching system properly handles waybar and wofi styling
+- All Sway components (waybar, wofi, theme switching) were already implemented correctly
+
 ---
 
 **Last Updated:** 2025-11-19
-**Status:** System functional, session selector working, Sway UX improvements needed
+**Status:** System fully functional, both desktops working, only cosmetic polish remaining

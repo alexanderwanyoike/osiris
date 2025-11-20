@@ -40,6 +40,8 @@ layer_effects "wofi" {
 output * bg /usr/share/backgrounds/osiris/osiris-light.png fill
 
 ### Autostart
+exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK
+exec hash dbus-update-activation-environment 2>/dev/null && dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK
 exec waybar
 exec mako
 exec nm-applet
@@ -75,14 +77,13 @@ for_window [title="Picture-in-Picture"] floating enable, sticky enable
 
 ### Keybindings
 bindsym $mod+Return exec $term
-bindsym $mod+d exec $menu
+bindsym $mod+space exec $menu
 bindsym $mod+b exec firefox
 bindsym $mod+e exec thunar
 bindsym $mod+q kill
 bindsym $mod+f fullscreen
 bindsym $mod+v split toggle
 bindsym $mod+Shift+space floating toggle
-bindsym $mod+space focus mode_toggle
 bindsym $mod+Shift+c reload
 bindsym $mod+Shift+e exec swaymsg exit
 
@@ -155,9 +156,4 @@ bindsym XF86AudioMute exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
 bindsym XF86MonBrightnessUp exec brightnessctl set +5%
 bindsym XF86MonBrightnessDown exec brightnessctl set 5%-
 
-### Window Rules
-for_window [app_id="foot"] opacity 0.70, blur disable     
-for_window [app_id="thunar"] opacity 0.85, blur enable
-for_window [class="firefox"] opacity 0.95
-for_window [app_id="pavucontrol"] floating enable
-for_window [title="Picture-in-Picture"] floating enable, sticky enable
+exec autotiling -w 1 2 3 4 5
