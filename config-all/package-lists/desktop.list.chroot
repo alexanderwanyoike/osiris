@@ -93,6 +93,13 @@ lxappearance
 arc-theme
 elementary-xfce-icon-theme
 
+# LazyVim dependencies
+git
+curl
+ripgrep
+fd-find
+lazygit
+
 # Icon theme infrastructure
 hicolor-icon-theme
 adwaita-icon-theme

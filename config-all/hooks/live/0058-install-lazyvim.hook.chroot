@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+echo "Installing LazyVim for skeleton user..."
+
+# Clone LazyVim starter to temporary directory
+TEMP_DIR=$(mktemp -d)
+git clone https://github.com/LazyVim/starter "$TEMP_DIR"
+
+# Copy to /etc/skel/.config/nvim but exclude .git
+mkdir -p /etc/skel/.config/nvim
+cd "$TEMP_DIR"
+find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec cp -r {} /etc/skel/.config/nvim/ \;
+
+# Clean up temp directory
+rm -rf "$TEMP_DIR"
+
+# Create initial cache/state/share directories to avoid first-run issues
+mkdir -p /etc/skel/.local/share/nvim
+mkdir -p /etc/skel/.local/state/nvim
+mkdir -p /etc/skel/.cache/nvim
+
+# Ensure proper permissions
+chmod -R 755 /etc/skel/.config/nvim
+chmod -R 755 /etc/skel/.local
+
+echo "LazyVim installed successfully to /etc/skel"
