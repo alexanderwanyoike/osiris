@@ -31,11 +31,11 @@ fi
 chmod 755 /usr/share/backgrounds/osiris 2>/dev/null || true
 chmod 644 /usr/share/backgrounds/osiris/*.png 2>/dev/null || true
 
-# Fix skel .config directory permissions (includes autostart files)
+# Fix skel .config directory permissions (includes all config files)
 find /etc/skel/.config -type d -exec chmod 755 {} \; 2>/dev/null || true
 find /etc/skel/.config -type f -exec chmod 644 {} \; 2>/dev/null || true
 
-# Explicitly log autostart permission fixes
+# Explicitly log important config file permission fixes
 if [ -d "/etc/skel/.config/autostart" ]; then
     echo "✓ Fixed autostart files permissions"
 fi

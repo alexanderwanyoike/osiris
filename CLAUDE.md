@@ -11,6 +11,20 @@ Osiris is a custom Debian-based Linux distribution built using `live-build`. It 
 - Documentation should be clean and readable without decorative elements
 - Focus on technical accuracy and clarity
 
+## Development Guidelines
+
+**Research Before Implementation**:
+- **DO NOT GUESS** - Always research technical details before implementing solutions
+- Use WebSearch to look up documentation, specifications, and best practices
+- For configuration files, search for official documentation on syntax and supported features
+- For application behavior, consult official docs or reliable sources
+- Verify assumptions with research rather than trial-and-error
+- Examples of what to research:
+  - Does application X support tilde (~) expansion in config files?
+  - What is the exact syntax for configuration option Y?
+  - What are the documented behaviors of feature Z?
+- Only proceed with implementation after confirming technical details through research
+
 ## Project Architecture
 
 ### Build System
