@@ -31,7 +31,8 @@ EOF
 echo "  ✓ Created plymouthd.conf"
 
 # Set default Plymouth theme using update-alternatives
-update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth /usr/share/plymouth/themes/osiris/osiris.plymouth 150 --slave /usr/share/plymouth/themes/default.script default.script /usr/share/plymouth/themes/osiris/osiris.script
+# Note: two-step module doesn't use script files, so no --slave needed
+update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth /usr/share/plymouth/themes/osiris/osiris.plymouth 150
 update-alternatives --set default.plymouth /usr/share/plymouth/themes/osiris/osiris.plymouth
 echo "  ✓ Set Osiris as default Plymouth theme"
 
