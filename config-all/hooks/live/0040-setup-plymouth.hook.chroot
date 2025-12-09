@@ -17,7 +17,6 @@ echo "  Theme files present"
 # Register osiris theme with update-alternatives
 # This creates the /usr/share/plymouth/themes/default.plymouth symlink
 # that Debian's plymouth initramfs hook expects (it queries update-alternatives)
-# NOTE: Do NOT use --slave for default.script - two-step module doesn't use .script files
 update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth \
     /usr/share/plymouth/themes/osiris/osiris.plymouth 200
 
@@ -47,55 +46,6 @@ DeviceTimeout=8
 EOF
 echo "  Updated /usr/share/plymouth/plymouthd.defaults"
 
-# Custom initramfs hook for Plymouth fonts and default.plymouth symlink
-cat > /etc/initramfs-tools/hooks/zz-plymouth-osiris <<'EOFHOOK'
-#!/bin/sh
-PREREQ="plymouth"
-prereqs() { echo "$PREREQ"; }
-case $1 in prereqs) prereqs; exit 0 ;; esac
-
-. /usr/share/initramfs-tools/hook-functions
-
-THEMES="${DESTDIR}/usr/share/plymouth/themes"
-
-# Create default.plymouth symlink in initrd
-if [ -d "${THEMES}/osiris" ]; then
-    ln -sf osiris/osiris.plymouth "${THEMES}/default.plymouth"
-fi
-
-# Copy DejaVu fonts needed for two-step theme text rendering
-if [ -e /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf ]; then
-    mkdir -p "${DESTDIR}/usr/share/fonts/truetype/dejavu"
-    cp -a /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf "${DESTDIR}/usr/share/fonts/truetype/dejavu/"
-    cp -a /usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf "${DESTDIR}/usr/share/fonts/truetype/dejavu/" 2>/dev/null || true
-fi
-
-# Rebuild font cache in initrd
-if [ -x /usr/bin/fc-cache ]; then
-    fc-cache -s -y "${DESTDIR}" > /dev/null 2>&1 || true
-fi
-EOFHOOK
-chmod +x /etc/initramfs-tools/hooks/zz-plymouth-osiris
-echo "  Created initramfs hook for fonts and default.plymouth"
-
-# Patch the plymouth init-premount script to create /run/plymouth symlinks
-# This runs AFTER /run is mounted as tmpfs but BEFORE plymouthd starts
-# We insert our symlink creation right after "mkdir -m 0755 /run/plymouth"
-PLYMOUTH_SCRIPT="/usr/share/initramfs-tools/scripts/init-premount/plymouth"
-if [ -f "$PLYMOUTH_SCRIPT" ]; then
-    # Check if already patched
-    if ! grep -q "Plymouth 24 theme path fix" "$PLYMOUTH_SCRIPT"; then
-        sed -i '/mkdir -m 0755 \/run\/plymouth/a\
-    # Plymouth 24 theme path fix - create symlinks for runtime theme lookup\
-    ln -sf /usr/share/plymouth/themes /run/plymouth/themes\
-    ln -sf /usr/share/plymouth/plymouthd.defaults /run/plymouth/plymouthd.defaults\
-    ln -sf /etc/plymouth/plymouthd.conf /run/plymouth/plymouthd.conf' "$PLYMOUTH_SCRIPT"
-        echo "  Patched plymouth init-premount script for Plymouth 24"
-    else
-        echo "  Plymouth init-premount script already patched"
-    fi
-fi
-
 # Update initramfs
 echo "  Updating initramfs..."
 update-initramfs -u
@@ -103,5 +53,4 @@ update-initramfs -u
 echo ""
 echo "Plymouth configured:"
 echo "  Theme: osiris (two-step module)"
-echo "  Hook: zz-plymouth-osiris (fonts + default.plymouth symlink)"
-echo "  Patch: init-premount/plymouth (creates /run/plymouth symlinks at boot)"
+echo "  Method: update-alternatives + plymouthd.conf"
