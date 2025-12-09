@@ -141,6 +141,24 @@ qemu-system-x86_64 -enable-kvm -m 4096 -cdrom output/*.iso -boot d
 # Create VM, mount ISO from output/ directory
 ```
 
+## Debugging
+
+### Plymouth Debug Mode
+To debug Plymouth boot splash issues:
+1. At GRUB menu, press `e` to edit the boot entry
+2. Find the `linux` line and add `plymouth.debug`, remove `quiet`:
+   ```
+   linux /live/vmlinuz boot=live components splash plymouth.debug plymouth.ignore-serial-consoles vga=791
+   ```
+3. Press `F10` to boot
+4. After boot, check the debug log:
+   ```bash
+   sudo cat /var/log/plymouth-debug.log
+   journalctl -b | grep -i plymouth
+   ```
+
+**Note:** Plymouth 24 (Debian Trixie) looks for themes in `/run/plymouth/themes/` first, then falls back to `/usr/share/plymouth/themes/`.
+
 ## Key Features
 
 1. **Dual Desktop**: Both Sway and XFCE in one ISO - choose at login
