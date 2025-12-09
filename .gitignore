@@ -1,5 +1,8 @@
 # Osiris OS - Git Ignore
 
+# Reference configs (extracted from other distros)
+reference/
+
 # Build artifacts
 build/
 *.iso
