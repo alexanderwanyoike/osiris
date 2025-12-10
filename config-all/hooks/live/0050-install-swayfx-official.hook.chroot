@@ -6,15 +6,16 @@ set -e
 echo "=== Installing SwayFX dependencies ==="
 
 # Install library dependencies (build tools already installed via package list)
+# Note: Trixie has libpng version conflicts - update apt cache and install dev packages
+apt-get update
+
 apt-get install -y \
     wayland-protocols \
     libwayland-dev \
     libpcre2-dev \
     libjson-c-dev \
-    libpango-1.0-0 \
     libpango1.0-dev \
     libcairo2-dev \
-    libgdk-pixbuf-2.0-dev \
     libevdev-dev \
     libinput-dev \
     libxkbcommon-dev \

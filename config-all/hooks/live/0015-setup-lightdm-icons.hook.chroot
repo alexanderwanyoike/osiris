@@ -34,14 +34,32 @@ chown -R lightdm:lightdm /var/lib/lightdm/.config 2>/dev/null || true
 if [ -d "/usr/share/backgrounds/osiris" ]; then
     chmod 755 /usr/share/backgrounds/osiris
     chmod 644 /usr/share/backgrounds/osiris/*.png 2>/dev/null || true
-    echo "✓ Background permissions set"
+    echo "Background permissions set"
 fi
 
 # Verify slick-greeter configuration exists
 if [ -f "/etc/lightdm/slick-greeter.conf" ]; then
-    echo "✓ Slick-greeter configuration found"
+    echo "Slick-greeter configuration found"
 else
-    echo "⚠ Warning: /etc/lightdm/slick-greeter.conf not found"
+    echo "Warning: /etc/lightdm/slick-greeter.conf not found"
 fi
 
-echo "✓ LightDM greeter configuration complete"
+# Ensure badge directory exists with correct permissions
+if [ -d "/usr/share/slick-greeter/badges" ]; then
+    chmod 755 /usr/share/slick-greeter/badges
+    chmod 644 /usr/share/slick-greeter/badges/* 2>/dev/null || true
+    echo "Session badge permissions set"
+fi
+
+# Ensure session files are readable
+chmod 644 /usr/share/xsessions/*.desktop 2>/dev/null || true
+chmod 644 /usr/share/wayland-sessions/*.desktop 2>/dev/null || true
+echo "Session file permissions set"
+
+# Ensure sway wrapper script is executable
+if [ -f "/usr/local/bin/start-sway" ]; then
+    chmod 755 /usr/local/bin/start-sway
+    echo "Sway wrapper script permissions set"
+fi
+
+echo "LightDM greeter configuration complete"
