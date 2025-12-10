@@ -1,0 +1,53 @@
+# Osiris Alacritty Configuration - Dark Mode
+
+[window]
+padding = { x = 8, y = 8 }
+opacity = 0.75
+decorations = "full"
+
+[font]
+normal = { family = "JetBrainsMono Nerd Font Mono", style = "Regular" }
+bold = { family = "JetBrainsMono Nerd Font Mono", style = "Bold" }
+italic = { family = "JetBrainsMono Nerd Font Mono", style = "Italic" }
+size = 11.0
+
+[cursor]
+style = { shape = "Block", blinking = "On" }
+
+[scrolling]
+history = 10000
+
+[mouse]
+hide_when_typing = true
+
+# Colors - Dark Mode (Standard colors for shell themes)
+[colors.primary]
+background = "#000000"
+foreground = "#ffffff"
+
+[colors.normal]
+black   = "#000000"
+red     = "#cc0000"
+green   = "#4e9a06"
+yellow  = "#c4a000"
+blue    = "#3465a4"
+magenta = "#75507b"
+cyan    = "#06989a"
+white   = "#d3d7cf"
+
+[colors.bright]
+black   = "#555753"
+red     = "#ef2929"
+green   = "#8ae234"
+yellow  = "#fce94f"
+blue    = "#729fcf"
+magenta = "#ad7fa8"
+cyan    = "#34e2e2"
+white   = "#eeeeec"
+
+[keyboard]
+bindings = [
+  { key = "Plus", mods = "Control", action = "IncreaseFontSize" },
+  { key = "Minus", mods = "Control", action = "DecreaseFontSize" },
+  { key = "Key0", mods = "Control", action = "ResetFontSize" },
+]

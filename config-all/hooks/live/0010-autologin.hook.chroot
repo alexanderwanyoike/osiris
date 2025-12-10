@@ -5,8 +5,11 @@ set -e
 
 echo "=== Setting up live user ==="
 
+# Ensure zsh is installed before creating user with zsh shell
+apt-get install -y zsh
+
 # Create user named 'user' (matches live-build default)
-useradd -m -s /bin/bash -G sudo,audio,video,plugdev,netdev,input user 2>/dev/null || true
+useradd -m -s /bin/zsh -G sudo,audio,video,plugdev,netdev,input user 2>/dev/null || true
 
 # No password
 passwd -d user

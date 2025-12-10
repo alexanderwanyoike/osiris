@@ -2,7 +2,7 @@
 Name=Neovim
 GenericName=Text Editor
 Comment=Edit text files
-Exec=kitty nvim
+Exec=alacritty -e nvim
 Icon=nvim
 Terminal=false
 Type=Application

@@ -8,8 +8,11 @@ waybar
 
 # Terminals
 foot
-kitty
+alacritty
 xfce4-terminal
+
+# Shell
+zsh
 
 # App launcher
 wofi
