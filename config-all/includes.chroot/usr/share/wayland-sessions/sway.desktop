@@ -1,6 +1,9 @@
 [Desktop Entry]
+Version=1.0
 Name=Sway
-Comment=SwayFX - An i3-compatible Wayland compositor with effects
-Exec=sway
+Comment=SwayFX - An i3-compatible Wayland compositor
+Exec=dbus-run-session /usr/local/bin/sway
+TryExec=/usr/local/bin/sway
+Icon=sway
 Type=Application
 DesktopNames=sway
