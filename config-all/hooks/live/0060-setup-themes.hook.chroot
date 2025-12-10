@@ -41,6 +41,7 @@ set_theme_sway() {
     [ -f "$HOME/.config/waybar/style-$theme.css" ] && cp "$HOME/.config/waybar/style-$theme.css" "$HOME/.config/waybar/style.css"
     [ -f "$HOME/.config/wofi/style-$theme.css" ] && cp "$HOME/.config/wofi/style-$theme.css" "$HOME/.config/wofi/style.css"
     [ -f "$HOME/.config/foot/foot-$theme.ini" ] && cp "$HOME/.config/foot/foot-$theme.ini" "$HOME/.config/foot/foot.ini"
+    [ -f "$HOME/.config/alacritty/alacritty-$theme.toml" ] && cp "$HOME/.config/alacritty/alacritty-$theme.toml" "$HOME/.config/alacritty/alacritty.toml"
 
     # Update wofi config - use relative path (relative to $XDG_CONFIG_HOME/wofi)
     sed -i "s|stylesheet=.*|stylesheet=style.css|g" "$HOME/.config/wofi/config"
@@ -64,6 +65,7 @@ set_theme_sway() {
     echo "  • Waybar reloaded"
     echo "  • Wofi theme updated"
     echo "  • Foot theme updated"
+    echo "  • Alacritty theme updated"
     echo "  • GTK icon theme updated"
 }
 
@@ -92,12 +94,16 @@ set_theme_xfce() {
         cp "$HOME/.config/xfce4/terminal/terminalrc-$theme" "$HOME/.config/xfce4/terminal/terminalrc"
     fi
 
+    # Alacritty (also available in XFCE)
+    [ -f "$HOME/.config/alacritty/alacritty-$theme.toml" ] && cp "$HOME/.config/alacritty/alacritty-$theme.toml" "$HOME/.config/alacritty/alacritty.toml"
+
     # Restart XFCE components
     xfce4-panel -r 2>/dev/null || true
 
     echo "  • GTK theme updated"
     echo "  • Rofi theme updated"
     echo "  • XFCE Terminal updated"
+    echo "  • Alacritty theme updated"
     echo "  • Desktop wallpaper updated"
 }
 
@@ -162,6 +168,7 @@ SKEL_SWAY="/etc/skel/.config/sway"
 SKEL_WAYBAR="/etc/skel/.config/waybar"
 SKEL_WOFI="/etc/skel/.config/wofi"
 SKEL_FOOT="/etc/skel/.config/foot"
+SKEL_ALACRITTY="/etc/skel/.config/alacritty"
 
 # Copy dark configs as defaults
 if [ -f "$SKEL_SWAY/config-dark" ]; then
@@ -182,6 +189,11 @@ fi
 if [ -f "$SKEL_FOOT/foot-dark.ini" ]; then
     cp "$SKEL_FOOT/foot-dark.ini" "$SKEL_FOOT/foot.ini"
     echo "✓ Foot: dark mode set as default"
+fi
+
+if [ -f "$SKEL_ALACRITTY/alacritty-dark.toml" ]; then
+    cp "$SKEL_ALACRITTY/alacritty-dark.toml" "$SKEL_ALACRITTY/alacritty.toml"
+    echo "✓ Alacritty: dark mode set as default"
 fi
 
 # Create default theme marker
