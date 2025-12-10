@@ -97,6 +97,9 @@ elementary-xfce-icon-theme
 hicolor-icon-theme
 adwaita-icon-theme
 
+# SVG support for GdkPixbuf (needed for slick-greeter badges)
+librsvg2-common
+
 # Menu infrastructure for XFCE
 gnome-menus
 desktop-file-utils
