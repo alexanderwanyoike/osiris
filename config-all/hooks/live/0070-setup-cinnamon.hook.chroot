@@ -23,14 +23,15 @@ cat > /etc/dconf/db/local.d/00-osiris-defaults <<'EOF'
 enabled-applets=['panel1:left:0:menu@cinnamon.org:0', 'panel1:left:1:show-desktop@cinnamon.org:1', 'panel1:left:2:grouped-window-list@cinnamon.org:2', 'panel1:right:0:systray@cinnamon.org:3', 'panel1:right:1:xapp-status@cinnamon.org:4', 'panel1:right:2:notifications@cinnamon.org:5', 'panel1:right:3:printers@cinnamon.org:6', 'panel1:right:4:removable-drives@cinnamon.org:7', 'panel1:right:5:keyboard@cinnamon.org:8', 'panel1:right:6:favorites@cinnamon.org:9', 'panel1:right:7:network@cinnamon.org:10', 'panel1:right:8:sound@cinnamon.org:11', 'panel1:right:9:power@cinnamon.org:12', 'panel1:right:10:calendar@cinnamon.org:13']
 favorite-apps=['nemo.desktop', 'chromium.desktop', 'org.gnome.Terminal.desktop']
 panels-height=['1:40']
+app-menu-icon-name='osiris-menu'
 
 [org/cinnamon/desktop/interface]
-icon-theme='Papirus'
-gtk-theme='Adwaita'
-cursor-theme='Adwaita'
+icon-theme='Papirus-Light'
+gtk-theme='Arc-Lighter'
+cursor-theme='DMZ-White'
 
 [org/cinnamon/desktop/wm/preferences]
-theme='Adwaita'
+theme='Arc-Lighter'
 
 [org/cinnamon/desktop/background]
 picture-uri='file:///usr/share/backgrounds/osiris/osiris-light.png'
@@ -40,9 +41,12 @@ picture-options='zoom'
 name='cinnamon'
 
 [org/gnome/desktop/interface]
-icon-theme='Papirus'
-gtk-theme='Adwaita'
-color-scheme='default'
+icon-theme='Papirus-Light'
+gtk-theme='Arc-Lighter'
+color-scheme='prefer-light'
+
+[org/x/apps/portal]
+color-scheme='prefer-light'
 
 [org/nemo/preferences]
 show-hidden-files=false
@@ -71,16 +75,11 @@ cat > /etc/skel/.config/cinnamon/spices/menu@cinnamon.org/0.json <<'EOF'
 }
 EOF
 
-# Create GTK settings for light theme
-mkdir -p /etc/skel/.config/gtk-3.0
-cat > /etc/skel/.config/gtk-3.0/settings.ini <<'EOF'
-[Settings]
-gtk-theme-name=Adwaita
-gtk-icon-theme-name=Papirus
-gtk-cursor-theme-name=Adwaita
-gtk-font-name=Sans 10
-gtk-application-prefer-dark-theme=0
-EOF
+# NOTE: We do NOT set gtk-theme-name in settings.ini because it overrides gsettings
+# and prevents Cinnamon theme switching from working. GTK will read theme from
+# gsettings (org.cinnamon.desktop.interface/gtk-theme) instead.
+# The static file at /etc/skel/.config/gtk-3.0/settings.ini only contains
+# non-theme settings like font rendering options.
 
 # Set light wallpaper as default
 if [ -f /usr/share/backgrounds/osiris/osiris-light.png ]; then
@@ -89,7 +88,7 @@ fi
 
 echo ""
 echo "=== Cinnamon setup complete ==="
-echo "Default theme: Light (Adwaita)"
+echo "Default theme: Light (Arc-Lighter)"
 echo "Icon theme: Papirus"
 echo "Menu icon: Osiris logo"
 echo "Use Settings > Themes to switch between light and dark modes"

@@ -86,6 +86,13 @@ xorg
 papirus-icon-theme
 hicolor-icon-theme
 adwaita-icon-theme
+arc-theme
+dmz-cursor-theme
+gnome-themes-extra
+gtk2-engines-murrine
+gtk2-engines-pixbuf
+xdg-desktop-portal-gtk
+xdg-desktop-portal-xapp
 
 # dconf for Cinnamon settings
 dconf-cli

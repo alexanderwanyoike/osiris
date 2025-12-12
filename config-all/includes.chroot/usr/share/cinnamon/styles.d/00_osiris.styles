@@ -1,0 +1,16 @@
+{
+  "styles": [
+    {
+      "name": "Osiris",
+      "mixed": [
+          {"name": "default", "color": "#5294e2", "gtk": "Arc", "icons": "Papirus", "cinnamon": "cinnamon", "cursor": "DMZ-White", "default": "true"}
+        ],
+      "dark": [
+          {"name": "default", "color": "#5294e2", "gtk": "Arc-Dark", "icons": "Papirus-Dark", "cinnamon": "cinnamon", "cursor": "DMZ-White", "default": "true"}
+        ],
+      "light": [
+          {"name": "default", "color": "#5294e2", "gtk": "Arc-Lighter", "icons": "Papirus-Light", "cinnamon": "cinnamon", "cursor": "DMZ-White", "default": "true"}
+        ]
+    }
+  ]
+}
