@@ -9,16 +9,12 @@ waybar
 # Terminals
 foot
 alacritty
-xfce4-terminal
 
 # Shell
 zsh
 
-# App launcher
+# App launcher (Sway)
 wofi
-
-# File manager
-thunar
 
 # Network
 network-manager-gnome
@@ -38,7 +34,7 @@ mako-notifier
 grim
 slurp
 
-# Wallpaper
+# Wallpaper (Sway)
 swaybg
 
 # Clipboard
@@ -56,7 +52,6 @@ cracklib-runtime
 squashfs-tools
 
 # Bootloader (needed for Calamares to install GRUB)
-# Using -bin packages to avoid conflicts between BIOS and UEFI
 grub-pc-bin
 grub-efi-amd64-bin
 grub-efi-amd64-signed
@@ -82,30 +77,35 @@ calamares-settings-debian
 polkitd
 pkexec
 
-# XFCE Desktop Environment
-xfce4
+# Cinnamon Desktop Environment
+cinnamon-core
 xserver-xorg
 xorg
 
-# Beautiful Minimalism Additions
-rofi
-plank
-picom
-neovim
-lxappearance
-arc-theme
-elementary-xfce-icon-theme
-
-# Icon theme infrastructure
+# Theme and icons
+papirus-icon-theme
 hicolor-icon-theme
 adwaita-icon-theme
+arc-theme
+dmz-cursor-theme
+gnome-themes-extra
+gtk2-engines-murrine
+gtk2-engines-pixbuf
+xdg-desktop-portal-gtk
+xdg-desktop-portal-xapp
+
+# dconf for Cinnamon settings
+dconf-cli
 
 # SVG support for GdkPixbuf (needed for slick-greeter badges)
 librsvg2-common
 
-# Menu infrastructure for XFCE
+# Menu infrastructure
 gnome-menus
 desktop-file-utils
 shared-mime-info
+
+# Additional tools
+neovim
 
 # Note: VSCode installed via hook
