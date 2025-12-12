@@ -12,6 +12,15 @@ if [ ! -f /usr/share/plymouth/themes/osiris/watermark.png ]; then
     echo "  ERROR: watermark.png not found!"
     exit 1
 fi
+
+# Check watermark size - should be ~39KB (our logo), not ~3KB (Debian text)
+WATERMARK_SIZE=$(stat -c%s /usr/share/plymouth/themes/osiris/watermark.png)
+echo "  Watermark size: ${WATERMARK_SIZE} bytes"
+if [ "$WATERMARK_SIZE" -lt 10000 ]; then
+    echo "  WARNING: Watermark appears to be replaced by Debian default!"
+    echo "  This should not happen - check if desktop-base is overwriting files"
+fi
+
 echo "  Theme files present"
 
 # Register osiris theme with update-alternatives
