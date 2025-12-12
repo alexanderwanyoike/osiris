@@ -1,7 +1,7 @@
 # Osiris OS - Project Context
 
 ## Overview
-Osiris is a custom Debian-based Linux distribution built using `live-build`. It provides a minimal, polished desktop experience with **both Sway (Wayland) and XFCE (X11)** desktop environments in a single ISO. Users can choose which desktop to use at login.
+Osiris is a custom Debian-based Linux distribution built using `live-build`. It provides a minimal, polished desktop experience with **both Sway (Wayland) and Cinnamon (X11)** desktop environments in a single ISO. Users can choose which desktop to use at login.
 
 ## Code Style Guidelines
 
@@ -43,7 +43,7 @@ Both desktop environments are included in a single ISO. Users select which to us
 
 #### Sway (Wayland)
 - **Compositor**: SwayFX (custom-built from source)
-- **Terminal**: Foot
+- **Terminal**: Foot, Alacritty
 - **Status Bar**: Waybar
 - **App Launcher**: Wofi
 - **Features**:
@@ -52,16 +52,19 @@ Both desktop environments are included in a single ISO. Users select which to us
   - Auto-tiling support
   - Nerd Fonts
 
-#### XFCE (X11)
-- **Desktop**: XFCE4 (minimal)
-- **Terminal**: xfce4-terminal
+#### Cinnamon (X11)
+- **Desktop**: Cinnamon (modern, polished)
+- **File Manager**: Nemo
 - **Display Server**: Xorg
-- **Traditional desktop experience**
+- **Features**:
+  - Built-in theme switching via Settings > Themes
+  - Light theme default with Papirus icons
+  - Osiris logo as menu icon
+  - Modern, familiar desktop experience
 
 ### Common Components
 - **Display Manager**: LightDM with auto-login and session selection
-- **File Manager**: Thunar (works in both desktops)
-- **Browser**: Firefox ESR
+- **Browser**: Chromium
 - **IDE**: VSCode (installed via hook from Microsoft repo)
 - **Network**: NetworkManager with GNOME applet
 - **Audio**: PipeWire with PulseAudio compatibility
@@ -76,13 +79,13 @@ osiris/
 ├── Makefile                # Clean target
 ├── .gitignore              # Excludes build artifacts, ISOs, output/
 ├── config/                 # GENERATED - copied from config-all/
-├── config-all/             # Main configuration (Sway + XFCE)
-│   ├── hooks/live/         # Chroot hooks (numbered 0010-0090)
+├── config-all/             # Main configuration (Sway + Cinnamon)
+│   ├── hooks/live/         # Chroot hooks (numbered 0010-0095)
 │   ├── includes.chroot/    # Files to copy into ISO
-│   │   ├── etc/skel/.config/  # Sway default configs
+│   │   ├── etc/skel/.config/  # Default user configs
 │   │   └── usr/share/backgrounds/  # Wallpapers
 │   └── package-lists/      # Package lists
-│       ├── desktop.list.chroot      # Both Sway and XFCE packages
+│       ├── desktop.list.chroot      # Sway and Cinnamon packages
 │       ├── build-tools.list.chroot  # Build tools for SwayFX
 │       └── fonts.list.chroot        # Font packages
 └── output/                 # Build output (gitignored)
@@ -93,24 +96,22 @@ osiris/
 Hooks are bash scripts that run during the `chroot` phase of the build. They execute in numerical order:
 
 ### Hooks
-- **0010-autologin.hook.chroot**: Creates `user` account with passwordless sudo and LightDM auto-login with session selection
-- **0050-install-swayfx-official.hook.chroot**: Builds wlroots 0.16.2 and SwayFX 0.3.2 from source
+- **0010-autologin.hook.chroot**: Creates `user` account with passwordless sudo and LightDM auto-login
+- **0050-install-swayfx-official.hook.chroot**: Builds wlroots and SwayFX from source
 - **0055-install-nerd-fonts.hook.chroot**: Installs Nerd Fonts
-- **0060-setup-themes.hook.chroot**:
-  - Sets dark mode as default for Sway
-  - Installs `osiris-theme` CLI tool for theme switching
-  - Supports dark/light toggle for Sway, Waybar, Wofi, Foot
+- **0060-setup-themes.hook.chroot**: Sets dark mode as default for Sway, installs `osiris-theme` CLI
 - **0065-install-autotiling.hook.chroot**: Installs i3-autotiling for Sway
+- **0070-setup-cinnamon.hook.chroot**: Configures Cinnamon defaults (light theme, Papirus icons, menu icon)
 - **0090-install-vscode.hook.chroot**: Adds Microsoft repo and installs VSCode
 
 ## Package Lists
 
 ### desktop.list.chroot
-Contains packages for both Sway and XFCE:
-- Sway ecosystem: waybar, foot, wofi, swaybg, etc.
-- XFCE ecosystem: xfce4, xserver-xorg, xorg
-- Common: thunar, firefox-esr, network-manager-gnome
-- Display manager: lightdm, lightdm-gtk-greeter
+Contains packages for both Sway and Cinnamon:
+- Sway ecosystem: waybar, foot, wofi, swaybg, alacritty
+- Cinnamon: cinnamon-core, xserver-xorg, xorg
+- Common: chromium, network-manager-gnome, papirus-icon-theme
+- Display manager: lightdm, slick-greeter, lightdm-gtk-greeter
 
 ### build-tools.list.chroot
 Build tools for compiling SwayFX:
@@ -161,12 +162,14 @@ To debug Plymouth boot splash issues:
 
 ## Key Features
 
-1. **Dual Desktop**: Both Sway and XFCE in one ISO - choose at login
-2. **Live Boot + Installer**: Supports both live sessions and installation via debian-installer
+1. **Dual Desktop**: Both Sway and Cinnamon in one ISO - choose at login
+2. **Live Boot + Installer**: Supports both live sessions and installation via Calamares
 3. **Minimal & Bloat-free**: Only essential packages included
 4. **Auto-login**: LightDM auto-login to `user` account on live boot
 5. **Passwordless Sudo**: User has full sudo access without password
-6. **Theme System** (Sway): Dark/light mode switching via `osiris-theme` command
+6. **Theme System**:
+   - Sway: Dark/light mode switching via `osiris-theme` command
+   - Cinnamon: Use built-in Settings > Themes
 7. **Custom Builds**: SwayFX built from source for modern compositor features
 
 ## Important Notes
@@ -176,7 +179,7 @@ To debug Plymouth boot splash issues:
 - **Build time**: 30-60 minutes
 - **Privileged container**: Docker runs with `--privileged` flag for ISO creation
 - **Debian version**: Trixie (testing) - bleeding edge but stable
-- **Session selection**: At LightDM greeter, choose Sway or XFCE
+- **Session selection**: At LightDM greeter, choose Sway or Cinnamon
 
 ## Development Workflow
 
@@ -190,8 +193,8 @@ To debug Plymouth boot splash issues:
 
 The LightDM greeter allows users to select between:
 - **Sway Session**: Modern Wayland compositor with SwayFX, theme switcher, auto-tiling, Waybar, Wofi
-- **XFCE Session**: Complete XFCE4 desktop with traditional workflow
+- **Cinnamon Session**: Modern traditional desktop with familiar workflow, built-in theme switching
 
-**Shared Components**: VSCode, Firefox, Thunar file manager work in both desktops.
+**Shared Components**: VSCode, Chromium, NetworkManager work in both desktops.
 
-**Use Case**: Perfect for users who want flexibility - modern Wayland for daily use, traditional X11 for compatibility.
+**Use Case**: Perfect for users who want flexibility - modern Wayland for power users, polished Cinnamon for traditional desktop experience.

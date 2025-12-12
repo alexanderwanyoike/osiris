@@ -1,0 +1,95 @@
+#!/bin/bash
+# Setup Cinnamon desktop environment defaults
+
+set -e
+
+echo "=== Setting up Cinnamon desktop ==="
+
+# Create dconf profile directory
+mkdir -p /etc/dconf/profile
+mkdir -p /etc/dconf/db/local.d
+
+# Create dconf profile
+cat > /etc/dconf/profile/user <<'EOF'
+user-db:user
+system-db:local
+EOF
+
+# Create Cinnamon default settings
+cat > /etc/dconf/db/local.d/00-osiris-defaults <<'EOF'
+# Osiris OS - Cinnamon Default Settings
+
+[org/cinnamon]
+enabled-applets=['panel1:left:0:menu@cinnamon.org:0', 'panel1:left:1:show-desktop@cinnamon.org:1', 'panel1:left:2:grouped-window-list@cinnamon.org:2', 'panel1:right:0:systray@cinnamon.org:3', 'panel1:right:1:xapp-status@cinnamon.org:4', 'panel1:right:2:notifications@cinnamon.org:5', 'panel1:right:3:printers@cinnamon.org:6', 'panel1:right:4:removable-drives@cinnamon.org:7', 'panel1:right:5:keyboard@cinnamon.org:8', 'panel1:right:6:favorites@cinnamon.org:9', 'panel1:right:7:network@cinnamon.org:10', 'panel1:right:8:sound@cinnamon.org:11', 'panel1:right:9:power@cinnamon.org:12', 'panel1:right:10:calendar@cinnamon.org:13']
+favorite-apps=['nemo.desktop', 'chromium.desktop', 'org.gnome.Terminal.desktop']
+panels-height=['1:40']
+
+[org/cinnamon/desktop/interface]
+icon-theme='Papirus'
+gtk-theme='Adwaita'
+cursor-theme='Adwaita'
+
+[org/cinnamon/desktop/wm/preferences]
+theme='Adwaita'
+
+[org/cinnamon/desktop/background]
+picture-uri='file:///usr/share/backgrounds/osiris/osiris-light.png'
+picture-options='zoom'
+
+[org/cinnamon/theme]
+name='cinnamon'
+
+[org/gnome/desktop/interface]
+icon-theme='Papirus'
+gtk-theme='Adwaita'
+color-scheme='default'
+
+[org/nemo/preferences]
+show-hidden-files=false
+default-folder-viewer='icon-view'
+EOF
+
+# Update dconf database
+dconf update
+
+# Set menu icon to Osiris logo
+# This is done via applet configuration - create a config file
+mkdir -p /etc/skel/.config/cinnamon/spices/menu@cinnamon.org
+
+cat > /etc/skel/.config/cinnamon/spices/menu@cinnamon.org/0.json <<'EOF'
+{
+    "menu-icon-custom": {
+        "type": "checkbox",
+        "default": false,
+        "value": true
+    },
+    "menu-icon": {
+        "type": "iconfilechooser",
+        "default": "cinnamon-symbolic",
+        "value": "osiris-menu"
+    }
+}
+EOF
+
+# Create GTK settings for light theme
+mkdir -p /etc/skel/.config/gtk-3.0
+cat > /etc/skel/.config/gtk-3.0/settings.ini <<'EOF'
+[Settings]
+gtk-theme-name=Adwaita
+gtk-icon-theme-name=Papirus
+gtk-cursor-theme-name=Adwaita
+gtk-font-name=Sans 10
+gtk-application-prefer-dark-theme=0
+EOF
+
+# Set light wallpaper as default
+if [ -f /usr/share/backgrounds/osiris/osiris-light.png ]; then
+    echo "Light wallpaper available"
+fi
+
+echo ""
+echo "=== Cinnamon setup complete ==="
+echo "Default theme: Light (Adwaita)"
+echo "Icon theme: Papirus"
+echo "Menu icon: Osiris logo"
+echo "Use Settings > Themes to switch between light and dark modes"
