@@ -27,6 +27,24 @@ pavucontrol
 firmware-linux-free
 firmware-linux-nonfree
 
+<<<<<<< Updated upstream
+=======
+# Wireless firmware - covers most common WiFi chipsets
+firmware-iwlwifi
+firmware-atheros
+firmware-realtek
+firmware-brcm80211
+firmware-mediatek
+firmware-ralink
+
+# Wireless tools
+wireless-tools
+rfkill
+iw
+wpasupplicant
+wireless-regdb
+
+>>>>>>> Stashed changes
 # Notifications
 mako-notifier
 
