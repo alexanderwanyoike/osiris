@@ -27,9 +27,21 @@ network-manager-gnome
 pipewire-audio
 pavucontrol
 
-# Firmware
+# Firmware - base packages
 firmware-linux-free
 firmware-linux-nonfree
+
+# Wireless firmware - covers most common WiFi chipsets
+firmware-iwlwifi
+firmware-atheros
+firmware-realtek
+firmware-brcm80211
+firmware-mediatek
+firmware-ralink
+
+# Wireless tools
+wireless-tools
+rfkill
 
 # Notifications
 mako-notifier
