@@ -34,7 +34,6 @@ CMD lb config \
     --debian-installer live \
     --debian-installer-gui true \
     --debian-installer-distribution trixie \
-    --bootloaders "grub-efi,grub-pc" \
     --bootappend-live "boot=live components quiet splash" \
     --apt-indices false \
     --apt-recommends false && \
