@@ -18,6 +18,9 @@ wofi
 
 # Network
 network-manager-gnome
+gnome-keyring
+libsecret-tools
+lxpolkit
 
 # Audio - use pipewire for both
 pipewire-audio
@@ -27,8 +30,6 @@ pavucontrol
 firmware-linux-free
 firmware-linux-nonfree
 
-<<<<<<< Updated upstream
-=======
 # Wireless firmware - covers most common WiFi chipsets
 firmware-iwlwifi
 firmware-atheros
@@ -44,7 +45,6 @@ iw
 wpasupplicant
 wireless-regdb
 
->>>>>>> Stashed changes
 # Notifications
 mako-notifier
 
@@ -125,5 +125,57 @@ shared-mime-info
 
 # Additional tools
 neovim
+
+# Bluetooth
+bluez
+blueman
+
+# USB/Storage automounting
+udisks2
+gvfs
+gvfs-backends
+
+# Printing
+cups
+system-config-printer
+
+# Power management (laptops)
+power-profiles-daemon
+upower
+
+# Input devices (touchpad, etc.)
+xserver-xorg-input-libinput
+libinput-tools
+
+# File archiving
+file-roller
+zip
+unzip
+p7zip-full
+
+# Multimedia codecs
+gstreamer1.0-plugins-base
+gstreamer1.0-plugins-good
+gstreamer1.0-plugins-ugly
+gstreamer1.0-libav
+
+# Basic GUI apps
+evince
+eog
+gnome-calculator
+gnome-disk-utility
+gnome-system-monitor
+
+# Screen lock (Sway)
+swaylock
+swayidle
+
+# CLI essentials
+htop
+wget
+curl
+git
+bash-completion
+man-db
 
 # Note: VSCode installed via hook
