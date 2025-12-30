@@ -12,7 +12,13 @@ RUN apt-get update && \
     ca-certificates \
     xorriso \
     isolinux \
-    syslinux-common && \
+    syslinux-common \
+    grub-pc-bin \
+    grub-efi-amd64-bin \
+    grub-efi-amd64-signed \
+    shim-signed \
+    mtools \
+    dosfstools && \
     rm -rf /var/lib/apt/lists/*
 
 # Working directory
@@ -28,6 +34,7 @@ CMD lb config \
     --debian-installer live \
     --debian-installer-gui true \
     --debian-installer-distribution trixie \
+    --bootloaders "grub-efi,grub-pc" \
     --bootappend-live "boot=live components quiet splash" \
     --apt-indices false \
     --apt-recommends false && \

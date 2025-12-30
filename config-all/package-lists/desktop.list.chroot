@@ -178,4 +178,7 @@ git
 bash-completion
 man-db
 
+# Locales
+locales
+
 # Note: VSCode installed via hook

@@ -1,0 +1,24 @@
+# Osiris OS GRUB Theme
+desktop-image: "background.png"
+desktop-color: "#000000"
+title-text: ""
+terminal-font: "DejaVu Sans Mono Regular 12"
+terminal-left: "0"
+terminal-top: "0"
+terminal-width: "100%"
+terminal-height: "100%"
+
++ boot_menu {
+    left = 15%
+    top = 35%
+    width = 70%
+    height = 40%
+    item_font = "DejaVu Sans Regular 14"
+    item_color = "#cccccc"
+    selected_item_font = "DejaVu Sans Bold 14"
+    selected_item_color = "#ffffff"
+    item_height = 28
+    item_padding = 5
+    item_spacing = 5
+    scrollbar = false
+}
