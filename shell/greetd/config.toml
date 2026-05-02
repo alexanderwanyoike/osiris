@@ -1,0 +1,10 @@
+# greetd configuration for Osiris.
+# Installed to /etc/greetd/config.toml during Phase 2 install. Not used during
+# host development.
+
+[terminal]
+vt = 1
+
+[default_session]
+command = "tuigreet --time --remember --remember-user-session --asterisks --cmd Hyprland"
+user    = "greeter"
