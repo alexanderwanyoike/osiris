@@ -1,200 +1,59 @@
 # Osiris OS - Project Context
 
 ## Overview
-Osiris is a custom Debian-based Linux distribution built using `live-build`. It provides a minimal, polished desktop experience with **both Sway (Wayland) and Cinnamon (X11)** desktop environments in a single ISO. Users can choose which desktop to use at login.
 
-## Code Style Guidelines
+Osiris is a minimal AI-first Linux distribution. v2 is being built ground-up after v1 (Debian + live-build, dual Sway/Cinnamon desktop) was scrapped as too painful to build and too bloated.
 
-**IMPORTANT**: This project maintains a professional, technical tone:
-- **NO EMOJIS** - Do not use emojis in code, documentation, commit messages, or any project files
-- Keep all communication clear, technical, and professional
-- Documentation should be clean and readable without decorative elements
-- Focus on technical accuracy and clarity
+The full design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Read it before making non-trivial decisions.
 
-## Development Guidelines
+The build order and priorities are in [docs/ROADMAP.md](docs/ROADMAP.md). Refer to it before starting new work.
 
-**Research Before Implementation**:
-- **DO NOT GUESS** - Always research technical details before implementing solutions
-- Use WebSearch to look up documentation, specifications, and best practices
-- For configuration files, search for official documentation on syntax and supported features
-- For application behavior, consult official docs or reliable sources
-- Verify assumptions with research rather than trial-and-error
-- Examples of what to research:
-  - Does application X support tilde (~) expansion in config files?
-  - What is the exact syntax for configuration option Y?
-  - What are the documented behaviors of feature Z?
-- Only proceed with implementation after confirming technical details through research
+## Stack at a glance
 
-## Project Architecture
+- **Base**: Arch Linux
+- **Compositor**: Hyprland
+- **Desktop shell**: AGS / Astal (TypeScript over GTK)
+- **Chat UI**: webview hosting a TS web app
+- **Harness daemon**: Bun + TypeScript
+- **Installer**: webview frontend + Bun backend, packaged as a live ISO via mkosi
+- **Default model**: Gemma 4 2B local via Ollama, with optional cloud providers (OpenAI, Claude, Gemini, OpenRouter)
+- **User shell**: bash (universal, expected; do not propose alternatives as default)
 
-### Build System
-- **Base**: Debian Trixie (testing)
-- **Build Tool**: `live-build` in Docker container
-- **Build Method**: Single build script that:
-  1. Cleans previous builds
-  2. Copies `config-all/` to `config/`
-  3. Builds Docker image (`osiris-builder`)
-  4. Runs `lb config` and `lb build` in container
-  5. Outputs ISO to `output/` directory
+## Hard rules
 
-### Desktop Environments
+### No bash that we author
 
-Both desktop environments are included in a single ISO. Users select which to use at the LightDM login screen.
+The v1 pain point was bash chroot hooks inside a 30-60 minute Docker build with no stack traces. v2 contains zero `.sh` files we wrote. Build, install, hooks, glue: all Python or TypeScript. Agent shell tool spawns binaries via argv arrays (`Bun.spawn(["pacman", ...])`), never `bash -c`.
 
-#### Sway (Wayland)
-- **Compositor**: SwayFX (custom-built from source)
-- **Terminal**: Foot, Alacritty
-- **Status Bar**: Waybar
-- **App Launcher**: Wofi
-- **Features**:
-  - Theme switching system (dark/light modes via `osiris-theme` command)
-  - Custom wallpapers
-  - Auto-tiling support
-  - Nerd Fonts
+bash exists on the system as an Arch dependency and is the user's interactive shell. The rule is about what we author, not what's installed.
 
-#### Cinnamon (X11)
-- **Desktop**: Cinnamon (modern, polished)
-- **File Manager**: Nemo
-- **Display Server**: Xorg
-- **Features**:
-  - Built-in theme switching via Settings > Themes
-  - Light theme default with Papirus icons
-  - Osiris logo as menu icon
-  - Modern, familiar desktop experience
+### No emojis
 
-### Common Components
-- **Display Manager**: LightDM with auto-login and session selection
-- **Browser**: Chromium
-- **IDE**: VSCode (installed via hook from Microsoft repo)
-- **Network**: NetworkManager with GNOME applet
-- **Audio**: PipeWire with PulseAudio compatibility
-- **Firmware**: linux-free and linux-nonfree
+Project-wide: no emojis in code, configs, docs, commit messages, or PR descriptions. Keep tone professional and technical.
 
-## Directory Structure
+### Research before implementation
 
-```
-osiris/
-├── Dockerfile              # Docker image with live-build
-├── build.sh                # Main build script
-├── Makefile                # Clean target
-├── .gitignore              # Excludes build artifacts, ISOs, output/
-├── config/                 # GENERATED - copied from config-all/
-├── config-all/             # Main configuration (Sway + Cinnamon)
-│   ├── hooks/live/         # Chroot hooks (numbered 0010-0095)
-│   ├── includes.chroot/    # Files to copy into ISO
-│   │   ├── etc/skel/.config/  # Default user configs
-│   │   └── usr/share/backgrounds/  # Wallpapers
-│   └── package-lists/      # Package lists
-│       ├── desktop.list.chroot      # Sway and Cinnamon packages
-│       ├── build-tools.list.chroot  # Build tools for SwayFX
-│       └── fonts.list.chroot        # Font packages
-└── output/                 # Build output (gitignored)
-```
+Do not guess technical details. Use WebSearch for documentation, syntax, supported features. Verify assumptions before writing code. Examples: "does this config file support tilde expansion," "what is the exact pacman syntax for X," "what tool flag does Y."
 
-## Hook System
+### Thinness rules for the harness
 
-Hooks are bash scripts that run during the `chroot` phase of the build. They execute in numerical order:
+The default model is small (2-4B parameters). Every token in system prompts and tool descriptions costs context. Therefore: system prompts under ~500 tokens, tool descriptions one short sentence each, tools added per mode rather than all at once, no chain-of-thought scaffolding in prompts.
 
-### Hooks
-- **0010-autologin.hook.chroot**: Creates `user` account with passwordless sudo and LightDM auto-login
-- **0050-install-swayfx-official.hook.chroot**: Builds wlroots and SwayFX from source
-- **0055-install-nerd-fonts.hook.chroot**: Installs Nerd Fonts
-- **0060-setup-themes.hook.chroot**: Sets dark mode as default for Sway, installs `osiris-theme` CLI
-- **0065-install-autotiling.hook.chroot**: Installs i3-autotiling for Sway
-- **0070-setup-cinnamon.hook.chroot**: Configures Cinnamon defaults (light theme, Papirus icons, menu icon)
-- **0090-install-vscode.hook.chroot**: Adds Microsoft repo and installs VSCode
+### Permission model defaults
 
-## Package Lists
+PLAN mode (read-only) is the install default. DEFAULT mode (ask-on-risky) and ALLOW ALL are user-toggled. `shell_exec` always runs in a bubblewrap sandbox. Sudo always prompts.
 
-### desktop.list.chroot
-Contains packages for both Sway and Cinnamon:
-- Sway ecosystem: waybar, foot, wofi, swaybg, alacritty
-- Cinnamon: cinnamon-core, xserver-xorg, xorg
-- Common: chromium, network-manager-gnome, papirus-icon-theme
-- Display manager: lightdm, slick-greeter, lightdm-gtk-greeter
+## Development workflow
 
-### build-tools.list.chroot
-Build tools for compiling SwayFX:
-- cmake, meson, ninja-build
-- build-essential, gcc, g++
-- Python 3 and pip
+Phase 1 (shell) can be developed on any Linux machine without an Arch VM. Symlink the AGS configs in this repo into `~/.config/ags`, point Hyprland at `shell/hyprland/`, iterate. No ISO build needed for shell development.
 
-### fonts.list.chroot
-Font packages for both desktops
+Phase 2 (installer) requires testing in a VM (QEMU recommended) once mkosi produces an ISO.
 
-## Build Commands
+Phase 3 (harness) develops alongside the shell in a Bun project; the daemon can run on the dev host.
 
-```bash
-# Build Osiris OS
-./build.sh
+## What this project is not
 
-# Clean all builds
-make clean
-```
-
-## Testing
-
-```bash
-# QEMU
-qemu-system-x86_64 -enable-kvm -m 4096 -cdrom output/*.iso -boot d
-
-# VirtualBox
-# Create VM, mount ISO from output/ directory
-```
-
-## Debugging
-
-### Plymouth Debug Mode
-To debug Plymouth boot splash issues:
-1. At GRUB menu, press `e` to edit the boot entry
-2. Find the `linux` line and add `plymouth.debug`, remove `quiet`:
-   ```
-   linux /live/vmlinuz boot=live components splash plymouth.debug plymouth.ignore-serial-consoles vga=791
-   ```
-3. Press `F10` to boot
-4. After boot, check the debug log:
-   ```bash
-   sudo cat /var/log/plymouth-debug.log
-   journalctl -b | grep -i plymouth
-   ```
-
-**Note:** Plymouth 24 (Debian Trixie) looks for themes in `/run/plymouth/themes/` first, then falls back to `/usr/share/plymouth/themes/`.
-
-## Key Features
-
-1. **Dual Desktop**: Both Sway and Cinnamon in one ISO - choose at login
-2. **Live Boot + Installer**: Supports both live sessions and installation via Calamares
-3. **Minimal & Bloat-free**: Only essential packages included
-4. **Auto-login**: LightDM auto-login to `user` account on live boot
-5. **Passwordless Sudo**: User has full sudo access without password
-6. **Theme System**:
-   - Sway: Dark/light mode switching via `osiris-theme` command
-   - Cinnamon: Use built-in Settings > Themes
-7. **Custom Builds**: SwayFX built from source for modern compositor features
-
-## Important Notes
-
-- **config/ directory**: GENERATED at build time, gitignored
-- **output/ directory**: Build artifacts, gitignored
-- **Build time**: 30-60 minutes
-- **Privileged container**: Docker runs with `--privileged` flag for ISO creation
-- **Debian version**: Trixie (testing) - bleeding edge but stable
-- **Session selection**: At LightDM greeter, choose Sway or Cinnamon
-
-## Development Workflow
-
-1. Modify configs in `config-all/`
-2. Run `./build.sh`
-3. Build script cleans, copies config, and rebuilds ISO
-4. Test ISO in VM
-5. Iterate
-
-## Session Selection Details
-
-The LightDM greeter allows users to select between:
-- **Sway Session**: Modern Wayland compositor with SwayFX, theme switcher, auto-tiling, Waybar, Wofi
-- **Cinnamon Session**: Modern traditional desktop with familiar workflow, built-in theme switching
-
-**Shared Components**: VSCode, Chromium, NetworkManager work in both desktops.
-
-**Use Case**: Perfect for users who want flexibility - modern Wayland for power users, polished Cinnamon for traditional desktop experience.
+- Not a Debian or Ubuntu derivative. Arch only.
+- Not a multi-DE distro. Hyprland only.
+- Not a general-purpose distro. AI-first, opinionated.
+- Not built with bash, live-build, Docker chroot hooks, or Calamares. None of that.
