@@ -154,3 +154,59 @@ def terminal(seeds: Seeds) -> dict[str, str]:
         name: colours[name].hex
         for name in sorted(colours, key=lambda s: (s.startswith("bright"), s))
     }
+
+
+def build(
+    name: str,
+    label: str,
+    seeds: Seeds,
+    folder_colour: str | None = None,
+    wallpaper_style: str | None = None,
+) -> dict[str, object]:
+    """A complete theme document, ready to write to disk.
+
+    The derived values are written into the theme rather than recomputed when
+    it is loaded. That is what makes a theme a document: it can be hand-edited
+    afterwards, it does not shift under the user when this module improves, and
+    nothing downstream has to know it was generated.
+
+    `derived_from` records the seeds so the creator can reopen a theme with its
+    inputs in place rather than thirty swatches. The engine ignores it;
+    hand-edits to "colors" always win.
+    """
+    dark = seeds.dark
+    document: dict[str, object] = {
+        "name": name,
+        "label": label,
+        "dark": dark,
+        "derived_from": {
+            "background": seeds.background.hex,
+            "accent": seeds.accent.hex,
+            **(
+                {"secondary": seeds.secondary.hex}
+                if seeds.secondary is not None
+                else {}
+            ),
+        },
+        "colors": palette(seeds),
+        "terminal": terminal(seeds),
+        "ui": {
+            "gtk": "adw-gtk3-dark" if dark else "adw-gtk3",
+            "icons": "Papirus-Dark" if dark else "Papirus-Light",
+            "cursor": "Adwaita",
+            "font": "Noto Sans 10",
+            "mono": "FiraCode Nerd Font",
+        },
+        "requires": [
+            "adw-gtk-theme",
+            "papirus-icon-theme",
+            "noto-fonts",
+            "ttf-firacode-nerd",
+        ],
+        "wallpaper": "generated",
+    }
+    if folder_colour:
+        document["folder_colour"] = folder_colour
+    if wallpaper_style:
+        document["wallpaper_style"] = wallpaper_style
+    return document

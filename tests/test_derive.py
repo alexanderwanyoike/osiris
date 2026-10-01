@@ -6,10 +6,19 @@ looking at a screen.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from osiris.model.colour import BODY_CONTRAST, INTERFACE_CONTRAST, Colour
-from osiris.themes.derive import Seeds, foreground, palette, semantic, terminal
+from osiris.themes.derive import (
+    Seeds,
+    build,
+    foreground,
+    palette,
+    semantic,
+    terminal,
+)
 
 DARK = Colour("#15151c")
 LIGHT = Colour("#f2f0ef")
@@ -130,3 +139,38 @@ class TestTerminal:
             regular = Colour(colours[f"regular{index}"])
             bright = Colour(colours[f"bright{index}"])
             assert bright.luminance > regular.luminance
+
+
+class TestBuild:
+    def test_the_document_carries_its_seeds_for_reopening(self) -> None:
+        seeds = Seeds(DARK, ACCENT, secondary=Colour("#bb9af7"), dark=True)
+        document = build("mine", "Mine", seeds)
+        assert document["derived_from"] == {
+            "background": DARK.hex,
+            "accent": ACCENT.hex,
+            "secondary": "#bb9af7",
+        }
+
+    def test_a_light_theme_names_the_light_gtk_and_icon_themes(self) -> None:
+        document = build("pale", "Pale", Seeds(LIGHT, ACCENT, dark=False))
+        ui = document["ui"]
+        assert isinstance(ui, dict)
+        assert ui["gtk"] == "adw-gtk3"
+        assert ui["icons"] == "Papirus-Light"
+
+    def test_optional_fields_appear_only_when_given(self) -> None:
+        plain = build("a", "A", Seeds(DARK, ACCENT))
+        assert "folder_colour" not in plain
+        decorated = build(
+            "b",
+            "B",
+            Seeds(DARK, ACCENT),
+            folder_colour="indigo",
+            wallpaper_style="arcs",
+        )
+        assert decorated["folder_colour"] == "indigo"
+        assert decorated["wallpaper_style"] == "arcs"
+
+    def test_the_document_is_json_serialisable(self) -> None:
+        """It is written to disk as JSON; a stray Colour would break that."""
+        json.dumps(build("mine", "Mine", Seeds(DARK, ACCENT)))

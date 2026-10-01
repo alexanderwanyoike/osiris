@@ -3,6 +3,7 @@
     python3 provision/themes.py [--repo PATH]
 
 Lays down:
+    /usr/share/osiris/lib/osiris/    the osiris package
     /usr/share/osiris/themes/        theme manifests, engine, previews
     /usr/share/osiris/logo-mask.png  the mark, composited into wallpapers
     /usr/share/osiris/appearance/    the Appearance app
@@ -25,6 +26,10 @@ from run import run  # noqa: E402
 SHARE = "/usr/share/osiris"
 THEMES_DIR = f"{SHARE}/themes"
 APP_DIR = f"{SHARE}/appearance"
+# The osiris package itself. Everything on the target that wants the tested
+# code imports it from here; shell/themes/*.py are shims that put this on
+# sys.path. Until the whole legacy tree has moved across, both are installed.
+LIB_DIR = f"{SHARE}/lib"
 WALLPAPERS = "/usr/share/backgrounds/osiris"
 
 LAUNCHER = """#!/usr/bin/env python3
@@ -59,6 +64,19 @@ def main() -> None:
     src_themes = os.path.join(args.repo, "shell", "themes")
     if not os.path.isdir(src_themes):
         sys.exit(f"missing {src_themes}")
+
+    print("installing the osiris package")
+    package = os.path.join(args.repo, "osiris")
+    if not os.path.isdir(package):
+        sys.exit(f"missing {package}")
+    target = os.path.join(LIB_DIR, "osiris")
+    if os.path.isdir(target):
+        shutil.rmtree(target)
+    os.makedirs(LIB_DIR, exist_ok=True)
+    shutil.copytree(
+        package, target,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    print(f"  {target}")
 
     print("installing themes")
     n = copy_tree(src_themes, THEMES_DIR, (".json", ".py"))
