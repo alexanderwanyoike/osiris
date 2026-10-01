@@ -1,70 +1,37 @@
-# Osiris OS Branding Scripts
+# Branding scripts
 
-Tools for creating branded Osiris OS assets.
+Two tools, both run on a development machine, both writing assets that are
+checked in and shipped. Neither runs on an installed system.
 
-## brand-wallpaper.py
+## make-logo-mask.py
 
-Creates branded wallpapers by overlaying the Osiris logo on any image.
+Renders `logo.svg` to `branding/logo-mask.png`: an 8-bit greyscale alpha mask
+cropped to the ink's bounding box, so callers control the size directly rather
+than compensating for the SVG's generous margin.
 
-### Setup
+`shell/themes/wallpaper.py` composites this into every generated wallpaper.
+Shipping the mask rather than the SVG is what lets the generator run on the
+target with no SVG stack installed.
 
-```bash
-# Create virtual environment (first time only)
-python3 -m venv venv
+Needs `rsvg-convert` (librsvg) and ImageMagick.
 
-# Install dependencies
-./venv/bin/pip install -r requirements.txt
-```
+## make-terminal-logo.py
 
-### Usage
+Renders the mark to `branding/logo.txt` as braille characters, which fastfetch
+prints at login.
 
-```bash
-# Brand a dark wallpaper with white logo
-./venv/bin/python3 brand-wallpaper.py -i wallpaper.jpg -o branded.png -l dark
+Braille rather than ASCII because each cell carries 2x4 addressable dots rather
+than one character's worth of shape, which is the difference between a
+recognisable obelisk and a smudge. Six other approaches were tried first.
 
-# Brand a light wallpaper with black logo
-./venv/bin/python3 brand-wallpaper.py -i wallpaper.jpg -o branded.png -l light
+fastfetch on Arch links no image libraries, so a PNG logo silently falls back to
+the stock Arch ASCII art - the text file is what it actually uses.
 
-# Brand with scaled logo (50% size)
-./venv/bin/python3 brand-wallpaper.py -i wallpaper.jpg -o branded.png -l dark -s 0.5
+Needs `chafa` and ImageMagick.
 
-# Brand with semi-transparent logo
-./venv/bin/python3 brand-wallpaper.py -i wallpaper.jpg -o branded.png -l dark -a 180
-```
+## What used to be here
 
-### Options
-
-- `-i, --input`: Input wallpaper image path (required)
-- `-o, --output`: Output branded wallpaper path (required)
-- `-l, --logo`: Logo type - `dark` (white logo) or `light` (black logo) (default: dark)
-- `-s, --scale`: Logo scale factor (default: 1.0)
-- `-a, --alpha`: Logo opacity 0-255 (0=transparent, 255=opaque, default: 255)
-
-### Examples
-
-#### Create a collection of dark wallpapers
-
-```bash
-for img in ~/Pictures/wallpapers/*.jpg; do
-    filename=$(basename "$img" .jpg)
-    ./venv/bin/python3 brand-wallpaper.py -i "$img" -o "../wallpapers/${filename}-osiris-dark.png" -l dark
-done
-```
-
-#### Create a light wallpaper with subtle logo
-
-```bash
-./venv/bin/python3 brand-wallpaper.py \
-    -i abstract-light.jpg \
-    -o abstract-light-osiris.png \
-    -l light \
-    -s 0.8 \
-    -a 200
-```
-
-### Notes
-
-- Use `dark` logo (white) for dark/colorful backgrounds
-- Use `light` logo (black) for light/pale backgrounds
-- Output format is determined by file extension (PNG recommended for transparency)
-- Original images are never modified
+`brand-wallpaper.py` and `make-default-wallpaper.py` drew wallpapers by
+overlaying the logo on a gradient. Both are gone: `shell/themes/wallpaper.py`
+generates wallpapers from a palette, composites the mark itself, and runs on the
+target as well as here. One generator, not three.
