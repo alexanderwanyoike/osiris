@@ -1,100 +1,129 @@
 # Osiris Architecture
 
-This document captures the design of Osiris v2. v1 (Debian + live-build, dual Sway/Cinnamon desktop) was scrapped: too painful to build, too bloated, not the vision. v2 is a ground-up rebuild around a different premise.
+This document captures the design of Osiris. v1 (Debian + live-build, dual
+Sway/Cinnamon desktop) was scrapped: too painful to build and too bloated. This
+is a ground-up rebuild on Arch.
 
-## Vision
+## What Osiris is
 
-Osiris is a minimal AI-first operating system. The premise: modern AI assistants can do most of what desktop GUI software does, so the OS should be a thin substrate around an AI interface rather than shipping window managers, file managers, theme tools, and a hundred other applications.
+A Linux distribution with a conventional desktop that is themed properly and
+installs from a live ISO.
 
-The user's primary interface is a chat panel summoned by a keybind. The agent has tools to manipulate the system: change the theme, install a package, edit a config, run a command, launch an app. Anything the user would normally click through, the agent can do. The desktop itself is fully customizable by the agent because the customization surface is TypeScript files in a known location.
+Nothing here is novel in the way a new init system or a new display protocol
+would be. The pieces are Arch, Cinnamon, Plank, rofi, LightDM and ghostty - all
+of which already work. What Osiris adds is **coherence**: one choice of theme
+retints the GTK stack, the panel, window decorations, the terminal, the
+launcher, the dock, the folder icons and the wallpaper together, instead of
+leaving nine things to match by hand. And it adds an install that produces
+that, rather than a base system you then spend an evening configuring.
 
-A terminal exists and bash is the user's login shell, but the user is never required to type a command to use the system. The terminal is a fallback, not the primary UX.
+The scope is deliberately small. Osiris does not write a GTK theme, an icon set,
+a compositor or a file manager, because each of those is a permanent
+maintenance cost against an upstream that keeps moving. It orchestrates the ones
+that exist.
 
 ## Stack
 
 | Layer | Choice | Why |
 |---|---|---|
 | Base distro | Arch Linux | Rolling, minimal, no opinionated bloat, fast package availability |
-| Compositor | Hyprland | Rich live IPC, hot-reload of every setting, mature |
-| Desktop shell | AGS / Astal (TypeScript over GTK) | Reactive TS framework for bar, launcher, OSDs, notifications. Hot-reloads on save. |
-| Chat UI | Webview hosting a TS web app | Rich markdown, code blocks, streaming, attachments. Native GTK chat is awkward. |
-| Harness daemon | Bun + TypeScript | Fast, single-binary, native TS, matches the rest of the stack |
-| Installer | Webview frontend (TS) + Bun backend, packaged as an Arch live ISO via mkosi | Same TS aesthetic from boot through daily use. mkosi is declarative, no bash hooks. |
-| Default model | Gemma 4 2B local via Ollama | Works offline out of the box, no required cloud signup |
-| Provider neutrality | OpenAI-compatible API as universal protocol | Adapter shims for Claude and Gemini if needed; OpenAI/OpenRouter/Ollama native |
-| User shell | bash | Universal, expected on Linux. Ship a sensible `/etc/skel/.bashrc`. |
-| Login manager | TBD (greetd + tuigreet candidate) | Minimal, no GTK greeter |
-| Terminal | TBD (foot or ghostty candidate) | Wayland-native |
+| Desktop | Cinnamon (Muffin, X11) + Plank + rofi | Conventional and customisable, and it works without being rebuilt from parts. Superseded Hyprland + AGS. |
+| Installer | GTK4 + libadwaita in Python, on a live ISO built with archiso | Same toolkit as the Appearance app, and it calls `provision/install.py` directly rather than reimplementing it. See [the note below](#the-installer). |
+| Theme system | JSON palettes compiled to a real GTK theme per palette | Toolkits reload on a theme *name* change; that is the supported path. See [THEMING.md](THEMING.md). |
+| User shell | zsh with oh-my-zsh | Chosen explicitly over bash. `/etc/skel/.zshrc` ships configured. |
+| Login manager | LightDM + lightdm-slick-greeter | Branded, themeable, and it works with an X11 Cinnamon session |
+| Terminal | ghostty | GTK4, and the only candidate that renders font ligatures - VTE terminals cannot |
 
 ## Components
 
-### The harness
+### The desktop
 
-A long-running Bun daemon that:
+Cinnamon, trimmed to a single top panel, with Plank as the dock and rofi on
+`Super+Space` as the launcher. `provision/cinnamon.py` configures all three.
 
-1. Runs the agent loop: model calls, tool execution, conversation state.
-2. Owns the tool surface: filesystem ops, shell exec (sandboxed), Hyprland IPC via `hyprctl`, AGS reload, pacman wrapper, optional browser automation.
-3. Enforces the permission model (see below).
-4. Exposes a local websocket for the chat UI.
-5. Maintains persistent conversation history.
-6. Runs as a systemd user service.
+Cinnamon's own window list is removed from the panel, because Plank owns that
+job and two task lists is worse than either.
 
-The chat UI is a separate webview process that talks to the daemon over websocket. Two processes, one mental model.
+### The theme system
 
-### The user's `~/.osiris/` project
+`shell/themes/` holds one JSON palette per theme and the code that applies it.
+A palette is compiled into a real GTK theme at `~/.themes/Osiris-<palette>`,
+and every theme setting points at it.
 
-A TypeScript project the agent edits to customize the system. Themes, widgets, keybinds, agent prompts, tool configs all live as TS modules. AGS hot-reloads on save. This is the surface the agent operates on for "make a new theme" or "add a calendar widget."
+That is the load-bearing decision, and it is worth stating here rather than
+only in THEMING.md: rewriting colours into `~/.config/gtk-*/gtk.css` does not
+work, because GTK reads user CSS once at startup. Toolkits reload when the
+theme *name* changes. Giving each palette its own name makes switching an
+ordinary theme change that GTK, Muffin, Cinnamon and Plank already handle.
+
+### The Appearance app
+
+`apps/appearance/` - a GTK4 + libadwaita picker showing a rendered miniature of
+the desktop per theme, plus a creator that derives a full palette from three
+colours. See [THEMING.md](THEMING.md).
 
 ### The installer
 
-ISO boots into a minimal Wayland session running just the installer webview fullscreen. User clicks through:
+A GTK4 + libadwaita wizard in Python (`apps/installer/`), running as root on a
+live ISO. It collects settings and then calls `provision/install.py`, which is
+the install: partitioning, pacstrap, configuration, bootloader and the full
+provisioning run. The installer contains none of that logic, so the graphical
+and command-line paths cannot drift apart.
 
-1. Language and keyboard
-2. Disk selection (with partition preview)
-3. Username, password, hostname
-4. Default model selection (local Gemma, or configure cloud provider with API key)
-5. Optional API keys for OpenAI, Claude, Gemini, OpenRouter
-6. Install button: shows progress for partitioning, formatting, pacstrap, config copy, bootloader install, model download
+Steps: region, target disk, account, confirm, progress, restart.
 
-Backend is Bun spawning binaries directly (`Bun.spawn(["parted", ...])`), never `bash -c`.
+**archiso, not mkosi.** This document specified mkosi, on the grounds that it
+is declarative and has no bash hooks. Both true, and irrelevant: **mkosi has no
+ISO output format.** `Format=` accepts directory, tar, cpio, disk, uki, esp,
+oci, sysext, confext, portable, addon and none. It builds bootable disk images,
+which are not bootable removable media. P1.1 as written was not implementable.
 
-## Permission model
+archiso is the tool for this. The "no bash we author" rule survives intact:
 
-Three discrete modes the user toggles in the harness UI. Default on fresh install is **PLAN**.
+- `customize_airootfs.sh`, the bash hook the rule was written against, **no
+  longer exists** in archiso. Neither shipped profile has one.
+- Services are enabled with symlinks into `*.target.wants/`. Filesystem, not
+  scripts.
+- `profiledef.sh` is the one bash file archiso requires, and it contains only
+  variable assignments. `iso/profile.py` **generates** it, so the artefact is
+  bash and the source is not - the same arrangement as a compiler emitting
+  assembly.
 
-| Mode | Behavior |
-|---|---|
-| **PLAN** | Read-only. Agent can read files, query system state, and respond, but cannot execute, write, or modify anything. Safe default. |
-| **DEFAULT** | Ask-on-risky. Reads and safe writes (inside `~/.osiris/`, `$HOME` non-system files) auto-allowed. Sudo, package install, network writes, and shell exec prompt for confirmation. |
-| **ALLOW ALL** | No prompts. Power user / autonomous mode. |
+**No display manager on the ISO.** A systemd unit runs
+`xinit /usr/local/bin/osiris-installer -- /usr/bin/X :0 vt1`. xinit takes the
+client and then the server on argv, so a graphical session starts with no shell
+and no login manager to configure.
 
-`shell_exec` runs inside bubblewrap with `$HOME` and `~/.osiris/` writable, system paths read-only. Sudo-requiring tools always prompt regardless of mode.
-
-## Capability warnings
-
-The default model (Gemma 4 2B local) is small. It cannot do non-trivial code generation or multi-step planning well. The harness flags each provider config with a `capability_tier` (small | medium | large) at install time. When the user's message triggers a heuristic suggesting the task exceeds the current model (length over a threshold, code-task keywords like `build`/`implement`/`debug`/`refactor`, code blocks present), the chat panel shows an inline warning: "This task may exceed Gemma's capability. Configure a stronger model? Send anyway?"
+**Running as root** is deliberate. The alternative is a polkit action and a
+privilege boundary in the middle of a program whose whole purpose is to
+repartition the disk, on a medium with nothing to protect and no other user to
+protect it from.
 
 ## Conventions
 
 ### No bash that we author
 
-The v1 pain point was bash chroot hooks inside a 30-60 minute Docker build, with no stack traces and no debugger. v2 contains zero `.sh` files we wrote. Build, install, hooks, glue: all Python or TypeScript. Agent shell tool spawns binaries via argv arrays, never `bash -c`.
+The v1 pain point was bash chroot hooks inside a 30-60 minute Docker build,
+with no stack traces and no debugger. This repository contains zero `.sh` files
+we wrote. Build, install, hooks and glue are Python, and every process is
+spawned as an argv array rather than through a shell.
 
-bash still exists on the system (Arch base depends on it, PKGBUILDs are bash) and bash is the user's interactive login shell. The rule is about what *we* write, not what's installed.
+bash still exists on the system - Arch depends on it and PKGBUILDs are written
+in it. The rule is about what *we* write, not what is installed. The full
+accounting is in [DEVELOPMENT.md](DEVELOPMENT.md#how-much-bash-is-in-here).
 
-### Thinness rules for the harness
+### Python everywhere we can
 
-The default model is 2-4B parameters. Every token in the system prompt and tool descriptions eats into a tiny context. Therefore:
+Provisioning, the ISO build, the theme engine, the Appearance app and the
+installer are all Python. One language across the tooling, one idiom to read,
+and the installer can import the install flow directly instead of shelling out
+to it and parsing text back.
 
-- System prompt under ~500 tokens. No role-play preamble, no formatting instructions, no examples.
-- Tool descriptions one short sentence each.
-- Tools added per mode, not all loaded at once. Default conversation gets a small set; coding mode adds more; system config mode adds privileged ones.
-- No chain-of-thought scaffolding in the system prompt.
-
-### TypeScript everywhere we can
-
-Harness daemon, chat UI, AGS shell, user `~/.osiris/` project, installer frontend, installer backend. One language across the stack. The exception is the language inside the OS itself (kernel, systemd, pacman) which we do not write.
+The exception is what is inside the OS already - kernel, systemd, pacman - which
+we do not write.
 
 ### Branding
 
-The v1 branding assets (logos, SVGs, the wallpaper-branding Python script) are kept in `branding/` and carry forward to v2.
+`logo.svg` is the source of truth; everything else in `branding/` is derived
+from it and checked in so the target needs no SVG stack. See
+[branding/README.md](../branding/README.md).

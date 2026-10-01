@@ -16,6 +16,11 @@ config/
 # Docker build cache
 .docker/
 
+# Python
+__pycache__/
+*.py[cod]
+venv/
+
 # Temporary files
 *.tmp
 *.log

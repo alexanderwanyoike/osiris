@@ -1,91 +1,87 @@
 # Osiris Roadmap
 
-Work is grouped into four phases. Phases are sequential at the top level: shell before installer before harness before polish. Within a phase, tasks can be parallelized.
+Work is grouped into phases, sequential at the top level: desktop before
+installer before polish. Within a phase, tasks can be parallelised.
 
 Each task lists a definition of done so we know when to move on.
 
 ---
 
-## Phase 1: Desktop Shell (P0)
+## Phase 1: Desktop (P0)
 
-The visible product. Without it nothing else matters. Develops on any Linux box without an Arch VM by pointing AGS and Hyprland at the configs in this repo.
+The visible product. Without it nothing else matters.
 
-**Phase DoD**: a user runs Hyprland + AGS configs from this repo on any Linux machine. Bar, launcher, notifications all work. Looks intentional, not throwaway.
+**Phase DoD**: a themed, branded Cinnamon desktop that looks intentional rather
+than assembled, and switches theme live.
 
-| ID | Task | DoD |
-|---|---|---|
-| P0.1 | Hyprland base config: keybinds, gaps, animations, window rules | Logs into Hyprland, can launch terminal, move/tile windows, use workspaces |
-| P0.2 | AGS top bar: workspaces, audio, network, battery, clock, system tray | Bar visible on all monitors, all widgets reactive to state changes |
-| P0.3 | AGS app launcher (wofi-style replacement) | Keybind opens launcher, fuzzy search across `.desktop` files, launches selected app |
-| P0.4 | AGS notification daemon | Notifications appear, group, dismiss; replaces dunst/mako |
-| P0.5 | Default theme: one opinionated dark theme, single wallpaper | Coherent color palette across bar, launcher, notifications, GTK apps |
-| P0.6 | Terminal default: foot or ghostty (decide), launches bash with sensible `.bashrc` | Open terminal, get a usable prompt with history, completion, sane defaults |
-| P0.7 | Login manager: greetd + tuigreet (or alternative) | Boots to login screen, password auth, lands in Hyprland session |
+| ID | Task | DoD | State |
+|---|---|---|---|
+| P0.1 | Cinnamon trimmed to one top panel, Plank dock, rofi launcher | Boots to a desktop with one panel, a populated dock, and a launcher on Super+Space | done |
+| P0.2 | LightDM with slick-greeter, branded | Login screen carries the Osiris mark and the user's name | done |
+| P0.3 | Plymouth boot splash | Boot shows the mark rather than kernel messages | done |
+| P0.4 | Terminal and shell: ghostty, zsh with oh-my-zsh, FiraCode with ligatures | A new user opens a terminal and gets a configured prompt | done |
+| P0.5 | Theme system: each palette compiled to a real GTK theme | Picking a theme retints GTK, panel, decorations, terminal, launcher live | done |
+| P0.6 | Appearance app: picker with rendered desktop previews | Each theme shows as a miniature of the desktop in that palette | done |
+| P0.7 | Theme creator: a full palette from three colours | Name, light/dark and three colours produce a usable theme | done |
+| P0.8 | Generative wallpapers per palette | Every theme has matching artwork with no files to commission | done |
+| P0.9 | Dock and folder icons follow the palette | Plank and the folder icons retint with everything else | done |
+
+Seven themes ship. See [THEMING.md](THEMING.md).
 
 ---
 
 ## Phase 2: Installer (P1)
 
-Turns the shell into a real distributable OS. Webview frontend in TS, Bun backend, packaged as a live ISO via mkosi.
+Turns the desktop into a distributable OS. GTK4 + libadwaita wizard in Python
+on a live ISO built with archiso.
 
-**Phase DoD**: ISO boots in QEMU. User clicks through the installer. After install + reboot, lands in the Phase 1 shell with the default model downloaded.
+**Phase DoD**: ISO boots in QEMU. User clicks through the installer. After
+install and reboot, lands in the Phase 1 desktop, themed and branded.
 
-| ID | Task | DoD |
-|---|---|---|
-| P1.1 | mkosi config to build minimal Arch live ISO with shell baked in | `mkosi build` produces a bootable ISO under 2GB |
-| P1.2 | Installer webview UI (TS, web framework TBD): wizard flow | All steps render, validation works, can navigate back/forward |
-| P1.3 | Bun installer backend: parted, mkfs, pacstrap, arch-chroot wrappers via `Bun.spawn(argv)` | Each step exposes a typed function the UI can call over websocket |
-| P1.4 | Disk picker UI with partition preview | User sees current disk layout, picks target, sees what will happen |
-| P1.5 | Model selection step: local Gemma default, optional cloud provider config | API key entry, validation against the provider, capability_tier inferred |
-| P1.6 | First-boot experience: welcome screen, Ollama check, default model download with progress | Fresh install boots to a welcome flow that ends with model ready |
-| P1.7 | Bootloader: systemd-boot with branded splash | Install completes with a working bootloader, splash uses Osiris branding |
+| ID | Task | DoD | State |
+|---|---|---|---|
+| P1.1 | `iso/profile.py` generates an archiso profile and builds the ISO | `python3 iso/profile.py` produces a bootable UEFI ISO | done |
+| P1.2 | Installer wizard: region, disk, account, confirm, progress, done | All steps render, validation works, back navigation works | done |
+| P1.3 | `provision/install.py` as an importable API with progress | `install(Options, progress)` drives both the CLI and the GUI | done |
+| P1.4 | Disk picker | Lists disks with size and transport; refuses mounted and undersized ones with the reason | done |
+| P1.5 | Full provisioning on install | Installed system has the themes, Appearance app, ghostty, zsh and branding, not plain Cinnamon | done |
+| P1.6 | First-boot experience: welcome screen | Fresh install boots to a welcome flow | deferred to Phase 3 |
+| P1.8 | Disk layout options, software rendering, retry | ext4 or btrfs with subvolumes, swap file, VM-detected rendering switch, retry after failure | done |
+| P1.7 | Bootloader: systemd-boot with branded splash | Install completes with a working bootloader, splash uses Osiris branding | done |
 
----
+Dropped from this phase: model selection and API key entry (P1.5 as originally
+written). The installer installs an operating system; asking for an API key
+before there is anything to use it is the wrong order.
 
-## Phase 3: Harness (P2)
-
-The AI layer. Largest piece. Most novel work. Sits on top of a working desktop and installer.
-
-**Phase DoD**: user opens chat, asks "change the bar to a warmer color palette," agent edits the AGS theme files in `~/.osiris/`, AGS hot-reloads, bar repaints. Permission prompts work in DEFAULT mode.
-
-| ID | Task | DoD |
-|---|---|---|
-| P2.1 | Bun daemon scaffold + systemd user service | Daemon starts on login, exposes websocket, accepts connections |
-| P2.2 | LLM provider abstraction: OpenAI-compatible base, Claude/Gemini adapters, Ollama default | Switching providers requires only `{baseUrl, model, apiKey}` change, no code path divergence |
-| P2.3 | Tool registry: `read_file`, `write_file`, `set_theme`, `launch_app`, `hyprctl_call` | Each tool defined as TS function with one-sentence description; agent can invoke and get typed results |
-| P2.4 | Permission model: PLAN / DEFAULT / ALLOW ALL with PLAN as install default | Mode toggle in chat UI; PLAN blocks all writes; DEFAULT prompts on risky |
-| P2.5 | `shell_exec` tool sandboxed with bubblewrap, `$HOME` writable, system read-only | Agent can run commands, cannot escape to `/etc` or `/usr` |
-| P2.6 | Webview chat UI: streaming markdown, code blocks, tool call visibility | Chat opens in own window, streams responses, shows what tools are running |
-| P2.7 | Permission prompt UI: inline approve/deny for risky tool calls | When DEFAULT mode triggers a prompt, user sees what's about to happen and approves |
-| P2.8 | Capability warning system: heuristic for code/complex tasks on small models | Inline banner appears when message looks like coding and current model is `small` tier |
-| P2.9 | Keybind to summon chat window (Super+Space style) | Configured in Hyprland, summons or focuses the chat window |
-| P2.10 | Persistent conversation history (SQLite likely) | Conversations survive daemon restart, browseable in UI |
-| P2.11 | `~/.osiris/` skel: TS skeleton with example theme and example widget | New user has a working customizable starting point |
+Why archiso rather than mkosi, which this document used to specify: mkosi has
+no ISO output format. See [ARCHITECTURE.md](ARCHITECTURE.md#the-installer).
 
 ---
 
-## Phase 4: Polish (P3)
+## Phase 3: Polish (P2)
 
 Everything that makes Osiris feel like a product, not a project.
 
 **Phase DoD**: someone who has never seen Osiris can install it, use it, and not feel like they're testing a prototype.
 
-| ID | Task | DoD |
-|---|---|---|
-| P3.1 | Branding pass: logos in installer, login, about screen; bootloader theme; default wallpaper | Brand identity consistent across every visible surface |
-| P3.2 | Documentation site or install instructions | Public docs for installation, customization, harness configuration |
-| P3.3 | First-run user tutorial delivered via the harness chat itself | New user lands in chat with a "hi, here's how Osiris works" walkthrough |
-| P3.4 | Distribution channel: GitHub releases or osiris.sh | ISO downloadable from a stable URL with checksums |
-| P3.5 | "AI installs Osiris" mode: agent walks user through install via chat (deferred, requires harness) | Optional toggle on installer, agent partitions and installs via tool calls |
+| ID | Task | DoD | State |
+|---|---|---|---|
+| P2.1 | Branding pass: logos in installer, login, about screen; bootloader theme; default wallpaper | Brand identity consistent across every visible surface | mostly done |
+| P2.2 | Public installation and customisation documentation | Someone who has not seen the repo can install Osiris and write a theme | |
+| P2.3 | First-run welcome: what Osiris is, where Appearance lives | A fresh install explains itself once, briefly | |
+| P2.4 | Distribution channel: GitHub releases or osiris.sh | ISO downloadable from a stable URL with checksums | |
+| P2.5 | Package the tree properly: `osiris-desktop`, `osiris-themes` | Installing is pacman installing packages, not a script copying files | |
+| P2.6 | Theme the remaining surfaces: Plymouth splash, greeter | The boot-to-desktop sequence is one palette, not three | |
 
 ---
 
 ## What NOT to do (yet)
 
 - No mobile or tablet form factor.
-- No alternative compositors (no Sway, no GNOME, no KDE). Hyprland only.
-- No alternative shells or launchers beyond AGS.
-- No browser fork or AI browser integration. Use whatever browser ships.
+- No alternative desktops. Cinnamon only.
+- No GTK theme, icon set or compositor of our own. Orchestrate what exists.
+- No browser fork. Use whatever ships.
 - No custom kernel patches.
-- No reproducible-build infrastructure (Nix-style). mkosi is enough.
+- No reproducible-build infrastructure (Nix-style). archiso is enough.
+- No disk encryption, dual boot or manual partitioning in the installer yet.
 - No package repository of our own. Use Arch + AUR.
