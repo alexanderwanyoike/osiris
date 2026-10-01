@@ -309,6 +309,34 @@ def compose(theme: dict, size: tuple[int, int] = (WIDTH, HEIGHT),
     return Image.fromarray((np.clip(image, 0, 1) * 255).astype(np.uint8))
 
 
+def boot_background(theme: dict,
+                    size: tuple[int, int] = (1920, 1080)) -> Image.Image:
+    """A quieter version for the boot menu.
+
+    The desktop wallpaper is too busy to put menu text on. This keeps the
+    palette and the gradient but drops the pattern to a quarter strength and
+    leaves the mark off entirely - GRUB places the logo itself, as its own
+    component, so it stays crisp instead of being resampled with the
+    background.
+    """
+    width, height = size
+    palette = tones(theme)
+    style = theme.get("wallpaper_style") or style_for(theme["name"])
+    rng = np.random.default_rng(zlib.crc32(theme["name"].encode()))
+    fill, line = RENDERERS[style]((height, width), rng)
+
+    mask = quiet_mask((height, width))
+    fill *= mask * 0.25
+    line *= mask * 0.25
+
+    ramp = np.linspace(0.0, 1.0, height, dtype=np.float32)[:, None]
+    base = palette["base"] * (1.0 - 0.18 * ramp)[..., None]
+    image = base + (palette["shape"] - base) * fill[..., None]
+    image = image + (palette["line"] - image) * (
+        line * palette["line_alpha"])[..., None]
+    return Image.fromarray((np.clip(image, 0, 1) * 255).astype(np.uint8))
+
+
 def render(theme: dict, dest: str, size: tuple[int, int] = (WIDTH, HEIGHT),
            style: str | None = None) -> str:
     os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
