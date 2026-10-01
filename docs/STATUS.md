@@ -117,14 +117,14 @@ stale `DEV_SHELL.md` replaced by [DEVELOPMENT.md](DEVELOPMENT.md).
 Documentation is now a README plus six documents, each with a stated job; see
 the table in the README.
 
-## Decisions pending
+## Since
 
-**COSMIC.** `provision/desktop.py`, `DESKTOP_COSMIC` and the `--desktop` flag
-are still in the tree, from when COSMIC was being evaluated. CLAUDE.md now says
-"not a multi-DE distro, Cinnamon only", and the COSMIC path has never been
-installed or tested. It is about 140 lines plus a package list. Worth deleting,
-but it is a product decision rather than dead-code cleanup, so it is flagged
-here rather than removed.
+**COSMIC is gone.** `provision/desktop.py`, `DESKTOP_COSMIC`, the `DESKTOPS`
+dict and the `--desktop` flag are removed. Cinnamon is the desktop, settled.
+`packages.for_install()` now takes only `software_rendering`.
+
+**GRUB replaced systemd-boot**, so the boot menu can carry the mark.
+systemd-boot has no theme engine at all. See [INSTALLER.md](INSTALLER.md#the-boot-menu).
 
 ## Known gaps
 

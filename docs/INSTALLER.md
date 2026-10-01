@@ -45,8 +45,9 @@ qemu-system-x86_64 -enable-kvm -m 4096 -smp 4 \
     -drive file=target.qcow2,if=virtio
 ```
 
-A BIOS VM will not boot it, by design: Osiris installs systemd-boot, so a BIOS
-machine would boot the installer and then install a system it cannot start.
+A BIOS VM will not boot it, by design: Osiris installs GRUB in EFI mode, so a
+BIOS machine would boot the installer and then install a system it could not
+start.
 
 ## Decisions worth knowing
 
@@ -127,6 +128,30 @@ previous attempt left behind before it touches the partition table. Most
 failures are a dropped network or a mirror that went away mid-download, and
 those succeed on a second run without changing anything.
 
+## The boot menu
+
+GRUB, not systemd-boot. systemd-boot has no theme engine at all - it draws a
+text menu and offers no way to put anything on screen before Plymouth starts -
+and a branded boot screen was wanted. The second reason is `os-prober`, which
+finds other installed systems; systemd-boot never did.
+
+The theme lives on the ESP at `/boot/grub/themes/osiris`, because GRUB reads it
+long before any other filesystem is mounted. `provision/grub.py` installs it,
+writes `/etc/default/grub` and runs `grub-install` and `grub-mkconfig`.
+
+Assets are generated at build time by `branding/scripts/make-grub-theme.py`
+from the `osiris-obsidian` palette and checked in. The bootloader cannot follow
+the user's chosen theme - it runs before any user session exists - so it stays
+branded, the same decision as the boot splash and the greeter.
+
+Two things that are easy to get wrong:
+
+- **Fonts must be GRUB's own `.pf2` format**, converted with `grub-mkfont`. The
+  family name baked in with `-n` is what `theme.txt` refers to; if the two
+  disagree GRUB falls back to a bitmap font without saying so.
+- **9-slice pixmaps need all nine pieces** named `<prefix>_<c|n|s|e|w|nw|ne|sw|se>.png`.
+  GRUB silently draws nothing if one is missing.
+
 ## Guardrails
 
 The one unrecoverable mistake this program can make is writing to the wrong
@@ -174,5 +199,6 @@ the same bug.
 - **Disk encryption.** LUKS changes the boot path substantially and deserves
   testing proportional to the cost of getting it wrong.
 - **Installing alongside an existing system.** Osiris takes the whole disk.
-- **BIOS machines**, deliberately: Osiris installs systemd-boot, so a BIOS
-  machine would boot the installer and then install a system it cannot start.
+- **BIOS machines**, deliberately: Osiris installs GRUB in EFI mode, so a BIOS
+  machine would boot the installer and then install a system it could not
+  start.

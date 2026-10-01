@@ -47,7 +47,7 @@ install and reboot, lands in the Phase 1 desktop, themed and branded.
 | P1.5 | Full provisioning on install | Installed system has the themes, Appearance app, ghostty, zsh and branding, not plain Cinnamon | done |
 | P1.6 | First-boot experience: welcome screen | Fresh install boots to a welcome flow | deferred to Phase 3 |
 | P1.8 | Disk layout options, software rendering, retry | ext4 or btrfs with subvolumes, swap file, VM-detected rendering switch, retry after failure | done |
-| P1.7 | Bootloader: systemd-boot with branded splash | Install completes with a working bootloader, splash uses Osiris branding | done |
+| P1.7 | Bootloader: GRUB with a themed menu carrying the mark | Install completes with a working bootloader; the boot menu and splash are both branded | done |
 
 Dropped from this phase: model selection and API key entry (P1.5 as originally
 written). The installer installs an operating system; asking for an API key

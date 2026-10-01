@@ -61,8 +61,9 @@ def profiledef(version: str) -> str:
         f'iso_version="{version}"\n'
         f'install_dir="{INSTALL_DIR}"\n'
         "buildmodes=('iso')\n"
-        # UEFI only: Osiris installs systemd-boot, so a BIOS machine would boot
-        # the installer and then install a system it cannot boot.
+        # UEFI only. This is the medium's own bootloader, not the one Osiris
+        # installs - that is GRUB, in EFI mode, so a BIOS machine would boot
+        # the installer and then install a system it could not start.
         "bootmodes=('uefi.systemd-boot')\n"
         'arch="x86_64"\n'
         'pacman_conf="pacman.conf"\n'

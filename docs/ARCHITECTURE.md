@@ -31,6 +31,7 @@ that exist.
 | Installer | GTK4 + libadwaita in Python, on a live ISO built with archiso | Same toolkit as the Appearance app, and it calls `provision/install.py` directly rather than reimplementing it. See [the note below](#the-installer). |
 | Theme system | JSON palettes compiled to a real GTK theme per palette | Toolkits reload on a theme *name* change; that is the supported path. See [THEMING.md](THEMING.md). |
 | User shell | zsh with oh-my-zsh | Chosen explicitly over bash. `/etc/skel/.zshrc` ships configured. |
+| Bootloader | GRUB (UEFI) with a themed menu | systemd-boot has no theme engine, and os-prober finds other installed systems |
 | Login manager | LightDM + lightdm-slick-greeter | Branded, themeable, and it works with an X11 Cinnamon session |
 | Terminal | ghostty | GTK4, and the only candidate that renders font ligatures - VTE terminals cannot |
 

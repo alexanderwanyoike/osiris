@@ -16,6 +16,9 @@ BASE = [
     # The root may be btrfs; the tools have to be on the installed system, not
     # only on the installer.
     "btrfs-progs",
+    # GRUB draws the boot menu; efibootmgr writes the UEFI boot entry and
+    # os-prober finds other installed systems.
+    "grub", "efibootmgr", "os-prober",
     "networkmanager", "polkit",
     "pipewire", "pipewire-pulse", "wireplumber",
     "upower", "brightnessctl",
@@ -33,19 +36,6 @@ DESKTOP_CINNAMON = [
     "xed", "gnome-screenshot",
     "adw-gtk-theme", "papirus-icon-theme",
 ]
-
-# COSMIC. `cosmic` is a package group pulling the whole session. Kept so the
-# desktop choice stays a one-word argument rather than a rewrite.
-DESKTOP_COSMIC = [
-    "cosmic",
-    "cosmic-icon-theme",
-    "xdg-desktop-portal-cosmic",
-]
-
-DESKTOPS = {
-    "cinnamon": DESKTOP_CINNAMON,
-    "cosmic": DESKTOP_COSMIC,
-}
 
 # Applications Osiris ships by default.
 #
@@ -85,12 +75,8 @@ SOFTWARE_RENDERING = [
 ]
 
 
-def for_install(desktop: str = "cinnamon",
-                software_rendering: bool = False) -> list[str]:
-    if desktop not in DESKTOPS:
-        raise ValueError(f"unknown desktop {desktop!r}; "
-                         f"one of: {', '.join(DESKTOPS)}")
-    packages = BASE + DESKTOPS[desktop] + APPS + BRANDING
+def for_install(software_rendering: bool = False) -> list[str]:
+    packages = BASE + DESKTOP_CINNAMON + APPS + BRANDING
     if software_rendering:
         packages += SOFTWARE_RENDERING
     return packages

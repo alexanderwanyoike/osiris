@@ -1,0 +1,77 @@
+# Osiris boot menu.
+#
+# Global properties use "key: value"; components use "+ name { key = value }".
+# Fonts are referenced by the family name baked into the .pf2 file, which
+# provision/grub.py sets with grub-mkfont -n. A name GRUB cannot find falls
+# back to a bitmap font silently, so the two have to agree.
+
+title-text: ""
+desktop-image: "background.png"
+desktop-color: "#0d0d10"
+terminal-font: "Osiris Mono 16"
+terminal-left: "8%"
+terminal-top: "12%"
+terminal-width: "84%"
+terminal-height: "76%"
+
+# The mark, above the menu. Its own component rather than part of the
+# background, so it stays crisp if GRUB has to scale the backdrop.
++ image {
+    file = "logo.png"
+    top = 14%
+    left = 50%-45
+    width = 91
+    height = 220
+}
+
++ label {
+    text = "Osiris"
+    top = 14%+236
+    left = 0
+    width = 100%
+    align = "center"
+    font = "Osiris Sans 28"
+    color = "#e8e8f0"
+}
+
++ boot_menu {
+    top = 50%
+    left = 22%
+    width = 56%
+    height = 32%
+    item_font = "Osiris Sans 18"
+    selected_item_font = "Osiris Sans 18"
+    item_color = "#9aa0b4"
+    selected_item_color = "#ffffff"
+    item_height = 40
+    item_padding = 6
+    item_spacing = 6
+    icon_width = 0
+    icon_height = 0
+    item_icon_space = 0
+    selected_item_pixmap_style = "select_*.png"
+    scrollbar = false
+}
+
+# The countdown, as a plain bar rather than a widget with chrome.
++ progress_bar {
+    id = "__timeout__"
+    top = 85%
+    left = 35%
+    width = 30%
+    height = 4
+    show_text = false
+    bg_color = "#20222e"
+    fg_color = "#7c8aeb"
+    border_color = "#2c2f3d"
+}
+
++ label {
+    top = 91%
+    left = 0
+    width = 100%
+    align = "center"
+    font = "Osiris Sans 14"
+    color = "#6b7187"
+    text = "Press E to edit, C for a console"
+}

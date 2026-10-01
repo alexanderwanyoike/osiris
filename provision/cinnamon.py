@@ -210,7 +210,6 @@ def main() -> None:
 
     print("configuring display manager")
     write("/etc/lightdm/lightdm.conf.d/50-osiris.conf", LIGHTDM_CONF)
-    run("systemctl", "disable", "cosmic-greeter.service", check=False)
     services.enable("lightdm.service")
     run("systemctl", "set-default", "graphical.target")
 

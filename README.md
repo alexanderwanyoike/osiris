@@ -20,6 +20,7 @@ python3 iso/profile.py        # build the ISO (as root)
 |---|---|
 | Base | Arch Linux |
 | Desktop | Cinnamon (Muffin, X11), Plank dock, rofi launcher |
+| Boot | GRUB with a themed menu, then Plymouth, both carrying the mark |
 | Login | LightDM with slick-greeter, branded |
 | Terminal | ghostty, FiraCode with ligatures |
 | Shell | zsh with oh-my-zsh |

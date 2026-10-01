@@ -2,7 +2,7 @@
 
     python3 provision/install.py --disk /dev/vda --hostname osiris --user alexander
 
-Destroys everything on --disk. UEFI only: Osiris uses systemd-boot.
+Destroys everything on --disk. UEFI only: Osiris boots with GRUB.
 
 This is the install flow, and the only one. `install()` takes an Options and a
 progress callback; the command line and the graphical installer are both thin
@@ -21,7 +21,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import packages  # noqa: E402
-from run import capture, emit, run, stream  # noqa: E402
+from run import emit, run, stream  # noqa: E402
 
 ESP_SIZE_MB = 1024
 ESP_SIZE = f"+{ESP_SIZE_MB}M"
@@ -38,7 +38,6 @@ class Options:
     timezone: str = "Europe/London"
     locale: str = "en_GB.UTF-8"
     keymap: str = "us"
-    desktop: str = "cinnamon"
     filesystem: str = "ext4"          # ext4 or btrfs
     swap_mb: int = 0                  # 0 for none
     software_rendering: bool = False
@@ -192,9 +191,8 @@ def make_swap(options: Options) -> str | None:
     return path
 
 
-def pacstrap(desktop: str, software_rendering: bool) -> None:
-    stream("pacstrap", "-K", "/mnt",
-           *packages.for_install(desktop, software_rendering))
+def pacstrap(software_rendering: bool) -> None:
+    stream("pacstrap", "-K", "/mnt", *packages.for_install(software_rendering))
 
 
 def write_fstab(extra_mounts: list[str]) -> None:
@@ -232,8 +230,7 @@ def install_ssh_key(user: str, key_path: str) -> None:
 
 
 def configure(hostname: str, user: str, password: str, timezone: str,
-              locale: str, root_dev: str, keymap: str = "us",
-              filesystem: str = "ext4") -> None:
+              locale: str, keymap: str = "us") -> None:
     in_chroot("ln", "-sf", f"/usr/share/zoneinfo/{timezone}", "/etc/localtime")
     in_chroot("hwclock", "--systohc")
 
@@ -266,18 +263,9 @@ def configure(hostname: str, user: str, password: str, timezone: str,
               "-s", "/bin/bash", user)
     chpasswd(user, password)
 
-    in_chroot("bootctl", "install")
-    uuid = capture("blkid", "-s", "UUID", "-o", "value", root_dev)
-    put("/boot/loader/loader.conf",
-        "default osiris.conf\ntimeout 1\nconsole-mode max\n")
-    # btrfs puts the system on a subvolume, so the kernel has to be told which
-    # one; without this it mounts the top-level volume and finds no /sbin/init.
-    rootflags = " rootflags=subvol=@" if filesystem == "btrfs" else ""
-    put("/boot/loader/entries/osiris.conf",
-        "title   Osiris\n"
-        "linux   /vmlinuz-linux\n"
-        "initrd  /initramfs-linux.img\n"
-        f"options root=UUID={uuid}{rootflags} rw\n")
+    # The bootloader is installed by provision/grub.py, in the desktop step,
+    # because it needs the fonts that pacstrap put there and the theme assets
+    # that are copied in with the rest of the payload.
 
 
 def install(options: Options, progress=None) -> None:
@@ -309,7 +297,7 @@ def install(options: Options, progress=None) -> None:
     format_and_mount(esp, root, options)
 
     step("packages")
-    pacstrap(options.desktop, options.software_rendering)
+    pacstrap(options.software_rendering)
 
     step("fstab")
     extra = []
@@ -326,13 +314,12 @@ def install(options: Options, progress=None) -> None:
 
     step("configure")
     configure(options.hostname, options.user, options.password,
-              options.timezone, options.locale, root, options.keymap,
-              options.filesystem)
+              options.timezone, options.locale, options.keymap)
     if options.ssh_key:
         install_ssh_key(options.user, options.ssh_key)
 
     step("desktop")
-    configure_desktop(options.desktop, options.software_rendering)
+    configure_desktop()
 
     step("finish")
     unmount_target()
@@ -346,7 +333,7 @@ PAYLOAD = ("provision", "apps", "branding", "shell/themes")
 SETUP_DIR = "/root/osiris-setup"
 
 
-def configure_desktop(desktop: str, software_rendering: bool) -> None:
+def configure_desktop() -> None:
     """Run the provisioning scripts inside the new system.
 
     For a long time this ran only the desktop configurator, which left an
@@ -375,18 +362,14 @@ def configure_desktop(desktop: str, software_rendering: bool) -> None:
         shutil.copytree(source, destination,
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 
-    configurator = {"cosmic": "desktop.py", "cinnamon": "cinnamon.py"}[desktop]
-    scripts = [configurator, "apps.py", "branding.py", "themes.py"]
+    scripts = ("cinnamon.py", "apps.py", "branding.py", "themes.py", "grub.py")
     try:
         for script in scripts:
             if not os.path.exists(os.path.join(target, "provision", script)):
                 continue
-            argv = ["arch-chroot", "/mnt", "python3",
-                    f"{SETUP_DIR}/provision/{script}"]
-            if script == "desktop.py" and software_rendering:
-                argv.append("--software-rendering")
             emit(f"  == {script} ==")
-            stream(*argv)
+            stream("arch-chroot", "/mnt", "python3",
+                   f"{SETUP_DIR}/provision/{script}")
     finally:
         shutil.rmtree(target, ignore_errors=True)
 
@@ -404,9 +387,6 @@ def main() -> None:
                         choices=("ext4", "btrfs"))
     parser.add_argument("--swap", type=int, default=0, metavar="MB",
                         help="size of the swap file in MB (0 for none)")
-    parser.add_argument("--desktop", default="cinnamon",
-                        choices=sorted(packages.DESKTOPS),
-                        help="which desktop to install (default: cinnamon)")
     parser.add_argument("--software-rendering", action="store_true",
                         help="target has no GPU acceleration (e.g. a VM)")
     parser.add_argument("--ssh-key",
@@ -430,7 +410,7 @@ def main() -> None:
         disk=args.disk, user=args.user,
         password=args.password or getpass.getpass("password for root and user: "),
         hostname=args.hostname, timezone=args.timezone, locale=args.locale,
-        keymap=args.keymap, desktop=args.desktop,
+        keymap=args.keymap,
         filesystem=args.filesystem, swap_mb=args.swap,
         software_rendering=args.software_rendering,
         ssh_key=args.ssh_key, virtiofs_tag=args.virtiofs_tag)
