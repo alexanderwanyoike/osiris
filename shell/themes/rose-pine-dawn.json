@@ -1,0 +1,45 @@
+{
+    "name": "rose-pine-dawn",
+    "label": "Rose Pine Dawn",
+    "dark": false,
+    "colors": {
+        "background": "#faf4ed",
+        "surface": "#fffaf3",
+        "surfaceMuted": "#f2e9e1",
+        "border": "#dfdad9",
+        "borderActive": "#907aa9",
+        "foreground": "#575279",
+        "foregroundMuted": "#797593",
+        "accent": "#907aa9",
+        "accentMuted": "#cecacd",
+        "success": "#286983",
+        "warning": "#ea9d34",
+        "danger": "#b4637a"
+    },
+    "terminal": {
+        "regular0": "#f2e9e1",
+        "regular1": "#b4637a",
+        "regular2": "#286983",
+        "regular3": "#ea9d34",
+        "regular4": "#56949f",
+        "regular5": "#907aa9",
+        "regular6": "#d7827e",
+        "regular7": "#575279",
+        "bright0": "#9893a5",
+        "bright1": "#b4637a",
+        "bright2": "#286983",
+        "bright3": "#ea9d34",
+        "bright4": "#56949f",
+        "bright5": "#907aa9",
+        "bright6": "#d7827e",
+        "bright7": "#575279"
+    },
+    "ui": {
+        "gtk": "adw-gtk3",
+        "icons": "Papirus-Light",
+        "font": "Noto Sans 10",
+        "mono": "FiraCode Nerd Font"
+    },
+    "wallpaper_style": "arcs",
+    "folder_colour": "violet"
+}

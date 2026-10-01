@@ -1,0 +1,45 @@
+{
+    "name": "nord",
+    "label": "Nord",
+    "dark": true,
+    "colors": {
+        "background": "#2e3440",
+        "surface": "#3b4252",
+        "surfaceMuted": "#434c5e",
+        "border": "#4c566a",
+        "borderActive": "#88c0d0",
+        "foreground": "#eceff4",
+        "foregroundMuted": "#d8dee9",
+        "accent": "#88c0d0",
+        "accentMuted": "#5e81ac",
+        "success": "#a3be8c",
+        "warning": "#ebcb8b",
+        "danger": "#bf616a"
+    },
+    "terminal": {
+        "regular0": "#3b4252",
+        "regular1": "#bf616a",
+        "regular2": "#a3be8c",
+        "regular3": "#ebcb8b",
+        "regular4": "#81a1c1",
+        "regular5": "#b48ead",
+        "regular6": "#88c0d0",
+        "regular7": "#e5e9f0",
+        "bright0": "#4c566a",
+        "bright1": "#bf616a",
+        "bright2": "#a3be8c",
+        "bright3": "#ebcb8b",
+        "bright4": "#81a1c1",
+        "bright5": "#b48ead",
+        "bright6": "#8fbcbb",
+        "bright7": "#eceff4"
+    },
+    "ui": {
+        "gtk": "adw-gtk3-dark",
+        "icons": "Papirus-Dark",
+        "font": "Noto Sans 10",
+        "mono": "FiraCode Nerd Font"
+    },
+    "wallpaper_style": "strata",
+    "folder_colour": "nordic"
+}

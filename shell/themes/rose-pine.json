@@ -1,0 +1,45 @@
+{
+    "name": "rose-pine",
+    "label": "Rose Pine",
+    "dark": true,
+    "colors": {
+        "background": "#191724",
+        "surface": "#1f1d2e",
+        "surfaceMuted": "#26233a",
+        "border": "#403d52",
+        "borderActive": "#c4a7e7",
+        "foreground": "#e0def4",
+        "foregroundMuted": "#908caa",
+        "accent": "#c4a7e7",
+        "accentMuted": "#6e6a86",
+        "success": "#9ccfd8",
+        "warning": "#f6c177",
+        "danger": "#eb6f92"
+    },
+    "terminal": {
+        "regular0": "#26233a",
+        "regular1": "#eb6f92",
+        "regular2": "#31748f",
+        "regular3": "#f6c177",
+        "regular4": "#9ccfd8",
+        "regular5": "#c4a7e7",
+        "regular6": "#ebbcba",
+        "regular7": "#e0def4",
+        "bright0": "#6e6a86",
+        "bright1": "#eb6f92",
+        "bright2": "#31748f",
+        "bright3": "#f6c177",
+        "bright4": "#9ccfd8",
+        "bright5": "#c4a7e7",
+        "bright6": "#ebbcba",
+        "bright7": "#e0def4"
+    },
+    "ui": {
+        "gtk": "adw-gtk3-dark",
+        "icons": "Papirus-Dark",
+        "font": "Noto Sans 10",
+        "mono": "FiraCode Nerd Font"
+    },
+    "wallpaper_style": "contour",
+    "folder_colour": "violet"
+}

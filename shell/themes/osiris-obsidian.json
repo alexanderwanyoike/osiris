@@ -1,0 +1,45 @@
+{
+    "name": "osiris-obsidian",
+    "label": "Osiris Obsidian",
+    "dark": true,
+    "colors": {
+        "background": "#0d0d10",
+        "surface": "#1a1a1f",
+        "surfaceMuted": "#2a2a2f",
+        "border": "#2a2a2a",
+        "borderActive": "#7c8aeb",
+        "foreground": "#e8e8e8",
+        "foregroundMuted": "#a0a0a8",
+        "accent": "#7c8aeb",
+        "accentMuted": "#5560a8",
+        "success": "#98c379",
+        "warning": "#e5c07b",
+        "danger": "#e06c75"
+    },
+    "terminal": {
+        "regular0": "#1a1a1f",
+        "regular1": "#e06c75",
+        "regular2": "#98c379",
+        "regular3": "#e5c07b",
+        "regular4": "#7c8aeb",
+        "regular5": "#c678dd",
+        "regular6": "#56b6c2",
+        "regular7": "#e8e8e8",
+        "bright0": "#2a2a2f",
+        "bright1": "#e06c75",
+        "bright2": "#98c379",
+        "bright3": "#e5c07b",
+        "bright4": "#7c8aeb",
+        "bright5": "#c678dd",
+        "bright6": "#56b6c2",
+        "bright7": "#ffffff"
+    },
+    "ui": {
+        "gtk": "adw-gtk3-dark",
+        "icons": "Papirus-Dark",
+        "font": "Noto Sans 10",
+        "mono": "FiraCode Nerd Font"
+    },
+    "wallpaper_style": "arcs",
+    "folder_colour": "indigo"
+}

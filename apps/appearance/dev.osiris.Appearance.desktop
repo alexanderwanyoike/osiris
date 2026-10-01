@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Appearance
+Comment=Choose an Osiris theme
+Exec=osiris-appearance
+Icon=preferences-desktop-theme
+Terminal=false
+Categories=Settings;DesktopSettings;GTK;
+Keywords=theme;appearance;colour;color;wallpaper;icons;
+StartupNotify=true
