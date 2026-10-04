@@ -20,6 +20,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import hardware  # noqa: E402
 import packages  # noqa: E402
 from run import emit, run, stream  # noqa: E402
 
@@ -192,7 +193,19 @@ def make_swap(options: Options) -> str | None:
 
 
 def pacstrap(software_rendering: bool) -> None:
-    stream("pacstrap", "-K", "/mnt", *packages.for_install(software_rendering))
+    """Install the base system, plus whatever this machine turns out to need.
+
+    Detection happens here rather than in the package list because the answer
+    is different on every target: an AMD machine wants amd-ucode and an Intel
+    one wants intel-ucode, and shipping both to both is the bloat this avoids.
+    """
+    detected = hardware.packages_for(hardware.detect())
+    if detected:
+        emit(f"  detected: {' '.join(detected)}")
+    stream(
+        "pacstrap", "-K", "/mnt",
+        *packages.for_install(software_rendering, detected),
+    )
 
 
 def write_fstab(extra_mounts: list[str]) -> None:
@@ -329,7 +342,7 @@ def install(options: Options, progress=None) -> None:
 
 # Everything the target needs to look like Osiris rather than like stock
 # Cinnamon. Copied into the new system and run there, in this order.
-PAYLOAD = ("provision", "apps", "branding", "shell/themes")
+PAYLOAD = ("osiris", "provision", "apps", "branding", "shell/themes")
 SETUP_DIR = "/root/osiris-setup"
 
 

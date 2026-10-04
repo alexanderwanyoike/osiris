@@ -37,7 +37,9 @@ INSTALL_DIR = "osiris"
 ISO_LABEL = "OSIRIS"
 
 # What gets copied into the live system so the installer can install from it.
-PAYLOAD = ("provision", "apps", "branding", "shell/themes")
+# `osiris` is the package the provisioning shims delegate to; without it on
+# the medium they resolve to nothing and the install loses hardware detection.
+PAYLOAD = ("osiris", "provision", "apps", "branding", "shell/themes")
 PAYLOAD_DIR = "/usr/share/osiris/source"
 
 

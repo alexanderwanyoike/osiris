@@ -2,7 +2,14 @@
 
 Kept as plain data so the eventual pacman packages (osiris-base, osiris-desktop)
 can depend on exactly these lists rather than re-deriving them.
+
+What is *not* here is drivers. Osiris ships the drivers the target machine
+actually has, worked out at install time by osiris.model.hardware - bundling
+every driver so one image suits every machine is how a distribution reaches
+four gigabytes.
 """
+
+from collections.abc import Sequence
 
 # Bootable Arch with networking, audio and a login shell. No desktop.
 BASE = [
@@ -69,14 +76,27 @@ BRANDING = [
     "plymouth",
 ]
 
-# Only needed where there is no GPU acceleration, e.g. a QEMU guest.
+# Forced when the user ticks "software rendering", for a machine whose GPU
+# driver is broken rather than absent. Hardware detection adds these by itself
+# for a guest; this is the override.
 SOFTWARE_RENDERING = [
     "mesa", "vulkan-swrast",
 ]
 
 
-def for_install(software_rendering: bool = False) -> list[str]:
-    packages = BASE + DESKTOP_CINNAMON + APPS + BRANDING
+def for_install(
+    software_rendering: bool = False,
+    detected: Sequence[str] = (),
+) -> list[str]:
+    """The package set for one machine.
+
+    `detected` is what osiris.model.hardware decided this particular machine
+    needs - its microcode, its GPU drivers - and is the reason Osiris does not
+    ship every driver to every target. See provision/hardware.py.
+    """
+    packages = BASE + DESKTOP_CINNAMON + APPS + BRANDING + list(detected)
     if software_rendering:
         packages += SOFTWARE_RENDERING
-    return packages
+    # Order is irrelevant to pacman but a stable one makes the install log
+    # diffable between runs.
+    return sorted(set(packages))

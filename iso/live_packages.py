@@ -20,6 +20,9 @@ BASE = [
 INSTALL_TOOLS = [
     "arch-install-scripts", "gptfdisk", "parted", "dosfstools", "e2fsprogs",
     "btrfs-progs", "util-linux", "efibootmgr",
+    # lspci, which is how the installer works out which drivers this machine
+    # needs. Without it detection degrades to a generic mesa install.
+    "pciutils",
 ]
 
 # pacstrap needs to reach a mirror, so the live system needs networking it can
