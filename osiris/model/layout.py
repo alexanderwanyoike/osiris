@@ -12,7 +12,11 @@ Deliberately absent: shrinking an existing partition to make room, which is
 what Mint's "install alongside" does. An online resize of a filesystem holding
 someone's data is the single operation in an installer most likely to lose it,
 and "make space first, then install into it" costs the user one step and
-removes the whole class of failure.
+removes the whole class of failure. The installer opens GParted for that step.
+
+Installing alongside another system needs UEFI and a GPT disk: Osiris shares
+the existing EFI system partition rather than touching the other system's boot
+code, and a BIOS machine has none to share.
 
 Everything here is a description. Nothing opens a device.
 """
@@ -77,6 +81,7 @@ class DiskContents:
     disk: Disk
     partitions: tuple[Partition, ...] = field(default_factory=tuple)
     free: tuple[FreeRegion, ...] = field(default_factory=tuple)
+    gpt: bool = True
 
     @property
     def existing_esp(self) -> Partition | None:
@@ -96,9 +101,11 @@ class DiskContents:
         usable = [region for region in self.free if region.big_enough]
         return max(usable, key=lambda region: region.size) if usable else None
 
-    def modes(self) -> list[InstallMode]:
-        """Which modes this disk can actually offer."""
+    def modes(self, uefi: bool = True) -> list[InstallMode]:
+        """Which modes this disk can actually offer on this machine."""
         available = [InstallMode.WHOLE_DISK]
+        if not (uefi and self.gpt):
+            return available
         if self.largest_free is not None:
             available.append(InstallMode.FREE_SPACE)
         if any(self._can_be_root(p) for p in self.partitions):
@@ -126,8 +133,6 @@ class Layout:
     filesystem: Filesystem = Filesystem.EXT4
     #: Which existing partition becomes the root, for EXISTING_PARTITION.
     root_partition: Partition | None = None
-    #: Kept and mounted without being formatted, if the user has one.
-    home_partition: Partition | None = None
 
     @property
     def disk(self) -> Disk:
@@ -197,10 +202,6 @@ class Layout:
             if self.reuses_esp:
                 esp = self.contents.existing_esp
                 lines.append(f"reuse    existing {esp.path if esp else 'ESP'}")
-            if self.home_partition:
-                lines.append(
-                    f"keep     {self.home_partition.path} as /home, not formatted"
-                )
         if self.filesystem is Filesystem.BTRFS:
             lines.append("         subvolumes @, @home, @log, @pkg")
         return lines
@@ -227,6 +228,4 @@ class Layout:
                 # Making one would mean repartitioning, which is the thing
                 # this mode exists to avoid.
                 problems.append("no EFI system partition on this disk to boot from")
-            if self.home_partition is not None and self.home_partition.mounted:
-                problems.append(f"{self.home_partition.path} is in use")
         return problems

@@ -50,8 +50,11 @@ from archinstall.lib.models.device import (
     DiskLayoutType,
     FilesystemType,
     ModificationStatus,
+    PartitionFlag,
     PartitionModification,
     PartitionType,
+    Size,
+    Unit,
 )
 from archinstall.lib.models.locale import LocaleConfiguration
 from archinstall.lib.models.mirrors import (
@@ -68,6 +71,7 @@ from archinstall.lib.profile.profiles_handler import profile_handler
 
 from osiris.model.disk import Filesystem
 from osiris.model.hardware import Gpu, GpuVendor
+from osiris.model.layout import InstallMode, Layout
 from osiris.model.request import InstallRequest
 
 #: The package that is Osiris: the desktop, the themes, the branding, and the
@@ -80,6 +84,13 @@ OSIRIS_PACKAGE = "osiris"
 #: script, but there is no shell logic of ours in it.
 SETUP_COMMAND = "osiris-setup"
 
+#: Where a shared EFI system partition is mounted. Not /boot: the kernels and
+#: initramfs images stay on Osiris's own root, so an ESP made by Windows at
+#: 100MB is not filled up, and only GRUB's few files go onto it.
+SHARED_ESP = Path("/efi")
+
+ESP_SIZE_GIB = 1
+
 
 @dataclass(frozen=True)
 class Target:
@@ -87,6 +98,8 @@ class Target:
 
     device: BDevice
     using_gpt: bool
+    #: Where on the disk Osiris goes. None erases the whole disk.
+    layout: Layout | None = None
     gpus: Sequence[Gpu] = ()
     bluetooth: bool = False
     repository: str = "file:///usr/share/osiris/repo"
@@ -132,6 +145,89 @@ def whole_disk_layout(
     )
 
 
+def _as_root(partition: PartitionModification, filesystem: Filesystem) -> None:
+    """Make `partition` the root filesystem, as the whole-disk layout does."""
+    btrfs = filesystem is Filesystem.BTRFS
+    partition.fs_type = FilesystemType.BTRFS if btrfs else FilesystemType.EXT4
+    partition.mountpoint = None if btrfs else Path("/")
+    partition.mount_options = [BtrfsMountOption.compress.value] if btrfs else []
+    partition.btrfs_subvols = get_default_btrfs_subvols() if btrfs else []
+    partition.flags = []
+
+
+def alongside_layout(device: BDevice, layout: Layout) -> DiskLayoutConfiguration:
+    """Install beside what is already on the disk, touching only Osiris's part.
+
+    Every existing partition is listed as it is, so archinstall knows the disk
+    and leaves it alone. Only three things change: the root partition is
+    created in free space or formatted in place, and an existing EFI system
+    partition is mounted - never formatted - so GRUB can add itself to it.
+    """
+    sector_size = device.device_info.sector_size
+    existing = {
+        str(part.path): PartitionModification.from_existing_partition(part)
+        for part in device.partition_infos
+    }
+    for partition in existing.values():
+        partition.mountpoint = None
+        partition.btrfs_subvols = []
+
+    esp = layout.contents.existing_esp
+    if esp is not None:
+        existing[esp.path].mountpoint = SHARED_ESP
+
+    created: list[PartitionModification] = []
+    if layout.mode is InstallMode.FREE_SPACE:
+        region = layout.contents.largest_free
+        if region is None:
+            raise ValueError("no free space to install into")
+        start = Size(region.start, Unit.B, sector_size)
+        end = Size(region.start + region.size, Unit.B, sector_size)
+        if esp is None:
+            boot = PartitionModification(
+                status=ModificationStatus.CREATE,
+                type=PartitionType.PRIMARY,
+                start=start,
+                length=Size(ESP_SIZE_GIB, Unit.GiB, sector_size),
+                mountpoint=Path("/boot"),
+                fs_type=FilesystemType.FAT32,
+                flags=[PartitionFlag.BOOT, PartitionFlag.ESP],
+            )
+            created.append(boot)
+            start = boot.start + boot.length
+        root = PartitionModification(
+            status=ModificationStatus.CREATE,
+            type=PartitionType.PRIMARY,
+            start=start,
+            length=end - start,
+        )
+        _as_root(root, layout.filesystem)
+        created.append(root)
+    elif layout.mode is InstallMode.EXISTING_PARTITION:
+        if layout.root_partition is None:
+            raise ValueError("no partition chosen to install into")
+        root = existing[layout.root_partition.path]
+        root.status = ModificationStatus.MODIFY
+        _as_root(root, layout.filesystem)
+    else:
+        raise ValueError(f"not an alongside layout: {layout.mode}")
+
+    modification = DeviceModification(device, wipe=False)
+    for partition in [*existing.values(), *created]:
+        modification.add_partition(partition)
+    return DiskLayoutConfiguration(
+        config_type=DiskLayoutType.Manual,
+        device_modifications=[modification],
+    )
+
+
+def disk_layout(target: Target, filesystem: Filesystem) -> DiskLayoutConfiguration:
+    layout = target.layout
+    if layout is None or layout.mode is InstallMode.WHOLE_DISK:
+        return whole_disk_layout(target.device, filesystem, target.using_gpt)
+    return alongside_layout(target.device, layout)
+
+
 def graphics_driver(gpus: Sequence[Gpu]) -> GfxDriver:
     """Which of archinstall's driver sets this machine wants.
 
@@ -166,14 +262,15 @@ def build(request: InstallRequest, target: Target) -> ArchConfig:
             sys_lang=language,
             sys_enc=encoding or "UTF-8",
         ),
-        disk_config=whole_disk_layout(
-            target.device, request.filesystem, target.using_gpt
-        ),
+        disk_config=disk_layout(target, request.filesystem),
         bootloader_config=BootloaderConfiguration(
             bootloader=Bootloader.Grub,
             # Also install to /EFI/BOOT/BOOTX64.EFI, so the disk boots on a
-            # machine other than the one it was installed from.
-            removable=True,
+            # machine other than the one it was installed from. Only when
+            # the disk is Osiris's alone: on a shared ESP that file belongs
+            # to whichever system put it there, often Windows.
+            removable=target.layout is None
+            or target.layout.mode is InstallMode.WHOLE_DISK,
             # The script module is what the Osiris theme is written for;
             # osiris-setup selects the theme itself.
             plymouth=PlymouthTheme.SCRIPT,
