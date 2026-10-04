@@ -2,7 +2,7 @@
 name = "osiris"
 version = "0.1.0"
 description = "A Linux distribution: Arch, Cinnamon, themed, installable"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = [
     "numpy>=1.26",
     "pillow>=10.0",
@@ -41,7 +41,7 @@ include = ["osiris*"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py314"
 
 # The legacy tree, excluded while it is migrated into osiris/. Each entry is
 # deleted as that area moves across, so the list shrinking is the measure of
@@ -83,7 +83,7 @@ max-complexity = 10
 "tests/*" = ["ARG"]          # fixtures are often unused by name
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
 packages = ["osiris"]
 strict = true
 warn_unreachable = true
