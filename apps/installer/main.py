@@ -514,13 +514,17 @@ class Window(Adw.ApplicationWindow):
         threading.Thread(target=run, daemon=True).start()
 
     def after_gparted(self) -> bool:
+        """Re-read the disks and redraw the options for the chosen one.
+
+        In place rather than by replacing the page: the disks themselves are
+        the same, only what is on them changed.
+        """
         from osiris.provision import disk_contents
 
         disk_contents.rescan()
-        self.contents = None
-        self.options.disk = ""
-        self.nav.pop()
-        self.nav.push(self.disk_page())
+        if self.options.disk:
+            self.contents = self.machine.contents(self.options.disk)
+        self.show_modes()
         return GLib.SOURCE_REMOVE
 
     def leave_disk(self) -> None:
