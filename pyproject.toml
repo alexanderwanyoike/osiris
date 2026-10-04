@@ -1,0 +1,118 @@
+[project]
+name = "osiris"
+version = "0.1.0"
+description = "A Linux distribution: Arch, Cinnamon, themed, installable"
+requires-python = ">=3.14"
+dependencies = [
+    "numpy>=1.26",
+    "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+# PyGObject is deliberately not a hard dependency. The theme engine, the
+# provisioning code and the ISO builder must stay importable - and testable -
+# on a machine with no GTK stack at all, which is what CI is.
+gui = ["PyGObject>=3.46"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "vulture>=2.11",
+    "import-linter>=2.0",
+    # The installer's configuration is built from archinstall's own objects
+    # and tested by round-tripping through its parser. Pinned to the version
+    # Arch ships, so a format change shows up here before it shows up on a
+    # user's disk.
+    "archinstall==4.5",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["osiris*"]
+
+[tool.setuptools.package-data]
+"osiris.resources" = ["**/*"]
+
+# --------------------------------------------------------------------------- #
+
+[tool.ruff]
+line-length = 88
+target-version = "py314"
+
+# The legacy tree, excluded while it is migrated into osiris/. Each entry is
+# deleted as that area moves across, so the list shrinking is the measure of
+# the refactor. Nothing new may be added to it.
+extend-exclude = [
+    "build",
+    "provision",
+    "shell",
+    "apps",
+    "iso",
+    "branding/scripts",
+]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",      # pycodestyle
+    "F",           # pyflakes: unused imports and names
+    "I",           # import ordering
+    "UP",          # pyupgrade
+    "B",           # bugbear: real bug patterns
+    "SIM",         # simplifiable code
+    "C4",          # comprehensions
+    "RET",         # return consistency
+    "PTH",         # use pathlib over os.path
+    "ARG",         # unused arguments
+    "TID",         # tidy imports, including relative-import bans
+    "C90",         # mccabe complexity
+    "RUF",
+]
+ignore = [
+    "RUF012",      # mutable class defaults; we use them for literal tables
+]
+
+[tool.ruff.lint.mccabe]
+# Anything past this is doing too much to be understood or tested in one piece.
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]          # fixtures are often unused by name
+
+[tool.mypy]
+python_version = "3.14"
+packages = ["osiris"]
+strict = true
+warn_unreachable = true
+# gi has no usable stubs; the GUI modules are excluded from strict typing
+# rather than littered with ignores.
+[[tool.mypy.overrides]]
+module = ["gi.*", "gi"]
+ignore_missing_imports = true
+
+# archinstall and pyparted ship no type information.
+[[tool.mypy.overrides]]
+module = ["archinstall", "archinstall.*", "parted"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["osiris.apps.*"]
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config"
+markers = [
+    "integration: needs a real machine or VM; skipped by default in CI",
+]
+
+[tool.coverage.run]
+source = ["osiris"]
+omit = ["osiris/apps/*"]        # GTK windows are not unit-testable
+
+[tool.vulture]
+paths = ["osiris"]
+min_confidence = 80

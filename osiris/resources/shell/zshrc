@@ -1,0 +1,21 @@
+# Osiris default zsh configuration.
+export ZSH="/usr/share/oh-my-zsh"
+# The framework writes nothing to the shared install; per-user state lives here.
+export ZSH_CUSTOM="$HOME/.config/osiris/zsh"
+export ZSH_COMPDUMP="$HOME/.cache/zcompdump"
+
+ZSH_THEME="af-magic"
+plugins=(git sudo command-not-found)
+
+mkdir -p "$ZSH_CUSTOM" "$(dirname "$ZSH_COMPDUMP")"
+[ -r "$ZSH/oh-my-zsh.sh" ] && source "$ZSH/oh-my-zsh.sh"
+
+setopt HIST_IGNORE_ALL_DUPS SHARE_HISTORY
+HISTSIZE=50000
+SAVEHIST=50000
+HISTFILE="$HOME/.zsh_history"
+
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+
+command -v fastfetch >/dev/null && fastfetch

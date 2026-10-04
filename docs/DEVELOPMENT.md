@@ -9,8 +9,11 @@ this repository. There is no container path and no "run it on your host"
 path - the desktop, the theme engine and the installer all act on a real
 system, and a VM is the only honest place to watch them do it.
 
+Install it from the ISO (see below), then add the repository share to the
+guest's `/etc/fstab`:
+
 ```
-provision/install.py --disk /dev/vda --user <name> --virtiofs-tag osiris
+osiris /home/<user>/osiris virtiofs rw,nofail 0 0
 ```
 
 The repository is shared into the guest over virtiofs, mounted at
@@ -44,10 +47,13 @@ checksum offload were both blamed and neither was at fault.
 ## Building the ISO
 
 ```
+python3 iso/repo.py
 sudo python3 iso/profile.py
 ```
 
-Needs the `archiso` package and root, because mkarchiso mounts and chroots.
+The first builds the `osiris` package as a normal user (makepkg refuses root).
+The second needs the `archiso` package and root, because mkarchiso mounts and
+chroots.
 Budget around 8GB of scratch space and twelve minutes. Writes
 `build/out/osiris-<version>-x86_64.iso` and leaves the generated profile at
 `build/iso-profile` for inspection.
@@ -74,13 +80,13 @@ interpolated into a command line, so nothing can be quoted wrongly.
 
 Three things are worth knowing, none of which is a loophole:
 
-**`profiledef.sh` is generated.** archiso requires that file and it must be
-bash. It contains no logic - only variable assignments like `iso_name=` and
-`bootmodes=` - and `iso/profile.py` emits it. The artefact is bash; the source
-is Python, the same arrangement as a compiler emitting assembly. The two other
-things that used to require bash no longer do: `customize_airootfs.sh` has been
-removed from archiso entirely, and services are enabled with symlinks into
-`*.target.wants/`.
+**Two generated files are bash.** archiso's `profiledef.sh` is upstream's
+releng file with variable assignments appended by `iso/profile.py`, and the
+`osiris` package's PKGBUILD is emitted by `osiris/iso/package.py`: assignments
+and one `cp`. Neither carries logic of ours; the source is Python, the same
+arrangement as a compiler emitting assembly. archinstall wraps `osiris-setup`
+in a one-line script of its own when it runs it, which is archinstall's bash,
+not ours. Services are enabled with symlinks into `*.target.wants/`.
 
 **22 lines of zsh ship as `/etc/skel/.zshrc`,** authored in
 `provision/apps.py`. That is the user's interactive shell configuration, which

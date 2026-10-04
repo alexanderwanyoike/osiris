@@ -1,0 +1,61 @@
+# Architecture, enforced. These contracts are the difference between a design
+# document and a design: import-linter fails the build when a layer reaches
+# somewhere it should not, which is how the structure survives contact with
+# future changes.
+
+[importlinter]
+root_package = osiris
+include_external_packages = True
+
+[importlinter:contract:layers]
+name = Layers point downwards only
+type = layers
+layers =
+    osiris.apps
+    osiris.iso | osiris.provision | osiris.themes
+    osiris.resources
+    osiris.platform
+    osiris.model
+
+[importlinter:contract:model-is-pure]
+name = The domain model touches nothing
+type = forbidden
+source_modules =
+    osiris.model
+forbidden_modules =
+    osiris.platform
+    osiris.resources
+    osiris.provision
+    osiris.themes
+    osiris.iso
+    osiris.apps
+    subprocess
+    os
+
+[importlinter:contract:subprocess-is-confined]
+name = Only the process adapter may spawn processes
+type = forbidden
+source_modules =
+    osiris.model
+    osiris.resources
+    osiris.themes
+    osiris.provision
+    osiris.iso
+    osiris.apps
+forbidden_modules =
+    subprocess
+ignore_imports =
+    osiris.platform.process -> subprocess
+
+[importlinter:contract:no-gtk-below-apps]
+name = GTK stays in the application layer
+type = forbidden
+source_modules =
+    osiris.model
+    osiris.platform
+    osiris.resources
+    osiris.themes
+    osiris.provision
+    osiris.iso
+forbidden_modules =
+    gi

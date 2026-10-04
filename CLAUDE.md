@@ -62,6 +62,16 @@ packaged options are good. When a feature seems to need one of those, the
 answer is almost always to configure or generate against what upstream already
 ships. See docs/THEMING.md.
 
+### Never hand-roll critical system machinery
+
+Installing the OS, partitioning disks, setting up the bootloader, detecting
+drivers, building the ISO, delivering updates: these are done by the tools Arch
+already maintains (archinstall, archiso's releng profile, pacman packages), not
+by code we write. Osiris owns the screens, the desktop, the themes and the
+branding. It does not own anything that can leave a machine unbootable or a
+disk erased. If a feature seems to need us to write that kind of code, stop and
+find the maintained tool first. See docs/adr/0012.
+
 ## Development workflow
 
 See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). In short: work against the

@@ -40,14 +40,15 @@ install and reboot, lands in the Phase 1 desktop, themed and branded.
 
 | ID | Task | DoD | State |
 |---|---|---|---|
-| P1.1 | `iso/profile.py` generates an archiso profile and builds the ISO | `python3 iso/profile.py` produces a bootable UEFI ISO | done |
+| P1.1 | `iso/profile.py` builds the ISO from archiso's releng profile | `python3 iso/profile.py` produces a medium that boots on BIOS and UEFI | built, not yet booted |
 | P1.2 | Installer wizard: region, disk, account, confirm, progress, done | All steps render, validation works, back navigation works | done |
-| P1.3 | `provision/install.py` as an importable API with progress | `install(Options, progress)` drives both the CLI and the GUI | done |
+| P1.3 | archinstall does the install (ADR 0012) | The wizard's answers become an archinstall config; archinstall installs the `osiris` package and runs `osiris-setup` | written and unit-tested, not yet run end to end |
 | P1.4 | Disk picker | Lists disks with size and transport; refuses mounted and undersized ones with the reason | done |
 | P1.5 | Full provisioning on install | Installed system has the themes, Appearance app, ghostty, zsh and branding, not plain Cinnamon | done |
 | P1.6 | First-boot experience: welcome screen | Fresh install boots to a welcome flow | deferred to Phase 3 |
-| P1.8 | Disk layout options, software rendering, retry | ext4 or btrfs with subvolumes, swap file, VM-detected rendering switch, retry after failure | done |
-| P1.7 | Bootloader: systemd-boot with branded splash | Install completes with a working bootloader, splash uses Osiris branding | done |
+| P1.8 | Disk layout options, software rendering, retry | ext4 or btrfs with subvolumes, zram, detected graphics drivers, retry after failure | done |
+| P1.9 | Install alongside another system | Free space or an existing partition, via an archinstall manual layout | model only |
+| P1.7 | Bootloader: GRUB with a themed menu carrying the mark | Install completes with a working bootloader; the boot menu and splash are both branded | done |
 
 Dropped from this phase: model selection and API key entry (P1.5 as originally
 written). The installer installs an operating system; asking for an API key
@@ -70,7 +71,7 @@ Everything that makes Osiris feel like a product, not a project.
 | P2.2 | Public installation and customisation documentation | Someone who has not seen the repo can install Osiris and write a theme | |
 | P2.3 | First-run welcome: what Osiris is, where Appearance lives | A fresh install explains itself once, briefly | |
 | P2.4 | Distribution channel: GitHub releases or osiris.sh | ISO downloadable from a stable URL with checksums | |
-| P2.5 | Package the tree properly: `osiris-desktop`, `osiris-themes` | Installing is pacman installing packages, not a script copying files | |
+| P2.5 | Package the tree properly | Installing is pacman installing packages, not a script copying files | `osiris` package exists; a hosted repository for updates does not |
 | P2.6 | Theme the remaining surfaces: Plymouth splash, greeter | The boot-to-desktop sequence is one palette, not three | |
 
 ---

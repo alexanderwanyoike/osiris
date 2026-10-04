@@ -8,7 +8,8 @@ Touches three surfaces:
   * /usr/share/osiris/ as the canonical place other components read assets from
 
 Plymouth needs a mkinitcpio hook and a kernel command line flag, so this
-regenerates the initramfs and rewrites the systemd-boot entry options.
+regenerates the initramfs. The kernel command line that Plymouth needs
+(`quiet splash`) is set by provision/grub.py, which owns the bootloader.
 """
 import argparse
 import os
@@ -143,6 +144,11 @@ def install_plymouth() -> None:
     run("plymouth-set-default-theme", "osiris")
 
 
+def has_plymouth_hook() -> bool:
+    with open("/etc/mkinitcpio.conf") as fh:
+        return re.search(r"^HOOKS=.*\bplymouth\b", fh.read(), re.M) is not None
+
+
 def add_mkinitcpio_hook() -> bool:
     """Insert the right plymouth hook. Returns True if changed.
 
@@ -172,25 +178,6 @@ def add_mkinitcpio_hook() -> bool:
     return False
 
 
-def add_kernel_flags() -> bool:
-    """Add quiet/splash to the systemd-boot entry. Returns True if changed."""
-    entry = "/boot/loader/entries/osiris.conf"
-    if not os.path.exists(entry):
-        print(f"  no {entry}; skipping kernel flags")
-        return False
-    with open(entry) as fh:
-        text = fh.read()
-    if "splash" in text:
-        print("  kernel flags already present")
-        return False
-    text = re.sub(r"^(options .*)$", r"\1 quiet splash vt.global_cursor_default=0",
-                  text, count=1, flags=re.M)
-    with open(entry, "w") as fh:
-        fh.write(text)
-    print("  added quiet/splash to kernel command line")
-    return True
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=os.path.dirname(
@@ -202,13 +189,16 @@ def main() -> None:
 
     install_assets(args.repo)
     install_plymouth()
-    changed = add_mkinitcpio_hook()
-    add_kernel_flags()
+    add_mkinitcpio_hook()
 
     print("configuring login screen")
     write("/etc/lightdm/slick-greeter.conf", SLICK_GREETER_CONF)
 
-    if changed:
+    # The splash theme is copied into the initramfs, so choosing one means
+    # rebuilding it - even when the hook was already there. On an install,
+    # archinstall added the hook and built the initramfs with its own default
+    # theme a minute earlier.
+    if has_plymouth_hook():
         print("regenerating initramfs")
         run("mkinitcpio", "-P")
 

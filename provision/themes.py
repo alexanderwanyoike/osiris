@@ -3,6 +3,7 @@
     python3 provision/themes.py [--repo PATH]
 
 Lays down:
+    /usr/share/osiris/lib/osiris/    the osiris package
     /usr/share/osiris/themes/        theme manifests, engine, previews
     /usr/share/osiris/logo-mask.png  the mark, composited into wallpapers
     /usr/share/osiris/appearance/    the Appearance app
@@ -25,6 +26,10 @@ from run import run  # noqa: E402
 SHARE = "/usr/share/osiris"
 THEMES_DIR = f"{SHARE}/themes"
 APP_DIR = f"{SHARE}/appearance"
+# The osiris package itself. Everything on the target that wants the tested
+# code imports it from here; shell/themes/*.py are shims that put this on
+# sys.path. Until the whole legacy tree has moved across, both are installed.
+LIB_DIR = f"{SHARE}/lib"
 WALLPAPERS = "/usr/share/backgrounds/osiris"
 
 LAUNCHER = """#!/usr/bin/env python3
@@ -33,6 +38,17 @@ import sys
 
 sys.argv[0] = "osiris-appearance"
 runpy.run_path("/usr/share/osiris/appearance/main.py", run_name="__main__")
+"""
+
+
+# Applies the default theme on a user's first login; see engine.first_login.
+FIRST_LOGIN = """[Desktop Entry]
+Type=Application
+Name=Osiris theme
+Comment=Apply the default Osiris theme on first login
+Exec=/usr/bin/python3 /usr/share/osiris/themes/engine.py --first-login
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
 """
 
 
@@ -59,6 +75,19 @@ def main() -> None:
     src_themes = os.path.join(args.repo, "shell", "themes")
     if not os.path.isdir(src_themes):
         sys.exit(f"missing {src_themes}")
+
+    print("installing the osiris package")
+    package = os.path.join(args.repo, "osiris")
+    if not os.path.isdir(package):
+        sys.exit(f"missing {package}")
+    target = os.path.join(LIB_DIR, "osiris")
+    if os.path.isdir(target):
+        shutil.rmtree(target)
+    os.makedirs(LIB_DIR, exist_ok=True)
+    shutil.copytree(
+        package, target,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    print(f"  {target}")
 
     print("installing themes")
     n = copy_tree(src_themes, THEMES_DIR, (".json", ".py"))
@@ -105,6 +134,12 @@ def main() -> None:
                              "dev.osiris.Appearance.desktop")
     run("update-desktop-database", "/usr/share/applications", check=False)
     print("  /usr/bin/osiris-appearance")
+
+    print("applying the default theme on first login")
+    os.makedirs("/etc/xdg/autostart", exist_ok=True)
+    with open("/etc/xdg/autostart/osiris-theme.desktop", "w") as fh:
+        fh.write(FIRST_LOGIN)
+    print("  /etc/xdg/autostart/osiris-theme.desktop")
 
     print("THEMES_INSTALLED")
 

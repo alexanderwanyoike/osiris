@@ -1,6 +1,6 @@
 """Services every Osiris install needs, regardless of desktop.
 
-Exists because the Cinnamon and COSMIC configurators each used to enable their
+Exists because the desktop and application configurators each used to enable their
 own list, and the Cinnamon one silently omitted NetworkManager and sshd - which
 produced an installed system with no network and no way in. One list, imported
 by both.
