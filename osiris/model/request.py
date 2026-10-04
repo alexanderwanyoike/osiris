@@ -12,6 +12,7 @@ import re
 from dataclasses import dataclass, field
 
 from osiris.model.disk import Disk, Filesystem
+from osiris.model.layout import InstallMode
 
 MINIMUM_PASSWORD = 6
 
@@ -37,6 +38,9 @@ class InstallRequest:
     keymap: str = "us"
     filesystem: Filesystem = Filesystem.EXT4
     software_rendering: bool = False
+    mode: InstallMode = InstallMode.WHOLE_DISK
+    #: The partition to install into, for InstallMode.EXISTING_PARTITION.
+    root_partition: str | None = None
 
     #: Collected rather than raised one at a time, so a form can show every
     #: problem at once instead of playing whack-a-mole.
@@ -60,8 +64,10 @@ class InstallRequest:
             problems.append("computer name may only contain letters, digits and -")
         if len(self.password) < MINIMUM_PASSWORD:
             problems.append(f"password must be at least {MINIMUM_PASSWORD} characters")
-        if not self.disk.usable:
+        if self.mode is InstallMode.WHOLE_DISK and not self.disk.usable:
             problems.append(f"{self.disk.path}: {self.disk.unusable_because}")
+        if self.mode is InstallMode.EXISTING_PARTITION and not self.root_partition:
+            problems.append("choose a partition to install into")
         return problems
 
     @property

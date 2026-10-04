@@ -9,7 +9,13 @@ import parted
 import pytest
 from archinstall.lib.disk.device_handler import device_handler
 from archinstall.lib.locale import utils as locale_utils
-from archinstall.lib.models.device import BDevice, _DeviceInfo
+from archinstall.lib.models.device import (
+    BDevice,
+    FilesystemType,
+    LsblkInfo,
+    _DeviceInfo,
+    _PartitionInfo,
+)
 
 GIB = 1024**3
 
@@ -43,3 +49,75 @@ def device(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[BDevice]
     bdevice = BDevice(disk, _DeviceInfo.from_disk(disk), [])
     monkeypatch.setattr(device_handler, "get_device", lambda _path: bdevice)
     yield bdevice
+
+
+def _lsblk(partition: parted.Partition, fstype: str) -> LsblkInfo:
+    """What lsblk would report for a partition of the image."""
+    return LsblkInfo.model_validate(
+        {
+            "name": partition.path.rsplit("/", 1)[-1],
+            "path": partition.path,
+            "pkname": None,
+            "log-sec": 512,
+            "size": int(partition.getLength(unit="B")),
+            "pttype": "gpt",
+            "ptuuid": None,
+            "rota": False,
+            "tran": None,
+            "partn": partition.number,
+            "partuuid": None,
+            "parttype": None,
+            "uuid": None,
+            "fstype": fstype,
+            "fsver": None,
+            "fsavail": None,
+            "fsuse%": None,
+            "type": "part",
+            "mountpoint": None,
+            "mountpoints": [],
+            "fsroots": [],
+        }
+    )
+
+
+def a_disk_with(
+    tmp_path: Path, partitions: list[tuple[int, int, FilesystemType, bool]]
+) -> BDevice:
+    """A 40 GiB GPT image holding `partitions`: (start MiB, size MiB, fs, esp)."""
+    image = tmp_path / "shared.img"
+    with image.open("wb") as handle:
+        handle.truncate(40 * GIB)
+    device = parted.getDevice(str(image))
+    disk = parted.freshDisk(device, "gpt")
+    mib = 1024**2 // device.sectorSize
+    infos = []
+    for start, size, _fs_type, esp in partitions:
+        geometry = parted.Geometry(device, start=start * mib, length=size * mib)
+        partition = parted.Partition(
+            disk=disk, type=parted.PARTITION_NORMAL, geometry=geometry
+        )
+        disk.addPartition(partition, constraint=device.optimalAlignedConstraint)
+        if esp:
+            partition.setFlag(parted.PARTITION_ESP)
+    for partition, (_, _, fs_type, _) in zip(disk.partitions, partitions, strict=True):
+        infos.append(
+            _PartitionInfo.from_partition(
+                partition, _lsblk(partition, fs_type.value), fs_type
+            )
+        )
+    return BDevice(disk, _DeviceInfo.from_disk(disk), infos)
+
+
+@pytest.fixture
+def shared_device(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> BDevice:
+    """Another system already installed: a 512 MiB ESP, a 20 GiB ext4 root,
+    and about 19.5 GiB unallocated after them."""
+    bdevice = a_disk_with(
+        tmp_path,
+        [
+            (1, 512, FilesystemType.FAT32, True),
+            (513, 20480, FilesystemType.EXT4, False),
+        ],
+    )
+    monkeypatch.setattr(device_handler, "get_device", lambda _path: bdevice)
+    return bdevice

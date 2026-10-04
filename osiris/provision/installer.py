@@ -13,12 +13,14 @@ from collections.abc import Callable
 from pathlib import Path
 
 from archinstall.lib.disk.device_handler import device_handler
+from archinstall.lib.hardware import SysInfo
 from archinstall.lib.models.device import BDevice
 
-from osiris.model.request import InstallRequest
+from osiris.model.layout import DiskContents, InstallMode, Layout
+from osiris.model.request import InstallRequest, InvalidRequest
 from osiris.platform.hardware import HardwareProbe, SystemProbe
 from osiris.platform.process import CommandRunner
-from osiris.provision import archinstall_config
+from osiris.provision import archinstall_config, disk_contents
 
 #: fraction completed, what is starting now
 Progress = Callable[[float, str], None]
@@ -40,12 +42,14 @@ class Installer:
         probe: HardwareProbe,
         devices: Devices,
         using_gpt: bool,
+        uefi: bool = True,
         config_dir: Path = CONFIG_DIR,
     ) -> None:
         self._runner = runner
         self._probe = probe
         self._devices = devices
         self._using_gpt = using_gpt
+        self._uefi = uefi
         self._config_dir = config_dir
 
     @classmethod
@@ -60,6 +64,7 @@ class Installer:
             SystemProbe(runner),
             devices=lambda path: device_handler.get_device(Path(path)),
             using_gpt=device_handler.partition_table.is_gpt(),
+            uefi=SysInfo.has_uefi(),
         )
 
     def target(self, request: InstallRequest) -> archinstall_config.Target:
@@ -71,11 +76,42 @@ class Installer:
         return archinstall_config.Target(
             device=device,
             using_gpt=self._using_gpt,
+            layout=self.layout(request, device),
             # No GPUs means archinstall's all-open-source set, whose mesa
             # renders in software where no driver works.
             gpus=() if request.software_rendering else hardware.gpus,
             bluetooth=hardware.bluetooth,
         )
+
+    @property
+    def uefi(self) -> bool:
+        return self._uefi
+
+    def contents(self, path: str) -> DiskContents | None:
+        """What is on the disk at `path`, for the wizard to offer modes from."""
+        device = self._devices(path)
+        return disk_contents.read(device) if device is not None else None
+
+    def layout(self, request: InstallRequest, device: BDevice) -> Layout | None:
+        """Where Osiris goes, checked against what is really on the disk.
+
+        Read again here rather than trusted from the wizard: the disk may have
+        changed since it was shown - GParted is one click away - and this is
+        the last moment before anything is written.
+        """
+        if request.mode is InstallMode.WHOLE_DISK:
+            return None
+        contents = disk_contents.read(device)
+        if request.mode not in contents.modes(self._uefi):
+            raise InvalidRequest(f"{request.mode} is not possible on {request.disk.path}")
+        root = next(
+            (p for p in contents.partitions if p.path == request.root_partition),
+            None,
+        )
+        layout = Layout(contents, request.mode, request.filesystem, root_partition=root)
+        if layout.problems:
+            raise InvalidRequest("; ".join(layout.problems))
+        return layout
 
     def install(
         self, request: InstallRequest, progress: Progress | None = None

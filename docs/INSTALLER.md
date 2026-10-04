@@ -115,7 +115,7 @@ protect it from.
 |---|---|
 | Region | Language (locale), time zone, keyboard layout |
 | Hardware | Software rendering, defaulted on inside a VM |
-| Disk | Which disk, filesystem |
+| Disk | Which disk, how (erase, free space, a partition), filesystem |
 | Account | Computer name, username, password |
 | Confirm | A summary, the destructive warning, and a gate |
 
@@ -131,14 +131,43 @@ software where no driver works.
 
 ### Disk layout
 
-The whole disk: archinstall's default layout, a 1GB boot partition and one
-root filesystem. ext4, or btrfs with archinstall's default subvolumes (`@`,
+Three ways onto a disk, and the page offers only the ones that fit:
+
+- **Erase the disk.** archinstall's default layout: a 1GB boot partition and
+  one root filesystem.
+- **Install in free space.** The root is created in the largest unallocated
+  region. Nothing that exists is touched.
+- **Install on a partition.** The chosen partition is formatted as the root.
+  Nothing else is touched.
+
+The root is ext4, or btrfs with archinstall's default subvolumes (`@`,
 `@home`, `@log`, `@pkg`) and compression. Swap is zram, compressed RAM, so
 there is no swap file or partition to size.
 
-Installing alongside another system is not offered yet. The model for it is
-in `osiris/model/layout.py`; it will be expressed as an archinstall manual
-layout that keeps the existing partitions.
+**Making room** is GParted's job, opened from a button on the disk page. Osiris
+never shrinks a partition itself (see `osiris/model/layout.py`). When GParted
+closes, the disks are read again.
+
+**Installing beside another system needs UEFI and a GPT disk.** Osiris shares
+the existing EFI system partition rather than touching anything else's boot
+code. That partition is mounted at `/efi`, never formatted, and receives only
+GRUB's files (a few MB, theme included); the kernels stay on Osiris's own
+root, so a 100MB ESP made by Windows does not fill up. The removable fallback
+loader, `/EFI/BOOT/BOOTX64.EFI`, is not written on a shared ESP, because it
+belongs to whichever system put it there. If the disk has no ESP, a new 1GB
+one is created in the free space.
+
+The disk is read through archinstall: its device handler for partitions, and
+the free-space logic of its own partitioning screen, so the installer offers
+exactly the space archinstall will accept. The layout goes to archinstall as a
+manual layout listing every existing partition as it is. It is read and
+checked again immediately before archinstall runs, since the disk may have
+changed after the page was drawn.
+
+Known limits: archinstall always names the boot entry `GRUB`, so a second
+archinstall-made system on the same ESP shares that entry and the boot menu,
+which os-prober populates with the other system. os-prober identifies an
+Osiris install as "Arch Linux", because Osiris does not brand `/etc/os-release`.
 
 ### Retrying
 

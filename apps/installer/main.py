@@ -33,13 +33,20 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))
 
 import disks  # noqa: E402
 
-from osiris.model.disk import Disk, Filesystem  # noqa: E402
+from osiris.model.disk import Disk, Filesystem, human  # noqa: E402
+from osiris.model.layout import InstallMode, Layout  # noqa: E402
 from osiris.model.request import InstallRequest  # noqa: E402
 from osiris.platform.process import SubprocessRunner  # noqa: E402
 
 LOGO_PATHS = ("/usr/share/osiris/logo-dark.png",
               os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
                   os.path.abspath(__file__)))), "branding", "logo-dark.png"))
+
+MODE_TITLES = {
+    InstallMode.WHOLE_DISK: "Erase the disk and install Osiris",
+    InstallMode.FREE_SPACE: "Install in free space",
+    InstallMode.EXISTING_PARTITION: "Install on a partition",
+}
 
 COMMON_KEYMAPS = ("us", "uk", "gb", "de", "fr", "es", "it", "dvorak", "colemak")
 
@@ -59,6 +66,8 @@ class Choices:
     keymap: str = "us"
     filesystem: str = "ext4"
     software_rendering: bool = False
+    mode: InstallMode = InstallMode.WHOLE_DISK
+    root_partition: str | None = None
 
     def request(self) -> InstallRequest:
         return InstallRequest(
@@ -71,15 +80,9 @@ class Choices:
             keymap=self.keymap,
             filesystem=Filesystem(self.filesystem),
             software_rendering=self.software_rendering,
+            mode=self.mode,
+            root_partition=self.root_partition,
         )
-
-    def layout(self) -> list[str]:
-        """The partition plan in words, for the installer to show."""
-        plan = ["1 GB     boot partition",
-                f"rest     Osiris root ({self.filesystem})"]
-        if self.filesystem == "btrfs":
-            plan.append("         subvolumes @, @home, @log, @pkg")
-        return plan
 
 CSS = b"""
 .hero-logo { margin-bottom: 6px; }
@@ -235,6 +238,11 @@ class Window(Adw.ApplicationWindow):
         self.set_default_size(*screen_size())
         self.options = Choices()
         self.installing = False
+        # archinstall's view of this machine's disks and firmware. Made when
+        # the disk page is first shown: importing archinstall reads every
+        # disk, which is not something the welcome page should wait on.
+        self.machine = None
+        self.contents = None
 
         self.nav = Adw.NavigationView()
         self.nav.add(self.welcome_page())
@@ -300,9 +308,13 @@ class Window(Adw.ApplicationWindow):
     def disk_page(self) -> Adw.NavigationPage:
         box = column()
         found = disks.available()
+        if self.machine is None:
+            from osiris.provision.installer import Installer
+
+            self.machine = Installer.for_this_machine(SubprocessRunner())
         group = Adw.PreferencesGroup(
             title="Target disk",
-            description="Everything on the disk you pick will be erased.")
+            description="Pick the disk, then how Osiris goes onto it.")
 
         self.disk_choice = None
         self.disk_next = None
@@ -353,14 +365,26 @@ class Window(Adw.ApplicationWindow):
         box.append(bar)
         return page("disk", "Disk", box)
 
-    def layout_group(self) -> Adw.PreferencesGroup:
-        """How the chosen disk gets laid out."""
-        group = Adw.PreferencesGroup(
-            title="Layout",
-            description="Osiris uses the whole disk: a boot partition and one "
-                        "root filesystem. Memory is backed by compressed RAM "
-                        "(zram) rather than a swap file.")
+    def layout_group(self) -> Gtk.Box:
+        """How Osiris goes onto the chosen disk, and what that costs."""
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
 
+        self.mode_group = Adw.PreferencesGroup(title="How to install")
+        box.append(self.mode_group)
+        self.mode_rows = []
+
+        tools = Adw.PreferencesGroup()
+        gparted = Adw.ActionRow(
+            title="Make room for Osiris",
+            subtitle="Shrink or delete partitions in GParted, then come back. "
+                     "Back up anything you care about first.")
+        button = Gtk.Button(label="Open GParted", valign=Gtk.Align.CENTER)
+        button.connect("clicked", lambda _b: self.open_gparted())
+        gparted.add_suffix(button)
+        tools.add(gparted)
+        box.append(tools)
+
+        group = Adw.PreferencesGroup(title="Layout")
         self.filesystem = dropdown(["ext4", "btrfs"], self.options.filesystem)
         group.add(combo_row(
             "Filesystem",
@@ -374,18 +398,134 @@ class Window(Adw.ApplicationWindow):
         self.plan.set_margin_top(8)
         self.plan.set_margin_start(4)
         group.add(self.plan)
+        box.append(group)
 
         self.filesystem.connect("notify::selected", lambda *_a: self.show_plan())
+        self.show_modes()
+        return box
+
+    def show_modes(self) -> None:
+        """Offer only the modes this disk and this machine can do."""
+        for row in self.mode_rows:
+            self.mode_group.remove(row)
+        self.mode_rows = []
+        self.partition_choice = None
+
+        contents = self.contents
+        if contents is None:
+            self.mode_group.set_description("Choose a disk first.")
+            self.show_plan()
+            return
+        offered = contents.modes(self.machine.uefi)
+        if self.options.mode not in offered:
+            self.options.mode = InstallMode.WHOLE_DISK
+
+        notes = []
+        if not self.machine.uefi:
+            notes.append("Installing beside another system needs a UEFI "
+                         "machine; this one started in BIOS mode.")
+        elif not contents.gpt:
+            notes.append("Installing beside another system needs a GPT disk.")
+        self.mode_group.set_description(" ".join(notes) or None)
+
+        first = None
+        for mode in offered:
+            row = Adw.ActionRow(title=MODE_TITLES[mode],
+                                subtitle=self.mode_subtitle(mode))
+            radio = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+            if first is None:
+                first = radio
+            else:
+                radio.set_group(first)
+            radio.set_active(mode is self.options.mode)
+            radio.connect("toggled", self.choose_mode, mode)
+            row.add_prefix(radio)
+            row.set_activatable_widget(radio)
+            if mode is InstallMode.EXISTING_PARTITION:
+                candidates = contents.candidates_for_root()
+                self.partition_choice = dropdown(
+                    [p.description for p in candidates])
+                self.partition_paths = [p.path for p in candidates]
+                self.partition_choice.connect(
+                    "notify::selected", lambda *_a: self.show_plan())
+                row.add_suffix(self.partition_choice)
+            self.mode_group.add(row)
+            self.mode_rows.append(row)
         self.show_plan()
-        return group
+
+    def mode_subtitle(self, mode: InstallMode) -> str:
+        if mode is InstallMode.WHOLE_DISK:
+            return "Everything on the disk is erased."
+        if mode is InstallMode.FREE_SPACE:
+            region = self.contents.largest_free if self.contents else None
+            size = human(region.size) if region else "the"
+            return f"Uses {size} of unallocated space. Nothing else is touched."
+        return "Formats the partition you choose. Nothing else is touched."
+
+    def choose_mode(self, radio: Gtk.CheckButton, mode: InstallMode) -> None:
+        if radio.get_active():
+            self.options.mode = mode
+            self.show_plan()
 
     def read_layout(self) -> None:
         self.options.filesystem = self.filesystem.get_selected_item().get_string()
+        self.options.root_partition = None
+        if (self.options.mode is InstallMode.EXISTING_PARTITION
+                and self.partition_choice is not None
+                and self.partition_paths):
+            index = self.partition_choice.get_selected()
+            self.options.root_partition = self.partition_paths[index]
+
+    def current_layout(self) -> Layout | None:
+        if self.contents is None:
+            return None
+        root = next((p for p in self.contents.partitions
+                     if p.path == self.options.root_partition), None)
+        return Layout(self.contents, self.options.mode,
+                      Filesystem(self.options.filesystem), root_partition=root)
 
     def show_plan(self) -> None:
         """Say what the disk will look like afterwards, in so many words."""
         self.read_layout()
-        self.plan.set_text("\n".join(self.options.layout()))
+        layout = self.current_layout()
+        if layout is None:
+            self.plan.set_text("")
+            return
+        lines = layout.describe()
+        lines += [""] + [f"erased   {item}" for item in layout.destroys]
+        lines += [f"kept     {item}" for item in layout.keeps]
+        lines += [f"problem  {item}" for item in layout.problems]
+        self.plan.set_text("\n".join(lines))
+        if self.disk_next is not None:
+            self.disk_next.set_sensitive(not layout.problems)
+
+    def open_gparted(self) -> None:
+        """Run GParted, then read the disks again and redraw this page."""
+        path = self.options.disk or None
+
+        def run() -> None:
+            argv = ["gparted"] + ([path] if path else [])
+            try:
+                subprocess.run(argv, check=False)
+            except OSError:
+                pass
+            GLib.idle_add(self.after_gparted)
+
+        threading.Thread(target=run, daemon=True).start()
+
+    def after_gparted(self) -> bool:
+        """Re-read the disks and redraw the options for the chosen one.
+
+        In place rather than by replacing the page: the disks themselves are
+        the same, only what is on them changed.
+        """
+        from osiris.provision import disk_contents
+
+        disk_contents.rescan()
+        if self.options.disk:
+            self.contents = self.machine.contents(self.options.disk)
+        self.show_modes()
+        return GLib.SOURCE_REMOVE
 
     def leave_disk(self) -> None:
         self.read_layout()
@@ -397,8 +537,8 @@ class Window(Adw.ApplicationWindow):
         self.disk_choice = disk
         self.options.disk = disk["path"]
         self.options.disk_size = disk["size"]
-        if self.disk_next is not None:
-            self.disk_next.set_sensitive(True)
+        self.contents = self.machine.contents(disk["path"])
+        self.show_modes()
 
     # ------------------------------------------------------------- 3 account
 
@@ -487,6 +627,7 @@ class Window(Adw.ApplicationWindow):
             ("Language", self.options.locale),
             ("Time zone", self.options.timezone),
             ("Keyboard", self.options.keymap),
+            ("How", MODE_TITLES[self.options.mode]),
             ("Filesystem", self.options.filesystem),
             ("Graphics", "Software rendering"
                          if self.options.software_rendering
@@ -497,18 +638,33 @@ class Window(Adw.ApplicationWindow):
             summary.add(row)
         box.append(summary)
 
+        layout = self.current_layout()
+        if self.options.mode is InstallMode.WHOLE_DISK or layout is None:
+            heading = "Everything on this disk will be erased"
+            detail = (f"{self.options.disk} will be repartitioned. There is no "
+                      "undo, and anything on it now will be gone.")
+            consent = f"I understand that {self.options.disk} will be erased"
+        elif self.options.mode is InstallMode.FREE_SPACE:
+            heading = "Osiris goes into the free space"
+            detail = ("No existing partition is erased. Kept: "
+                      + "; ".join(layout.keeps or ["nothing else on the disk"]))
+            consent = ("I understand that the disk's partition table will be "
+                       "changed, and I have a backup")
+        else:
+            erased = "; ".join(layout.destroys)
+            heading = "One partition will be erased"
+            detail = (f"Erased: {erased}. Kept: "
+                      + "; ".join(layout.keeps or ["nothing else"]))
+            consent = f"I understand that {self.options.root_partition} will be erased"
+
         warning = Adw.PreferencesGroup()
-        banner = Adw.ActionRow(
-            title="Everything on this disk will be erased",
-            subtitle=f"{self.options.disk} will be repartitioned. There is no "
-                     "undo, and anything on it now will be gone.")
+        banner = Adw.ActionRow(title=heading, subtitle=detail)
         banner.add_prefix(Gtk.Image(icon_name="dialog-warning-symbolic"))
         banner.add_css_class("error")
         warning.add(banner)
         box.append(warning)
 
-        self.understood = Gtk.CheckButton(
-            label=f"I understand that {self.options.disk} will be erased")
+        self.understood = Gtk.CheckButton(label=consent)
         self.understood.set_margin_top(4)
         box.append(self.understood)
 

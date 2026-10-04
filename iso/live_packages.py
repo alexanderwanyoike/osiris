@@ -22,6 +22,9 @@ INSTALLER = [
     # lspci, which is how the installer works out which graphics driver the
     # machine needs.
     "pciutils",
+    # Making room to install beside another system: the installer opens it
+    # rather than shrinking anything itself.
+    "gparted",
 ]
 
 

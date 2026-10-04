@@ -8,7 +8,8 @@ This puts the Osiris theme beside it, merges Osiris's settings into
 rather than overwrites) and regenerates the menu. It never runs grub-install:
 a theme that fails to apply leaves a plain menu, and a plain menu still boots.
 
-The theme lives under /boot/grub/themes/osiris, which GRUB reads at boot,
+The theme lives beside GRUB - /boot/grub/themes/osiris, or /efi/grub/themes/osiris
+when Osiris shares another system's EFI partition - which GRUB reads at boot,
 before any filesystem but the one holding /boot is mounted.
 """
 import argparse
@@ -20,9 +21,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from run import run  # noqa: E402
 
-from osiris.provision.grub_defaults import merged  # noqa: E402
+from osiris.provision.grub_defaults import grub_dir, merged, settings  # noqa: E402
 
-THEME_DIR = "/boot/grub/themes/osiris"
+# archinstall has installed GRUB and written grub.cfg by the time this runs.
+GRUB_DIR = grub_dir(os.path.exists)
+THEME_DIR = f"{GRUB_DIR}/themes/osiris"
 DEFAULTS = "/etc/default/grub"
 
 # Fonts have to be GRUB's own .pf2 format. The family name set here is what
@@ -86,8 +89,8 @@ def main() -> None:
     with open(DEFAULTS) as fh:
         current = fh.read()
     with open(DEFAULTS, "w") as fh:
-        fh.write(merged(current))
-    run("grub-mkconfig", "-o", "/boot/grub/grub.cfg")
+        fh.write(merged(current, settings(GRUB_DIR)))
+    run("grub-mkconfig", "-o", f"{GRUB_DIR}/grub.cfg")
 
     print("GRUB_CONFIGURED")
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from osiris.provision.grub_defaults import SETTINGS, merged
+from osiris.provision.grub_defaults import SETTINGS, grub_dir, merged, settings
 
 # The shape of Arch's stock /etc/default/grub after archinstall has filled in
 # the kernel command line for an encrypted btrfs root.
@@ -55,3 +55,14 @@ def test_commented_keys_are_replaced_in_place() -> None:
 def test_merging_twice_changes_nothing() -> None:
     once = merged(ARCHINSTALL)
     assert merged(once) == once
+
+
+def test_a_shared_esp_points_the_theme_at_efi() -> None:
+    directory = grub_dir(lambda path: path == "/efi/grub/grub.cfg")
+    assert directory == "/efi/grub"
+    text = merged(ARCHINSTALL, settings(directory))
+    assert 'GRUB_THEME="/efi/grub/themes/osiris/theme.txt"' in text
+
+
+def test_a_disk_of_its_own_uses_boot() -> None:
+    assert grub_dir(lambda path: path == "/boot/grub/grub.cfg") == "/boot/grub"

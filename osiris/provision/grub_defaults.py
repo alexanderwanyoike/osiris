@@ -11,9 +11,26 @@ everything else is kept as written.
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 
-THEME = "/boot/grub/themes/osiris/theme.txt"
+#: Where archinstall may have put GRUB's files. /boot/grub when Osiris has the
+#: disk to itself; /efi/grub when it shares another system's EFI system
+#: partition, which is mounted at /efi so the kernels stay off it.
+GRUB_DIRS = ("/boot/grub", "/efi/grub")
+
+
+def grub_dir(has_config: Callable[[str], bool]) -> str:
+    """The directory GRUB reads at boot: the one archinstall wrote grub.cfg to."""
+    for directory in GRUB_DIRS:
+        if has_config(f"{directory}/grub.cfg"):
+            return directory
+    return GRUB_DIRS[0]
+
+
+def settings(directory: str = GRUB_DIRS[0]) -> dict[str, str]:
+    """Osiris's settings, for GRUB installed in `directory`."""
+    return {**SETTINGS, "GRUB_THEME": f'"{directory}/themes/osiris/theme.txt"'}
+
 
 SETTINGS: Mapping[str, str] = {
     "GRUB_TIMEOUT": "3",
@@ -29,7 +46,7 @@ SETTINGS: Mapping[str, str] = {
     # bring the mode up again and flicker.
     "GRUB_GFXMODE": "auto",
     "GRUB_GFXPAYLOAD_LINUX": "keep",
-    "GRUB_THEME": f'"{THEME}"',
+    "GRUB_THEME": '"/boot/grub/themes/osiris/theme.txt"',
     "GRUB_DISABLE_RECOVERY": "true",
     # Arch ships this off. Finding the other systems on a dual-boot machine is
     # the main practical reason Osiris boots with GRUB.

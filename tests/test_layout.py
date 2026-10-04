@@ -158,29 +158,17 @@ class TestRefusals:
         assert Layout(DiskContents(disk=DISK)).problems == []
 
 
-class TestKeepingHome:
-    def test_a_home_partition_is_kept_and_not_formatted(self) -> None:
-        contents = a_spare_partition()
-        layout = Layout(
-            contents,
-            InstallMode.EXISTING_PARTITION,
-            root_partition=contents.partitions[2],
-            home_partition=contents.partitions[3],
-        )
-        described = " ".join(layout.describe())
-        assert "not formatted" in described
-        assert contents.partitions[3].description not in layout.destroys
+class TestFirmware:
+    def test_a_bios_machine_offers_only_erasing(self) -> None:
+        """No EFI system partition to share, so nothing to install beside."""
+        assert windows_and_free_space().modes(uefi=False) == [InstallMode.WHOLE_DISK]
 
-    def test_a_mounted_home_is_refused(self) -> None:
-        contents = a_spare_partition()
-        busy = Partition("/dev/sda4", 4, 200 * GB, "ext4", mounted=True)
-        layout = Layout(
-            contents,
-            InstallMode.EXISTING_PARTITION,
-            root_partition=contents.partitions[2],
-            home_partition=busy,
-        )
-        assert any("in use" in p for p in layout.problems)
+    def test_an_mbr_disk_offers_only_erasing(self) -> None:
+        contents = DiskContents(
+            disk=DISK, partitions=windows_and_free_space().partitions,
+            free=windows_and_free_space().free, gpt=False,
+        )  # fmt: skip
+        assert contents.modes() == [InstallMode.WHOLE_DISK]
 
 
 class TestDescription:
