@@ -95,10 +95,11 @@ fun display_password_callback (text, count)
     place_below_logo(prompt.sprite, prompt.image, 48);
     prompt.sprite.SetOpacity(1);
 
-    # One dot per character typed, never the characters themselves.
+    # One mark per character typed, never the characters themselves. ASCII
+    # on purpose: the initramfs text renderer drew U+2022 as an empty box.
     dots = "";
     for (index = 0; index < count; index++)
-      dots = dots + "\u2022 ";
+      dots = dots + "* ";
     if (count > 0)
       {
         bullets.image = Image.Text(dots, 0.85, 0.85, 0.88);
