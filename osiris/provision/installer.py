@@ -108,7 +108,13 @@ class Installer:
             (p for p in contents.partitions if p.path == request.root_partition),
             None,
         )
-        layout = Layout(contents, request.mode, request.filesystem, root_partition=root)
+        layout = Layout(
+            contents,
+            request.mode,
+            request.filesystem,
+            root_partition=root,
+            encrypted=request.encrypt,
+        )
         if layout.problems:
             raise InvalidRequest("; ".join(layout.problems))
         return layout
