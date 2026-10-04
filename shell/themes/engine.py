@@ -26,6 +26,7 @@ Theme search order, first match wins by name:
     /usr/share/osiris/themes/*.json     shipped themes
     <repo>/shell/themes/*.json          development checkout
 """
+import argparse
 import hashlib
 import json
 import os
@@ -59,6 +60,8 @@ PREVIEW_DIRS = [
     os.path.join(REPO_THEMES, "previews"),
 ]
 STATE = os.path.join(HOME, ".config", "osiris", "theme")
+#: Applied on a user's first login, before they have chosen anything.
+DEFAULT_THEME = "osiris-obsidian"
 WALLPAPERS = "/usr/share/backgrounds/osiris"
 
 THEMES_DIR = os.path.join(HOME, ".themes")
@@ -661,3 +664,32 @@ def apply(name: str) -> list[str]:
 
     # These read their configuration once at startup.
     return ["Terminal", "Launcher"]
+
+
+def first_login() -> None:
+    """Apply the default theme, once, for a user who has never chosen one.
+
+    Run from an autostart entry in every session. Without it a new account
+    starts on the bare system defaults - Plank's own dock theme, rofi with no
+    configuration at all - until the user happens to open Appearance. A user
+    who has chosen a theme has the state file, and is left alone.
+    """
+    if current() is None:
+        apply(DEFAULT_THEME)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Apply an Osiris theme.")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--apply", metavar="NAME", help="apply this theme")
+    group.add_argument("--first-login", action="store_true",
+                       help="apply the default theme if none has been chosen")
+    args = parser.parse_args()
+    if args.first_login:
+        first_login()
+    else:
+        apply(args.apply)
+
+
+if __name__ == "__main__":
+    main()

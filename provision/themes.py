@@ -41,6 +41,17 @@ runpy.run_path("/usr/share/osiris/appearance/main.py", run_name="__main__")
 """
 
 
+# Applies the default theme on a user's first login; see engine.first_login.
+FIRST_LOGIN = """[Desktop Entry]
+Type=Application
+Name=Osiris theme
+Comment=Apply the default Osiris theme on first login
+Exec=/usr/bin/python3 /usr/share/osiris/themes/engine.py --first-login
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+"""
+
+
 def copy_tree(src: str, dst: str, suffixes: tuple[str, ...]) -> int:
     os.makedirs(dst, exist_ok=True)
     count = 0
@@ -123,6 +134,12 @@ def main() -> None:
                              "dev.osiris.Appearance.desktop")
     run("update-desktop-database", "/usr/share/applications", check=False)
     print("  /usr/bin/osiris-appearance")
+
+    print("applying the default theme on first login")
+    os.makedirs("/etc/xdg/autostart", exist_ok=True)
+    with open("/etc/xdg/autostart/osiris-theme.desktop", "w") as fh:
+        fh.write(FIRST_LOGIN)
+    print("  /etc/xdg/autostart/osiris-theme.desktop")
 
     print("THEMES_INSTALLED")
 
