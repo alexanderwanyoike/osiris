@@ -20,6 +20,11 @@ dev = [
     "mypy>=1.11",
     "vulture>=2.11",
     "import-linter>=2.0",
+    # The installer's configuration is built from archinstall's own objects
+    # and tested by round-tripping through its parser. Pinned to the version
+    # Arch ships, so a format change shows up here before it shows up on a
+    # user's disk.
+    "archinstall==4.5",
 ]
 
 [build-system]
@@ -86,6 +91,11 @@ warn_unreachable = true
 # rather than littered with ignores.
 [[tool.mypy.overrides]]
 module = ["gi.*", "gi"]
+ignore_missing_imports = true
+
+# archinstall and pyparted ship no type information.
+[[tool.mypy.overrides]]
+module = ["archinstall", "archinstall.*", "parted"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
