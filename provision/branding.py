@@ -144,6 +144,11 @@ def install_plymouth() -> None:
     run("plymouth-set-default-theme", "osiris")
 
 
+def has_plymouth_hook() -> bool:
+    with open("/etc/mkinitcpio.conf") as fh:
+        return re.search(r"^HOOKS=.*\bplymouth\b", fh.read(), re.M) is not None
+
+
 def add_mkinitcpio_hook() -> bool:
     """Insert the right plymouth hook. Returns True if changed.
 
@@ -184,12 +189,16 @@ def main() -> None:
 
     install_assets(args.repo)
     install_plymouth()
-    changed = add_mkinitcpio_hook()
+    add_mkinitcpio_hook()
 
     print("configuring login screen")
     write("/etc/lightdm/slick-greeter.conf", SLICK_GREETER_CONF)
 
-    if changed:
+    # The splash theme is copied into the initramfs, so choosing one means
+    # rebuilding it - even when the hook was already there. On an install,
+    # archinstall added the hook and built the initramfs with its own default
+    # theme a minute earlier.
+    if has_plymouth_hook():
         print("regenerating initramfs")
         run("mkinitcpio", "-P")
 

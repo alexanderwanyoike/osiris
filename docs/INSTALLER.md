@@ -4,64 +4,96 @@ How the ISO is built, how the installer works, and how to test both.
 
 ## Shape
 
+The install is done by archinstall, Arch's official installer. Osiris supplies
+the screens in front of it and the package installed by it. See
+[ADR 0012](adr/0012-do-not-hand-roll-critical-machinery.md).
+
 ```
-iso/live_packages.py       what goes on the live medium
-iso/profile.py             generates an archiso profile, then builds the ISO
-apps/installer/main.py     the GTK4 wizard
-apps/installer/disks.py    which disks may be installed onto
-provision/install.py       the install itself - partitioning through bootloader
+apps/installer/main.py              the GTK4 wizard
+apps/installer/disks.py             which disks may be installed onto
+osiris/provision/installer.py       detects the hardware, runs archinstall
+osiris/provision/archinstall_config.py
+                                    the wizard's answers as an archinstall config
+osiris/iso/package.py               what the `osiris` package contains and needs
+provision/setup.py                  `osiris-setup`, run inside the new system
+iso/repo.py                         builds the package and its repository
+iso/live_packages.py                what the medium adds to archiso's releng
+iso/profile.py                      generates the archiso profile, builds the ISO
 ```
 
-The wizard contains no install logic. It fills in an `install.Options` and
-calls `install.install(options, progress)`. The command line does the same
-thing with the same function, so the two cannot drift apart.
+An install, in order:
+
+1. The wizard collects region, disk, filesystem and account.
+2. `Installer` reads the machine's GPUs and Bluetooth, and builds an
+   archinstall configuration from archinstall's own objects. The password goes
+   in a separate credentials file under `/root`, readable by root only, and is
+   deleted when archinstall exits.
+3. `archinstall --config --creds --silent` partitions, formats, installs the
+   base system, microcode and graphics drivers, creates the user, installs
+   GRUB (UEFI or BIOS), PipeWire, NetworkManager, LightDM with slick-greeter,
+   Plymouth and zram swap.
+4. archinstall installs the `osiris` package from the repository on the medium.
+   Its dependencies bring in Cinnamon, Plank, rofi, ghostty and the rest.
+5. archinstall runs `osiris-setup` inside the new system. It applies what a
+   package cannot ship as plain files: desktop defaults, themes, the boot
+   splash, the GRUB theme. It also removes the medium's repository from the new
+   system's pacman.conf, or every later update would fail on it.
 
 ## Building
 
 ```
+python3 iso/repo.py            # as a normal user: makepkg refuses root
 sudo python3 iso/profile.py
 ```
 
-Needs the `archiso` package and root, because mkarchiso mounts and chroots.
-Writes `build/out/osiris-<version>-x86_64.iso` and leaves the generated profile
-in `build/iso-profile` for inspection.
+`iso/repo.py` builds the `osiris` package with makepkg and indexes it with
+repo-add into `build/repo`. `iso/profile.py` copies archiso's releng profile,
+adds the installer and that repository, and runs mkarchiso. It needs the
+`archiso` package and root. Writes `build/out/osiris-<version>-x86_64.iso` and
+leaves the generated profile in `build/iso-profile`.
 
 ```
 python3 iso/profile.py --generate-only     # write the profile, build nothing
 python3 iso/profile.py --out /var/tmp/x    # build somewhere with room
 ```
 
-Budget around 8GB of scratch space and a package download on first run.
-
 ## Testing
 
-UEFI only, so the VM needs OVMF firmware:
+The medium boots on BIOS and UEFI, because releng does, and archinstall
+installs GRUB for whichever the machine booted with. Test both:
 
 ```
 qemu-system-x86_64 -enable-kvm -m 4096 -smp 4 \
-    -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.4m.fd \
-    -drive if=pflash,format=raw,file=OVMF_VARS.4m.fd \
     -cdrom build/out/osiris-0.1.0-x86_64.iso \
     -drive file=target.qcow2,if=virtio
+
+# and with UEFI firmware
+    -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.4m.fd \
+    -drive if=pflash,format=raw,file=OVMF_VARS.4m.fd \
 ```
 
-A BIOS VM will not boot it, by design: Osiris installs GRUB in EFI mode, so a
-BIOS machine would boot the installer and then install a system it could not
-start.
+archinstall's own log is in `/var/log/archinstall/install.log` on the medium.
 
 ## Decisions worth knowing
 
-**archiso, not mkosi.** `docs/ARCHITECTURE.md` specified mkosi. mkosi has no
-ISO output format - `Format=` accepts directory, tar, cpio, disk, uki, esp,
-oci, sysext, confext, portable, addon and none. It builds bootable disk images,
-not bootable removable media.
+**archinstall does the install.** The hand-written install this replaced had
+no microcode, no graphics drivers, no BIOS support and a partitioning race
+that took a day to find. archinstall had solved all of it. Osiris now writes
+no partitioning, package installation or bootloader code.
 
-**The profile is generated, not checked in.** archiso requires
-`profiledef.sh`, which is bash, and this project does not author bash. It holds
-no logic - only variable assignments - so `iso/profile.py` emits it. The
-artefact is bash; the source is Python. The other two things that used to need
-bash do not any more: `customize_airootfs.sh` no longer exists in archiso, and
-services are enabled with symlinks into `*.target.wants/`.
+**The configuration is built with archinstall's objects, not written as
+JSON.** `archinstall_config.build` returns an `ArchConfig`, and archinstall's
+own serialiser writes it. The tests read every configuration back through
+archinstall's parser, the code path `archinstall --config` takes.
+
+**The medium is releng.** Arch's own install medium, copied and added to
+rather than reimplemented: it boots on BIOS and UEFI, and carries archinstall
+and the disk tools already. `profiledef.sh` keeps upstream's contents with a
+few assignments appended, so boot modes and compression keep tracking upstream.
+
+**Osiris is a package.** It reaches a machine the way everything else on Arch
+does. The PKGBUILD is generated from Python (`osiris/iso/package.py`) and holds
+assignments and one copy - the project authors no bash.
 
 **No display manager on the ISO.** A systemd unit runs:
 
@@ -77,74 +109,54 @@ privilege boundary in the middle of a program whose entire purpose is to
 repartition the disk, on a medium with nothing to protect and no other user to
 protect it from.
 
-**The install runs every provisioner, not just the desktop one.** For a while
-it ran only `cinnamon.py`, which produced a working Cinnamon desktop with none
-of Osiris on it: no themes, no Appearance app, no ghostty or zsh config, no
-boot splash. `configure_desktop()` now copies `provision/`, `apps/`,
-`branding/` and `shell/themes/` into the target and runs the same scripts a
-development machine runs, in the same order.
-
 ## What the user chooses
 
 | Step | Choices |
 |---|---|
 | Region | Language (locale), time zone, keyboard layout |
 | Hardware | Software rendering, defaulted on inside a VM |
-| Disk | Which disk, filesystem, swap size |
+| Disk | Which disk, filesystem |
 | Account | Computer name, username, password |
 | Confirm | A summary, the destructive warning, and a gate |
 
-### Software rendering
+The account is a sudoer and root is locked, as on Mint and Ubuntu.
 
-A switch on the first page, defaulted from `systemd-detect-virt`. A guest
-usually has no GPU to accelerate anything and a desktop that tries comes up to
-a black screen, so the common case is pre-selected rather than left as a trap.
+### Graphics
+
+Detected, not chosen. Turing and newer NVIDIA cards get the open kernel
+modules; older NVIDIA cards get nouveau, because their proprietary driver is
+AUR-only now. AMD and Intel get their open drivers, and hybrid laptops get
+both. Software rendering forces the all-open-source set, whose mesa renders in
+software where no driver works.
 
 ### Disk layout
 
-The whole disk, always: an EFI system partition of 1GB and one root filesystem.
-Within that:
+The whole disk: archinstall's default layout, a 1GB boot partition and one
+root filesystem. ext4, or btrfs with archinstall's default subvolumes (`@`,
+`@home`, `@log`, `@pkg`) and compression. Swap is zram, compressed RAM, so
+there is no swap file or partition to size.
 
-- **Filesystem** - ext4 or btrfs. btrfs is laid out with subvolumes `@` and
-  `@home`, mounted `compress=zstd:1,noatime`, so the system can be snapshotted
-  without taking the user's files with it. The bootloader entry gains
-  `rootflags=subvol=@`; without it the kernel mounts the top-level volume and
-  finds no init.
-- **Swap** - a swap file, none to 16GB. On btrfs it goes on its own `@swap`
-  subvolume, because a subvolume holding an active swap file cannot be
-  snapshotted; keeping it off `@` keeps that limitation off the root. It is
-  created with `btrfs filesystem mkswapfile`, which preallocates and marks the
-  file NODATACOW in one step - a copy-on-write or compressed file cannot be
-  swapped on at all.
-
-The page shows the resulting plan as it changes, so the layout is visible
-before it is committed to rather than described after.
+Installing alongside another system is not offered yet. The model for it is
+in `osiris/model/layout.py`; it will be expressed as an archinstall manual
+layout that keeps the existing partitions.
 
 ### Retrying
 
-A failed install offers **Try again** and **Change settings**. Retrying is safe
-to offer because the install is written to be repeatable: it unmounts whatever a
-previous attempt left behind before it touches the partition table. Most
-failures are a dropped network or a mirror that went away mid-download, and
-those succeed on a second run without changing anything.
+A failed install offers **Try again** and **Change settings**. archinstall
+unmounts whatever a previous attempt left mounted on the disk before it
+repartitions, so a second run starts clean.
 
 ## The boot menu
 
-GRUB, not systemd-boot. systemd-boot has no theme engine at all - it draws a
-text menu and offers no way to put anything on screen before Plymouth starts -
-and a branded boot screen was wanted. The second reason is `os-prober`, which
-finds other installed systems; systemd-boot never did.
-
-The theme lives on the ESP at `/boot/grub/themes/osiris`, because GRUB reads it
-long before any other filesystem is mounted. `provision/grub.py` installs it,
-writes `/etc/default/grub` and runs `grub-install` and `grub-mkconfig`.
+GRUB, installed by archinstall. `provision/grub.py` only themes it: it copies
+the theme to `/boot/grub/themes/osiris`, merges Osiris's settings into
+`/etc/default/grub` and regenerates the menu. It merges rather than overwrites
+because archinstall writes the kernel command line into that file - the root
+device, the subvolume, and on an encrypted install what is needed to unlock it.
 
 Assets are generated at build time by `branding/scripts/make-grub-theme.py`
-from the `osiris-obsidian` palette and checked in. The bootloader cannot follow
-the user's chosen theme - it runs before any user session exists - so it stays
-branded, the same decision as the boot splash and the greeter.
-
-Two things that are easy to get wrong:
+from the `osiris-obsidian` palette and checked in. Two things that are easy to
+get wrong:
 
 - **Fonts must be GRUB's own `.pf2` format**, converted with `grub-mkfont`. The
   family name baked in with `-n` is what `theme.txt` refers to; if the two
@@ -165,40 +177,11 @@ disk, so:
 - The confirm step names the disk, and the Install button stays disabled until
   an explicit checkbox naming that disk is ticked.
 - The window refuses to close while an install is running.
-- Partition device nodes are waited for rather than assumed. `partprobe`
-  returns before udev has created them - measured at 1.7 seconds on a disk that
-  already held a filesystem - and the `mount` that followed failed
-  intermittently, which is the worst way for an installer to fail.
-- Old filesystem signatures are wiped from the new partitions. Zapping the
-  partition table leaves them in place, where tools that read a signature
-  before writing will still find them.
 
 ## Writing into a user's home
 
-Provisioning runs as root, before anyone has logged in, so every directory it
-creates under a home belongs to root unless it is handed back explicitly.
-
-`provision/homes.py` exists because getting that subtly wrong is easy and the
-consequences are not subtle. An earlier version created
-`~/.config/ghostty` and chowned the file and `.config/ghostty` - but not
-`.config`, which the same call had just created. Every fresh install produced a
-user who could not write to their own `~/.config`: no theme could be applied,
-no terminal or launcher configuration saved, and the symptom surfaced much
-later as an unrelated permission error.
-
-It never appeared in development, because there the account had already logged
-in and `.config` existed before provisioning ran.
-
-Create directories with `homes.makedirs` and write with `homes.write` or
-`homes.copy`. `homes.chown_tree` covers an existing tree *including its root*,
-which `os.walk` reports as a parent rather than an entry - the other half of
-the same bug.
-
-## Not in this phase
-
-- **Disk encryption.** LUKS changes the boot path substantially and deserves
-  testing proportional to the cost of getting it wrong.
-- **Installing alongside an existing system.** Osiris takes the whole disk.
-- **BIOS machines**, deliberately: Osiris installs GRUB in EFI mode, so a BIOS
-  machine would boot the installer and then install a system it could not
-  start.
+Provisioning runs as root, so every directory it creates under a home belongs
+to root unless it is handed back explicitly. `provision/homes.py` exists
+because getting that subtly wrong produced, on every fresh install, a user who
+could not write to their own `~/.config`. Create directories with
+`homes.makedirs` and write with `homes.write` or `homes.copy`.

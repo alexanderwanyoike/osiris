@@ -2,15 +2,16 @@
 """Osiris installer.
 
 GTK4 + libadwaita, the same toolkit as the Appearance app. A wizard that
-collects what the install needs and then calls provision/install.py, which is
-the install - this file contains no partitioning, no pacstrap and no bootloader
-logic, so the graphical and command-line paths cannot drift apart.
+collects what the install needs and hands it to archinstall, through
+osiris.provision.installer. This file contains no partitioning, no package
+installation and no bootloader logic; archinstall does all of that (ADR 0012).
 
 Runs as root from the live ISO. That is deliberate: the alternative is a
 polkit action and a privilege boundary in the middle of a program whose entire
 purpose is to repartition the disk, on a medium where there is nothing to
 protect and no other user to protect it from.
 """
+import dataclasses
 import os
 import subprocess
 import sys
@@ -24,19 +25,17 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, GLib, Gtk  # noqa: E402
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-for candidate in (
-    os.path.join(os.path.dirname(os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__)))), "provision"),
-    "/usr/share/osiris/provision",
-):
-    if os.path.isdir(candidate):
-        sys.path.insert(0, candidate)
-        break
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+# The osiris package sits two directories up, both in a checkout and in the
+# copy on the live medium.
+sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))
 
 import disks  # noqa: E402
-import install as installer  # noqa: E402
-import run as runner  # noqa: E402
+
+from osiris.model.disk import Disk, Filesystem  # noqa: E402
+from osiris.model.request import InstallRequest  # noqa: E402
+from osiris.platform.process import SubprocessRunner  # noqa: E402
 
 LOGO_PATHS = ("/usr/share/osiris/logo-dark.png",
               os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
@@ -44,16 +43,43 @@ LOGO_PATHS = ("/usr/share/osiris/logo-dark.png",
 
 COMMON_KEYMAPS = ("us", "uk", "gb", "de", "fr", "es", "it", "dvorak", "colemak")
 
-# Swap sizes offered, in MB. Hibernation needs a swap file at least as large as
-# memory, which is why the list goes past what a desktop needs to page out.
-SWAP_CHOICES = {
-    "None": 0,
-    "2 GB": 2048,
-    "4 GB": 4096,
-    "8 GB": 8192,
-    "16 GB": 16384,
-}
-SWAP_DEFAULT = "4 GB"
+
+
+@dataclasses.dataclass
+class Choices:
+    """What the wizard has collected so far. Becomes an InstallRequest."""
+
+    disk: str = ""
+    disk_size: int = 0
+    user: str = ""
+    password: str = ""
+    hostname: str = "osiris"
+    timezone: str = "Europe/London"
+    locale: str = "en_GB.UTF-8"
+    keymap: str = "us"
+    filesystem: str = "ext4"
+    software_rendering: bool = False
+
+    def request(self) -> InstallRequest:
+        return InstallRequest(
+            disk=Disk(self.disk, self.disk_size),
+            username=self.user,
+            password=self.password,
+            hostname=self.hostname,
+            timezone=self.timezone,
+            locale=self.locale,
+            keymap=self.keymap,
+            filesystem=Filesystem(self.filesystem),
+            software_rendering=self.software_rendering,
+        )
+
+    def layout(self) -> list[str]:
+        """The partition plan in words, for the installer to show."""
+        plan = ["1 GB     boot partition",
+                f"rest     Osiris root ({self.filesystem})"]
+        if self.filesystem == "btrfs":
+            plan.append("         subvolumes @, @home, @log, @pkg")
+        return plan
 
 CSS = b"""
 .hero-logo { margin-bottom: 6px; }
@@ -130,7 +156,8 @@ def locales() -> list[str]:
 
 def keymaps() -> list[str]:
     try:
-        listed = sorted(set(runner.capture("localectl", "list-keymaps").split()))
+        listed = sorted(set(
+            SubprocessRunner().capture("localectl", "list-keymaps").split()))
     except Exception:                                       # noqa: BLE001
         listed = []
     if not listed:
@@ -206,7 +233,7 @@ class Window(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title="Install Osiris")
         self.set_default_size(*screen_size())
-        self.options = installer.Options(disk="", user="", password="")
+        self.options = Choices()
         self.installing = False
 
         self.nav = Adw.NavigationView()
@@ -330,8 +357,9 @@ class Window(Adw.ApplicationWindow):
         """How the chosen disk gets laid out."""
         group = Adw.PreferencesGroup(
             title="Layout",
-            description="Osiris uses the whole disk: an EFI partition and one "
-                        "root filesystem.")
+            description="Osiris uses the whole disk: a boot partition and one "
+                        "root filesystem. Memory is backed by compressed RAM "
+                        "(zram) rather than a swap file.")
 
         self.filesystem = dropdown(["ext4", "btrfs"], self.options.filesystem)
         group.add(combo_row(
@@ -339,11 +367,6 @@ class Window(Adw.ApplicationWindow):
             "btrfs adds compression and snapshot-ready subvolumes; "
             "ext4 is the simpler, more predictable choice",
             self.filesystem))
-
-        self.swap = dropdown(list(SWAP_CHOICES), SWAP_DEFAULT)
-        group.add(combo_row("Swap file",
-                            "Backs memory to disk. Needed for hibernation.",
-                            self.swap))
 
         self.plan = Gtk.Label(xalign=0, wrap=True)
         self.plan.add_css_class("disk-size")
@@ -353,14 +376,11 @@ class Window(Adw.ApplicationWindow):
         group.add(self.plan)
 
         self.filesystem.connect("notify::selected", lambda *_a: self.show_plan())
-        self.swap.connect("notify::selected", lambda *_a: self.show_plan())
         self.show_plan()
         return group
 
     def read_layout(self) -> None:
         self.options.filesystem = self.filesystem.get_selected_item().get_string()
-        self.options.swap_mb = SWAP_CHOICES[
-            self.swap.get_selected_item().get_string()]
 
     def show_plan(self) -> None:
         """Say what the disk will look like afterwards, in so many words."""
@@ -376,6 +396,7 @@ class Window(Adw.ApplicationWindow):
             return
         self.disk_choice = disk
         self.options.disk = disk["path"]
+        self.options.disk_size = disk["size"]
         if self.disk_next is not None:
             self.disk_next.set_sensitive(True)
 
@@ -467,8 +488,6 @@ class Window(Adw.ApplicationWindow):
             ("Time zone", self.options.timezone),
             ("Keyboard", self.options.keymap),
             ("Filesystem", self.options.filesystem),
-            ("Swap", f"{self.options.swap_mb} MB"
-                     if self.options.swap_mb else "None"),
             ("Graphics", "Software rendering"
                          if self.options.software_rendering
                          else "Hardware accelerated"),
@@ -558,17 +577,19 @@ class Window(Adw.ApplicationWindow):
         self.bar.remove_css_class("error")
         self.bar.set_fraction(0.0)
         self.step_label.set_text("Starting")
-        runner.set_sink(self.log_line)
+        # archinstall reports no fraction complete, so the bar says "working"
+        # rather than inventing a percentage. The Details log shows each step.
+        GLib.timeout_add(120, self.pulse)
         threading.Thread(target=self.worker, daemon=True).start()
 
     def retry(self, to_start: bool = False) -> None:
         """Run it again, or go back and change something first.
 
-        Retrying is safe to offer because the install is written to be
-        repeatable: it unmounts whatever a previous attempt left behind before
-        it touches the partition table. Most failures here are a dropped
-        network or a mirror that went away mid-download, and those succeed on
-        a second run without changing a thing.
+        Retrying is safe to offer because archinstall unmounts whatever a
+        previous attempt left mounted on the disk before it repartitions it.
+        Most failures here are a dropped network or a mirror that went away
+        mid-download, and those succeed on a second run without changing a
+        thing.
         """
         if to_start:
             self.nav.pop()
@@ -579,7 +600,14 @@ class Window(Adw.ApplicationWindow):
 
     def worker(self) -> None:
         try:
-            installer.install(self.options, progress=self.on_progress)
+            # Imported here, not at the top: archinstall reads the disks when
+            # it is imported, and a disk plugged in after the installer
+            # started would otherwise be missing from its list.
+            from osiris.provision.installer import Installer
+
+            runner = SubprocessRunner(sink=self.log_line)
+            Installer.for_this_machine(runner).install(
+                self.options.request(), progress=self.on_progress)
         except BaseException as error:                      # noqa: BLE001
             detail = traceback.format_exc()
             GLib.idle_add(self.failed, error, detail)
@@ -602,14 +630,19 @@ class Window(Adw.ApplicationWindow):
         self.log.scroll_to_iter(buffer.get_end_iter(), 0.0, False, 0.0, 0.0)
         return GLib.SOURCE_REMOVE
 
+    def pulse(self) -> bool:
+        if self.installing:
+            self.bar.pulse()
+        return self.installing
+
     def set_progress(self, fraction: float, message: str) -> bool:
-        self.bar.set_fraction(fraction)
+        if fraction >= 1.0:
+            self.bar.set_fraction(fraction)
         self.step_label.set_text(message)
         return GLib.SOURCE_REMOVE
 
     def failed(self, error: BaseException, detail: str) -> bool:
         self.installing = False
-        runner.set_sink(None)
         self.append_log("")
         self.append_log(detail.rstrip())
         self.step_label.set_text("Install failed")
@@ -626,7 +659,6 @@ class Window(Adw.ApplicationWindow):
 
     def finished(self) -> bool:
         self.installing = False
-        runner.set_sink(None)
         self.nav.push(self.done_page())
         return GLib.SOURCE_REMOVE
 
@@ -659,7 +691,7 @@ class Window(Adw.ApplicationWindow):
 
     def reboot(self) -> None:
         try:
-            runner.run("systemctl", "reboot")
+            SubprocessRunner().run("systemctl", "reboot")
         except Exception as error:                          # noqa: BLE001
             dialog = Adw.AlertDialog(
                 heading="Could not restart",

@@ -5,24 +5,20 @@ Every configuration built here is written with archinstall's serialiser and
 read back with `ArchConfig.from_config`, the code path `archinstall --config`
 takes. If archinstall accepts it, the format is right by definition.
 
-The disk is a sparse image file, never a real device. archinstall's parser
-looks devices up through its device handler, which only knows real hardware,
-so that one lookup is pointed at the image.
+The disk is a sparse image file, never a real device: see the `device`
+fixture in conftest.py.
 """
 
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-import parted
 import pytest
 from archinstall.lib.args import ArchConfig, Arguments
-from archinstall.lib.disk.device_handler import device_handler
 from archinstall.lib.hardware import GfxDriver
-from archinstall.lib.models.device import BDevice, FilesystemType, _DeviceInfo
+from archinstall.lib.models.device import BDevice, FilesystemType
 
 from osiris.model.disk import Disk, Filesystem
 from osiris.model.hardware import Gpu, GpuVendor
@@ -30,17 +26,6 @@ from osiris.model.request import InstallRequest
 from osiris.provision import archinstall_config as config
 
 GIB = 1024**3
-
-
-@pytest.fixture
-def device(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[BDevice]:
-    image = tmp_path / "disk.img"
-    with image.open("wb") as handle:
-        handle.truncate(40 * GIB)
-    disk = parted.freshDisk(parted.getDevice(str(image)), "gpt")
-    bdevice = BDevice(disk, _DeviceInfo.from_disk(disk), [])
-    monkeypatch.setattr(device_handler, "get_device", lambda _path: bdevice)
-    yield bdevice
 
 
 def a_request(device: BDevice, **overrides: Any) -> InstallRequest:

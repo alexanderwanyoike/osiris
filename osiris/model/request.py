@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from osiris.model.disk import Disk, Filesystem, PartitionPlan
+from osiris.model.disk import Disk, Filesystem
 
 MINIMUM_PASSWORD = 6
 
@@ -36,10 +36,7 @@ class InstallRequest:
     locale: str = "en_GB.UTF-8"
     keymap: str = "us"
     filesystem: Filesystem = Filesystem.EXT4
-    swap_megabytes: int = 0
     software_rendering: bool = False
-    ssh_key: str | None = None
-    virtiofs_tag: str | None = None
 
     #: Collected rather than raised one at a time, so a form can show every
     #: problem at once instead of playing whack-a-mole.
@@ -65,8 +62,6 @@ class InstallRequest:
             problems.append(f"password must be at least {MINIMUM_PASSWORD} characters")
         if not self.disk.usable:
             problems.append(f"{self.disk.path}: {self.disk.unusable_because}")
-        if self.swap_megabytes < 0:
-            problems.append("swap size cannot be negative")
         return problems
 
     @property
@@ -77,22 +72,3 @@ class InstallRequest:
         """Raise if this request cannot produce a working system."""
         if self.problems:
             raise InvalidRequest("; ".join(self.problems))
-
-    @property
-    def plan(self) -> PartitionPlan:
-        return PartitionPlan(self.disk, self.filesystem, self.swap_megabytes)
-
-    @property
-    def extra_mounts(self) -> tuple[str, ...]:
-        """fstab lines that genfstab cannot work out for itself."""
-        lines: list[str] = []
-        swap = self.plan.swap_file
-        if swap:
-            # genfstab does not see a swap file that is not switched on, and
-            # switching it on inside the installer would then need switching
-            # off again before the unmount.
-            lines.append(f"{swap} none swap defaults 0 0")
-        if self.virtiofs_tag:
-            mount = f"/home/{self.username}/osiris"
-            lines.append(f"{self.virtiofs_tag} {mount} virtiofs rw,nofail 0 0")
-        return tuple(lines)

@@ -22,7 +22,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import StrEnum
 
-from osiris.model.disk import ESP_MEGABYTES, MINIMUM_BYTES, Disk, Filesystem, human
+from osiris.model.disk import MINIMUM_BYTES, Disk, Filesystem, human
 
 #: An ESP shared with another operating system is usually this small, and
 #: GRUB needs little. Refusing to install into a cramped one is better than
@@ -124,7 +124,6 @@ class Layout:
     contents: DiskContents
     mode: InstallMode = InstallMode.WHOLE_DISK
     filesystem: Filesystem = Filesystem.EXT4
-    swap_megabytes: int = 0
     #: Which existing partition becomes the root, for EXISTING_PARTITION.
     root_partition: Partition | None = None
     #: Kept and mounted without being formatted, if the user has one.
@@ -178,7 +177,7 @@ class Layout:
     def describe(self) -> list[str]:
         lines = []
         if self.mode is InstallMode.WHOLE_DISK:
-            lines.append(f"{ESP_MEGABYTES} MB  new EFI system partition")
+            lines.append("1 GB     new boot partition")
             lines.append(f"rest     Osiris root ({self.filesystem.value})")
         elif self.mode is InstallMode.FREE_SPACE:
             region = self.contents.largest_free
@@ -187,7 +186,7 @@ class Layout:
                 esp = self.contents.existing_esp
                 lines.append(f"reuse    existing {esp.path if esp else 'ESP'}")
             else:
-                lines.append(f"{ESP_MEGABYTES} MB  new EFI system partition")
+                lines.append("1 GB     new boot partition")
             lines.append(f"{size}   Osiris root ({self.filesystem.value})")
         else:
             root = self.root_partition
@@ -203,12 +202,7 @@ class Layout:
                     f"keep     {self.home_partition.path} as /home, not formatted"
                 )
         if self.filesystem is Filesystem.BTRFS:
-            lines.append(
-                "         subvolumes @ and @home"
-                + (", @swap" if self.swap_megabytes else "")
-            )
-        if self.swap_megabytes:
-            lines.append(f"{self.swap_megabytes} MB  swap file")
+            lines.append("         subvolumes @, @home, @log, @pkg")
         return lines
 
     @property

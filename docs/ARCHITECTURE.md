@@ -28,10 +28,10 @@ that exist.
 |---|---|---|
 | Base distro | Arch Linux | Rolling, minimal, no opinionated bloat, fast package availability |
 | Desktop | Cinnamon (Muffin, X11) + Plank + rofi | Conventional and customisable, and it works without being rebuilt from parts. Superseded Hyprland + AGS. |
-| Installer | GTK4 + libadwaita in Python, on a live ISO built with archiso | Same toolkit as the Appearance app, and it calls `provision/install.py` directly rather than reimplementing it. See [the note below](#the-installer). |
+| Installer | GTK4 + libadwaita screens in front of archinstall, on archiso's releng medium | Osiris owns the screens; archinstall does the install. See [the note below](#the-installer) and ADR 0012. |
 | Theme system | JSON palettes compiled to a real GTK theme per palette | Toolkits reload on a theme *name* change; that is the supported path. See [THEMING.md](THEMING.md). |
 | User shell | zsh with oh-my-zsh | Chosen explicitly over bash. `/etc/skel/.zshrc` ships configured. |
-| Bootloader | GRUB (UEFI) with a themed menu | systemd-boot has no theme engine, and os-prober finds other installed systems |
+| Bootloader | GRUB (UEFI or BIOS), installed by archinstall, with a themed menu | systemd-boot has no theme engine, and os-prober finds other installed systems |
 | Login manager | LightDM + lightdm-slick-greeter | Branded, themeable, and it works with an X11 Cinnamon session |
 | Terminal | ghostty | GTK4, and the only candidate that renders font ligatures - VTE terminals cannot |
 
@@ -66,10 +66,11 @@ colours. See [THEMING.md](THEMING.md).
 ### The installer
 
 A GTK4 + libadwaita wizard in Python (`apps/installer/`), running as root on a
-live ISO. It collects settings and then calls `provision/install.py`, which is
-the install: partitioning, pacstrap, configuration, bootloader and the full
-provisioning run. The installer contains none of that logic, so the graphical
-and command-line paths cannot drift apart.
+live ISO. It collects settings and hands them to archinstall as a
+configuration file; archinstall partitions, installs the base system, drivers
+and bootloader, then installs the `osiris` package and runs `osiris-setup`
+inside the new system. The installer contains no install logic of its own. See
+[INSTALLER.md](INSTALLER.md).
 
 Steps: region, target disk, account, confirm, progress, restart.
 

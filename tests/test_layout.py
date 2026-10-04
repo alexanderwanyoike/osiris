@@ -112,7 +112,7 @@ class TestTheEsp:
     def test_erasing_the_disk_makes_a_new_one(self) -> None:
         layout = Layout(windows_and_free_space(), InstallMode.WHOLE_DISK)
         assert not layout.reuses_esp
-        assert "new EFI system partition" in " ".join(layout.describe())
+        assert "new boot partition" in " ".join(layout.describe())
 
     def test_a_cramped_esp_is_not_treated_as_usable(self) -> None:
         """Filling a 32MB ESP breaks whatever else boots from it."""

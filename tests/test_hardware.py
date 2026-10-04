@@ -12,11 +12,6 @@ from osiris.model.hardware import (
     CpuVendor,
     Gpu,
     GpuVendor,
-    Hardware,
-    graphics,
-    microcode,
-    packages_for,
-    unsupported,
 )
 from osiris.platform.hardware import FakeProbe, HardwareProbe, SystemProbe
 from osiris.platform.process import FakeRunner, Result
@@ -49,7 +44,6 @@ class TestNvidiaGenerations:
         self, device_id: int, name: str
     ) -> None:
         assert nvidia(device_id, name).has_open_kernel_modules, name
-        assert "nvidia-open" in graphics((nvidia(device_id),))
 
     @pytest.mark.parametrize(
         ("device_id", "name"),
@@ -65,71 +59,9 @@ class TestNvidiaGenerations:
         self, device_id: int, name: str
     ) -> None:
         assert not nvidia(device_id, name).has_open_kernel_modules, name
-        packages = graphics((nvidia(device_id),))
-        assert "nvidia-open" not in packages
-        assert "mesa" in packages, "nouveau lives in mesa"
 
-    def test_an_unsupported_card_is_explained_rather_than_silently_downgraded(
-        self,
-    ) -> None:
-        notes = unsupported(Hardware(gpus=(nvidia(0x1B06, "GTX 1080 Ti"),)))
-        assert len(notes) == 1
-        assert "nouveau" in notes[0]
-
-    def test_a_supported_card_needs_no_explanation(self) -> None:
-        assert unsupported(Hardware(gpus=(nvidia(0x1E89),))) == []
-
-
-class TestOtherVendors:
-    def test_amd_gets_the_radeon_vulkan_driver(self) -> None:
-        packages = graphics((Gpu(GpuVendor.AMD, 0x164E),))
-        assert "vulkan-radeon" in packages
-        assert "nvidia-open" not in packages
-
-    def test_intel_gets_the_intel_vulkan_driver(self) -> None:
-        packages = graphics((Gpu(GpuVendor.INTEL, 0x9A49),))
-        assert "vulkan-intel" in packages
-
-    def test_a_guest_gets_software_rendering(self) -> None:
-        """A VM has no GPU, and a desktop that assumes one shows a black screen."""
-        assert "vulkan-swrast" in graphics((), virtual=True)
-
-    def test_bare_metal_does_not_get_software_rendering(self) -> None:
-        assert "vulkan-swrast" not in graphics((Gpu(GpuVendor.AMD, 0x164E),))
-
-
-class TestLaptops:
-    def test_both_gpus_in_a_hybrid_machine_get_drivers(self) -> None:
-        """Intel drives the panel, NVIDIA drives anything demanding.
-
-        Picking a single "best" GPU gets this common case wrong.
-        """
-        packages = graphics((Gpu(GpuVendor.INTEL, 0x9A49), nvidia(0x1F82, "GTX 1650")))
-        assert "vulkan-intel" in packages
-        assert "nvidia-open" in packages
-
-
-class TestMicrocode:
-    def test_amd_and_intel_get_their_own_and_only_their_own(self) -> None:
-        assert microcode(CpuVendor.AMD) == ["amd-ucode"]
-        assert microcode(CpuVendor.INTEL) == ["intel-ucode"]
-
-    def test_an_unknown_processor_gets_neither(self) -> None:
-        assert microcode(CpuVendor.UNKNOWN) == []
-
-    def test_every_real_machine_ends_up_with_microcode(self) -> None:
-        """Osiris shipped none at all, on any machine, until this existed."""
-        for cpu in (CpuVendor.AMD, CpuVendor.INTEL):
-            assert any(
-                package.endswith("-ucode")
-                for package in packages_for(Hardware(cpu=cpu))
-            )
-
-
-class TestPeripherals:
-    def test_bluetooth_packages_only_when_there_is_a_controller(self) -> None:
-        assert "bluez" in packages_for(Hardware(bluetooth=True))
-        assert "bluez" not in packages_for(Hardware(bluetooth=False))
+    def test_other_vendors_never_take_the_nvidia_driver(self) -> None:
+        assert not Gpu(GpuVendor.AMD, 0x7550).has_open_kernel_modules
 
 
 class TestProbe:
@@ -161,4 +93,3 @@ class TestProbe:
         runner = FakeRunner(results={"lspci": FileNotFoundError("no lspci")})
         hardware = SystemProbe(runner, root=tmp_path).detect()
         assert hardware.gpus == ()
-        assert "mesa" in packages_for(hardware), "still a working desktop"
