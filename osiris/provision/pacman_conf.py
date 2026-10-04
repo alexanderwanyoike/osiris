@@ -17,32 +17,29 @@ _SERVER = re.compile(r"^\s*Server\s*=\s*(?P<url>\S+)")
 
 
 def without_local_repository(text: str, name: str) -> str:
-    """`text` with the `[name]` section removed if it is served from a file.
+    """`text` with every `[name]` section removed that is served from a file.
 
-    The section runs from its header to the next header or the end. Anything
-    else - other repositories, comments, a `[name]` served over the network -
-    is returned untouched.
+    Every one, because archinstall writes the section twice: once into the
+    live system's pacman.conf, which it then copies onto the target, and once
+    more into the target's own. A section runs from its header to the next
+    header or the end. Anything else - other repositories, comments, a
+    `[name]` served over the network - is returned untouched.
     """
-    lines = text.splitlines(keepends=True)
-    start = end = None
-    for index, line in enumerate(lines):
-        header = _SECTION.match(line)
-        if header is None:
-            continue
-        if start is not None:
-            end = index
-            break
-        if header.group("name") == name:
-            start = index
-    if start is None:
-        return text
-    end = len(lines) if end is None else end
+    sections: list[list[str]] = [[]]
+    for line in text.splitlines(keepends=True):
+        if _SECTION.match(line):
+            sections.append([])
+        sections[-1].append(line)
+    return "".join(
+        "".join(section) for section in sections if not _is_local(section, name)
+    )
 
+
+def _is_local(section: list[str], name: str) -> bool:
+    header = _SECTION.match(section[0]) if section else None
+    if header is None or header.group("name") != name:
+        return False
     servers = [
-        match.group("url")
-        for line in lines[start:end]
-        if (match := _SERVER.match(line))
+        match.group("url") for line in section if (match := _SERVER.match(line))
     ]
-    if not servers or not all(url.startswith("file://") for url in servers):
-        return text
-    return "".join(lines[:start] + lines[end:])
+    return bool(servers) and all(url.startswith("file://") for url in servers)

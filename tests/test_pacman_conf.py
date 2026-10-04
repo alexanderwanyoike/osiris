@@ -59,3 +59,11 @@ def test_a_section_in_the_middle_leaves_the_rest_alone() -> None:
 
 def test_nothing_to_remove() -> None:
     assert without_local_repository(STOCK, "osiris") == STOCK
+
+
+def test_both_copies_archinstall_writes_are_removed() -> None:
+    """One arrives with the live pacman.conf, the other is appended after."""
+    local = appended("file:///usr/share/osiris/repo")
+    cleaned = without_local_repository(STOCK + local + local, "osiris")
+    assert "[osiris]" not in cleaned
+    assert cleaned.strip() == STOCK.strip()
