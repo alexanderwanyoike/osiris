@@ -129,7 +129,10 @@ OnlyShowIn=X-Cinnamon;
 # Cinnamon writes a wallpaper there on first login. A gschema override changes
 # the schema default itself, so it wins in both cases and the user can still
 # change it afterwards. This is how distributions set desktop defaults.
-GSCHEMA_OVERRIDE = """[org.cinnamon.desktop.background]
+GSCHEMA_OVERRIDE = """[org.cinnamon]
+app-menu-icon-name='osiris-symbolic'
+
+[org.cinnamon.desktop.background]
 picture-uri='file://{wallpaper}'
 picture-options='zoom'
 primary-color='#0d0d10'

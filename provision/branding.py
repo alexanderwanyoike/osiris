@@ -30,6 +30,7 @@ WALLPAPER = f"{WALLPAPERS_DIR}/osiris-obsidian.png"
 SPLASH_LOGO = "/usr/share/osiris/logo-splash.png"
 # The greeter draws its logo in a corner; the 320px splash asset clips there.
 GREETER_LOGO = "/usr/share/osiris/logo-greeter.png"
+MENU_ICON = "/usr/share/icons/hicolor/scalable/apps/osiris-symbolic.svg"
 
 PLYMOUTH_THEME = """[Plymouth Theme]
 Name=Osiris
@@ -130,6 +131,17 @@ def install_assets(repo: str) -> None:
         shutil.copy(branded, BRANDED_WALLPAPER)
         os.chmod(BRANDED_WALLPAPER, 0o644)
         print(f"  installed {BRANDED_WALLPAPER}")
+
+    # The mark as a symbolic icon, for the panel's menu button. Named, so the
+    # setting refers to it by name and the panel recolours it with the theme.
+    icon = os.path.join(repo, "branding", "osiris-symbolic.svg")
+    if os.path.exists(icon):
+        os.makedirs(os.path.dirname(MENU_ICON), exist_ok=True)
+        shutil.copy(icon, MENU_ICON)
+        os.chmod(MENU_ICON, 0o644)
+        run("gtk-update-icon-cache", "-q", "-f", "-t", "/usr/share/icons/hicolor",
+            check=False)
+        print(f"  installed {MENU_ICON}")
 
     text_logo = os.path.join(repo, "branding", "logo.txt")
     if os.path.exists(text_logo):
