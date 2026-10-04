@@ -66,3 +66,19 @@ def test_a_shared_esp_points_the_theme_at_efi() -> None:
 
 def test_a_disk_of_its_own_uses_boot() -> None:
     assert grub_dir(lambda path: path == "/boot/grub/grub.cfg") == "/boot/grub"
+
+
+def test_archinstalls_luks_line_survives_verbatim() -> None:
+    """As archinstall 4.5 wrote it on an encrypted btrfs install in a VM.
+
+    GRUB boots with `cryptdevice=`, not `root=`, from this line; grub-mkconfig
+    adds the rest. Losing it is a machine that cannot open its own root.
+    """
+    line = (
+        "cryptdevice=UUID=1fc465d3-034d-4353-95e3-aa38833641ec:root "
+        "zswap.enabled=0 rootfstype=btrfs quiet splash"
+    )
+    stock = ARCHINSTALL.replace(COMMAND_LINE, line)
+    merged_text = merged(stock, settings("/boot/grub"))
+    assert values(merged_text)["GRUB_CMDLINE_LINUX"] == f'"{line}"'
+    assert "cryptdevice" not in values(merged_text)["GRUB_CMDLINE_LINUX_DEFAULT"]
