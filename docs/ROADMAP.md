@@ -47,7 +47,7 @@ install and reboot, lands in the Phase 1 desktop, themed and branded.
 | P1.5 | Full provisioning on install | Installed system has the themes, Appearance app, ghostty, zsh and branding, not plain Cinnamon | done |
 | P1.6 | First-boot experience: welcome screen | Fresh install boots to a welcome flow | deferred to Phase 3 |
 | P1.8 | Disk layout options, software rendering, retry | ext4 or btrfs with subvolumes, zram, detected graphics drivers, retry after failure | done |
-| P1.9 | Install alongside another system | Free space or an existing partition, via an archinstall manual layout | model only |
+| P1.9 | Install alongside another system | Free space or an existing partition, via an archinstall manual layout; GParted to make room | done (UEFI) |
 | P1.7 | Bootloader: GRUB with a themed menu carrying the mark | Install completes with a working bootloader; the boot menu and splash are both branded | done |
 
 Dropped from this phase: model selection and API key entry (P1.5 as originally
