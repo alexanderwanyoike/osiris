@@ -1,0 +1,15 @@
+# The system's name, as other systems' boot menus (os-prober) and tools such as
+# fastfetch report it. Written to /etc/os-release by provision/branding.py.
+#
+# Arch's own os-release lives in /usr/lib/os-release, owned by the filesystem
+# package; /etc/os-release is a symlink to it that no package owns, and
+# os-release(5) gives /etc precedence. So the symlink is replaced by this file,
+# as derivatives such as CachyOS do, and Arch's file is left for pacman to
+# update. ID_LIKE keeps tools that look for Arch treating this as Arch.
+NAME="Osiris"
+PRETTY_NAME="Osiris"
+ID=osiris
+ID_LIKE=arch
+BUILD_ID=rolling
+HOME_URL="https://github.com/alexanderwanyoike/osiris"
+BUG_REPORT_URL="https://github.com/alexanderwanyoike/osiris/issues"

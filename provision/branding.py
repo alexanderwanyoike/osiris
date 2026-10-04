@@ -2,10 +2,11 @@
 
     python3 provision/branding.py [--repo PATH]
 
-Touches three surfaces:
+Touches four surfaces:
   * Plymouth boot splash showing the Osiris logo on the brand background
   * LightDM slick-greeter background
   * /usr/share/osiris/ as the canonical place other components read assets from
+  * /etc/os-release, the system's name as other tools report it
 
 Plymouth needs a mkinitcpio hook and a kernel command line flag, so this
 regenerates the initramfs. The kernel command line that Plymouth needs
@@ -34,6 +35,7 @@ SPLASH_LOGO = "/usr/share/osiris/logo-splash.png"
 # The greeter draws its logo in a corner; the 320px splash asset clips there.
 GREETER_LOGO = "/usr/share/osiris/logo-greeter.png"
 MENU_ICON = "/usr/share/icons/hicolor/scalable/apps/osiris-symbolic.svg"
+OS_RELEASE = "/etc/os-release"
 
 RESOURCES = Resources()
 
@@ -138,6 +140,14 @@ def add_mkinitcpio_hook() -> bool:
     return False
 
 
+def install_os_release() -> None:
+    """Name the system; see osiris/resources/system/os-release for why here."""
+    print("naming the system")
+    if os.path.islink(OS_RELEASE):
+        os.remove(OS_RELEASE)
+    write(OS_RELEASE, RESOURCES.read("system/os-release"))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=os.path.dirname(
@@ -148,6 +158,7 @@ def main() -> None:
         sys.exit("must run as root")
 
     install_assets(args.repo)
+    install_os_release()
     install_plymouth()
     add_mkinitcpio_hook()
 
