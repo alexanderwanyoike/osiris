@@ -427,7 +427,7 @@ class Window(Adw.ApplicationWindow):
         group.add(self.passphrase_confirm)
 
         self.passphrase_note = Gtk.Label(
-            xalign=0, wrap=True,
+            xalign=0, wrap=True, max_width_chars=60,
             label="If the passphrase is forgotten, the data on this disk is "
                   "lost for good. Nobody can recover it, including Osiris. "
                   "Write it down somewhere safe.")
@@ -436,7 +436,7 @@ class Window(Adw.ApplicationWindow):
         self.passphrase_note.set_margin_start(4)
         group.add(self.passphrase_note)
 
-        self.passphrase_problem = Gtk.Label(xalign=0, wrap=True)
+        self.passphrase_problem = Gtk.Label(xalign=0, wrap=True, max_width_chars=60)
         self.passphrase_problem.add_css_class("danger-note")
         self.passphrase_problem.set_margin_start(4)
         group.add(self.passphrase_problem)
