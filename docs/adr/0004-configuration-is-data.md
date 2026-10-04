@@ -31,17 +31,33 @@ loaded at runtime:
 
 ```
 osiris/resources/
+    bin/launcher                          the two-line Python launchers
+    boot/osiris.plymouth, osiris.script   the boot splash
+    desktop/dconf-defaults, dconf-profile Cinnamon, Plank and keybinding defaults
+    desktop/99-osiris.gschema.override    schema defaults that beat first-login writes
+    desktop/lightdm.conf, slick-greeter.conf
+    desktop/plank.desktop, osiris-theme.desktop   autostart entries
+    fetch/fastfetch.jsonc
+    iso/osiris-installer.service          the live medium's installer unit
     shell/zshrc
     terminal/ghostty.conf
-    fetch/fastfetch.jsonc
-    desktop/lightdm.conf
-    desktop/99-osiris.gschema.override
-    boot/grub-theme.txt
 ```
 
 Python templates them only where a value genuinely has to be computed, and
-templating is explicit substitution of named placeholders rather than f-string
-interpolation of a whole document.
+templating is explicit substitution of named placeholders (`@WALLPAPER@`)
+rather than f-string interpolation of a whole document. Not a template
+language such as Jinja: every file here is static or needs one or two values,
+and logic inside templates is the kind of hidden behaviour this ADR exists to
+remove.
+
+Two kinds of text stay in Python on purpose. The PKGBUILD and archiso's
+`profiledef.sh` are generated from Python lists, which is how the rule against
+authored bash is kept. Values computed from data, such as the dock's launcher
+list, stay in Python and are substituted into the file around them.
+
+**Status of the migration:** complete as of the change that added this
+paragraph. Earlier, three files had been moved here while the provisioning
+scripts kept writing their own inline copies, so the resources were unused.
 
 ## Consequences
 

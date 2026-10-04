@@ -40,7 +40,7 @@ def stage(directory: str) -> None:
     launcher = os.path.join(root, package.SETUP.lstrip("/"))
     os.makedirs(os.path.dirname(launcher))
     with open(launcher, "w") as fh:
-        fh.write(package.SETUP_LAUNCHER)
+        fh.write(package.setup_launcher())
     os.chmod(launcher, 0o755)
     with open(os.path.join(directory, "PKGBUILD"), "w") as fh:
         fh.write(package.pkgbuild(VERSION))

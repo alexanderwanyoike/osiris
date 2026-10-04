@@ -18,7 +18,10 @@ import shutil
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from run import run  # noqa: E402
+
+from osiris.resources.loader import Resources  # noqa: E402
 
 BRANDING_DIR = "/usr/share/osiris"
 THEME_DIR = "/usr/share/plymouth/themes/osiris"
@@ -32,62 +35,7 @@ SPLASH_LOGO = "/usr/share/osiris/logo-splash.png"
 GREETER_LOGO = "/usr/share/osiris/logo-greeter.png"
 MENU_ICON = "/usr/share/icons/hicolor/scalable/apps/osiris-symbolic.svg"
 
-PLYMOUTH_THEME = """[Plymouth Theme]
-Name=Osiris
-Description=Osiris boot splash
-ModuleName=script
-
-[script]
-ImageDir=/usr/share/plymouth/themes/osiris
-ScriptFile=/usr/share/plymouth/themes/osiris/osiris.script
-"""
-
-# Plymouth's scripting language. Background colours are the Osiris Obsidian
-# palette (#0d0d10) expressed as 0-1 floats.
-PLYMOUTH_SCRIPT = """# Osiris boot splash.
-#
-# Modelled on plymouth's own /usr/share/plymouth/themes/script example, which is
-# known to render. The earlier version set sprite positions once at load and
-# used a bare refresh callback; it drew nothing. Positions are recomputed in the
-# callback here because Window geometry is not final when the script loads.
-
-Window.SetBackgroundTopColor(0.051, 0.051, 0.063);
-Window.SetBackgroundBottomColor(0.051, 0.051, 0.063);
-
-logo.image = Image("logo.png");
-logo.sprite = Sprite(logo.image);
-logo.opacity_angle = 0;
-
-fun refresh_callback ()
-  {
-    logo.opacity_angle += ((2 * 3.14) / 60) * 0.5;
-    min_opacity = 0.45;
-    opacity = (Math.Cos(logo.opacity_angle) + 1) / 2;
-    opacity *= 1 - min_opacity;
-    opacity += min_opacity;
-
-    logo.sprite.SetX(Window.GetX() + Window.GetWidth()  / 2
-                     - logo.image.GetWidth()  / 2);
-    logo.sprite.SetY(Window.GetY() + Window.GetHeight() / 2
-                     - logo.image.GetHeight() / 2);
-    logo.sprite.SetOpacity(opacity);
-  }
-
-Plymouth.SetRefreshFunction(refresh_callback);
-"""
-
-SLICK_GREETER_CONF = f"""[Greeter]
-background={BRANDED_WALLPAPER}
-background-color=#0d0d10
-theme-name=adw-gtk3-dark
-icon-theme-name=Papirus-Dark
-font-name=Noto Sans 10
-show-hostname=true
-show-a11y=false
-show-keyboard=false
-draw-user-backgrounds=false
-draw-grid=false
-"""
+RESOURCES = Resources()
 
 
 def write(path: str, text: str) -> None:
@@ -151,8 +99,8 @@ def install_assets(repo: str) -> None:
 
 def install_plymouth() -> None:
     print("installing boot splash")
-    write(os.path.join(THEME_DIR, "osiris.plymouth"), PLYMOUTH_THEME)
-    write(os.path.join(THEME_DIR, "osiris.script"), PLYMOUTH_SCRIPT)
+    for name in ("osiris.plymouth", "osiris.script"):
+        write(os.path.join(THEME_DIR, name), RESOURCES.read(f"boot/{name}"))
     run("plymouth-set-default-theme", "osiris")
 
 
@@ -204,7 +152,9 @@ def main() -> None:
     add_mkinitcpio_hook()
 
     print("configuring login screen")
-    write("/etc/lightdm/slick-greeter.conf", SLICK_GREETER_CONF)
+    write("/etc/lightdm/slick-greeter.conf",
+          RESOURCES.render("desktop/slick-greeter.conf",
+                           {"wallpaper": BRANDED_WALLPAPER}))
 
     # The splash theme is copied into the initramfs, so choosing one means
     # rebuilding it - even when the hook was already there. On an install,

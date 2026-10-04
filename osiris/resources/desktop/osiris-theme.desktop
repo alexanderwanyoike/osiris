@@ -1,0 +1,9 @@
+# Applies the default theme on a user's first login; see engine.first_login
+# in shell/themes/engine.py. Does nothing once a theme has been chosen.
+[Desktop Entry]
+Type=Application
+Name=Osiris theme
+Comment=Apply the default Osiris theme on first login
+Exec=/usr/bin/python3 /usr/share/osiris/themes/engine.py --first-login
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

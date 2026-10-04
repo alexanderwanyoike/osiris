@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import configparser
 import json
 import re
+from importlib import resources as importlib_resources
 
 import pytest
 
@@ -98,3 +100,78 @@ class TestRendering:
         assert Resources.substitute(document, {"name": "x"}) == (
             '{ "logo": { "padding": { "top": 1 } }, "n": "x" }'
         )
+
+
+#: Every key-file resource, with the values it is rendered with in use. These
+#: are GKeyFile, desktop-entry and systemd formats: all "[group]" and
+#: "key=value", which configparser reads closely enough to catch a missing
+#: header, a stray line or an unrendered placeholder.
+KEY_FILES = {
+    "desktop/dconf-defaults": {
+        "applets": "'panel1:left:0:menu@cinnamon.org:0'",
+        "dock_items": "'nemo.dockitem'",
+        "wallpaper": "/usr/share/backgrounds/osiris/osiris-obsidian.png",
+    },
+    "desktop/99-osiris.gschema.override": {"wallpaper": "/w.png"},
+    "desktop/slick-greeter.conf": {"wallpaper": "/w.png"},
+    "desktop/lightdm.conf": {},
+    "desktop/plank.desktop": {},
+    "desktop/osiris-theme.desktop": {},
+    "boot/osiris.plymouth": {},
+    "iso/osiris-installer.service": {"launcher": "/usr/local/bin/osiris-installer"},
+}
+
+
+def parsed(text: str) -> configparser.ConfigParser:
+    # systemd units repeat keys (After=), so duplicates are allowed; keys keep
+    # their case, which every one of these formats is sensitive to.
+    parser = configparser.ConfigParser(
+        interpolation=None, strict=False, comment_prefixes=("#", ";")
+    )
+    parser.optionxform = str  # type: ignore[assignment, method-assign]
+    parser.read_string(text)
+    return parser
+
+
+class TestEveryKeyFile:
+    def test_every_resource_is_covered(self) -> None:
+        """A new key-file resource has to be added here to be checked."""
+        root = importlib_resources.files("osiris.resources")
+        found = {
+            f"{group.name}/{entry.name}"
+            for group in root.iterdir()
+            if group.is_dir() and group.name not in ("__pycache__",)
+            for entry in group.iterdir()
+            if entry.name.endswith((".conf", ".desktop", ".override", ".service",
+                                    ".plymouth"))
+            or entry.name == "dconf-defaults"
+        }  # fmt: skip
+        assert found - {"terminal/ghostty.conf"} == set(KEY_FILES)
+
+    @pytest.mark.parametrize("name", sorted(KEY_FILES))
+    def test_it_renders_completely_and_parses(
+        self, resources: Resources, name: str
+    ) -> None:
+        text = resources.render(name, KEY_FILES[name])
+        assert not re.search(r"@[A-Z][A-Z0-9_]*@", text), "unrendered marker"
+        assert parsed(text).sections(), f"{name} has no [group]"
+
+    @pytest.mark.parametrize(
+        "name", ["desktop/plank.desktop", "desktop/osiris-theme.desktop"]
+    )
+    def test_autostart_entries_are_runnable(
+        self, resources: Resources, name: str
+    ) -> None:
+        entry = parsed(resources.read(name))["Desktop Entry"]
+        assert entry["Type"] == "Application"
+        assert entry["Exec"]
+
+
+class TestLauncher:
+    def test_it_renders_to_valid_python(self, resources: Resources) -> None:
+        text = resources.render(
+            "bin/launcher", {"command": "osiris-setup", "script": "/x/setup.py"}
+        )
+        compile(text, "launcher", "exec")
+        assert text.startswith("#!/usr/bin/env python3\n")
+        assert '"/x/setup.py"' in text

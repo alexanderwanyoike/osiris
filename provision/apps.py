@@ -18,85 +18,17 @@ import shutil
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import homes  # noqa: E402
 from run import run  # noqa: E402
+
+from osiris.resources.loader import Resources  # noqa: E402
 
 OMZ_REPO = "https://github.com/ohmyzsh/ohmyzsh.git"
 OMZ_DIR = "/usr/share/oh-my-zsh"
 BRANDING_DIR = "/usr/share/osiris"
 
-ZSHRC = """# Osiris default zsh configuration.
-export ZSH="/usr/share/oh-my-zsh"
-# The framework writes nothing to the shared install; per-user state lives here.
-export ZSH_CUSTOM="$HOME/.config/osiris/zsh"
-export ZSH_COMPDUMP="$HOME/.cache/zcompdump"
-
-ZSH_THEME="af-magic"
-plugins=(git sudo command-not-found)
-
-mkdir -p "$ZSH_CUSTOM" "$(dirname "$ZSH_COMPDUMP")"
-[ -r "$ZSH/oh-my-zsh.sh" ] && source "$ZSH/oh-my-zsh.sh"
-
-setopt HIST_IGNORE_ALL_DUPS SHARE_HISTORY
-HISTSIZE=50000
-SAVEHIST=50000
-HISTFILE="$HOME/.zsh_history"
-
-alias ls='ls --color=auto'
-alias grep='grep --color=auto'
-
-command -v fastfetch >/dev/null && fastfetch
-"""
-
-# Key names verified against `ghostty +show-config --default`.
-# font-feature calt/liga are FiraCode's ligature features; ghostty shapes
-# through harfbuzz, so they actually take effect here.
-GHOSTTY_CONF = """# Osiris terminal defaults.
-font-family = FiraCode Nerd Font
-font-size = 11
-font-feature = calt
-font-feature = liga
-
-background = #0d0d10
-foreground = #e8e8e8
-cursor-color = #7c8aeb
-selection-background = #2a2a2f
-selection-foreground = #e8e8e8
-
-background-opacity = 0.92
-window-padding-x = 10
-window-padding-y = 10
-window-decoration = auto
-scrollback-limit = 10000000
-confirm-close-surface = false
-"""
-
-FASTFETCH_CONF = """{
-    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
-    "logo": {
-        "source": "/usr/share/osiris/logo.txt",
-        "type": "file-raw",
-        "padding": { "top": 1, "right": 3 }
-    },
-    "display": { "separator": "  " },
-    "modules": [
-        "break",
-        { "type": "title", "format": "{user-name}@{host-name}" },
-        "separator",
-        { "type": "os", "key": "os" },
-        { "type": "kernel", "key": "kernel" },
-        { "type": "de", "key": "desktop" },
-        { "type": "wm", "key": "wm" },
-        { "type": "terminal", "key": "terminal" },
-        { "type": "shell", "key": "shell" },
-        { "type": "packages", "key": "packages" },
-        { "type": "memory", "key": "memory" },
-        { "type": "uptime", "key": "uptime" },
-        "break",
-        { "type": "colors", "symbol": "circle" }
-    ]
-}
-"""
+RESOURCES = Resources()
 
 
 def write(path: str, text: str) -> None:
@@ -122,7 +54,7 @@ def install_oh_my_zsh(offline: bool) -> None:
 
 
 def configure_shell() -> None:
-    write("/etc/skel/.zshrc", ZSHRC)
+    write("/etc/skel/.zshrc", RESOURCES.read("shell/zshrc"))
     for user in desktop_users():
         target = f"{user.pw_dir}/.zshrc"
         if not os.path.exists(target):
@@ -136,7 +68,8 @@ def configure_shell() -> None:
 
 def configure_terminal() -> None:
     """Terminal config in /etc/skel and for existing users."""
-    write("/etc/skel/.config/ghostty/config", GHOSTTY_CONF)
+    write("/etc/skel/.config/ghostty/config",
+          RESOURCES.read("terminal/ghostty.conf"))
     for user in desktop_users():
         homes.copy("/etc/skel/.config/ghostty/config",
                    f"{user.pw_dir}/.config/ghostty/config", user)
@@ -144,7 +77,8 @@ def configure_terminal() -> None:
 
 
 def configure_apps() -> None:
-    write("/etc/skel/.config/fastfetch/config.jsonc", FASTFETCH_CONF)
+    write("/etc/skel/.config/fastfetch/config.jsonc",
+          RESOURCES.read("fetch/fastfetch.jsonc"))
     for user in desktop_users():
         for rel in (".config/fastfetch/config.jsonc",):
             homes.copy(f"/etc/skel/{rel}", f"{user.pw_dir}/{rel}", user)

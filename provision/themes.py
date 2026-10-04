@@ -21,7 +21,10 @@ import shutil
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from run import run  # noqa: E402
+
+from osiris.resources.loader import Resources  # noqa: E402
 
 SHARE = "/usr/share/osiris"
 THEMES_DIR = f"{SHARE}/themes"
@@ -32,24 +35,7 @@ APP_DIR = f"{SHARE}/appearance"
 LIB_DIR = f"{SHARE}/lib"
 WALLPAPERS = "/usr/share/backgrounds/osiris"
 
-LAUNCHER = """#!/usr/bin/env python3
-import runpy
-import sys
-
-sys.argv[0] = "osiris-appearance"
-runpy.run_path("/usr/share/osiris/appearance/main.py", run_name="__main__")
-"""
-
-
-# Applies the default theme on a user's first login; see engine.first_login.
-FIRST_LOGIN = """[Desktop Entry]
-Type=Application
-Name=Osiris theme
-Comment=Apply the default Osiris theme on first login
-Exec=/usr/bin/python3 /usr/share/osiris/themes/engine.py --first-login
-NoDisplay=true
-X-GNOME-Autostart-enabled=true
-"""
+RESOURCES = Resources()
 
 
 def copy_tree(src: str, dst: str, suffixes: tuple[str, ...]) -> int:
@@ -126,7 +112,10 @@ def main() -> None:
     src_app = os.path.join(args.repo, "apps", "appearance")
     copy_tree(src_app, APP_DIR, (".py",))
     with open("/usr/bin/osiris-appearance", "w") as fh:
-        fh.write(LAUNCHER)
+        fh.write(RESOURCES.render("bin/launcher", {
+            "command": "osiris-appearance",
+            "script": f"{APP_DIR}/main.py",
+        }))
     os.chmod("/usr/bin/osiris-appearance", 0o755)
     desktop = os.path.join(src_app, "dev.osiris.Appearance.desktop")
     if os.path.exists(desktop):
@@ -138,7 +127,7 @@ def main() -> None:
     print("applying the default theme on first login")
     os.makedirs("/etc/xdg/autostart", exist_ok=True)
     with open("/etc/xdg/autostart/osiris-theme.desktop", "w") as fh:
-        fh.write(FIRST_LOGIN)
+        fh.write(RESOURCES.read("desktop/osiris-theme.desktop"))
     print("  /etc/xdg/autostart/osiris-theme.desktop")
 
     print("THEMES_INSTALLED")

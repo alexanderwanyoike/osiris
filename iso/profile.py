@@ -26,9 +26,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(REPO, "provision"))
 sys.path.insert(0, HERE)
+sys.path.insert(0, REPO)
 
 import live_packages  # noqa: E402
 from run import stream  # noqa: E402
+
+from osiris.resources.loader import Resources  # noqa: E402
 
 RELENG = "/usr/share/archiso/configs/releng"
 
@@ -63,37 +66,7 @@ def profiledef_overrides(version: str) -> str:
     )
 
 
-# xinit takes the client and then the server on argv, so a graphical session
-# starts here without a shell or a display manager. Conflicts with getty@tty1
-# so the two do not fight over the console; the other consoles keep releng's
-# root login for rescue work.
-INSTALLER_SERVICE = f"""[Unit]
-Description=Osiris installer
-After=systemd-user-sessions.service
-Conflicts=getty@tty1.service
-After=getty@tty1.service
-
-[Service]
-Type=simple
-ExecStart=/usr/bin/xinit {LAUNCHER_PATH} -- /usr/bin/X :0 vt1 -keeptty -nolisten tcp
-Restart=on-failure
-RestartSec=2
-TTYPath=/dev/tty1
-StandardInput=tty
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-"""
-
-LAUNCHER = f"""#!/usr/bin/env python3
-import runpy
-import sys
-
-sys.argv[0] = "osiris-installer"
-runpy.run_path("{PAYLOAD_DIR}/apps/installer/main.py", run_name="__main__")
-"""
+RESOURCES = Resources()
 
 
 def write(path: str, text: str, mode: int | None = None) -> None:
@@ -146,9 +119,16 @@ def generate(out: str, version: str, repository: str,
     rebrand(out)
 
     root = os.path.join(out, "airootfs")
+    # xinit takes the client and then the server on argv, so the installer
+    # starts without a shell or a display manager; see the unit itself.
     write(os.path.join(root, "etc/systemd/system/osiris-installer.service"),
-          INSTALLER_SERVICE)
-    write(os.path.join(root, LAUNCHER_PATH.lstrip("/")), LAUNCHER, 0o755)
+          RESOURCES.render("iso/osiris-installer.service",
+                           {"launcher": LAUNCHER_PATH}))
+    write(os.path.join(root, LAUNCHER_PATH.lstrip("/")),
+          RESOURCES.render("bin/launcher", {
+              "command": "osiris-installer",
+              "script": f"{PAYLOAD_DIR}/apps/installer/main.py",
+          }), 0o755)
     # The unit lives in /etc, so its symlink points there rather than at
     # /usr/lib where packaged units live. Not systemctl: that would enable it
     # on the build host.

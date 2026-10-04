@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Plank
+Comment=Osiris dock
+Exec=plank
+Icon=plank
+Terminal=false
+X-GNOME-Autostart-Delay=2
+OnlyShowIn=X-Cinnamon;

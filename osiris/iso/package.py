@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from osiris.resources.loader import Resources
+
 NAME = "osiris"
 URL = "https://github.com/alexanderwanyoike/osiris"
 
@@ -29,13 +31,14 @@ PAYLOAD = ("osiris", "provision", "apps", "branding", "shell/themes")
 
 SETUP = "/usr/bin/osiris-setup"
 
-SETUP_LAUNCHER = f"""#!/usr/bin/env python3
-import runpy
-import sys
 
-sys.argv[0] = "osiris-setup"
-runpy.run_path("{SOURCE_DIR}/provision/setup.py", run_name="__main__")
-"""
+
+def setup_launcher() -> str:
+    """/usr/bin/osiris-setup: runs provision/setup.py from the packaged tree."""
+    return Resources().render(
+        "bin/launcher",
+        {"command": "osiris-setup", "script": f"{SOURCE_DIR}/provision/setup.py"},
+    )
 
 # What Osiris needs on top of the system archinstall builds. The kernel, the
 # base system, the bootloader, microcode, graphics drivers, NetworkManager,

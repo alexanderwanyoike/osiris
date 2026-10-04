@@ -1,0 +1,57 @@
+# Osiris desktop defaults, as system-wide dconf settings.
+# Written to /etc/dconf/db/local.d/00-osiris by provision/cinnamon.py.
+
+[org/cinnamon]
+panels-enabled=['1:0:top']
+panels-height=['1:30']
+panels-autohide=['1:false']
+enabled-applets=[@APPLETS@]
+desktop-effects=true
+startup-animation=false
+alttab-switcher-style='coverflow'
+
+[org/cinnamon/desktop/background]
+picture-uri='file://@WALLPAPER@'
+picture-options='zoom'
+
+[org/cinnamon/desktop/interface]
+gtk-theme='adw-gtk3-dark'
+icon-theme='Papirus-Dark'
+font-name='Noto Sans 10'
+cursor-theme='Adwaita'
+
+[org/cinnamon/desktop/wm/preferences]
+button-layout=':minimize,maximize,close'
+titlebar-font='Noto Sans Bold 10'
+
+[org/gnome/desktop/interface]
+gtk-theme='adw-gtk3-dark'
+icon-theme='Papirus-Dark'
+color-scheme='prefer-dark'
+
+[org/cinnamon/desktop/keybindings]
+custom-list=['custom0']
+
+[org/cinnamon/desktop/keybindings/custom-keybindings/custom0]
+name='Launcher'
+command='rofi -show drun'
+binding=['<Super>space']
+
+[net/launchpad/plank/docks/dock1]
+dock-items=[@DOCK_ITEMS@]
+position='bottom'
+alignment='center'
+theme='Transparent'
+icon-size=44
+hide-mode='intelligent'
+zoom-enabled=true
+zoom-percent=125
+tooltips-enabled=true
+
+[org/cinnamon/desktop/default-applications/terminal]
+exec='ghostty'
+exec-arg='-e'
+
+[org/nemo/preferences]
+show-hidden-files=false
+default-folder-viewer='list-view'

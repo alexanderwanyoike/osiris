@@ -1,0 +1,22 @@
+# The Osiris installer on the live medium. xinit takes the client and then the
+# server on argv, so a graphical session starts here without a shell or a
+# display manager. Conflicts with getty@tty1 so the two do not fight over the
+# console; the other consoles keep releng's root login for rescue work.
+[Unit]
+Description=Osiris installer
+After=systemd-user-sessions.service
+Conflicts=getty@tty1.service
+After=getty@tty1.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/xinit @LAUNCHER@ -- /usr/bin/X :0 vt1 -keeptty -nolisten tcp
+Restart=on-failure
+RestartSec=2
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

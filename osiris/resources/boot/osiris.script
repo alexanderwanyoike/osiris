@@ -1,0 +1,32 @@
+# Osiris boot splash.
+#
+# Modelled on plymouth's own /usr/share/plymouth/themes/script example, which is
+# known to render. The earlier version set sprite positions once at load and
+# used a bare refresh callback; it drew nothing. Positions are recomputed in the
+# callback here because Window geometry is not final when the script loads.
+#
+# Background colours are the Osiris Obsidian palette (#0d0d10) as 0-1 floats.
+
+Window.SetBackgroundTopColor(0.051, 0.051, 0.063);
+Window.SetBackgroundBottomColor(0.051, 0.051, 0.063);
+
+logo.image = Image("logo.png");
+logo.sprite = Sprite(logo.image);
+logo.opacity_angle = 0;
+
+fun refresh_callback ()
+  {
+    logo.opacity_angle += ((2 * 3.14) / 60) * 0.5;
+    min_opacity = 0.45;
+    opacity = (Math.Cos(logo.opacity_angle) + 1) / 2;
+    opacity *= 1 - min_opacity;
+    opacity += min_opacity;
+
+    logo.sprite.SetX(Window.GetX() + Window.GetWidth()  / 2
+                     - logo.image.GetWidth()  / 2);
+    logo.sprite.SetY(Window.GetY() + Window.GetHeight() / 2
+                     - logo.image.GetHeight() / 2);
+    logo.sprite.SetOpacity(opacity);
+  }
+
+Plymouth.SetRefreshFunction(refresh_callback);
