@@ -28,6 +28,26 @@ _USERNAME = re.compile(r"^[a-z_][a-z0-9_-]*$")
 _HOSTNAME = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9-]*$")
 
 
+def passphrase_problem(passphrase: str) -> str | None:
+    """Why `passphrase` cannot unlock a disk, or None if it can.
+
+    A function of its own so the installer's form applies the same rule as
+    the request, as the user types.
+    """
+    if len(passphrase) < MINIMUM_PASSPHRASE:
+        return f"encryption passphrase must be at least {MINIMUM_PASSPHRASE} characters"
+    if not (passphrase.isascii() and passphrase.isprintable()):
+        # It is typed at boot, before any input method exists, through
+        # whichever keymap the initramfs carries. Characters outside ASCII
+        # are where that goes wrong, and a passphrase that cannot be typed
+        # is a disk that cannot be opened.
+        return (
+            "encryption passphrase may only use letters, digits, spaces "
+            "and the symbols on a US keyboard"
+        )
+    return None
+
+
 class InvalidRequest(ValueError):
     """The request cannot produce a working system."""
 
@@ -85,20 +105,8 @@ class InstallRequest:
 
     def _encryption_problems(self) -> list[str]:
         problems: list[str] = []
-        if len(self.passphrase) < MINIMUM_PASSPHRASE:
-            problems.append(
-                f"encryption passphrase must be at least {MINIMUM_PASSPHRASE} "
-                "characters"
-            )
-        elif not (self.passphrase.isascii() and self.passphrase.isprintable()):
-            # It is typed at boot, before any input method exists, through
-            # whichever keymap the initramfs carries. Characters outside
-            # ASCII are where that goes wrong, and a passphrase that cannot
-            # be typed is a disk that cannot be opened.
-            problems.append(
-                "encryption passphrase may only use letters, digits, spaces "
-                "and the symbols on a US keyboard"
-            )
+        if (problem := passphrase_problem(self.passphrase)) is not None:
+            problems.append(problem)
         if self.mode is InstallMode.EXISTING_PARTITION:
             # This mode always shares another system's EFI partition, which
             # puts the kernels inside the encrypted root. See Layout.problems.

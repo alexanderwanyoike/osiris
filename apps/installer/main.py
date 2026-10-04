@@ -35,7 +35,7 @@ import disks  # noqa: E402
 
 from osiris.model.disk import Disk, Filesystem, human  # noqa: E402
 from osiris.model.layout import InstallMode, Layout  # noqa: E402
-from osiris.model.request import InstallRequest  # noqa: E402
+from osiris.model.request import InstallRequest, passphrase_problem  # noqa: E402
 from osiris.platform.process import SubprocessRunner  # noqa: E402
 
 LOGO_PATHS = ("/usr/share/osiris/logo-dark.png",
@@ -68,6 +68,8 @@ class Choices:
     software_rendering: bool = False
     mode: InstallMode = InstallMode.WHOLE_DISK
     root_partition: str | None = None
+    encrypt: bool = False
+    passphrase: str = dataclasses.field(default="", repr=False)
 
     def request(self) -> InstallRequest:
         return InstallRequest(
@@ -82,6 +84,8 @@ class Choices:
             software_rendering=self.software_rendering,
             mode=self.mode,
             root_partition=self.root_partition,
+            encrypt=self.encrypt,
+            passphrase=self.passphrase if self.encrypt else "",
         )
 
 CSS = b"""
@@ -400,9 +404,70 @@ class Window(Adw.ApplicationWindow):
         group.add(self.plan)
         box.append(group)
 
+        box.append(self.encryption_group())
+
         self.filesystem.connect("notify::selected", lambda *_a: self.show_plan())
         self.show_modes()
         return box
+
+    def encryption_group(self) -> Adw.PreferencesGroup:
+        """Encrypt the root, and the passphrase that opens it at every boot."""
+        group = Adw.PreferencesGroup(title="Encryption")
+        self.encrypt = Adw.SwitchRow(
+            title="Encrypt the system",
+            subtitle="A passphrase is asked for every time the computer "
+                     "starts. Without it, nothing on the disk can be read.")
+        self.encrypt.set_active(self.options.encrypt)
+        group.add(self.encrypt)
+
+        self.passphrase_row = Adw.PasswordEntryRow(title="Passphrase")
+        self.passphrase_confirm = Adw.PasswordEntryRow(
+            title="Confirm passphrase")
+        group.add(self.passphrase_row)
+        group.add(self.passphrase_confirm)
+
+        self.passphrase_note = Gtk.Label(
+            xalign=0, wrap=True,
+            label="If the passphrase is forgotten, the data on this disk is "
+                  "lost for good. Nobody can recover it, including Osiris. "
+                  "Write it down somewhere safe.")
+        self.passphrase_note.add_css_class("dim-label")
+        self.passphrase_note.set_margin_top(8)
+        self.passphrase_note.set_margin_start(4)
+        group.add(self.passphrase_note)
+
+        self.passphrase_problem = Gtk.Label(xalign=0, wrap=True)
+        self.passphrase_problem.add_css_class("danger-note")
+        self.passphrase_problem.set_margin_start(4)
+        group.add(self.passphrase_problem)
+
+        self.encrypt.connect("notify::active", lambda *_a: self.show_plan())
+        for row in (self.passphrase_row, self.passphrase_confirm):
+            row.connect("changed", lambda *_a: self.show_plan())
+        return group
+
+    def check_passphrase(self) -> str | None:
+        """What is wrong with the passphrase, or None.
+
+        Shown only once there is something typed to be wrong; an empty form
+        just keeps Next disabled.
+        """
+        encrypt = self.encrypt.get_active()
+        for widget in (self.passphrase_row, self.passphrase_confirm,
+                       self.passphrase_note, self.passphrase_problem):
+            widget.set_visible(encrypt)
+        if not encrypt:
+            return None
+        passphrase = self.passphrase_row.get_text()
+        confirm = self.passphrase_confirm.get_text()
+        problem = passphrase_problem(passphrase)
+        if problem is None and passphrase != confirm:
+            problem = "the passphrases do not match"
+        shown = problem if passphrase or confirm else None
+        self.passphrase_problem.set_text(
+            shown[0].upper() + shown[1:] if shown else "")
+        self.passphrase_problem.set_visible(bool(shown))
+        return problem
 
     def show_modes(self) -> None:
         """Offer only the modes this disk and this machine can do."""
@@ -469,6 +534,8 @@ class Window(Adw.ApplicationWindow):
 
     def read_layout(self) -> None:
         self.options.filesystem = self.filesystem.get_selected_item().get_string()
+        self.options.encrypt = self.encrypt.get_active()
+        self.options.passphrase = self.passphrase_row.get_text()
         self.options.root_partition = None
         if (self.options.mode is InstallMode.EXISTING_PARTITION
                 and self.partition_choice is not None
@@ -482,11 +549,13 @@ class Window(Adw.ApplicationWindow):
         root = next((p for p in self.contents.partitions
                      if p.path == self.options.root_partition), None)
         return Layout(self.contents, self.options.mode,
-                      Filesystem(self.options.filesystem), root_partition=root)
+                      Filesystem(self.options.filesystem), root_partition=root,
+                      encrypted=self.options.encrypt)
 
     def show_plan(self) -> None:
         """Say what the disk will look like afterwards, in so many words."""
         self.read_layout()
+        passphrase = self.check_passphrase()
         layout = self.current_layout()
         if layout is None:
             self.plan.set_text("")
@@ -497,7 +566,8 @@ class Window(Adw.ApplicationWindow):
         lines += [f"problem  {item}" for item in layout.problems]
         self.plan.set_text("\n".join(lines))
         if self.disk_next is not None:
-            self.disk_next.set_sensitive(not layout.problems)
+            self.disk_next.set_sensitive(
+                not layout.problems and passphrase is None)
 
     def open_gparted(self) -> None:
         """Run GParted, then read the disks again and redraw this page."""
@@ -629,6 +699,8 @@ class Window(Adw.ApplicationWindow):
             ("Keyboard", self.options.keymap),
             ("How", MODE_TITLES[self.options.mode]),
             ("Filesystem", self.options.filesystem),
+            ("Encryption", "LUKS2, passphrase asked at every start"
+                           if self.options.encrypt else "None"),
             ("Graphics", "Software rendering"
                          if self.options.software_rendering
                          else "Hardware accelerated"),
