@@ -16,6 +16,11 @@ from osiris.model.layout import InstallMode
 
 MINIMUM_PASSWORD = 6
 
+#: A disk passphrase is the only thing between a stolen laptop and its
+#: contents, and unlike an account password it cannot be reset. Eight is the
+#: floor, not a recommendation.
+MINIMUM_PASSPHRASE = 8
+
 # POSIX portable usernames: start with a letter or underscore, then letters,
 # digits, hyphen or underscore. useradd will refuse anything else, and refusing
 # it here means the user is told at the keyboard rather than forty minutes in.
@@ -31,7 +36,7 @@ class InvalidRequest(ValueError):
 class InstallRequest:
     disk: Disk
     username: str
-    password: str
+    password: str = field(repr=False)
     hostname: str = "osiris"
     timezone: str = "Europe/London"
     locale: str = "en_GB.UTF-8"
@@ -41,6 +46,12 @@ class InstallRequest:
     mode: InstallMode = InstallMode.WHOLE_DISK
     #: The partition to install into, for InstallMode.EXISTING_PARTITION.
     root_partition: str | None = None
+    #: Encrypt the root filesystem with LUKS. archinstall does the encrypting;
+    #: see archinstall_config.
+    encrypt: bool = False
+    #: Typed at every boot to unlock the root. Kept out of the repr so it
+    #: cannot reach a log or a traceback by way of the request.
+    passphrase: str = field(default="", repr=False)
 
     #: Collected rather than raised one at a time, so a form can show every
     #: problem at once instead of playing whack-a-mole.
@@ -68,6 +79,32 @@ class InstallRequest:
             problems.append(f"{self.disk.path}: {self.disk.unusable_because}")
         if self.mode is InstallMode.EXISTING_PARTITION and not self.root_partition:
             problems.append("choose a partition to install into")
+        if self.encrypt:
+            problems += self._encryption_problems()
+        return problems
+
+    def _encryption_problems(self) -> list[str]:
+        problems: list[str] = []
+        if len(self.passphrase) < MINIMUM_PASSPHRASE:
+            problems.append(
+                f"encryption passphrase must be at least {MINIMUM_PASSPHRASE} "
+                "characters"
+            )
+        elif not (self.passphrase.isascii() and self.passphrase.isprintable()):
+            # It is typed at boot, before any input method exists, through
+            # whichever keymap the initramfs carries. Characters outside
+            # ASCII are where that goes wrong, and a passphrase that cannot
+            # be typed is a disk that cannot be opened.
+            problems.append(
+                "encryption passphrase may only use letters, digits, spaces "
+                "and the symbols on a US keyboard"
+            )
+        if self.mode is InstallMode.EXISTING_PARTITION:
+            # This mode always shares another system's EFI partition, which
+            # puts the kernels inside the encrypted root. See Layout.problems.
+            problems.append(
+                "encryption is not available when installing on an existing partition"
+            )
         return problems
 
     @property

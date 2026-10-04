@@ -9,7 +9,8 @@ from osiris.model.disk import (
     Disk,
     human,
 )
-from osiris.model.request import InstallRequest, InvalidRequest
+from osiris.model.layout import InstallMode
+from osiris.model.request import MINIMUM_PASSPHRASE, InstallRequest, InvalidRequest
 
 
 def a_disk(**overrides: object) -> Disk:
@@ -85,3 +86,53 @@ class TestValidation:
             self.a_request(username="", password="x").validate()
         assert "username" in str(caught.value)
         assert "password" in str(caught.value)
+
+
+class TestEncryption:
+    def a_request(self, **overrides: object) -> InstallRequest:
+        defaults = {
+            "disk": a_disk(),
+            "username": "alex",
+            "password": "osiris123",
+            "encrypt": True,
+            "passphrase": "a long passphrase",
+        }
+        return InstallRequest(**{**defaults, **overrides})  # type: ignore[arg-type]
+
+    def test_a_sound_encrypted_request_is_valid(self) -> None:
+        assert self.a_request().valid
+
+    @pytest.mark.parametrize(
+        "passphrase", ["", "short", "x" * (MINIMUM_PASSPHRASE - 1)]
+    )
+    def test_a_short_passphrase_is_refused(self, passphrase: str) -> None:
+        request = self.a_request(passphrase=passphrase)
+        assert not request.valid
+        assert any("passphrase" in problem for problem in request.problems)
+
+    @pytest.mark.parametrize(
+        "passphrase", ["p\u00e4ssphrase", "pass\tphrase", "\u5bc6\u7801" * 4]
+    )
+    def test_a_passphrase_that_may_not_be_typeable_at_boot_is_refused(
+        self, passphrase: str
+    ) -> None:
+        assert not self.a_request(passphrase=passphrase).valid
+
+    def test_the_passphrase_is_ignored_without_encryption(self) -> None:
+        assert self.a_request(encrypt=False, passphrase="").valid
+
+    def test_free_space_is_left_to_the_layout_to_judge(self) -> None:
+        """Whether it works depends on the disk's ESP; see Layout.problems."""
+        assert self.a_request(mode=InstallMode.FREE_SPACE).valid
+
+    def test_an_existing_partition_cannot_be_encrypted(self) -> None:
+        request = self.a_request(
+            mode=InstallMode.EXISTING_PARTITION, root_partition="/dev/vda2"
+        )
+        assert not request.valid
+        assert any("existing partition" in p for p in request.problems)
+
+    def test_neither_secret_is_in_the_repr(self) -> None:
+        text = repr(self.a_request())
+        assert "a long passphrase" not in text
+        assert "osiris123" not in text
