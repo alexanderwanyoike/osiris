@@ -8,9 +8,25 @@ from pathlib import Path
 import parted
 import pytest
 from archinstall.lib.disk.device_handler import device_handler
+from archinstall.lib.locale import utils as locale_utils
 from archinstall.lib.models.device import BDevice, _DeviceInfo
 
 GIB = 1024**3
+
+#: Console keymaps, as `localectl list-keymaps` prints them on Arch.
+KEYMAPS = ["de", "fr", "uk", "us"]
+
+
+@pytest.fixture(autouse=True)
+def keymaps(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The keymaps archinstall validates a configuration against.
+
+    archinstall asks `localectl list-keymaps`, which reads the console keymaps
+    the kbd package installs. CI runs on Ubuntu, which has none, so every
+    configuration read back there failed validation. A fixed list keeps the
+    tests about the configuration rather than about the machine running them.
+    """
+    monkeypatch.setattr(locale_utils, "list_keyboard_languages", lambda: KEYMAPS)
 
 
 @pytest.fixture
