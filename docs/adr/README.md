@@ -21,6 +21,7 @@ that supersedes it and say so in both.
 | [0009](0009-one-desktop.md) | One desktop, Cinnamon | Accepted |
 | [0010](0010-the-installer-imports-the-install.md) | The installer imports the install flow | Accepted |
 | [0011](0011-testing-strategy.md) | Testing strategy, and what is deliberately not tested | Accepted |
+| [0012](0012-do-not-hand-roll-critical-machinery.md) | Do not hand-roll critical system machinery | Accepted |
 
 ## Format
 
