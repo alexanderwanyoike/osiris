@@ -426,17 +426,18 @@ class Window(Adw.ApplicationWindow):
         group.add(self.passphrase_row)
         group.add(self.passphrase_confirm)
 
-        self.passphrase_note = Gtk.Label(
-            xalign=0, wrap=True, max_width_chars=60,
-            label="If the passphrase is forgotten, the data on this disk is "
-                  "lost for good. Nobody can recover it, including Osiris. "
-                  "Write it down somewhere safe.")
-        self.passphrase_note.add_css_class("dim-label")
-        self.passphrase_note.set_margin_top(8)
-        self.passphrase_note.set_margin_start(4)
+        # A row rather than a free label: a long wrapping GtkLabel in the
+        # group stretched the whole page to the width of its text.
+        self.passphrase_note = Adw.ActionRow(
+            title="A forgotten passphrase cannot be recovered",
+            subtitle="The data on this disk would be lost for good. Nobody "
+                     "can recover it, including Osiris. Write it down "
+                     "somewhere safe.")
+        self.passphrase_note.add_prefix(
+            Gtk.Image(icon_name="dialog-warning-symbolic"))
         group.add(self.passphrase_note)
 
-        self.passphrase_problem = Gtk.Label(xalign=0, wrap=True, max_width_chars=60)
+        self.passphrase_problem = Gtk.Label(xalign=0, wrap=True)
         self.passphrase_problem.add_css_class("danger-note")
         self.passphrase_problem.set_margin_start(4)
         group.add(self.passphrase_problem)
