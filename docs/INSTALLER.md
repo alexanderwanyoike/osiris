@@ -24,15 +24,15 @@ iso/profile.py                      generates the archiso profile, builds the IS
 
 An install, in order:
 
-1. The wizard collects region, disk, filesystem and account.
+1. The wizard collects region, disk, filesystem, encryption and account.
 2. `Installer` reads the machine's GPUs and Bluetooth, and builds an
-   archinstall configuration from archinstall's own objects. The password goes
-   in a separate credentials file under `/root`, readable by root only, and is
-   deleted when archinstall exits.
-3. `archinstall --config --creds --silent` partitions, formats, installs the
-   base system, microcode and graphics drivers, creates the user, installs
-   GRUB (UEFI or BIOS), PipeWire, NetworkManager, LightDM with slick-greeter,
-   Plymouth and zram swap.
+   archinstall configuration from archinstall's own objects. The password hash
+   and any disk passphrase go in a separate credentials file under `/root`,
+   readable by root only, and deleted when archinstall exits.
+3. `archinstall --config --creds --silent` partitions, encrypts if asked,
+   formats, installs the base system, microcode and graphics drivers, creates
+   the user, installs GRUB (UEFI or BIOS), PipeWire, NetworkManager, LightDM
+   with slick-greeter, Plymouth and zram swap.
 4. archinstall installs the `osiris` package from the repository on the medium.
    Its dependencies bring in Cinnamon, Plank, rofi, ghostty and the rest.
 5. archinstall runs `osiris-setup` inside the new system. It applies what a
@@ -152,7 +152,7 @@ other user to protect it from.
 |---|---|
 | Region | Language (locale), time zone, keyboard layout |
 | Hardware | Software rendering, defaulted on inside a VM |
-| Disk | Which disk, how (erase, free space, a partition), filesystem |
+| Disk | Which disk, how (erase, free space, a partition), filesystem, encryption and its passphrase |
 | Account | Computer name, username, password |
 | Confirm | A summary, the destructive warning, and a gate |
 
@@ -205,6 +205,64 @@ Known limits: archinstall always names the boot entry `GRUB`, so a second
 archinstall-made system on the same ESP shares that entry and the boot menu,
 which os-prober populates with the other system. os-prober identifies an
 Osiris install as "Arch Linux", because Osiris does not brand `/etc/os-release`.
+
+### Encryption
+
+"Encrypt the system" on the disk page encrypts Osiris's root filesystem with
+LUKS2, and the passphrase is asked for on the boot splash every time the
+machine starts. Osiris writes no encryption code: it puts archinstall's own
+`DiskEncryption` (type `luks`, the root partition only) into the
+configuration, and archinstall does the rest:
+
+- `cryptsetup luksFormat` (LUKS2, argon2id) on the root partition, then the
+  filesystem inside it. btrfs keeps its subvolumes; they are inside the
+  encrypted volume.
+- the `encrypt` initramfs hook, with `plymouth` placed ahead of it, so the
+  hook asks through Plymouth rather than on a bare console;
+- `cryptdevice=UUID=<luks uuid>:root` in `GRUB_CMDLINE_LINUX`.
+  `osiris-setup` merges its GRUB settings around that line, never over it
+  (see `osiris/provision/grub_defaults.py`).
+
+The passphrase must be at least 8 characters of printable ASCII. It is typed
+at boot through the console keymap the initramfs carries, before any input
+method exists, and characters outside ASCII are where that goes wrong. It
+crosses to archinstall in the credentials file, the only place archinstall
+reads it from; `config.json` never carries it, and the credentials file is
+deleted when archinstall exits. A forgotten passphrase means the data is
+gone: there is no recovery key, and the disk page says so.
+
+The boot partition is never encrypted: GRUB reads the kernels from it, and
+archinstall does not configure GRUB to unlock anything (it never sets
+`GRUB_ENABLE_CRYPTODISK`). So encryption is offered only where Osiris has a
+boot partition of its own:
+
+| Layout | Encryption |
+|---|---|
+| Erase the disk | yes |
+| Free space, no EFI system partition on the disk yet | yes: the new 1GB ESP is mounted at `/boot` and holds the kernels |
+| Free space beside an existing ESP | refused |
+| An existing partition | refused (this mode always shares an existing ESP) |
+
+A shared ESP is mounted at `/efi` and carries only GRUB; the kernels stay in
+`/boot` on the root. Encrypting that root would leave GRUB unable to read the
+kernels, an unbootable machine. Making it work would mean setting up GRUB's
+own LUKS unlocking (`GRUB_ENABLE_CRYPTODISK`, the cryptodisk modules in the
+EFI image, and a second passphrase prompt or a keyfile in the initramfs),
+none of which archinstall does. That is hand-rolling boot machinery, so the
+combination is refused on the disk page, in `Layout.problems`, and again in
+`archinstall_config.encryption`.
+
+At boot the Osiris splash shows the hook's prompt under the logo, with an
+asterisk per character typed; a wrong passphrase clears it and asks again.
+The prompt is drawn by the Osiris Plymouth script theme
+(`osiris/provision/plymouth.py`), which registers Plymouth's password callbacks: a
+script theme without them draws no prompt at all, and the machine looks hung
+at the logo. The keyboard layout at that prompt is the one chosen on the
+first page.
+
+archinstall formats the key slot with its default argon2id iteration time of
+10 seconds, so a correct passphrase takes several seconds to open the disk on
+the machine it was installed from. Osiris keeps that default.
 
 ### Retrying
 

@@ -48,6 +48,7 @@ install and reboot, lands in the Phase 1 desktop, themed and branded.
 | P1.6 | First-boot experience: welcome screen | Fresh install boots to a welcome flow | deferred to Phase 3 |
 | P1.8 | Disk layout options, software rendering, retry | ext4 or btrfs with subvolumes, zram, detected graphics drivers, retry after failure | done |
 | P1.9 | Install alongside another system | Free space or an existing partition, via an archinstall manual layout; GParted to make room | done (UEFI) |
+| P1.10 | Full-disk encryption | An "Encrypt the system" switch puts the root in LUKS2 through archinstall; Plymouth asks for the passphrase at boot | done (whole disk, and free space with a new ESP) |
 | P1.7 | Bootloader: GRUB with a themed menu carrying the mark | Install completes with a working bootloader; the boot menu and splash are both branded | done |
 
 Dropped from this phase: model selection and API key entry (P1.5 as originally
@@ -113,7 +114,8 @@ each other. Then P3.3, P3.4 and P3.6, each of which needs one of those two.
 - No browser fork. Use whatever ships.
 - No custom kernel patches.
 - No reproducible-build infrastructure (Nix-style). archiso is enough.
-- No disk encryption or manual partitioning in the installer yet.
+- No manual partitioning in the installer. Encrypting beside a shared EFI
+  system partition waits on archinstall supporting an encrypted /boot.
 - No hosted package repository yet. The medium carries Osiris's own: the
   `osiris` package and what it bundles because no official repository has it
   (Plank Reloaded). Nothing depends on the AUR.
