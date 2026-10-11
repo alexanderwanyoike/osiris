@@ -6,6 +6,8 @@ makes keeps arriving; these functions change only what Osiris has to.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 #: The directories of releng's profile that hold boot menu configuration.
 CONFIG_DIRS = ("efiboot", "syslinux", "grub")
 
@@ -16,3 +18,7 @@ CONFIG_SUFFIXES = (".conf", ".cfg")
 def rebranded(text: str) -> str:
     """`text` with the menu entries called Osiris rather than Arch Linux."""
     return text.replace("Arch Linux install medium", "Osiris install medium")
+
+
+def themed(text: str, theme_dir: str, fonts: Sequence[str]) -> str:
+    raise NotImplementedError
