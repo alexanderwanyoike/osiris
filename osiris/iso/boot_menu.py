@@ -15,9 +15,21 @@ CONFIG_DIRS = ("efiboot", "syslinux", "grub")
 CONFIG_SUFFIXES = (".conf", ".cfg")
 
 
+#: What releng calls Arch Linux in its menus, and what Osiris calls it instead.
+#: Phrases rather than every "Arch Linux": the medium is Arch underneath, and a
+#: blanket replace would also rewrite the mentions that are still true.
+RENAMES = (
+    ("Arch Linux install medium", "Osiris install medium"),
+    ("MENU TITLE Arch Linux", "MENU TITLE Osiris"),
+    ("install Arch Linux", "install Osiris"),
+)
+
+
 def rebranded(text: str) -> str:
-    """`text` with the menu entries called Osiris rather than Arch Linux."""
-    return text.replace("Arch Linux install medium", "Osiris install medium")
+    """`text` with the menus naming Osiris rather than Arch Linux."""
+    for arch, osiris in RENAMES:
+        text = text.replace(arch, osiris)
+    return text
 
 
 #: The line in releng's graphics block that keeps the menu on the text console.
