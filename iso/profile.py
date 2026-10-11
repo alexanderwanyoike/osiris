@@ -26,8 +26,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(REPO, "provision"))
 sys.path.insert(0, HERE)
+sys.path.insert(0, REPO)
 
 import live_packages  # noqa: E402
+from osiris.iso import boot_menu  # noqa: E402
 from run import stream  # noqa: E402
 
 RELENG = "/usr/share/archiso/configs/releng"
@@ -37,9 +39,6 @@ PAYLOAD = ("osiris", "provision", "apps", "branding", "shell/themes")
 PAYLOAD_DIR = "/usr/share/osiris/source"
 REPOSITORY_DIR = "/usr/share/osiris/repo"
 LAUNCHER_PATH = "/usr/local/bin/osiris-installer"
-
-# Boot menu entries are upstream's, with the name changed.
-BOOT_CONFIGS = ("efiboot", "syslinux", "grub")
 
 
 def profiledef_overrides(version: str) -> str:
@@ -105,17 +104,16 @@ def write(path: str, text: str, mode: int | None = None) -> None:
 
 
 def rebrand(out: str) -> None:
-    """Call the boot menu entries Osiris rather than Arch Linux."""
-    for directory in BOOT_CONFIGS:
+    """Apply osiris/iso/boot_menu.py to each of releng's menu files."""
+    for directory in boot_menu.CONFIG_DIRS:
         for parent, _dirs, files in os.walk(os.path.join(out, directory)):
             for name in files:
-                if not name.endswith((".conf", ".cfg")):
+                if not name.endswith(boot_menu.CONFIG_SUFFIXES):
                     continue
                 path = os.path.join(parent, name)
                 with open(path) as fh:
                     text = fh.read()
-                branded = text.replace("Arch Linux install medium",
-                                       "Osiris install medium")
+                branded = boot_menu.rebranded(text)
                 if branded != text:
                     write(path, branded)
 
