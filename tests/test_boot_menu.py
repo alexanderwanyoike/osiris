@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from osiris.iso.boot_menu import rebranded, themed
+from osiris.iso.boot_menu import rebranded, themed, without_apm_entries
 
 SYSLINUX_ENTRY = "MENU LABEL Arch Linux install medium (%ARCH%, BIOS)\n"
 
@@ -67,3 +67,40 @@ def test_the_serial_console_is_kept() -> None:
 def test_a_menu_without_releng_graphics_block_is_refused() -> None:
     with pytest.raises(ValueError):
         themed("timeout=15\n", THEME_DIR, FONTS)
+
+
+# The end of releng's syslinux/archiso_tail.cfg.
+RELENG_SYSLINUX_TAIL = """\
+# https://wiki.syslinux.org/wiki/index.php/Hdt_(Hardware_Detection_Tool)
+LABEL hdt
+MENU LABEL Hardware Information (HDT)
+COM32 hdt.c32
+APPEND modules_alias=hdt/modalias.gz pciids=hdt/pciids.gz
+
+LABEL reboot
+TEXT HELP
+Reboot computer.
+The computer's firmware must support APM.
+ENDTEXT
+MENU LABEL Reboot
+COM32 reboot.c32
+
+LABEL poweroff
+TEXT HELP
+Power off computer.
+The computer's firmware must support APM.
+ENDTEXT
+MENU LABEL Power Off
+COM32 poweroff.c32
+"""
+
+
+def test_entries_that_need_apm_are_dropped() -> None:
+    text = without_apm_entries(RELENG_SYSLINUX_TAIL)
+    assert "reboot.c32" not in text
+    assert "poweroff.c32" not in text
+
+
+def test_entries_that_do_not_need_apm_are_kept_whole() -> None:
+    text = without_apm_entries(RELENG_SYSLINUX_TAIL)
+    assert text.startswith(RELENG_SYSLINUX_TAIL.split("\n\n")[0])

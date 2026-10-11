@@ -41,3 +41,7 @@ def themed(text: str, theme_dir: str, fonts: Sequence[str]) -> str:
         "    export theme",
     ]
     return text.replace(CONSOLE_OUTPUT, "\n".join(lines) + "\nfi\n", 1)
+
+
+def without_apm_entries(text: str) -> str:
+    raise NotImplementedError
