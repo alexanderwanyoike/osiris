@@ -15,6 +15,17 @@ def test_entries_are_called_osiris() -> None:
     )
 
 
+def test_the_bios_menu_title_is_osiris() -> None:
+    assert rebranded("MENU TITLE Arch Linux\n") == "MENU TITLE Osiris\n"
+
+
+def test_help_text_offers_to_install_osiris() -> None:
+    help_text = "It allows you to install Arch Linux or perform system maintenance.\n"
+    assert rebranded(help_text) == (
+        "It allows you to install Osiris or perform system maintenance.\n"
+    )
+
+
 def test_text_without_an_entry_name_is_unchanged() -> None:
     assert rebranded("timeout 15\n") == "timeout 15\n"
 
