@@ -61,6 +61,17 @@ def nine_slice(prefix: str, fill: tuple[int, int, int, int]) -> None:
         image.save(os.path.join(OUT, f"{prefix}_{position}.png"))
 
 
+def mark(colour: str, height: int) -> Image.Image:
+    """The mark, trimmed to its ink and kept as RGBA, so a bootloader
+    composites it over the backdrop rather than over a black rectangle."""
+    mask = Image.open(os.path.join(REPO, "branding", "logo-mask.png")).convert("L")
+    scale = height / mask.height
+    mask = mask.resize((max(1, round(mask.width * scale)), height), Image.LANCZOS)
+    ink = Image.new("RGBA", mask.size, (*rgb(colour), 0))
+    ink.putalpha(mask)
+    return ink
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--theme", default="osiris-obsidian")
@@ -76,15 +87,7 @@ def main() -> None:
         os.path.join(OUT, "background.png"))
     print(f"  background.png  {SIZE[0]}x{SIZE[1]}")
 
-    # The mark, trimmed to its ink and kept as RGBA so GRUB composites it over
-    # the backdrop rather than over a black rectangle.
-    mask_path = os.path.join(REPO, "branding", "logo-mask.png")
-    mask = Image.open(mask_path).convert("L")
-    scale = LOGO_HEIGHT / mask.height
-    mask = mask.resize((max(1, round(mask.width * scale)), LOGO_HEIGHT),
-                       Image.LANCZOS)
-    ink = Image.new("RGBA", mask.size, (*rgb(colors["foreground"]), 0))
-    ink.putalpha(mask)
+    ink = mark(colors["foreground"], LOGO_HEIGHT)
     ink.save(os.path.join(OUT, "logo.png"))
     print(f"  logo.png        {ink.width}x{ink.height}")
 
