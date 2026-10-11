@@ -143,6 +143,14 @@ def theme_boot_menu(out: str) -> None:
     write(config, boot_menu.themed(text, MEDIUM_GRUB_THEME, fonts))
 
 
+def drop_apm_entries(out: str) -> None:
+    """Remove the BIOS menu's Reboot and Power Off; see boot_menu.APM_MODULES."""
+    tail = os.path.join(out, "syslinux", "archiso_tail.cfg")
+    with open(tail) as fh:
+        text = fh.read()
+    write(tail, boot_menu.without_apm_entries(text))
+
+
 def generate(out: str, version: str, repository: str,
              releng: str = RELENG) -> str:
     """Write a complete archiso profile to `out`. Returns the path."""
@@ -168,6 +176,7 @@ def generate(out: str, version: str, repository: str,
 
     rebrand(out)
     theme_boot_menu(out)
+    drop_apm_entries(out)
 
     root = os.path.join(out, "airootfs")
     write(os.path.join(root, "etc/systemd/system/osiris-installer.service"),
