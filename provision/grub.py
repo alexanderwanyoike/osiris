@@ -45,7 +45,11 @@ def find_font(candidates: str) -> str | None:
     return None
 
 
-def install_fonts() -> None:
+def font_file(name: str, size: int) -> str:
+    return f"{name.replace(' ', '-')}-{size}.pf2"
+
+
+def install_fonts(theme_dir: str) -> None:
     """Convert the UI fonts to .pf2 beside the theme."""
     made = set()
     for name, size, source in FONTS:
@@ -54,11 +58,24 @@ def install_fonts() -> None:
         if find_font(source) is None:
             print(f"  missing {source}; GRUB will fall back for {name} {size}")
             continue
-        target = os.path.join(THEME_DIR, f"{name.replace(' ', '-')}-{size}.pf2")
+        target = os.path.join(theme_dir, font_file(name, size))
         run("grub-mkfont", "-n", name, "-s", str(size), "-o", target, source,
             check=False)
         made.add((name, size))
         print(f"  {os.path.basename(target)}")
+
+
+def install_theme(source: str, theme_dir: str) -> None:
+    """The theme from branding/grub, and its fonts, into theme_dir."""
+    if os.path.isdir(theme_dir):
+        shutil.rmtree(theme_dir)
+    os.makedirs(theme_dir, exist_ok=True)
+    for name in sorted(os.listdir(source)):
+        if name.endswith((".png", ".txt")):
+            shutil.copy(os.path.join(source, name),
+                        os.path.join(theme_dir, name))
+    print(f"  {theme_dir}")
+    install_fonts(theme_dir)
 
 
 def main() -> None:
@@ -75,15 +92,7 @@ def main() -> None:
         sys.exit(f"missing {source}; run branding/scripts/make-grub-theme.py")
 
     print("installing the boot menu theme")
-    if os.path.isdir(THEME_DIR):
-        shutil.rmtree(THEME_DIR)
-    os.makedirs(THEME_DIR, exist_ok=True)
-    for name in sorted(os.listdir(source)):
-        if name.endswith((".png", ".txt")):
-            shutil.copy(os.path.join(source, name),
-                        os.path.join(THEME_DIR, name))
-    print(f"  {THEME_DIR}")
-    install_fonts()
+    install_theme(source, THEME_DIR)
 
     print("configuring the boot menu")
     with open(DEFAULTS) as fh:
