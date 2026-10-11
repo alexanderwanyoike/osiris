@@ -43,5 +43,20 @@ def themed(text: str, theme_dir: str, fonts: Sequence[str]) -> str:
     return text.replace(CONSOLE_OUTPUT, "\n".join(lines) + "\nfi\n", 1)
 
 
+#: syslinux modules that work only through APM, which most firmware has dropped.
+#: On a machine without it the entry does nothing at all.
+APM_MODULES = ("reboot.c32", "poweroff.c32")
+
+
 def without_apm_entries(text: str) -> str:
-    raise NotImplementedError
+    """A syslinux menu without the entries that only work through APM.
+
+    releng separates its entries with blank lines, so an entry is a paragraph.
+    """
+    paragraphs = text.rstrip("\n").split("\n\n")
+    kept = [
+        paragraph
+        for paragraph in paragraphs
+        if not any(f"COM32 {module}" in paragraph for module in APM_MODULES)
+    ]
+    return "\n\n".join(kept) + "\n"
