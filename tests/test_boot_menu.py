@@ -9,9 +9,9 @@ from osiris.iso.boot_menu import rebranded, themed, without_apm_entries
 SYSLINUX_ENTRY = "MENU LABEL Arch Linux install medium (%ARCH%, BIOS)\n"
 
 
-def test_entries_are_called_osiris() -> None:
+def test_entries_boot_the_osiris_live_medium() -> None:
     assert rebranded(SYSLINUX_ENTRY) == (
-        "MENU LABEL Osiris install medium (%ARCH%, BIOS)\n"
+        "MENU LABEL Osiris live medium (%ARCH%, BIOS)\n"
     )
 
 
