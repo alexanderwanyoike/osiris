@@ -52,8 +52,9 @@ sudo python3 iso/profile.py
 ```
 
 The first builds the `osiris` package as a normal user (makepkg refuses root).
-The second needs the `archiso` package and root, because mkarchiso mounts and
-chroots.
+The second needs root, because mkarchiso mounts and chroots, and these packages
+on the build host: `archiso`, plus `grub`, `freetype2`, `noto-fonts` and
+`ttf-firacode-nerd`, from which the medium's boot menu fonts are made.
 Budget around 8GB of scratch space and twelve minutes. Writes
 `build/out/osiris-<version>-x86_64.iso` and leaves the generated profile at
 `build/iso-profile` for inspection.
