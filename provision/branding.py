@@ -141,6 +141,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=os.path.dirname(
         os.path.dirname(os.path.abspath(__file__))))
+    parser.add_argument("--no-initramfs", action="store_true",
+                        help="leave the initramfs to whoever builds it")
     args = parser.parse_args()
 
     if os.geteuid() != 0:
@@ -157,7 +159,7 @@ def main() -> None:
     # rebuilding it - even when the hook was already there. On an install,
     # archinstall added the hook and built the initramfs with its own default
     # theme a minute earlier.
-    if has_plymouth_hook():
+    if has_plymouth_hook() and not args.no_initramfs:
         print("regenerating initramfs")
         run("mkinitcpio", "-P")
 

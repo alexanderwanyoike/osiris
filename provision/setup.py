@@ -1,6 +1,7 @@
 """Turn an installed Arch + Cinnamon into Osiris.
 
     osiris-setup
+    osiris-setup --live
 
 The `osiris` package installs this as /usr/bin/osiris-setup, and archinstall
 runs it inside the new system once everything else is in place: users exist,
@@ -11,7 +12,12 @@ the same order, that a development machine runs.
 
 It installs nothing that can stop the machine booting. GRUB was installed by
 archinstall; this only themes it.
+
+--live is the install medium's: it runs while the ISO is built, to make the
+live session the same desktop. The medium boots through archiso's own menus,
+so there is no GRUB to theme, and archiso builds its initramfs itself.
 """
+import argparse
 import os
 import subprocess
 import sys
@@ -44,12 +50,22 @@ def forget_install_medium() -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--live", action="store_true",
+                        help="provision the install medium's live session")
+    args = parser.parse_args()
+
     if os.geteuid() != 0:
         sys.exit("must run as root")
 
     for script in SCRIPTS:
+        argv = [sys.executable, os.path.join(HERE, script)]
+        if args.live and script == "grub.py":
+            continue
+        if args.live and script == "branding.py":
+            argv.append("--no-initramfs")
         print(f"== {script} ==", flush=True)
-        subprocess.run([sys.executable, os.path.join(HERE, script)], check=True)
+        subprocess.run(argv, check=True)
 
     forget_install_medium()
     print("OSIRIS_SETUP_DONE")
