@@ -175,6 +175,37 @@ def install_splash(out: str) -> None:
     write(hooks, with_splash)
 
 
+# releng manages the network with systemd-networkd and iwd. The installed
+# system, its Cinnamon network applet and osiris-setup all expect
+# NetworkManager, and two managers on one interface fight over it.
+NETWORKD_LINKS = (
+    "multi-user.target.wants/systemd-networkd.service",
+    "multi-user.target.wants/iwd.service",
+    "sockets.target.wants/systemd-networkd.socket",
+    "network-online.target.wants/systemd-networkd-wait-online.service",
+    "dbus-org.freedesktop.network1.service",
+)
+NETWORKMANAGER_LINKS = {
+    "multi-user.target.wants/NetworkManager.service": "NetworkManager.service",
+    "network-online.target.wants/NetworkManager-wait-online.service":
+        "NetworkManager-wait-online.service",
+    "dbus-org.freedesktop.nm-dispatcher.service":
+        "NetworkManager-dispatcher.service",
+}
+
+
+def use_networkmanager(out: str) -> None:
+    """Swap releng's network services for NetworkManager, as symlinks for the
+    same reason the installer's unit is enabled with one."""
+    units = os.path.join(out, "airootfs/etc/systemd/system")
+    for link in NETWORKD_LINKS:
+        os.remove(os.path.join(units, link))
+    for link, unit in NETWORKMANAGER_LINKS.items():
+        path = os.path.join(units, link)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        os.symlink(f"/usr/lib/systemd/system/{unit}", path)
+
+
 def drop_apm_entries(out: str) -> None:
     """Remove the BIOS menu's Reboot and Power Off; see boot_menu.APM_MODULES."""
     tail = os.path.join(out, "syslinux", "archiso_tail.cfg")
@@ -210,6 +241,7 @@ def generate(out: str, version: str, repository: str,
     theme_boot_menu(out)
     drop_apm_entries(out)
     install_splash(out)
+    use_networkmanager(out)
 
     root = os.path.join(out, "airootfs")
     write(os.path.join(root, "etc/systemd/system/osiris-installer.service"),

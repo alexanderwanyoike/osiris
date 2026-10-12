@@ -31,6 +31,10 @@ INSTALLER = [
 # The boot splash, the same one the installed system shows.
 SPLASH = ["plymouth"]
 
+# The installed system's network manager, in place of releng's; see
+# iso/profile.py.
+NETWORK = ["networkmanager"]
+
 
 def additions() -> list[str]:
-    return GRAPHICS + INSTALLER + SPLASH
+    return GRAPHICS + INSTALLER + SPLASH + NETWORK
