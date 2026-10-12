@@ -6,6 +6,10 @@ Writes branding/grub/: the backdrop, the mark, and the 9-slice pixmaps for the
 selection highlight. The theme.txt beside them is hand-written and references
 these by name.
 
+Also writes branding/syslinux/splash.png, the install medium's BIOS menu
+backdrop, from the same palette and mark: syslinux draws an image and some
+coloured text, and nothing that would need a theme of its own.
+
 The bootloader runs before any user session exists, so it cannot follow the
 user's chosen theme - it is generated from `osiris-obsidian` and stays branded,
 the same decision as the boot splash and the greeter.
@@ -25,6 +29,7 @@ from PIL import Image, ImageDraw
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 OUT = os.path.join(REPO, "branding", "grub")
+SYSLINUX_OUT = os.path.join(REPO, "branding", "syslinux")
 sys.path.insert(0, os.path.join(REPO, "shell", "themes"))
 
 import wallpaper  # noqa: E402
@@ -32,6 +37,12 @@ import wallpaper  # noqa: E402
 RADIUS = 8          # corner size, and therefore the 9-slice corner tile size
 LOGO_HEIGHT = 220
 SIZE = (1920, 1080)
+# vesamenu's default resolution, which its background must match exactly. The
+# menu starts at text row 10 of 30 (MENU VSHIFT in releng), so the mark sits in
+# the band above it.
+SYSLINUX_SIZE = (640, 480)
+SYSLINUX_LOGO_HEIGHT = 112
+SYSLINUX_LOGO_TOP = 24
 
 
 def rgb(value: str) -> tuple[int, int, int]:
@@ -93,6 +104,14 @@ def main() -> None:
 
     nine_slice("select", (*rgb(colors["accent"]), 56))
     print(f"  select_*.png    9 pieces, accent {colors['accent']}")
+
+    os.makedirs(SYSLINUX_OUT, exist_ok=True)
+    splash = wallpaper.boot_background(theme, SYSLINUX_SIZE).convert("RGBA")
+    ink = mark(colors["foreground"], SYSLINUX_LOGO_HEIGHT)
+    splash.alpha_composite(ink, ((SYSLINUX_SIZE[0] - ink.width) // 2,
+                                 SYSLINUX_LOGO_TOP))
+    splash.convert("RGB").save(os.path.join(SYSLINUX_OUT, "splash.png"))
+    print(f"  syslinux/splash.png  {SYSLINUX_SIZE[0]}x{SYSLINUX_SIZE[1]}")
 
 
 if __name__ == "__main__":
