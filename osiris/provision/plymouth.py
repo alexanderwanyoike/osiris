@@ -11,6 +11,10 @@ import re
 THEME = "osiris"
 THEME_DIR = f"/usr/share/plymouth/themes/{THEME}"
 
+#: Kernel parameters that keep the console quiet, so Plymouth has the screen,
+#: beyond the `quiet splash` that turns it on.
+QUIET = "loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0"
+
 THEME_FILE = f"""[Plymouth Theme]
 Name=Osiris
 Description=Osiris boot splash
