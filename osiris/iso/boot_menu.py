@@ -72,3 +72,11 @@ def without_apm_entries(text: str) -> str:
         if not any(f"COM32 {module}" in paragraph for module in APM_MODULES)
     ]
     return "\n\n".join(kept) + "\n"
+
+
+def grub_with_installer_entry(text: str, unit: str) -> str:
+    raise NotImplementedError
+
+
+def syslinux_with_installer_entry(text: str, unit: str) -> str:
+    raise NotImplementedError
