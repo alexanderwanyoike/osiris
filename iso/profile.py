@@ -93,7 +93,7 @@ After=getty@tty1.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/xinit {LAUNCHER_PATH} -- /usr/bin/X :0 vt1 -keeptty -nolisten tcp
+ExecStart=/usr/bin/xinit {LAUNCHER_PATH} --bare-x -- /usr/bin/X :0 vt1 -keeptty -nolisten tcp
 Restart=on-failure
 RestartSec=2
 TTYPath=/dev/tty1
@@ -170,8 +170,13 @@ LIVE_SUDOERS = "live ALL=(ALL:ALL) NOPASSWD: ALL\n"
 
 LAUNCHER = f"""#!/usr/bin/env python3
 import runpy
+import subprocess
 import sys
 
+# On bare X nothing else sets the root window's cursor, and X's default is an X.
+if "--bare-x" in sys.argv:
+    sys.argv.remove("--bare-x")
+    subprocess.run(["xsetroot", "-cursor_name", "left_ptr"], check=False)
 sys.argv[0] = "osiris-installer"
 runpy.run_path("{package.SOURCE_DIR}/apps/installer/main.py", run_name="__main__")
 """

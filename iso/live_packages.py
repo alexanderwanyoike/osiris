@@ -14,7 +14,8 @@ DESKTOP = ["osiris"]
 # live desktop. xinit takes a client and a server on argv, which is how the
 # installer service starts without a shell or a display manager. mesa renders
 # in software where there is no driver, as in most virtual machines.
-GRAPHICS = ["xorg-server", "xorg-xinit", "xorg-xrandr", "mesa"]
+# xsetroot gives that bare screen a pointer rather than X's default X shape.
+GRAPHICS = ["xorg-server", "xorg-xinit", "xorg-xrandr", "xorg-xsetroot", "mesa"]
 
 # The installer itself: GTK4 and libadwaita in Python, same as the Appearance
 # app. adwaita-icon-theme supplies the symbolic icons the UI asks for.
