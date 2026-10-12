@@ -5,10 +5,11 @@
     python3 iso/profile.py --generate-only      # just write build/iso-profile
 
 The medium is archiso's releng profile - the official Arch install medium -
-with the Osiris installer added on top. releng is maintained by Arch, boots on
-BIOS and UEFI, and already carries archinstall, which does the install (ADR
-0012). This copies it and adds: the installer and the X session it runs in,
-the provisioning tree, and the local repository holding the `osiris` package,
+with Osiris added on top. releng is maintained by Arch, boots on BIOS and UEFI,
+and already carries archinstall, which does the install (ADR 0012). This copies
+it and adds: the `osiris` package, provisioned at build time into a live
+desktop that logs itself in; the installer, launched from that desktop or, from
+a second boot entry, on bare X; and the local repository holding the package,
 which archinstall installs from. Everything else is upstream's, unchanged.
 
 Must run as root - mkarchiso mounts and chroots - and needs the `archiso`
@@ -28,20 +29,22 @@ sys.path.insert(0, os.path.join(REPO, "provision"))
 sys.path.insert(0, HERE)
 sys.path.insert(0, REPO)
 
+import apps  # noqa: E402
 import grub  # noqa: E402
 import live_packages  # noqa: E402
-from osiris.iso import boot_menu  # noqa: E402
+from osiris.iso import boot_menu, package  # noqa: E402
 from osiris.provision import plymouth  # noqa: E402
-from run import stream  # noqa: E402
+from run import run, stream  # noqa: E402
 
 RELENG = "/usr/share/archiso/configs/releng"
 
 # Where things go on the medium.
-PAYLOAD = ("osiris", "provision", "apps", "branding", "shell/themes")
-PAYLOAD_DIR = "/usr/share/osiris/source"
 REPOSITORY_DIR = "/usr/share/osiris/repo"
 MEDIUM_GRUB_THEME = "/boot/grub/themes/osiris"
 LAUNCHER_PATH = "/usr/local/bin/osiris-installer"
+LIVE_SETUP_PATH = "/usr/local/bin/osiris-live-setup"
+INSTALLER_TARGET = "osiris-installer.target"
+SUDOERS_PATH = "/etc/sudoers.d/osiris-live"
 
 
 def profiledef_overrides(version: str) -> str:
@@ -66,6 +69,9 @@ def profiledef_overrides(version: str) -> str:
         "bootmodes=('bios.syslinux' 'uefi.grub')\n"
         f'kernel_params_x86_64="quiet splash {plymouth.QUIET}"\n'
         f'file_permissions+=(["{LAUNCHER_PATH}"]="0:0:755")\n'
+        f'file_permissions+=(["{LIVE_SETUP_PATH}"]="0:0:755")\n'
+        'file_permissions+=(["/etc/sudoers.d"]="0:0:750")\n'
+        f'file_permissions+=(["{SUDOERS_PATH}"]="0:0:440")\n'
     )
 
 
@@ -91,15 +97,47 @@ StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=multi-user.target
+WantedBy={INSTALLER_TARGET}
 """
+
+# What the installer-only boot entry starts in place of the live desktop.
+INSTALLER_TARGET_UNIT = """[Unit]
+Description=Osiris installer, without the live desktop
+Requires=multi-user.target
+After=multi-user.target
+AllowIsolate=yes
+"""
+
+# "remove from airootfs" is what releng's own last hook looks for: it deletes
+# every hook so marked once the build's package installation is done, so this
+# one does not run again inside the live system.
+LIVE_HOOK = f"""# remove from airootfs!
+[Trigger]
+Operation = Install
+Type = Package
+Target = {package.NAME}
+
+[Action]
+Description = Provisioning the Osiris live session...
+When = PostTransaction
+Exec = {LIVE_SETUP_PATH}
+"""
+
+LIVE_AUTOLOGIN = """[Seat:*]
+autologin-user=live
+autologin-session=cinnamon
+"""
+
+# A live medium has nothing to protect and nobody to protect it from; the same
+# reasoning that runs the installer as root.
+LIVE_SUDOERS = "live ALL=(ALL:ALL) NOPASSWD: ALL\n"
 
 LAUNCHER = f"""#!/usr/bin/env python3
 import runpy
 import sys
 
 sys.argv[0] = "osiris-installer"
-runpy.run_path("{PAYLOAD_DIR}/apps/installer/main.py", run_name="__main__")
+runpy.run_path("{package.SOURCE_DIR}/apps/installer/main.py", run_name="__main__")
 """
 
 
@@ -206,6 +244,48 @@ def use_networkmanager(out: str) -> None:
         os.symlink(f"/usr/lib/systemd/system/{unit}", path)
 
 
+def add_installer_entries(out: str) -> None:
+    """The installer-only entry, second on each menu; see boot_menu."""
+    config = os.path.join(out, "grub", "grub.cfg")
+    with open(config) as fh:
+        text = fh.read()
+    write(config, boot_menu.grub_with_installer_entry(text, INSTALLER_TARGET))
+    config = os.path.join(out, "syslinux", "archiso_sys-linux.cfg")
+    with open(config) as fh:
+        text = fh.read()
+    write(config, boot_menu.syslinux_with_installer_entry(text, INSTALLER_TARGET))
+
+
+def add_local_repository(out: str, repository: str) -> None:
+    """Let the build install the `osiris` package from iso/repo.py's output.
+
+    mkarchiso reads the profile's pacman.conf to install packages and leaves
+    the live system with pacman's own, so the repository is not configured on
+    the medium afterwards.
+    """
+    with open(os.path.join(out, "pacman.conf"), "a") as fh:
+        fh.write(f"\n[{package.NAME}]\n"
+                 "SigLevel = Optional TrustAll\n"
+                 f"Server = file://{os.path.abspath(repository)}\n")
+
+
+def add_live_session(out: str) -> None:
+    """The build-time hook that provisions the live desktop, and its login.
+
+    oh-my-zsh is cloned here, on the build host: the hook runs in a chroot
+    without name resolution, and apps.py skips the clone when it finds one.
+    """
+    root = os.path.join(out, "airootfs")
+    write(os.path.join(root, "etc/pacman.d/hooks/80-osiris-live.hook"), LIVE_HOOK)
+    shutil.copy(os.path.join(HERE, "live_session.py"),
+                os.path.join(root, LIVE_SETUP_PATH.lstrip("/")))
+    write(os.path.join(root, "etc/lightdm/lightdm.conf.d/60-osiris-live.conf"),
+          LIVE_AUTOLOGIN)
+    write(os.path.join(root, SUDOERS_PATH.lstrip("/")), LIVE_SUDOERS)
+    run("git", "clone", "--depth", "1", apps.OMZ_REPO,
+        os.path.join(root, apps.OMZ_DIR.lstrip("/")))
+
+
 def drop_apm_entries(out: str) -> None:
     """Remove the BIOS menu's Reboot and Power Off; see boot_menu.APM_MODULES."""
     tail = os.path.join(out, "syslinux", "archiso_tail.cfg")
@@ -229,6 +309,7 @@ def generate(out: str, version: str, repository: str,
 
     with open(os.path.join(out, "profiledef.sh"), "a") as fh:
         fh.write(profiledef_overrides(version))
+    add_local_repository(out, repository)
 
     packages_file = os.path.join(out, "packages.x86_64")
     with open(packages_file) as fh:
@@ -242,26 +323,23 @@ def generate(out: str, version: str, repository: str,
     drop_apm_entries(out)
     install_splash(out)
     use_networkmanager(out)
+    add_installer_entries(out)
+    add_live_session(out)
 
     root = os.path.join(out, "airootfs")
     write(os.path.join(root, "etc/systemd/system/osiris-installer.service"),
           INSTALLER_SERVICE)
+    write(os.path.join(root, f"etc/systemd/system/{INSTALLER_TARGET}"),
+          INSTALLER_TARGET_UNIT)
     write(os.path.join(root, LAUNCHER_PATH.lstrip("/")), LAUNCHER, 0o755)
     # The unit lives in /etc, so its symlink points there rather than at
     # /usr/lib where packaged units live. Not systemctl: that would enable it
     # on the build host.
-    wants = os.path.join(root, "etc/systemd/system/multi-user.target.wants")
+    wants = os.path.join(root, f"etc/systemd/system/{INSTALLER_TARGET}.wants")
     os.makedirs(wants, exist_ok=True)
     os.symlink("/etc/systemd/system/osiris-installer.service",
                os.path.join(wants, "osiris-installer.service"))
 
-    payload = os.path.join(root, PAYLOAD_DIR.lstrip("/"))
-    for relative in PAYLOAD:
-        source = os.path.join(REPO, relative)
-        if not os.path.isdir(source):
-            raise FileNotFoundError(f"missing {source}")
-        shutil.copytree(source, os.path.join(payload, relative),
-                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     # repo-add makes osiris.db a symlink to the tarball; pacman reads both.
     shutil.copytree(repository, os.path.join(root, REPOSITORY_DIR.lstrip("/")),
                     symlinks=True)
