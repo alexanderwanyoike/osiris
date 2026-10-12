@@ -11,17 +11,25 @@ adds the one thing an install does not have: an account that logs itself in.
 The account has no password. LightDM's autologin only skips the password check
 for members of `autologin`, a group nothing on Arch creates.
 
-releng's network services are disabled here rather than in the profile: the
-systemd package enables systemd-networkd from its presets when it installs,
-after the profile's files are laid down. osiris-setup has enabled
-NetworkManager, and two managers on one interface fight over it.
+osiris-setup enables NetworkManager, and two managers on one interface fight
+over it, so releng's are turned off here. systemd-networkd is masked rather
+than disabled: archiso leaves /etc/machine-id uninitialized, which makes every
+boot a first boot, and systemd re-enables whatever its presets list - networkd
+among them - on each one. A masked unit is the one thing presets leave alone.
+iwd is in no preset, so disabling it holds.
 """
 import subprocess
 import sys
 
 USER = "live"
-RELENG_NETWORK = ("systemd-networkd.service", "systemd-networkd-wait-online.service",
-                  "iwd.service")
+NETWORKD = (
+    "systemd-networkd.service",
+    "systemd-networkd.socket",
+    "systemd-networkd-varlink.socket",
+    "systemd-networkd-varlink-metrics.socket",
+    "systemd-networkd-resolve-hook.socket",
+    "systemd-networkd-wait-online.service",
+)
 
 
 def run(*argv: str) -> None:
@@ -31,7 +39,8 @@ def run(*argv: str) -> None:
 
 def main() -> None:
     run("osiris-setup", "--live")
-    run("systemctl", "disable", *RELENG_NETWORK)
+    run("systemctl", "disable", "iwd.service", *NETWORKD)
+    run("systemctl", "mask", *NETWORKD)
     if subprocess.run(["getent", "group", "autologin"],
                       capture_output=True).returncode != 0:
         run("groupadd", "--system", "autologin")
