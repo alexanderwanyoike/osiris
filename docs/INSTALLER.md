@@ -103,7 +103,16 @@ xinit /usr/local/bin/osiris-installer -- /usr/bin/X :0 vt1 -keeptty -nolisten tc
 ```
 
 xinit takes the client and then the server on argv, so a graphical session
-starts with no shell and no login manager to configure.
+starts with no shell and no login manager to configure. The unit is ordered
+after `plymouth-quit`, as LightDM's own is, so X does not race the splash for
+the display.
+
+**The medium shows the installed system's boot splash.** The theme files come
+from `osiris/provision/plymouth.py`, the same source `provision/branding.py`
+installs from, and go into the live root before archiso builds the initramfs,
+with the `plymouth` hook after `udev` and `quiet splash` on the kernel line.
+In QEMU the splash appears a few seconds after the menu: the initramfs takes
+that long to load from a virtual CD, and the screen is black until then.
 
 **The installer runs as root.** The alternative is a polkit action and a
 privilege boundary in the middle of a program whose entire purpose is to
