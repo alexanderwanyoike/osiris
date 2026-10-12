@@ -128,6 +128,10 @@ systemd-boot has no theme engine at all. See [INSTALLER.md](INSTALLER.md#the-boo
 The install medium's menu now carries it too: themed GRUB on UEFI, the Osiris
 backdrop behind syslinux on BIOS. The medium also shows the Osiris boot splash.
 
+**The medium boots into the live desktop**, with the installer on its dock and
+desktop, and a second boot entry that starts the installer alone. See
+[INSTALLER.md](INSTALLER.md#decisions-worth-knowing).
+
 ## Known gaps
 
 - Four open theming decisions, listed at the end of [THEMING.md](THEMING.md).
