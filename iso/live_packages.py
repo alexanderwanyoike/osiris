@@ -31,7 +31,7 @@ INSTALLER = [
 ]
 
 # The installed system's network manager, in place of releng's; see
-# iso/profile.py.
+# iso/live_session.py.
 NETWORK = ["networkmanager"]
 
 
