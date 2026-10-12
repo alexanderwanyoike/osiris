@@ -125,6 +125,8 @@ dict and the `--desktop` flag are removed. Cinnamon is the desktop, settled.
 
 **GRUB replaced systemd-boot**, so the boot menu can carry the mark.
 systemd-boot has no theme engine at all. See [INSTALLER.md](INSTALLER.md#the-boot-menu).
+The install medium's menu now carries it too: themed GRUB on UEFI, the Osiris
+backdrop behind syslinux on BIOS.
 
 ## Known gaps
 

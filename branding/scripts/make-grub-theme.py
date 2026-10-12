@@ -6,6 +6,10 @@ Writes branding/grub/: the backdrop, the mark, and the 9-slice pixmaps for the
 selection highlight. The theme.txt beside them is hand-written and references
 these by name.
 
+Also writes branding/syslinux/splash.png, the install medium's BIOS menu
+backdrop, from the same palette and mark: syslinux draws an image and some
+coloured text, and nothing that would need a theme of its own.
+
 The bootloader runs before any user session exists, so it cannot follow the
 user's chosen theme - it is generated from `osiris-obsidian` and stays branded,
 the same decision as the boot splash and the greeter.
@@ -25,6 +29,7 @@ from PIL import Image, ImageDraw
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 OUT = os.path.join(REPO, "branding", "grub")
+SYSLINUX_OUT = os.path.join(REPO, "branding", "syslinux")
 sys.path.insert(0, os.path.join(REPO, "shell", "themes"))
 
 import wallpaper  # noqa: E402
@@ -32,6 +37,12 @@ import wallpaper  # noqa: E402
 RADIUS = 8          # corner size, and therefore the 9-slice corner tile size
 LOGO_HEIGHT = 220
 SIZE = (1920, 1080)
+# vesamenu's default resolution, which its background must match exactly. The
+# menu starts at text row 10 of 30 (MENU VSHIFT in releng), so the mark sits in
+# the band above it.
+SYSLINUX_SIZE = (640, 480)
+SYSLINUX_LOGO_HEIGHT = 112
+SYSLINUX_LOGO_TOP = 24
 
 
 def rgb(value: str) -> tuple[int, int, int]:
@@ -61,6 +72,17 @@ def nine_slice(prefix: str, fill: tuple[int, int, int, int]) -> None:
         image.save(os.path.join(OUT, f"{prefix}_{position}.png"))
 
 
+def mark(colour: str, height: int) -> Image.Image:
+    """The mark, trimmed to its ink and kept as RGBA, so a bootloader
+    composites it over the backdrop rather than over a black rectangle."""
+    mask = Image.open(os.path.join(REPO, "branding", "logo-mask.png")).convert("L")
+    scale = height / mask.height
+    mask = mask.resize((max(1, round(mask.width * scale)), height), Image.LANCZOS)
+    ink = Image.new("RGBA", mask.size, (*rgb(colour), 0))
+    ink.putalpha(mask)
+    return ink
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--theme", default="osiris-obsidian")
@@ -76,20 +98,20 @@ def main() -> None:
         os.path.join(OUT, "background.png"))
     print(f"  background.png  {SIZE[0]}x{SIZE[1]}")
 
-    # The mark, trimmed to its ink and kept as RGBA so GRUB composites it over
-    # the backdrop rather than over a black rectangle.
-    mask_path = os.path.join(REPO, "branding", "logo-mask.png")
-    mask = Image.open(mask_path).convert("L")
-    scale = LOGO_HEIGHT / mask.height
-    mask = mask.resize((max(1, round(mask.width * scale)), LOGO_HEIGHT),
-                       Image.LANCZOS)
-    ink = Image.new("RGBA", mask.size, (*rgb(colors["foreground"]), 0))
-    ink.putalpha(mask)
+    ink = mark(colors["foreground"], LOGO_HEIGHT)
     ink.save(os.path.join(OUT, "logo.png"))
     print(f"  logo.png        {ink.width}x{ink.height}")
 
     nine_slice("select", (*rgb(colors["accent"]), 56))
     print(f"  select_*.png    9 pieces, accent {colors['accent']}")
+
+    os.makedirs(SYSLINUX_OUT, exist_ok=True)
+    splash = wallpaper.boot_background(theme, SYSLINUX_SIZE).convert("RGBA")
+    ink = mark(colors["foreground"], SYSLINUX_LOGO_HEIGHT)
+    splash.alpha_composite(ink, ((SYSLINUX_SIZE[0] - ink.width) // 2,
+                                 SYSLINUX_LOGO_TOP))
+    splash.convert("RGB").save(os.path.join(SYSLINUX_OUT, "splash.png"))
+    print(f"  syslinux/splash.png  {SYSLINUX_SIZE[0]}x{SYSLINUX_SIZE[1]}")
 
 
 if __name__ == "__main__":

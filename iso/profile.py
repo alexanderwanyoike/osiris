@@ -26,8 +26,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(REPO, "provision"))
 sys.path.insert(0, HERE)
+sys.path.insert(0, REPO)
 
+import grub  # noqa: E402
 import live_packages  # noqa: E402
+from osiris.iso import boot_menu  # noqa: E402
 from run import stream  # noqa: E402
 
 RELENG = "/usr/share/archiso/configs/releng"
@@ -36,17 +39,15 @@ RELENG = "/usr/share/archiso/configs/releng"
 PAYLOAD = ("osiris", "provision", "apps", "branding", "shell/themes")
 PAYLOAD_DIR = "/usr/share/osiris/source"
 REPOSITORY_DIR = "/usr/share/osiris/repo"
+MEDIUM_GRUB_THEME = "/boot/grub/themes/osiris"
 LAUNCHER_PATH = "/usr/local/bin/osiris-installer"
-
-# Boot menu entries are upstream's, with the name changed.
-BOOT_CONFIGS = ("efiboot", "syslinux", "grub")
 
 
 def profiledef_overrides(version: str) -> str:
     """Assignments appended to releng's profiledef.sh.
 
     Appended rather than rewritten, so every setting Osiris does not care
-    about - boot modes, compression, permissions on upstream's own files -
+    about - compression, permissions on upstream's own files -
     keeps tracking upstream. The later assignment wins in bash. These are
     assignments only, no logic: the project authors no bash.
     """
@@ -59,6 +60,9 @@ def profiledef_overrides(version: str) -> str:
         'iso_application="Osiris install medium"\n'
         f'iso_version="{version}"\n'
         'install_dir="osiris"\n'
+        # GRUB rather than releng's systemd-boot on UEFI, because only GRUB
+        # draws a theme. BIOS stays on syslinux: archiso has no BIOS GRUB mode.
+        "bootmodes=('bios.syslinux' 'uefi.grub')\n"
         f'file_permissions+=(["{LAUNCHER_PATH}"]="0:0:755")\n'
     )
 
@@ -105,19 +109,49 @@ def write(path: str, text: str, mode: int | None = None) -> None:
 
 
 def rebrand(out: str) -> None:
-    """Call the boot menu entries Osiris rather than Arch Linux."""
-    for directory in BOOT_CONFIGS:
+    """Apply osiris/iso/boot_menu.py to each of releng's menu files."""
+    for directory in boot_menu.CONFIG_DIRS:
         for parent, _dirs, files in os.walk(os.path.join(out, directory)):
             for name in files:
-                if not name.endswith((".conf", ".cfg")):
+                if not name.endswith(boot_menu.CONFIG_SUFFIXES):
                     continue
                 path = os.path.join(parent, name)
                 with open(path) as fh:
                     text = fh.read()
-                branded = text.replace("Arch Linux install medium",
-                                       "Osiris install medium")
+                branded = boot_menu.rebranded(text)
                 if branded != text:
                     write(path, branded)
+
+
+def theme_boot_menu(out: str) -> None:
+    """The installed system's GRUB theme on the UEFI menu, its backdrop on BIOS.
+
+    mkarchiso copies everything in the profile's grub/ that is not a .cfg to
+    /boot/grub on the medium.
+    """
+    theme = os.path.join(out, "grub", "themes", "osiris")
+    grub.install_theme(os.path.join(REPO, "branding", "grub"), theme)
+    fonts = sorted({grub.font_file(name, size) for name, size, _ in grub.FONTS})
+    missing = [name for name in fonts
+               if not os.path.exists(os.path.join(theme, name))]
+    if missing:
+        sys.exit(f"grub-mkfont made no {', '.join(missing)}; the build host "
+                 "needs grub, freetype2, noto-fonts and ttf-firacode-nerd")
+    config = os.path.join(out, "grub", "grub.cfg")
+    with open(config) as fh:
+        text = fh.read()
+    write(config, boot_menu.themed(text, MEDIUM_GRUB_THEME, fonts))
+
+    shutil.copy(os.path.join(REPO, "branding", "syslinux", "splash.png"),
+                os.path.join(out, "syslinux", "splash.png"))
+
+
+def drop_apm_entries(out: str) -> None:
+    """Remove the BIOS menu's Reboot and Power Off; see boot_menu.APM_MODULES."""
+    tail = os.path.join(out, "syslinux", "archiso_tail.cfg")
+    with open(tail) as fh:
+        text = fh.read()
+    write(tail, boot_menu.without_apm_entries(text))
 
 
 def generate(out: str, version: str, repository: str,
@@ -144,6 +178,8 @@ def generate(out: str, version: str, repository: str,
     write(packages_file, "\n".join([*upstream, "", "# Osiris", *added]) + "\n")
 
     rebrand(out)
+    theme_boot_menu(out)
+    drop_apm_entries(out)
 
     root = os.path.join(out, "airootfs")
     write(os.path.join(root, "etc/systemd/system/osiris-installer.service"),

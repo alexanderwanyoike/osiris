@@ -17,6 +17,8 @@ cannot render SVG.
 | `logo.txt` | Braille-rendered mark | fastfetch |
 | `wallpapers/osiris-default.png` | The branded wallpaper | the greeter |
 | `wallpapers/generated/` | One per shipped theme | the desktop |
+| `grub/` | Boot menu theme: backdrop, mark, selection pixmaps | installed GRUB, the medium's UEFI menu |
+| `syslinux/splash.png` | 640x480 backdrop with the mark | the medium's BIOS menu |
 
 **`-dark` and `-light` name the background, not the ink.** `logo-dark.png` is
 the *light* mark, for use *on* dark surfaces. This has caused confusion before;
@@ -28,6 +30,7 @@ when in doubt, composite it over the surface you mean to use it on and look.
 python3 branding/scripts/make-logo-mask.py       # logo-mask.png, from logo.svg
 python3 branding/scripts/make-terminal-logo.py   # logo.txt, from logo-simple.png
 python3 shell/themes/wallpaper.py                # wallpapers/generated/
+python3 branding/scripts/make-grub-theme.py      # grub/, syslinux/splash.png
 ```
 
 The first two need `rsvg-convert`, ImageMagick and `chafa`, and run on a

@@ -89,7 +89,8 @@ archinstall's parser, the code path `archinstall --config` takes.
 **The medium is releng.** Arch's own install medium, copied and added to
 rather than reimplemented: it boots on BIOS and UEFI, and carries archinstall
 and the disk tools already. `profiledef.sh` keeps upstream's contents with a
-few assignments appended, so boot modes and compression keep tracking upstream.
+few assignments appended, so compression and the rest keep tracking upstream.
+The one boot mode it changes is UEFI's; see [the boot menu](#the-boot-menu).
 
 **Osiris is a package.** It reaches a machine the way everything else on Arch
 does. The PKGBUILD is generated from Python (`osiris/iso/package.py`) and holds
@@ -192,6 +193,20 @@ get wrong:
   disagree GRUB falls back to a bitmap font without saying so.
 - **9-slice pixmaps need all nine pieces** named `<prefix>_<c|n|s|e|w|nw|ne|sw|se>.png`.
   GRUB silently draws nothing if one is missing.
+
+### On the medium
+
+The medium boots UEFI machines through archiso's `uefi.grub` mode rather than
+releng's systemd-boot, and draws the same theme: `iso/profile.py` installs it
+with `provision/grub.py`'s own `install_theme` and points releng's `grub.cfg`
+at it (`osiris/iso/boot_menu.py`). Its shutdown and restart entries work on
+any UEFI machine.
+
+BIOS machines get syslinux, because archiso has no BIOS GRUB mode. It cannot
+draw a GRUB theme, so it gets `branding/syslinux/splash.png` behind releng's
+menu. releng's Reboot and Power Off entries are removed there: syslinux does
+both through APM, which most firmware no longer has, and on such a machine they
+do nothing.
 
 ## Guardrails
 
