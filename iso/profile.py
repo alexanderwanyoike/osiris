@@ -124,7 +124,7 @@ def rebrand(out: str) -> None:
 
 
 def theme_boot_menu(out: str) -> None:
-    """The installed system's GRUB theme, on the medium's menu.
+    """The installed system's GRUB theme on the UEFI menu, its backdrop on BIOS.
 
     mkarchiso copies everything in the profile's grub/ that is not a .cfg to
     /boot/grub on the medium.
@@ -141,6 +141,9 @@ def theme_boot_menu(out: str) -> None:
     with open(config) as fh:
         text = fh.read()
     write(config, boot_menu.themed(text, MEDIUM_GRUB_THEME, fonts))
+
+    shutil.copy(os.path.join(REPO, "branding", "syslinux", "splash.png"),
+                os.path.join(out, "syslinux", "splash.png"))
 
 
 def drop_apm_entries(out: str) -> None:
