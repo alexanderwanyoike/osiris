@@ -30,6 +30,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, REPO)
 
 import apps  # noqa: E402
+import cinnamon  # noqa: E402
 import grub  # noqa: E402
 import live_packages  # noqa: E402
 from osiris.iso import boot_menu, package  # noqa: E402
@@ -45,6 +46,8 @@ LAUNCHER_PATH = "/usr/local/bin/osiris-installer"
 LIVE_SETUP_PATH = "/usr/local/bin/osiris-live-setup"
 INSTALLER_TARGET = "osiris-installer.target"
 SUDOERS_PATH = "/etc/sudoers.d/osiris-live"
+INSTALLER_ENTRY_PATH = f"/usr/share/applications/{cinnamon.INSTALLER_LAUNCHER}"
+INSTALLER_DESKTOP_ICON = f"/etc/skel/Desktop/{cinnamon.INSTALLER_LAUNCHER}"
 
 
 def profiledef_overrides(version: str) -> str:
@@ -72,6 +75,8 @@ def profiledef_overrides(version: str) -> str:
         f'file_permissions+=(["{LIVE_SETUP_PATH}"]="0:0:755")\n'
         'file_permissions+=(["/etc/sudoers.d"]="0:0:750")\n'
         f'file_permissions+=(["{SUDOERS_PATH}"]="0:0:440")\n'
+        # Nemo runs a launcher on the desktop only if it is executable.
+        f'file_permissions+=(["{INSTALLER_DESKTOP_ICON}"]="0:0:755")\n'
     )
 
 
@@ -126,6 +131,37 @@ Exec = {LIVE_SETUP_PATH}
 LIVE_AUTOLOGIN = """[Seat:*]
 autologin-user=live
 autologin-session=cinnamon
+"""
+
+INSTALLER_ENTRY = f"""[Desktop Entry]
+Type=Application
+Name=Install Osiris
+Comment=Install this system onto a disk
+Exec=pkexec {LAUNCHER_PATH}
+Icon=system-software-install
+Terminal=false
+Categories=System;
+"""
+
+# pkexec's way to run one program as root from the live session: no password
+# for the person at the machine, and the display passed through.
+INSTALLER_POLICY = f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <action id="dev.osiris.installer">
+    <description>Install Osiris</description>
+    <message>Installing Osiris needs to run as root</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">{LAUNCHER_PATH}</annotate>
+    <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
+  </action>
+</policyconfig>
 """
 
 # A live medium has nothing to protect and nobody to protect it from; the same
@@ -282,6 +318,10 @@ def add_live_session(out: str) -> None:
     write(os.path.join(root, "etc/lightdm/lightdm.conf.d/60-osiris-live.conf"),
           LIVE_AUTOLOGIN)
     write(os.path.join(root, SUDOERS_PATH.lstrip("/")), LIVE_SUDOERS)
+    for path in (INSTALLER_ENTRY_PATH, INSTALLER_DESKTOP_ICON):
+        write(os.path.join(root, path.lstrip("/")), INSTALLER_ENTRY)
+    write(os.path.join(root, "usr/share/polkit-1/actions/dev.osiris.installer.policy"),
+          INSTALLER_POLICY)
     run("git", "clone", "--depth", "1", apps.OMZ_REPO,
         os.path.join(root, apps.OMZ_DIR.lstrip("/")))
 
