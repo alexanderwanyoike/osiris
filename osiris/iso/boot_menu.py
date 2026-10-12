@@ -19,7 +19,7 @@ CONFIG_SUFFIXES = (".conf", ".cfg")
 #: Phrases rather than every "Arch Linux": the medium is Arch underneath, and a
 #: blanket replace would also rewrite the mentions that are still true.
 RENAMES = (
-    ("Arch Linux install medium", "Osiris install medium"),
+    ("Arch Linux install medium", "Osiris live medium"),
     ("MENU TITLE Arch Linux", "MENU TITLE Osiris"),
     ("install Arch Linux", "install Osiris"),
 )
