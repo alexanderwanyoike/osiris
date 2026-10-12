@@ -70,7 +70,10 @@ def profiledef_overrides(version: str) -> str:
         # GRUB rather than releng's systemd-boot on UEFI, because only GRUB
         # draws a theme. BIOS stays on syslinux: archiso has no BIOS GRUB mode.
         "bootmodes=('bios.syslinux' 'uefi.grub')\n"
-        f'kernel_params_x86_64="quiet splash {plymouth.QUIET}"\n'
+        # archiso keeps the live session's writes in a 256M tmpfs by default,
+        # which a desktop with a browser fills in minutes. A tmpfs size is a
+        # ceiling, not a reservation.
+        f'kernel_params_x86_64="quiet splash {plymouth.QUIET} cow_spacesize=4G"\n'
         f'file_permissions+=(["{LAUNCHER_PATH}"]="0:0:755")\n'
         f'file_permissions+=(["{LIVE_SETUP_PATH}"]="0:0:755")\n'
         'file_permissions+=(["/etc/sudoers.d"]="0:0:750")\n'
