@@ -28,5 +28,9 @@ INSTALLER = [
 ]
 
 
+# The boot splash, the same one the installed system shows.
+SPLASH = ["plymouth"]
+
+
 def additions() -> list[str]:
-    return GRAPHICS + INSTALLER
+    return GRAPHICS + INSTALLER + SPLASH
