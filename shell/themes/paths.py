@@ -8,6 +8,7 @@ process's own identity, not from the environment.
 """
 import os
 import pwd
+import sys
 
 
 def home() -> str:
@@ -22,3 +23,18 @@ def home() -> str:
         return pwd.getpwuid(os.getuid()).pw_dir
     except KeyError:
         return os.path.expanduser("~")
+
+
+def use_osiris_package() -> None:
+    """Put the tested `osiris` package on sys.path.
+
+    It is installed beside these files on a target, and lives two directories
+    up in a checkout.
+    """
+    for candidate in (
+        "/usr/share/osiris/lib",
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    ):
+        if os.path.isdir(os.path.join(candidate, "osiris")):
+            sys.path.insert(0, candidate)
+            return
