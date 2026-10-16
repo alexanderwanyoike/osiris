@@ -429,6 +429,17 @@ def style_for(name: str) -> str:
     return FALLBACK_STYLES[zlib.crc32(name.encode()) % len(FALLBACK_STYLES)]
 
 
+def _rng(theme: dict) -> np.random.Generator:
+    """The theme's composition: the same for the same name and variation.
+
+    Variation 0 keeps the name alone as the seed, so every wallpaper rendered
+    before variations existed stays exactly as it was.
+    """
+    variation = theme.get("wallpaper_variation", 0)
+    key = theme["name"] if not variation else f"{theme['name']}:{variation}"
+    return np.random.default_rng(zlib.crc32(key.encode()))
+
+
 def logo_mask(size: tuple[int, int]) -> np.ndarray | None:
     for path in MASK_PATHS:
         if os.path.exists(path):
@@ -456,7 +467,7 @@ def compose(theme: dict, size: tuple[int, int] = (WIDTH, HEIGHT),
         raise ValueError(f"unknown style {style!r}; expected one of "
                          f"{', '.join(STYLES)}")
 
-    rng = np.random.default_rng(zlib.crc32(theme["name"].encode()))
+    rng = _rng(theme)
     fill, line = RENDERERS[style](shape, rng)
 
     mask = quiet_mask(shape)
@@ -492,7 +503,7 @@ def boot_background(theme: dict,
     width, height = size
     palette = tones(theme)
     style = theme.get("wallpaper_style") or style_for(theme["name"])
-    rng = np.random.default_rng(zlib.crc32(theme["name"].encode()))
+    rng = _rng(theme)
     fill, line = RENDERERS[style]((height, width), rng)
 
     mask = quiet_mask((height, width))
