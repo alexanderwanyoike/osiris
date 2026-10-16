@@ -38,7 +38,10 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import icons  # noqa: E402
 import plank  # noqa: E402
-from paths import home  # noqa: E402
+from paths import home, use_osiris_package  # noqa: E402
+
+use_osiris_package()
+from osiris.themes.switch import Switch, keyfile  # noqa: E402
 
 
 HOME = home()
@@ -548,8 +551,9 @@ def _session_env() -> dict:
     return env
 
 
-def _set(schema: str, key: str, value: str, env: dict) -> None:
-    subprocess.run(["gsettings", "set", schema, key, value],
+def _load(settings: str, env: dict) -> None:
+    """Write settings as one dconf change; see osiris/themes/switch.py."""
+    subprocess.run(["dconf", "load", "/"], input=settings, text=True,
                    check=False, capture_output=True, env=env)
 
 
@@ -612,32 +616,18 @@ def apply(name: str) -> list[str]:
     ui = _ui(theme)
     env = _session_env()
 
-    applied = build_theme(theme) or ui["gtk"]
-
     # One theme name for every surface. Because the name differs per palette
     # this is an ordinary theme change, which GTK applications, Muffin's window
     # decorations and the Cinnamon shell all already reload on.
-    _set("org.cinnamon.desktop.interface", "gtk-theme", applied, env)
-    _set("org.cinnamon.desktop.wm.preferences", "theme", applied, env)
-    _set("org.cinnamon.theme", "name", applied, env)
-    _set("org.gnome.desktop.interface", "gtk-theme", applied, env)
-
+    applied = build_theme(theme) or ui["gtk"]
     # Folders tinted to the accent, over the theme's declared icon set. Falls
     # back to that set when Papirus is absent rather than naming a theme that
     # does not exist.
     icon_theme = icons.build(theme, ui["icons"]) or ui["icons"]
-    _set("org.cinnamon.desktop.interface", "icon-theme", icon_theme, env)
-    _set("org.cinnamon.desktop.interface", "cursor-theme", ui["cursor"], env)
-    _set("org.cinnamon.desktop.interface", "font-name", ui["font"], env)
-    _set("org.gnome.desktop.interface", "icon-theme", icon_theme, env)
-    _set("org.gnome.desktop.interface", "color-scheme",
-         "prefer-dark" if theme.get("dark", True) else "prefer-light", env)
-
     wallpaper = wallpaper_for(theme)
-    if os.path.exists(wallpaper):
-        _set("org.cinnamon.desktop.background", "picture-uri",
-             f"file://{wallpaper}", env)
-        _set("org.cinnamon.desktop.background", "picture-options", "zoom", env)
+    # Plank reads its theme when the setting changes, so the name carries the
+    # palette - the same reason the GTK theme does.
+    dock = plank.build(theme)
 
     _write(os.path.join(HOME, ".config", "rofi", "themes", "osiris.rasi"),
            rofi_theme(theme))
@@ -648,11 +638,15 @@ def apply(name: str) -> list[str]:
     _write(os.path.join(HOME, ".config", "ghostty", "config"),
            ghostty_config(theme))
 
-    # Plank reads its theme when the setting changes, so the name carries the
-    # palette - the same reason the GTK theme does.
-    dock = plank.build(theme)
-    if dock is not None:
-        _set(f"{plank.SCHEMA}:{plank.PATH}", "theme", dock, env)
+    _load(keyfile(Switch(
+        theme=applied,
+        icons=icon_theme,
+        cursor=ui["cursor"],
+        font=ui["font"],
+        dark=theme.get("dark", True),
+        wallpaper=wallpaper if os.path.exists(wallpaper) else None,
+        dock=dock,
+    ), plank.PATH), env)
 
     # Superseded by the generated theme; left in place it would override it.
     for version in ("gtk-3.0", "gtk-4.0"):
