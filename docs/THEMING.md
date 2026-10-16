@@ -323,6 +323,10 @@ yellow and a blue at the same HLS lightness look nothing alike. Harmony is a
 turn of the hue wheel, mood is a band of lightness and chroma, and the variant
 fixes the background's lightness. The seed contributes only its hue.
 
+The secondary takes the harmony's hue at 60% of the accent's chroma. One strong
+colour with a quieter partner reads as a palette; at equal strength,
+complementary and triadic pairs fought each other.
+
 The tests sweep every combination - twelve hues, five harmonies, four moods,
 light and dark - and require body text at 7:1 and both accents at 3:1 against
 the background. This is the path a model takes too: it writes an intent, never
