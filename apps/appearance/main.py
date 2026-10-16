@@ -30,6 +30,7 @@ for candidate in (
         sys.path.insert(0, candidate)
         break
 
+import drift  # noqa: E402
 import engine  # noqa: E402
 
 from creator import Creator  # noqa: E402
@@ -148,6 +149,13 @@ class ThemeCard(Gtk.Overlay):
 
 
 class Window(Adw.ApplicationWindow):
+    def _drift_toggled(self, button) -> None:
+        drift.set_enabled(button.get_active())
+        # Now, rather than at the next tick: the drift process itself only
+        # looks every few minutes.
+        GLib.spawn_async([sys.executable, drift.__file__, "--once"],
+                         flags=GLib.SpawnFlags.DEFAULT)
+
     def __init__(self, app):
         super().__init__(application=app, title="Appearance")
         self.set_default_size(1000, 720)
@@ -161,6 +169,11 @@ class Window(Adw.ApplicationWindow):
                                 tooltip_text="New theme")
         new_button.connect("clicked", lambda _b: self.create())
         header.pack_start(new_button)
+        self.drift = Gtk.ToggleButton(
+            label="Drift", active=drift.enabled(),
+            tooltip_text="Let generated wallpapers drift slowly")
+        self.drift.connect("toggled", self._drift_toggled)
+        header.pack_end(self.drift)
         toolbar.add_top_bar(header)
 
         # One parameterised action per menu entry, with the theme name as the
