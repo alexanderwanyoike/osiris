@@ -316,7 +316,7 @@ put their most interesting structure exactly where the mark goes.
 lightness, not by colour. The structure comes from accent hairlines on the
 boundaries. That is the difference between a wallpaper and a poster.
 
-Three styles, all deterministic in the theme's name, so a theme's wallpaper is
+Eight styles, all deterministic in the theme's name, so a theme's wallpaper is
 stable across regeneration and no two themes compose alike:
 
 | Style | Mathematics | Reads as |
@@ -324,6 +324,17 @@ stable across regeneration and no two themes compose alike:
 | `contour` | iso-bands through fractional Brownian motion | topography |
 | `arcs` | Truchet tiling of quarter circles | woven circuitry |
 | `strata` | horizontal bands warped by a slow noise field | sedimentary layers |
+| `flow` | particles traced through a noise field of directions | wind, or water |
+| `cells` | Voronoi cells around sites jittered off a grid | stained glass |
+| `bubbles` | circle packing, largest first | circles that never touch |
+| `ridges` | noise-lifted ridgelines drawn back to front, each hiding those behind | a ridgeline landscape |
+| `facets` | a jittered triangle mesh shaded by a slow field | low-poly stone |
+
+`wallpaper_variation` in a theme gives it a different composition in the same
+style; 0, the default, keeps the name alone as the seed, so wallpapers rendered
+before variations existed did not change. A theme that names no style falls
+back to one of the original three, chosen by hashing its name; hashing over all
+eight would move every such theme to a new wallpaper whenever a style is added.
 
 Truchet tiling earns its place: each cell's arcs meet the midpoints of its
 edges whichever orientation it takes, so neighbouring tiles always connect into
