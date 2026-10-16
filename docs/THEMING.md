@@ -337,6 +337,26 @@ before variations existed did not change. A theme that names no style falls
 back to one of the original three, chosen by hashing its name; hashing over all
 nine would move every such theme to a new wallpaper whenever a style is added.
 
+### Drift
+
+A generated wallpaper can **drift**: it changes a little every three minutes
+and comes all the way round in four hours, so the desktop is alive without
+anything moving moment to moment. `shell/themes/drift.py`, started at login,
+renders the next frame and points the desktop at it, and Cinnamon's own
+crossfade between backgrounds does the animating - no shell code draws it.
+
+Each frame is the same composition turned slightly further. Every noise field
+behind a style is blended between its own lattice and a partner from a separate
+generator, on a circle: phase 0 is the still wallpaper exactly, a small step is
+a small change, and a full turn returns to the start. Cells move their sites on
+small circles the same way. Arcs and bubbles have nothing to turn and stay
+still; so do pictures and named wallpapers. The phase comes from the clock, so
+it carries on across logins.
+
+Frames alternate between two files, because Cinnamon only loads a background
+when the name changes. The **Drift** switch in Appearance turns it on or off
+(`~/.config/osiris/drift`); turning it off puts the still wallpaper back.
+
 Truchet tiling earns its place: each cell's arcs meet the midpoints of its
 edges whichever orientation it takes, so neighbouring tiles always connect into
 continuous paths. The composition cannot fail, only vary.
