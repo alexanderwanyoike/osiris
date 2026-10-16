@@ -313,6 +313,14 @@ light and dark - and require body text at 7:1 and both accents at 3:1 against
 the background. This is the path a model takes too: it writes an intent, never
 colours (see CONTEXT.md).
 
+**From a wallpaper**, `osiris/themes/from_wallpaper.py` reads the picture and
+proposes an intent; the rules above still make every colour. The picture is
+reduced to twelve colours. Its subject is the most colourful one, weighted by
+the square root of how much of the picture it covers, so a small red car
+outweighs a large grey sky and anything under 2% is a speck. Its average
+lightness proposes light or dark, and its average chroma proposes the mood. Any
+of those the person chooses wins over the proposal.
+
 ## Wallpapers
 
 Every theme gets a generated wallpaper. `shell/themes/wallpaper.py` renders it
