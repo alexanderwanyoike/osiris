@@ -58,6 +58,10 @@ class Colour:
             )
         )
 
+    @classmethod
+    def from_oklch(cls, lightness: float, chroma: float, hue: float) -> Colour:
+        raise NotImplementedError
+
     # ---- views -------------------------------------------------------------
 
     @property
@@ -69,6 +73,10 @@ class Colour:
     def hls(self) -> tuple[float, float, float]:
         red, green, blue = self.rgb
         return colorsys.rgb_to_hls(red, green, blue)
+
+    @property
+    def oklch(self) -> tuple[float, float, float]:
+        raise NotImplementedError
 
     @property
     def luminance(self) -> float:
