@@ -143,9 +143,42 @@ def partners(seed: Colour) -> dict[Harmony, list[Colour]]:
     return offered
 
 
+#: What the creator offers for a seed, named for how the theme feels rather
+#: than for the colour theory behind it: people choose between finished themes
+#: more easily than between harmonies and moods.
+SUGGESTIONS: tuple[tuple[str, Harmony, Mood], ...] = (
+    ("Calm", Harmony.ANALOGOUS, Mood.BALANCED),
+    ("Contrast", Harmony.COMPLEMENTARY, Mood.BALANCED),
+    ("Lively", Harmony.SPLIT_COMPLEMENTARY, Mood.VIVID),
+    ("Playful", Harmony.TRIADIC, Mood.BALANCED),
+    ("Tonal", Harmony.MONOCHROME, Mood.MUTED),
+    ("Soft", Harmony.ANALOGOUS, Mood.PASTEL),
+)
+
+
 def suggestions(seed: Colour, dark: bool) -> list[tuple[str, ThemeIntent]]:
-    raise NotImplementedError
+    """Named starting points for a seed, all in one variant."""
+    return [
+        (name, ThemeIntent(seed=seed, harmony=harmony, mood=mood, dark=dark))
+        for name, harmony, mood in SUGGESTIONS
+    ]
 
 
 def harmonise(accent: Colour, secondary: Colour) -> Colour:
-    raise NotImplementedError
+    """`secondary` moved to the nearest harmony with `accent`, as a partner.
+
+    For colours a person chose: its hue snaps to the closest turn any harmony
+    makes, and it takes the accent's lightness and the supporting share of its
+    chroma. Applying it again changes nothing.
+    """
+    lightness, chroma, hue = accent.oklch
+    gap = (secondary.oklch[2] - hue) % 360.0
+    turns = {turn % 360.0 for options in HUE_TURNS.values() for turn in options}
+
+    def distance(turn: float) -> float:
+        return min(abs(gap - turn), 360.0 - abs(gap - turn))
+
+    nearest = min(turns, key=distance)
+    return Colour.from_oklch(
+        lightness, chroma * SECONDARY_CHROMA, (hue + nearest) % 360.0
+    )
