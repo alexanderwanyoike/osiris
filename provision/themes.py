@@ -51,6 +51,16 @@ NoDisplay=true
 X-GNOME-Autostart-enabled=true
 """
 
+# Drifts the wallpaper for the session; see shell/themes/drift.py.
+DRIFT = """[Desktop Entry]
+Type=Application
+Name=Osiris wallpaper drift
+Comment=Let the wallpaper drift slowly
+Exec=/usr/bin/python3 /usr/share/osiris/themes/drift.py
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+"""
+
 
 def copy_tree(src: str, dst: str, suffixes: tuple[str, ...]) -> int:
     os.makedirs(dst, exist_ok=True)
@@ -140,6 +150,11 @@ def main() -> None:
     with open("/etc/xdg/autostart/osiris-theme.desktop", "w") as fh:
         fh.write(FIRST_LOGIN)
     print("  /etc/xdg/autostart/osiris-theme.desktop")
+
+    print("drifting the wallpaper for each session")
+    with open("/etc/xdg/autostart/osiris-drift.desktop", "w") as fh:
+        fh.write(DRIFT)
+    print("  /etc/xdg/autostart/osiris-drift.desktop")
 
     print("THEMES_INSTALLED")
 
