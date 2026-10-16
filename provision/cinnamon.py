@@ -90,7 +90,9 @@ zoom-enabled=true
 zoom-percent=125
 tooltips-enabled=true
 
-[org/cinnamon/desktop/default-applications/terminal]
+# The schema is org.cinnamon.desktop.default-applications.terminal, but its
+# path drops "default-": a section named after the id is read by nothing.
+[org/cinnamon/desktop/applications/terminal]
 exec='ghostty'
 exec-arg='-e'
 
