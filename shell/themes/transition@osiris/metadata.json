@@ -1,0 +1,6 @@
+{
+    "uuid": "transition@osiris",
+    "name": "Osiris theme transitions",
+    "description": "Fades from one theme to the next instead of repainting surface by surface.",
+    "cinnamon-version": ["6.4"]
+}
