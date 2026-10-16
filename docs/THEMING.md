@@ -257,19 +257,23 @@ behind it.
 
 ## Creating a theme
 
-**Appearance** has a creator with three ways to start:
+**Appearance** has a creator that starts from **one colour** or **a picture**
+and offers finished themes to pick from, rather than controls to set. Asking
+people to choose a harmony and a mood asks them to do colour theory; choosing
+between finished themes is easy. Each start shows six looks - Calm, Contrast,
+Lively, Playful, Tonal and Soft (`SUGGESTIONS` in `osiris/themes/intent.py`) -
+as miniatures of the desktop, and the person picks one.
 
-- **One colour**: a seed, a harmony and a mood. The intent rules below make the
-  colours.
-- **A picture**: it proposes the seed, light or dark, and the mood, all of which
-  stay adjustable, and becomes the theme's wallpaper.
-- **Colours I choose**: background, accent and an optional secondary. Beside the
-  accent sit the colours that go with it, one row of swatches covering every
-  harmony; picking one makes it the secondary. Nothing stops a clash: a **User
-  theme** is the user's.
+A picture also proposes light or dark and the mood, and becomes the theme's
+wallpaper. **Fine-tune**, collapsed by default, holds the harmony and mood
+behind the chosen look and **Choose colours myself**: background, accent and
+secondary by hand, with the colours that go with the accent offered as swatches.
+Nothing stops a clash there - a **User theme** is the user's - but **Make these
+go together** moves the secondary to the nearest harmony with the accent, at a
+supporting strength.
 
-A theme carries about thirty colours; in every mode the rest are derived the
-same way. The preview re-renders on every change, debounced by 120ms against a
+A theme carries about thirty colours; however it starts, the rest are derived
+the same way. The preview re-renders on every change, debounced by 120ms against a
 render that costs about 25ms.
 
 A theme made from a picture names it in `wallpaper` by absolute path. On save
