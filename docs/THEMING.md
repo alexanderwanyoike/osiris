@@ -2,6 +2,11 @@
 
 How themes, icons, fonts and wallpapers are defined, shipped and switched.
 
+This describes the system as built. Where it is going - a **Theme** that is
+colours only, **Skins** for shape, Boot screens that follow a **System theme**,
+and themes made from a wallpaper or a sentence - is roadmap phase P3, with the
+terms in [CONTEXT.md](../CONTEXT.md) and the decisions in ADRs 0013 and 0014.
+
 ## Principle
 
 **Osiris does not implement a theming engine. It orchestrates the ones that
@@ -66,6 +71,9 @@ One JSON file per theme in `shell/themes/<name>.json`.
     "folder_colour": "blue"              // a Papirus folder colour
 }
 ```
+
+The `ui` block and `requires` describe shape, not colour: under P3.2 they move
+out of the theme into **Skins** (see CONTEXT.md).
 
 Two fields matter more than they look:
 
@@ -371,13 +379,13 @@ being a font that was never installed.
 1. **How many themes ship by default?** Seven exist. More is not obviously
    better - each is a support surface. A curated six to eight, half light and
    half dark, is probably right.
-2. **Do splash and greeter follow the theme, or stay branded?** Argument for
-   branded: they are the first impression and identity matters more than
-   preference. Argument for themed: a user on a light theme gets a dark login
-   screen, which feels broken.
+2. ~~**Do splash and greeter follow the theme, or stay branded?**~~ Resolved:
+   the **Boot screens** take the colours of one **System theme** per machine,
+   chosen with administrator approval, and keep the Osiris mark (CONTEXT.md,
+   roadmap P3.3).
 3. **Accent independent of theme?** COSMIC and GNOME let you pick an accent
    colour separately from light/dark. It is a nice affordance but multiplies the
    combinations every generated file has to cover.
-4. **Per-theme icon themes, really?** Changing icon theme with the palette is
-   striking, but icon themes vary enormously in coverage. A theme that selects a
-   sparse icon set will show generic fallback icons for half the menu.
+4. ~~**Per-theme icon themes, really?**~~ Resolved: no. The icon set belongs to
+   a **Skin**, so it stays put when the colours change; only the folder tint
+   follows the **Theme**.
