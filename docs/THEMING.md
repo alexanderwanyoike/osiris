@@ -193,6 +193,12 @@ Details that matter for it feeling finished:
 - **It says what will not update.** Terminal and launcher read their config at
   startup, so running instances keep the old palette. The toast says so rather
   than leaving you wondering.
+- **It scales past a screenful.** Themes are grouped by colour family (Reds
+  round the wheel to Pinks, then Neutrals), with favourites first. Typing
+  anywhere searches by name or family ("blue" finds the Blues), and chips
+  narrow to dark, light or the user's own themes. The grouping, search and
+  filters are pure logic in `osiris/themes/library.py`, tested without GTK;
+  the starred names live one per line in `~/.config/osiris/favourites`.
 
 `engine.py` is importable, so scripting a switch is `engine.apply("nord")`, and
 `engine.save()` / `engine.delete()` manage user themes. There is deliberately
@@ -202,6 +208,11 @@ One structural note, because it is easy to repeat: a card is a `Gtk.Overlay`
 wrapping a `Gtk.Button`, not a `Gtk.Button` containing one. A GtkButton takes
 the pointer across its whole area, so a menu button nested inside one renders,
 highlights on hover, and never fires.
+
+A second: card thumbnails are drawn by a small `Gtk.DrawingArea`, not a
+`Gtk.Picture`. A FlowBox lays children out by their natural width, and a
+Picture's natural width is its image's, so cards came out two to a row however
+wide the window was.
 
 ## Folder icons and the dock
 
