@@ -55,8 +55,8 @@ MASK_PATHS = (
     "/usr/share/osiris/logo-mask.png",
 )
 
-STYLES = ("contour", "arcs", "strata", "flow", "cells", "bubbles", "ridges",
-          "facets")
+STYLES = ("contour", "arcs", "strata", "aurora", "dots", "cells", "bubbles",
+          "ridges", "facets")
 # What a theme naming no style falls back to, chosen by hashing its name. Fixed
 # at the original three: hashing over STYLES would move every such theme to a
 # different wallpaper whenever a style is added.
@@ -258,34 +258,54 @@ def _field(image: Image.Image) -> np.ndarray:
     return np.asarray(image, dtype=np.float32) / 255.0
 
 
-def flow(shape, rng, particles: int = 280, steps: int = 140):
-    """Particles traced through a field of directions: wind, or water.
+def aurora(shape, rng, glows: int = 4):
+    """A few large soft glows bleeding in from the edges, and no line work.
 
-    The direction at each point is a slow noise field turned into an angle, so
-    neighbouring trails run alongside one another and the image reads as one
-    current rather than as scribble. A third of the trails are drawn in the
-    second tone.
+    Each glow is a wide elliptical gaussian centred off the canvas or near its
+    edge, in the second tone; one in three carries the accent, faintly. The
+    quiet mask leaves the middle dark, so the light reads as coming from beyond
+    the screen.
     """
     height, width = shape
-    angle = fbm(shape, rng, cells=2, octaves=3) * 4 * np.pi
-    step = height / 260
-    lines, draw_lines = _canvas(shape)
-    tone, draw_tone = _canvas(shape)
-    width_px = _hairline(shape)
-    count = int(particles * width * height / (2560 * 1440))
-    for _ in range(max(40, count)):
-        x, y = rng.random() * width, rng.random() * height
-        points = [(x, y)]
-        for _ in range(steps):
-            a = angle[int(y) % height, int(x) % width]
-            x, y = x + np.cos(a) * step, y + np.sin(a) * step
-            if not (0 <= x < width and 0 <= y < height):
-                break
-            points.append((x, y))
-        if len(points) > 4:
-            target = draw_tone if rng.random() < 0.34 else draw_lines
-            target.line(points, fill=255, width=width_px)
-    return _field(tone) * 0.5, _field(lines)
+    y, x = np.mgrid[0:height, 0:width].astype(np.float32)
+    fill = np.zeros(shape, dtype=np.float32)
+    glow = np.zeros(shape, dtype=np.float32)
+    for index in range(glows):
+        # Around the edge: a point on a wide ellipse just outside the frame.
+        angle = rng.random() * 2 * np.pi
+        cx = width / 2 + np.cos(angle) * width * (0.45 + rng.random() * 0.2)
+        cy = height / 2 + np.sin(angle) * height * (0.45 + rng.random() * 0.2)
+        rx = width * (0.25 + rng.random() * 0.2)
+        ry = height * (0.3 + rng.random() * 0.25)
+        light = np.exp(-(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2))
+        if index % 3 == 2:
+            glow = np.maximum(glow, light)
+        else:
+            fill = np.maximum(fill, light)
+    return fill * 0.8, glow * 0.45
+
+
+def dots(shape, rng, spacing: int = 30):
+    """A sparse halftone: a grid of dots sized by a slow field.
+
+    Most of the field sits below the threshold, so most dots are absent and the
+    rest gather in loose clusters - a texture that reads at a distance and
+    disappears up close.
+    """
+    height, width = shape
+    field = fbm(shape, rng, cells=2, octaves=3)
+    step = height / spacing
+    largest = step * 0.22
+    lines, draw = _canvas(shape)
+    for row in range(int(height / step) + 1):
+        for column in range(int(width / step) + 1):
+            cx, cy = (column + 0.5) * step, (row + 0.5) * step
+            value = field[min(int(cy), height - 1), min(int(cx), width - 1)]
+            radius = (value - 0.55) / 0.45 * largest
+            if radius > step * 0.04:
+                draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius),
+                             fill=255)
+    return np.zeros(shape, dtype=np.float32), _field(lines)
 
 
 def cells(shape, rng, count: int = 16):
@@ -407,7 +427,7 @@ def facets(shape, rng, grid: int = 6):
     return _field(tone), _field(lines) * 0.35
 
 
-RENDERERS = {"contour": contour, "arcs": arcs, "strata": strata, "flow": flow,
+RENDERERS = {"contour": contour, "arcs": arcs, "strata": strata, "aurora": aurora, "dots": dots,
              "cells": cells, "bubbles": bubbles, "ridges": ridges,
              "facets": facets}
 
