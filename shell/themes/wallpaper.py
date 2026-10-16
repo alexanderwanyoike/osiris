@@ -258,7 +258,7 @@ def _field(image: Image.Image) -> np.ndarray:
     return np.asarray(image, dtype=np.float32) / 255.0
 
 
-def flow(shape, rng, particles: int = 900, steps: int = 70):
+def flow(shape, rng, particles: int = 280, steps: int = 140):
     """Particles traced through a field of directions: wind, or water.
 
     The direction at each point is a slow noise field turned into an angle, so
@@ -273,7 +273,7 @@ def flow(shape, rng, particles: int = 900, steps: int = 70):
     tone, draw_tone = _canvas(shape)
     width_px = _hairline(shape)
     count = int(particles * width * height / (2560 * 1440))
-    for _ in range(max(200, count)):
+    for _ in range(max(40, count)):
         x, y = rng.random() * width, rng.random() * height
         points = [(x, y)]
         for _ in range(steps):
@@ -288,7 +288,7 @@ def flow(shape, rng, particles: int = 900, steps: int = 70):
     return _field(tone) * 0.5, _field(lines)
 
 
-def cells(shape, rng, count: int = 42):
+def cells(shape, rng, count: int = 16):
     """Voronoi cells: stained glass with soft fills and lead between them.
 
     Sites are jittered off a grid rather than scattered, so no cell grows huge
@@ -308,11 +308,11 @@ def cells(shape, rng, count: int = 42):
         closer = distance < nearest
         nearest[closer] = distance[closer]
         index[closer] = site
-    levels = rng.choice([0.0, 0.18, 0.34], size=sx.size, p=[0.5, 0.3, 0.2])
+    levels = rng.choice([0.0, 0.16, 0.3], size=sx.size, p=[0.65, 0.25, 0.1])
     return levels[index].astype(np.float32), _edges(index)
 
 
-def bubbles(shape, rng, attempts: int = 2400):
+def bubbles(shape, rng, attempts: int = 500):
     """Circle packing: circles of many sizes that never touch.
 
     Placed largest first, each tried at random positions until it fits, so the
@@ -321,7 +321,7 @@ def bubbles(shape, rng, attempts: int = 2400):
     height, width = shape
     placed: list[tuple[float, float, float]] = []
     gap = height / 160
-    largest, smallest = height / 7, height / 70
+    largest, smallest = height / 5, height / 30
     for attempt in range(attempts):
         radius = largest * (smallest / largest) ** (attempt / attempts)
         x, y = rng.random() * width, rng.random() * height
@@ -339,7 +339,7 @@ def bubbles(shape, rng, attempts: int = 2400):
     return _field(tone) * 0.3, _field(lines)
 
 
-def ridges(shape, rng, count: int = 26):
+def ridges(shape, rng, count: int = 14):
     """Stacked ridgelines lifted by noise, each hiding the ones behind it.
 
     Drawn back to front, every ridge's silhouette is filled in the base colour
@@ -371,7 +371,7 @@ def ridges(shape, rng, count: int = 26):
     return _field(tone), _field(lines)
 
 
-def facets(shape, rng, grid: int = 14):
+def facets(shape, rng, grid: int = 6):
     """A low-poly mesh: jittered triangles shaded by a slow field.
 
     Each triangle takes the field's value at its centre, quantised to a few
@@ -404,7 +404,7 @@ def facets(shape, rng, grid: int = 14):
                 level = round(shade[cy, cx] * 4) / 4
                 draw_tone.polygon(triangle, fill=int(level * 90))
                 draw_lines.polygon(triangle, outline=255, width=width_px)
-    return _field(tone), _field(lines) * 0.4
+    return _field(tone), _field(lines) * 0.35
 
 
 RENDERERS = {"contour": contour, "arcs": arcs, "strata": strata, "flow": flow,
