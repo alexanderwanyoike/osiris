@@ -16,7 +16,7 @@ import json
 import os
 import sys
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import wallpaper as wallpaper_module  # noqa: E402
@@ -50,8 +50,13 @@ def wallpaper(image: Image.Image, theme: dict) -> None:
     the file may not exist yet for a theme the user has just written, and the
     generator is parameterised by size anyway. The card therefore shows the
     background the user will actually get - an earlier version drew its own
-    gradient here and the cards quietly stopped matching the desktop.
+    gradient here and the cards quietly stopped matching the desktop. A theme
+    made from a picture shows that picture, cropped to fill the card.
     """
+    picture = theme.get("wallpaper")
+    if picture and os.path.isabs(picture) and os.path.exists(picture):
+        image.paste(ImageOps.fit(Image.open(picture).convert("RGB"), (W, H)), (0, 0))
+        return
     image.paste(wallpaper_module.compose(theme, (W, H)), (0, 0))
 
 
