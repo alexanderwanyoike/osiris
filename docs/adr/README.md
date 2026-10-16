@@ -22,6 +22,7 @@ that supersedes it and say so in both.
 | [0010](0010-the-installer-imports-the-install.md) | The installer imports the install flow | Accepted |
 | [0011](0011-testing-strategy.md) | Testing strategy, and what is deliberately not tested | Accepted |
 | [0012](0012-do-not-hand-roll-critical-machinery.md) | Do not hand-roll critical system machinery | Accepted |
+| [0013](0013-gtk-skins-are-shape-layers-on-recolourable-bases.md) | GTK skins are shape layers on recolourable bases | Accepted |
 
 ## Format
 
