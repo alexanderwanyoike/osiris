@@ -32,6 +32,11 @@ STYLE_LABELS = {
     "contour": "Contour - topographic bands",
     "arcs": "Arcs - woven quarter circles",
     "strata": "Strata - warped horizontal layers",
+    "flow": "Flow - trails through a current",
+    "cells": "Cells - stained glass",
+    "bubbles": "Bubbles - circles that never touch",
+    "ridges": "Ridges - a ridgeline landscape",
+    "facets": "Facets - low-poly stone",
 }
 
 # Starting backgrounds for each variant. Flipping the switch moves the
