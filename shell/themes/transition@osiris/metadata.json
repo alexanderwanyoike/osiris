@@ -2,5 +2,6 @@
     "uuid": "transition@osiris",
     "name": "Osiris theme transitions",
     "description": "Fades from one theme to the next instead of repainting surface by surface.",
+    "url": "https://github.com/alexanderwanyoike/osiris",
     "cinnamon-version": ["6.4"]
 }

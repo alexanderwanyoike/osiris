@@ -6,9 +6,10 @@
 
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
-const St = imports.gi.St;
 const Clutter = imports.gi.Clutter;
 const Cinnamon = imports.gi.Cinnamon;
+const Cogl = imports.gi.Cogl;
+const GdkPixbuf = imports.gi.GdkPixbuf;
 
 const BUS_NAME = 'dev.osiris.Transition';
 const OBJECT_PATH = '/dev/osiris/Transition';
@@ -69,14 +70,21 @@ class Transition {
         });
     }
 
+    // Loaded here rather than as a CSS background-image, which St loads
+    // asynchronously: the cover would still be empty when Freeze answers.
     _showCover(path) {
-        let width = global.stage.width;
-        let height = global.stage.height;
-        let cover = new St.Widget({
-            x: 0, y: 0, width: width, height: height,
+        let pixbuf = GdkPixbuf.Pixbuf.new_from_file(path);
+        let image = new Clutter.Image();
+        image.set_data(pixbuf.get_pixels(),
+                       pixbuf.get_has_alpha() ? Cogl.PixelFormat.RGBA_8888
+                                              : Cogl.PixelFormat.RGB_888,
+                       pixbuf.get_width(), pixbuf.get_height(),
+                       pixbuf.get_rowstride());
+        let cover = new Clutter.Actor({
+            x: 0, y: 0,
+            width: global.stage.width, height: global.stage.height,
+            content: image,
             reactive: true,
-            style: `background-image: url("file://${path}");` +
-                   `background-size: ${width}px ${height}px;`,
         });
         global.stage.add_child(cover);
         global.stage.set_child_above_sibling(cover, null);
