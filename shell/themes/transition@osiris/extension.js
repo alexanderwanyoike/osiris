@@ -64,7 +64,7 @@ class Transition {
             cover.ease({
                 opacity: 0,
                 duration: duration,
-                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                mode: Clutter.AnimationMode.EASE_IN_OUT_QUAD,
                 onComplete: () => this._clear(),
             });
         });
