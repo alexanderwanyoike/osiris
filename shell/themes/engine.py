@@ -137,8 +137,22 @@ def preview_path(name: str) -> str | None:
     return None
 
 
+def picture_of(theme: dict) -> str | None:
+    """The picture a theme was made from, which is its wallpaper, if any.
+
+    Named by absolute path; a shipped theme's wallpaper is a bare file name.
+    """
+    named = theme.get("wallpaper")
+    if named and os.path.isabs(named):
+        return named
+    return None
+
+
 def wallpaper_for(theme: dict) -> str:
     name = theme["name"]
+    picture = picture_of(theme)
+    if picture is not None:
+        return picture
     named = theme.get("wallpaper")
     if named and named != "generated":
         return os.path.join(WALLPAPERS, named)
@@ -192,8 +206,10 @@ def ensure_assets(theme: dict) -> None:
     # root-owned directories; trying to refresh those just fails noisily.
     preview = preview_path(name)
     wallpaper = wallpaper_for(theme)
+    # A picture the theme was made from is never rendered over.
     mine = {"preview": preview is None or preview.startswith(USER_ASSETS),
-            "wallpaper": wallpaper.startswith(USER_ASSETS)}
+            "wallpaper": (wallpaper.startswith(USER_ASSETS)
+                          and picture_of(theme) is None)}
     if not any(mine.values()):
         return
 
@@ -293,9 +309,13 @@ def delete(name: str) -> None:
     """
     if not is_user_theme(name):
         raise ValueError(f"{name} is not a user theme")
+    picture = picture_of(load(name))
     os.remove(user_theme_path(name))
     for path in (os.path.join(USER_PREVIEWS, f"{name}.png"),
-                 os.path.join(USER_WALLPAPERS, f"{name}.png")):
+                 os.path.join(USER_WALLPAPERS, f"{name}.png"),
+                 # Only a copy made for the theme; never a picture elsewhere.
+                 *([picture] if picture and picture.startswith(USER_WALLPAPERS)
+                   else [])):
         if os.path.exists(path):
             os.remove(path)
     manifest = _manifest()
