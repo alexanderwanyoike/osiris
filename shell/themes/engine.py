@@ -32,6 +32,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 
@@ -557,6 +558,28 @@ def _load(settings: str, env: dict) -> None:
                    check=False, capture_output=True, env=env)
 
 
+def _reload_terminals() -> None:
+    """Have the user's running ghostty processes re-read their config.
+
+    ghostty reloads on SIGUSR2; it would otherwise keep the old palette until
+    relaunched.
+    """
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            with open(f"/proc/{entry}/comm") as fh:
+                command = fh.read().strip()
+            owner = os.stat(f"/proc/{entry}").st_uid
+        except OSError:
+            continue
+        if command == "ghostty" and owner == os.getuid():
+            try:
+                os.kill(int(entry), signal.SIGUSR2)
+            except OSError:
+                pass
+
+
 def _write(path: str, text: str) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as fh:
@@ -610,7 +633,8 @@ def apply(name: str) -> list[str]:
 
     Returns the surfaces that will not pick the palette up until they are
     restarted. Everything else - GTK applications, window decorations, the
-    Cinnamon panel, the wallpaper - repaints in place.
+    Cinnamon panel, the wallpaper, running terminals - repaints in place, and
+    the launcher reads its theme each time it opens.
     """
     theme = load(name)
     ui = _ui(theme)
@@ -648,6 +672,8 @@ def apply(name: str) -> list[str]:
         dock=dock,
     ), plank.PATH), env)
 
+    _reload_terminals()
+
     # Superseded by the generated theme; left in place it would override it.
     for version in ("gtk-3.0", "gtk-4.0"):
         stale = os.path.join(HOME, ".config", version, "gtk.css")
@@ -655,9 +681,7 @@ def apply(name: str) -> list[str]:
             os.remove(stale)
 
     _write(STATE, name + "\n")
-
-    # These read their configuration once at startup.
-    return ["Terminal", "Launcher"]
+    return []
 
 
 def first_login() -> None:
