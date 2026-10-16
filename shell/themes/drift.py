@@ -47,6 +47,12 @@ def enabled() -> bool:
         return True
 
 
+def set_enabled(on: bool) -> None:
+    os.makedirs(os.path.dirname(PREFERENCE), exist_ok=True)
+    with open(PREFERENCE, "w") as fh:
+        fh.write("on\n" if on else "off\n")
+
+
 def phase(now: float) -> float:
     return (now % LOOP) / LOOP * 2 * math.pi
 
@@ -57,6 +63,19 @@ def drifts(theme: dict) -> bool:
         return False
     style = theme.get("wallpaper_style") or wallpaper.style_for(theme["name"])
     return style not in STILL_STYLES
+
+
+def _shown() -> str:
+    """The background the desktop is showing now.
+
+    Asked of the desktop rather than remembered, so another process, or this
+    one after a restart, acts on what is really on screen.
+    """
+    result = subprocess.run(
+        ["dconf", "read", "/org/cinnamon/desktop/background/picture-uri"],
+        check=False, capture_output=True, text=True,
+        env=engine._session_env())
+    return result.stdout
 
 
 def show(path: str) -> None:
@@ -88,7 +107,7 @@ def step(slot: int, last: tuple[str | None, float | None]) -> tuple[str | None, 
         return last
     theme = engine.load(name)
     if not enabled() or not drifts(theme):
-        if last[0] is not None:
+        if FRAMES in _shown():
             show(engine.wallpaper_for(theme))       # back to the still one
         return (None, None)
     turn = phase(time.time())
@@ -105,7 +124,8 @@ def main() -> None:
     args = parser.parse_args()
 
     last: tuple[str | None, float | None] = (None, None)
-    slot = 0
+    # Start in the file that is not on screen, or nothing would change.
+    slot = 1 if "frame-0" in _shown() else 0
     while True:
         try:
             last = step(slot, last)
