@@ -349,9 +349,10 @@ Each frame is the same composition turned slightly further. Every noise field
 behind a style is blended between its own lattice and a partner from a separate
 generator, on a circle: phase 0 is the still wallpaper exactly, a small step is
 a small change, and a full turn returns to the start. Cells move their sites on
-small circles the same way, and aurora's glows slide along the edges and back. Arcs and bubbles have nothing to turn and stay
-still; so do pictures and named wallpapers. The phase comes from the clock, so
-it carries on across logins.
+small circles the same way, and aurora's glows slide along the edges and back.
+Four styles drift - aurora, dots, ridges and cells, which move like light,
+weather and terrain - and the rest stay still, as do pictures and named
+wallpapers. The phase comes from the clock, so it carries on across logins.
 
 Frames alternate between two files, because Cinnamon only loads a background
 when the name changes. The **Drift** switch in Appearance turns it on or off

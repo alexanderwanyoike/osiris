@@ -9,8 +9,8 @@ points the desktop at it; Cinnamon crossfades from one background to the next,
 so the wallpaper moves without anything here drawing on screen.
 
 The phase comes from the clock, so it carries on across logins rather than
-starting again, and a full turn takes LOOP. A wallpaper that is a picture or a
-named file does not drift, and neither do styles with no field to turn.
+starting again, and a full turn takes LOOP. Only the DRIFTING styles move; a
+wallpaper that is a picture or a named file does not.
 
 Off when ~/.config/osiris/drift says "off"; switching it off puts the still
 wallpaper back.
@@ -35,8 +35,10 @@ LOOP = 4 * 60 * 60
 PREFERENCE = os.path.join(home(), ".config", "osiris", "drift")
 FRAMES = os.path.join(home(), ".local", "share", "osiris", "drift")
 
-# Styles whose drawing has no field to turn; their frames would all be alike.
-STILL_STYLES = ("arcs", "bubbles")
+# The styles that drift; the rest stay still. Chosen for how they move, not
+# for whether they can: a slowly turning contour or facet mesh reads as
+# restlessness, where these read as light, weather and terrain.
+DRIFTING = ("aurora", "dots", "ridges", "cells")
 
 
 def enabled() -> bool:
@@ -62,7 +64,7 @@ def drifts(theme: dict) -> bool:
     if named and named != "generated":
         return False
     style = theme.get("wallpaper_style") or wallpaper.style_for(theme["name"])
-    return style not in STILL_STYLES
+    return style in DRIFTING
 
 
 def _shown() -> str:
