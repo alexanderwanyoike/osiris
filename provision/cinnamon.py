@@ -4,7 +4,8 @@
 
 Layout: one 30px panel at the TOP carrying a menu, indicators and a clock, and
 nothing else. No window list in the panel - Plank at the bottom owns running and
-pinned applications. rofi on Super+Space is the launcher.
+pinned applications. rofi on Super+Space is the launcher, and Super+Enter
+opens the terminal.
 
 Everything is written as system-wide dconf defaults under /etc/dconf/db/local.d,
 not poked into a live session. That means it applies to every user, survives a
@@ -95,6 +96,9 @@ tooltips-enabled=true
 [org/cinnamon/desktop/applications/terminal]
 exec='ghostty'
 exec-arg='-e'
+
+[org/cinnamon/desktop/keybindings/media-keys]
+terminal=['<Super>Return']
 
 [org/nemo/preferences]
 show-hidden-files=false
