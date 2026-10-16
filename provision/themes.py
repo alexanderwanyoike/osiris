@@ -8,6 +8,8 @@ Lays down:
     /usr/share/osiris/logo-mask.png  the mark, composited into wallpapers
     /usr/share/osiris/appearance/    the Appearance app
     /usr/bin/osiris-appearance       launcher
+    /usr/share/osiris/switcher/      the theme switcher (Super+T)
+    /usr/bin/osiris-switcher         launcher
     /usr/share/applications/         menu entry
     /usr/share/backgrounds/osiris/   generated wallpapers
 
@@ -26,6 +28,7 @@ from run import run  # noqa: E402
 SHARE = "/usr/share/osiris"
 THEMES_DIR = f"{SHARE}/themes"
 APP_DIR = f"{SHARE}/appearance"
+SWITCHER_DIR = f"{SHARE}/switcher"
 # The osiris package itself. Everything on the target that wants the tested
 # code imports it from here; shell/themes/*.py are shims that put this on
 # sys.path. Until the whole legacy tree has moved across, both are installed.
@@ -38,6 +41,30 @@ import sys
 
 sys.argv[0] = "osiris-appearance"
 runpy.run_path("/usr/share/osiris/appearance/main.py", run_name="__main__")
+"""
+
+SWITCHER_LAUNCHER = """#!/usr/bin/env python3
+import runpy
+import sys
+
+sys.argv[0] = "osiris-switcher"
+runpy.run_path("/usr/share/osiris/switcher/main.py", run_name="__main__")
+"""
+
+# The switcher is resident, so Super+T only has to signal it. Started at login
+# to have its cards ready; D-Bus starts it on demand if it is not running.
+SWITCHER_AUTOSTART = """[Desktop Entry]
+Type=Application
+Name=Osiris theme switcher
+Comment=Keep the Super+T theme switcher ready
+Exec=/usr/bin/osiris-switcher --gapplication-service
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+"""
+
+SWITCHER_SERVICE = """[D-BUS Service]
+Name=dev.osiris.Switcher
+Exec=/usr/bin/osiris-switcher --gapplication-service
 """
 
 
@@ -144,6 +171,21 @@ def main() -> None:
                              "dev.osiris.Appearance.desktop")
     run("update-desktop-database", "/usr/share/applications", check=False)
     print("  /usr/bin/osiris-appearance")
+
+    print("installing the theme switcher")
+    copy_tree(os.path.join(args.repo, "apps", "switcher"), SWITCHER_DIR,
+              (".py",))
+    with open("/usr/bin/osiris-switcher", "w") as fh:
+        fh.write(SWITCHER_LAUNCHER)
+    os.chmod("/usr/bin/osiris-switcher", 0o755)
+    os.makedirs("/usr/share/dbus-1/services", exist_ok=True)
+    with open("/usr/share/dbus-1/services/dev.osiris.Switcher.service",
+              "w") as fh:
+        fh.write(SWITCHER_SERVICE)
+    os.makedirs("/etc/xdg/autostart", exist_ok=True)
+    with open("/etc/xdg/autostart/osiris-switcher.desktop", "w") as fh:
+        fh.write(SWITCHER_AUTOSTART)
+    print("  /usr/bin/osiris-switcher")
 
     print("applying the default theme on first login")
     os.makedirs("/etc/xdg/autostart", exist_ok=True)
