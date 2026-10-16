@@ -77,8 +77,10 @@ MOODS: dict[Mood, _Band] = {
 BACKGROUND_LIGHTNESS = {True: 0.20, False: 0.965}
 
 #: How far a monochrome secondary steps from the accent: towards the background
-#: would sink it, so it steps the other way.
+#: would sink it, so it steps the other way, but no further than these bounds,
+#: past which it washes out to near white or black and stops reading as a colour.
 MONOCHROME_STEP = 0.12
+MONOCHROME_BOUNDS = (0.35, 0.90)
 
 
 def _accent(hue: float, band: _Band, dark: bool) -> Colour:
@@ -90,6 +92,8 @@ def _secondary(hue: float, harmony: Harmony, band: _Band, dark: bool) -> Colour:
         lightness = (
             band.on_dark + MONOCHROME_STEP if dark else band.on_light - MONOCHROME_STEP
         )
+        low, high = MONOCHROME_BOUNDS
+        lightness = max(low, min(high, lightness))
         return Colour.from_oklch(lightness, band.chroma * 0.7, hue)
     return _accent((hue + HUE_TURNS[harmony][0]) % 360.0, band, dark)
 
