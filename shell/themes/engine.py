@@ -558,6 +558,28 @@ def _load(settings: str, env: dict) -> None:
                    check=False, capture_output=True, env=env)
 
 
+# The transition extension (shell/themes/transition@osiris, ADR 0014).
+TRANSITION_BUS = "dev.osiris.Transition"
+TRANSITION_PATH = "/dev/osiris/Transition"
+# How long the frozen frame stays once the switch is written, so applications
+# have repainted beneath it, and how long it takes to fade.
+SETTLE_MS = 400
+FADE_MS = 300
+
+
+def _transition(method: str, *args: str, env: dict) -> bool:
+    """Call the transition extension; False when it is not there."""
+    try:
+        result = subprocess.run(
+            ["gdbus", "call", "--session", "--dest", TRANSITION_BUS,
+             "--object-path", TRANSITION_PATH,
+             "--method", f"{TRANSITION_BUS}.{method}", *args],
+            check=False, capture_output=True, timeout=3, env=env)
+    except subprocess.TimeoutExpired:
+        return False
+    return result.returncode == 0
+
+
 def _reload_terminals() -> None:
     """Have the user's running ghostty processes re-read their config.
 
@@ -639,6 +661,8 @@ def apply(name: str) -> list[str]:
     theme = load(name)
     ui = _ui(theme)
     env = _session_env()
+    # Without the extension the switch still applies, as one change.
+    frozen = _transition("Freeze", env=env)
 
     # One theme name for every surface. Because the name differs per palette
     # this is an ordinary theme change, which GTK applications, Muffin's window
@@ -681,6 +705,8 @@ def apply(name: str) -> list[str]:
             os.remove(stale)
 
     _write(STATE, name + "\n")
+    if frozen:
+        _transition("Release", str(SETTLE_MS), str(FADE_MS), env=env)
     return []
 
 
