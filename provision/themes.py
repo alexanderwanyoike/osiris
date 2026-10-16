@@ -31,6 +31,9 @@ APP_DIR = f"{SHARE}/appearance"
 # sys.path. Until the whole legacy tree has moved across, both are installed.
 LIB_DIR = f"{SHARE}/lib"
 WALLPAPERS = "/usr/share/backgrounds/osiris"
+# Cinnamon loads system-wide extensions from here; enabled in provision/cinnamon.py.
+TRANSITION = "transition@osiris"
+EXTENSIONS_DIR = "/usr/share/cinnamon/extensions"
 
 LAUNCHER = """#!/usr/bin/env python3
 import runpy
@@ -134,6 +137,11 @@ def main() -> None:
                              "dev.osiris.Appearance.desktop")
     run("update-desktop-database", "/usr/share/applications", check=False)
     print("  /usr/bin/osiris-appearance")
+
+    print("installing the theme transition")
+    target = os.path.join(EXTENSIONS_DIR, TRANSITION)
+    n = copy_tree(os.path.join(src_themes, TRANSITION), target, (".js", ".json"))
+    print(f"  {n} files -> {target}")
 
     print("applying the default theme on first login")
     os.makedirs("/etc/xdg/autostart", exist_ok=True)
