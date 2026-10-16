@@ -141,3 +141,11 @@ def partners(seed: Colour) -> dict[Harmony, list[Colour]]:
                 for turn in turns
             ]
     return offered
+
+
+def suggestions(seed: Colour, dark: bool) -> list[tuple[str, ThemeIntent]]:
+    raise NotImplementedError
+
+
+def harmonise(accent: Colour, secondary: Colour) -> Colour:
+    raise NotImplementedError
