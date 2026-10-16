@@ -531,6 +531,8 @@ window-padding-y = 10
 window-decoration = auto
 scrollback-limit = 10000000
 confirm-close-surface = false
+# A theme switch reloads every open terminal; a toast in each one is noise.
+app-notifications = no-config-reload
 """
 
 
