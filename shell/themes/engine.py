@@ -60,6 +60,8 @@ PREVIEW_DIRS = [
     os.path.join(REPO_THEMES, "previews"),
 ]
 STATE = os.path.join(HOME, ".config", "osiris", "theme")
+# The names of starred themes, one per line.
+FAVOURITES = os.path.join(HOME, ".config", "osiris", "favourites")
 #: Applied on a user's first login, before they have chosen anything.
 DEFAULT_THEME = "osiris-obsidian"
 WALLPAPERS = "/usr/share/backgrounds/osiris"
@@ -301,6 +303,24 @@ def delete(name: str) -> None:
     manifest = _manifest()
     if manifest.pop(name, None) is not None:
         _write(ASSET_MANIFEST, json.dumps(manifest, indent=4) + "\n")
+
+
+def favourites() -> set[str]:
+    """The names of the themes the user has starred."""
+    try:
+        with open(FAVOURITES) as fh:
+            return {line.strip() for line in fh if line.strip()}
+    except OSError:
+        return set()
+
+
+def set_favourite(name: str, starred: bool) -> None:
+    names = favourites()
+    if starred:
+        names.add(name)
+    else:
+        names.discard(name)
+    _write(FAVOURITES, "".join(f"{n}\n" for n in sorted(names)))
 
 
 def current() -> str | None:
