@@ -34,7 +34,7 @@ let transition = null;
 class Transition {
     constructor() {
         this._cover = null;
-        this._picture = null;
+        this._generation = 0;
         this._timeouts = [];
         this._dbus = Gio.DBusExportedObject.wrapJSObject(INTERFACE, this);
         this._dbus.export(Gio.DBus.session, OBJECT_PATH);
@@ -44,12 +44,18 @@ class Transition {
 
     FreezeAsync(params, invocation) {
         this._clear();
-        this._picture = GLib.build_filenamev([
-            GLib.get_user_runtime_dir(), `osiris-transition-${Date.now()}.png`]);
+        // Switches can overlap - two clicks, or Super+T while Appearance is
+        // applying - and their pictures can arrive out of order. Only the
+        // latest Freeze may cover the screen; a cover nothing tracks would
+        // never be released and would freeze the desktop for good.
+        let generation = ++this._generation;
+        let picture = GLib.build_filenamev([
+            GLib.get_user_runtime_dir(), `osiris-transition-${generation}.png`]);
         let screenshot = new Cinnamon.Screenshot();
-        screenshot.screenshot(false, this._picture, (source, success) => {
-            if (success)
-                this._cover = this._showCover(this._picture);
+        screenshot.screenshot(false, picture, (source, success) => {
+            if (success && generation === this._generation)
+                this._cover = this._showCover(picture);
+            GLib.unlink(picture);
             // Answered either way: without the picture the switch still
             // applies, it just is not hidden.
             this._later(() => invocation.return_value(null));
@@ -65,7 +71,12 @@ class Transition {
                 opacity: 0,
                 duration: duration,
                 mode: Clutter.AnimationMode.EASE_IN_OUT_QUAD,
-                onComplete: () => this._clear(),
+                onComplete: () => {
+                    if (cover === this._cover)
+                        this._clear();
+                    else
+                        cover.destroy();
+                },
             });
         });
     }
@@ -116,10 +127,6 @@ class Transition {
         if (this._cover) {
             this._cover.destroy();
             this._cover = null;
-        }
-        if (this._picture) {
-            GLib.unlink(this._picture);
-            this._picture = null;
         }
     }
 
