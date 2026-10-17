@@ -87,6 +87,12 @@ name='Theme switcher'
 command='gapplication action dev.osiris.Switcher show'
 binding=['<Super>t']
 
+# Cinnamon gives Super+Space to switching keyboard layouts as well, and that
+# binding wins: the launcher never opens. Layouts keep their dedicated key.
+[org/cinnamon/desktop/keybindings/wm]
+switch-input-source=['XF86Keyboard']
+switch-input-source-backward=['<Shift>XF86Keyboard']
+
 [net/launchpad/plank/docks/dock1]
 dock-items=[{dock_items}]
 position='bottom'
