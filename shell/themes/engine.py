@@ -35,6 +35,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import icons  # noqa: E402
@@ -639,6 +640,55 @@ def _own_processes(command: str) -> list[int]:
     return found
 
 
+# How long the new GTK theme takes to reach running programs after the dconf
+# write; Plank is started again only once it has.
+DOCK_SETTLE_S = 0.3
+
+
+def _stop_dock() -> dict | None:
+    """Stop Plank before the GTK theme changes; its environment if it ran.
+
+    Plank's handler for a GTK theme change (plank_theme_gtk_theme_name_changed
+    in 0.11.89, unmaintained since 2019) notifies a property by a name that is
+    garbage memory. GLib's warning quotes the garbage, and Plank's own log
+    handler aborts on the malformed text, so the dock vanishes on some
+    switches and not others. Stopped first and started after, it never sees
+    the change; the frozen picture hides the gap.
+
+    It is started again with the environment it had: Plank refuses to run
+    without the session's XDG variables, which a switch made from elsewhere -
+    a terminal over ssh, say - does not have.
+    """
+    running = _own_processes("plank")
+    environment = None
+    for pid in running:
+        try:
+            with open(f"/proc/{pid}/environ", "rb") as fh:
+                pairs = fh.read().split(b"\0")
+            environment = dict(p.decode(errors="replace").split("=", 1)
+                               for p in pairs if b"=" in p)
+        except OSError:
+            pass
+    for pid in running:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+    deadline = time.monotonic() + 2
+    while _own_processes("plank") and time.monotonic() < deadline:
+        time.sleep(0.05)
+    if not running:
+        return None
+    return environment or _session_env()
+
+
+def _start_dock(env: dict) -> None:
+    time.sleep(DOCK_SETTLE_S)
+    subprocess.Popen(["plank"], env=env, stdin=subprocess.DEVNULL,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                     start_new_session=True)
+
+
 def _reload_terminals() -> None:
     """Have the user's running ghostty processes re-read their config.
 
@@ -750,6 +800,7 @@ def apply(name: str) -> list[str]:
     _write(os.path.join(HOME, ".config", "ghostty", "config"),
            ghostty_config(theme))
 
+    dock_environment = _stop_dock()
     _load(keyfile(Switch(
         theme=applied,
         icons=icon_theme,
@@ -759,6 +810,8 @@ def apply(name: str) -> list[str]:
         wallpaper=wallpaper if os.path.exists(wallpaper) else None,
         dock=dock,
     ), plank.PATH), env)
+    if dock_environment is not None:
+        _start_dock(dock_environment)
 
     _reload_terminals()
 
