@@ -218,6 +218,7 @@ palette. Click a card and it applies immediately.
 
     apps/appearance/main.py          the picker
     apps/appearance/creator.py       the creator dialog
+    apps/switcher/main.py            the Super+T carousel
     shell/themes/engine.py           load and apply; shared, not duplicated
     shell/themes/derive.py           a full palette from two or three seeds
     shell/themes/wallpaper.py        generative backgrounds from a palette
@@ -250,6 +251,30 @@ Details that matter for it feeling finished:
   narrow to dark, light or the user's own themes. The grouping, search and
   filters are pure logic in `osiris/themes/library.py`, tested without GTK;
   the starred names live one per line in `~/.config/osiris/favourites`.
+
+### Super+T
+
+For switching without opening a window, **Super+T** brings up a full-screen
+carousel (`apps/switcher/main.py`): the focused theme as a large card of its
+wallpaper and palette, neighbours smaller and dimmer either side, over a
+blurred backdrop of the focused wallpaper. Arrows, the scroll wheel or a click
+on a neighbour slide along; Enter or a click on the centre card applies;
+Escape or a click outside closes with nothing changed. Pressing Super+T again
+while it is open steps on, the way Alt+Tab does. The order is the library's,
+so favourites come first, and the carousel's geometry is pure logic in
+`osiris/themes/carousel.py`.
+
+It has to open at once, which is why it is resident. The autostart entry and
+a D-Bus service file both start it with `--gapplication-service`, and the
+keybinding runs `gapplication action dev.osiris.Switcher show`: a C tool
+sending one D-Bus call, so a key press never waits for a Python interpreter
+to start. If the switcher is not running, D-Bus starts it. Wallpapers are
+decoded at 1280px and only the sixteen nearest the focus are kept, with the
+small preview thumbnail standing in until a wallpaper has loaded.
+
+Everything on screen is drawn in one cairo pass rather than built from
+widgets, so cards, labels and backdrop move in step on every frame of the
+slide.
 
 `engine.py` is importable, so scripting a switch is `engine.apply("nord")`, and
 `engine.save()` / `engine.delete()` manage user themes. There is deliberately

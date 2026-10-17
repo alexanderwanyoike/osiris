@@ -64,14 +64,15 @@ APPLICATIONS = (
     "xclip",
 )  # fmt: skip
 
-# What osiris-setup and the Appearance app run on. Pillow and numpy render
-# theme previews and wallpapers, including for themes made on the machine, so
-# they are needed at runtime and not only at build time. grub supplies
+# What osiris-setup, Appearance and the theme switcher run on. Pillow and
+# numpy render theme previews and wallpapers, including for themes made on the
+# machine, so they are needed at runtime and not only at build time. pycairo is
+# what the GTK apps draw with; python-gobject does not pull it in. grub supplies
 # grub-mkfont and grub-mkconfig for the boot menu theme, and os-prober lets that
 # menu list the other systems on a dual-boot machine.
 RUNTIME = (
     "python", "python-gobject", "gtk4", "libadwaita",
-    "python-pillow", "python-numpy",
+    "python-pillow", "python-numpy", "python-cairo",
     "dconf", "glib2",
     "grub", "os-prober", "plymouth", "mkinitcpio",
 )  # fmt: skip

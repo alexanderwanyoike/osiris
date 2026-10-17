@@ -4,7 +4,8 @@
 
 Layout: one 30px panel at the TOP carrying a menu, indicators and a clock, and
 nothing else. No window list in the panel - Plank at the bottom owns running and
-pinned applications. rofi on Super+Space is the launcher.
+pinned applications. rofi on Super+Space is the launcher, and Super+T opens
+the theme switcher.
 
 Everything is written as system-wide dconf defaults under /etc/dconf/db/local.d,
 not poked into a live session. That means it applies to every user, survives a
@@ -74,12 +75,17 @@ icon-theme='Papirus-Dark'
 color-scheme='prefer-dark'
 
 [org/cinnamon/desktop/keybindings]
-custom-list=['custom0']
+custom-list=['custom0', 'custom1']
 
 [org/cinnamon/desktop/keybindings/custom-keybindings/custom0]
 name='Launcher'
 command='rofi -show drun'
 binding=['<Super>space']
+
+[org/cinnamon/desktop/keybindings/custom-keybindings/custom1]
+name='Theme switcher'
+command='gapplication action dev.osiris.Switcher show'
+binding=['<Super>t']
 
 [net/launchpad/plank/docks/dock1]
 dock-items=[{dock_items}]
