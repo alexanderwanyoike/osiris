@@ -308,13 +308,28 @@ behind it.
 
 ## Creating a theme
 
-**Appearance** has a creator: name, light or dark, and three colours.
+**Appearance** has a creator with three ways to start:
 
-A theme carries about thirty colours. Asking for thirty is a chore, so the
-creator asks for the three that decide the character - background, accent, and
-an optional secondary - and `shell/themes/derive.py` fills in the rest. The
-preview re-renders on every change, debounced by 120ms against a render that
-costs about 25ms.
+- **One colour**: a seed, a harmony and a mood. The intent rules below make the
+  colours.
+- **A picture**: it proposes the seed, light or dark, and the mood, all of which
+  stay adjustable, and becomes the theme's wallpaper.
+- **Colours I choose**: background, accent and an optional secondary. Beside the
+  accent sit the colours that go with it, one row of swatches covering every
+  harmony; picking one makes it the secondary. Nothing stops a clash: a **User
+  theme** is the user's.
+
+A theme carries about thirty colours; in every mode the rest are derived the
+same way. The preview re-renders on every change, debounced by 120ms against a
+render that costs about 25ms.
+
+A theme made from a picture names it in `wallpaper` by absolute path. On save
+the picture is copied to `~/.local/share/osiris/wallpapers/<name>-picture.*`,
+so moving or deleting the original does not take the wallpaper with it, and it
+is copied again under the new name on a rename, because a rename deletes the old
+theme. The engine never renders a generated wallpaper over a picture, its card
+shows the picture, and deleting the theme removes only that copy. The theme
+records its intent under `intent`, so reopening it restores the form.
 
 Derived values are **written into the saved theme**, not recomputed on load.
 That is what makes a theme a document: it can be hand-edited afterwards, it
