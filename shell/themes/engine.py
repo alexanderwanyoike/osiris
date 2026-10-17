@@ -32,13 +32,17 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import icons  # noqa: E402
 import plank  # noqa: E402
-from paths import home  # noqa: E402
+from paths import home, use_osiris_package  # noqa: E402
+
+use_osiris_package()
+from osiris.themes.switch import Switch, keyfile  # noqa: E402
 
 
 HOME = home()
@@ -527,6 +531,8 @@ window-padding-y = 10
 window-decoration = auto
 scrollback-limit = 10000000
 confirm-close-surface = false
+# A theme switch reloads every open terminal; a toast in each one is noise.
+app-notifications = no-config-reload
 """
 
 
@@ -548,9 +554,54 @@ def _session_env() -> dict:
     return env
 
 
-def _set(schema: str, key: str, value: str, env: dict) -> None:
-    subprocess.run(["gsettings", "set", schema, key, value],
+def _load(settings: str, env: dict) -> None:
+    """Write settings as one dconf change; see osiris/themes/switch.py."""
+    subprocess.run(["dconf", "load", "/"], input=settings, text=True,
                    check=False, capture_output=True, env=env)
+
+
+# The transition extension (shell/themes/transition@osiris, ADR 0014).
+TRANSITION_BUS = "dev.osiris.Transition"
+TRANSITION_PATH = "/dev/osiris/Transition"
+# How long the frozen frame stays once the switch is written, so applications
+# have repainted beneath it, and how long it takes to fade.
+SETTLE_MS = 400
+FADE_MS = 300
+
+
+def _transition(method: str, *args: str, env: dict) -> bool:
+    """Call the transition extension; False when it is not there."""
+    try:
+        result = subprocess.run(
+            ["gdbus", "call", "--session", "--dest", TRANSITION_BUS,
+             "--object-path", TRANSITION_PATH,
+             "--method", f"{TRANSITION_BUS}.{method}", *args],
+            check=False, capture_output=True, timeout=3, env=env)
+    except subprocess.TimeoutExpired:
+        return False
+    return result.returncode == 0
+
+
+def _reload_terminals() -> None:
+    """Have the user's running ghostty processes re-read their config.
+
+    ghostty reloads on SIGUSR2; it would otherwise keep the old palette until
+    relaunched.
+    """
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            with open(f"/proc/{entry}/comm") as fh:
+                command = fh.read().strip()
+            owner = os.stat(f"/proc/{entry}").st_uid
+        except OSError:
+            continue
+        if command == "ghostty" and owner == os.getuid():
+            try:
+                os.kill(int(entry), signal.SIGUSR2)
+            except OSError:
+                pass
 
 
 def _write(path: str, text: str) -> None:
@@ -606,38 +657,27 @@ def apply(name: str) -> list[str]:
 
     Returns the surfaces that will not pick the palette up until they are
     restarted. Everything else - GTK applications, window decorations, the
-    Cinnamon panel, the wallpaper - repaints in place.
+    Cinnamon panel, the wallpaper, running terminals - repaints in place, and
+    the launcher reads its theme each time it opens.
     """
     theme = load(name)
     ui = _ui(theme)
     env = _session_env()
-
-    applied = build_theme(theme) or ui["gtk"]
+    # Without the extension the switch still applies, as one change.
+    frozen = _transition("Freeze", env=env)
 
     # One theme name for every surface. Because the name differs per palette
     # this is an ordinary theme change, which GTK applications, Muffin's window
     # decorations and the Cinnamon shell all already reload on.
-    _set("org.cinnamon.desktop.interface", "gtk-theme", applied, env)
-    _set("org.cinnamon.desktop.wm.preferences", "theme", applied, env)
-    _set("org.cinnamon.theme", "name", applied, env)
-    _set("org.gnome.desktop.interface", "gtk-theme", applied, env)
-
+    applied = build_theme(theme) or ui["gtk"]
     # Folders tinted to the accent, over the theme's declared icon set. Falls
     # back to that set when Papirus is absent rather than naming a theme that
     # does not exist.
     icon_theme = icons.build(theme, ui["icons"]) or ui["icons"]
-    _set("org.cinnamon.desktop.interface", "icon-theme", icon_theme, env)
-    _set("org.cinnamon.desktop.interface", "cursor-theme", ui["cursor"], env)
-    _set("org.cinnamon.desktop.interface", "font-name", ui["font"], env)
-    _set("org.gnome.desktop.interface", "icon-theme", icon_theme, env)
-    _set("org.gnome.desktop.interface", "color-scheme",
-         "prefer-dark" if theme.get("dark", True) else "prefer-light", env)
-
     wallpaper = wallpaper_for(theme)
-    if os.path.exists(wallpaper):
-        _set("org.cinnamon.desktop.background", "picture-uri",
-             f"file://{wallpaper}", env)
-        _set("org.cinnamon.desktop.background", "picture-options", "zoom", env)
+    # Plank reads its theme when the setting changes, so the name carries the
+    # palette - the same reason the GTK theme does.
+    dock = plank.build(theme)
 
     _write(os.path.join(HOME, ".config", "rofi", "themes", "osiris.rasi"),
            rofi_theme(theme))
@@ -648,11 +688,17 @@ def apply(name: str) -> list[str]:
     _write(os.path.join(HOME, ".config", "ghostty", "config"),
            ghostty_config(theme))
 
-    # Plank reads its theme when the setting changes, so the name carries the
-    # palette - the same reason the GTK theme does.
-    dock = plank.build(theme)
-    if dock is not None:
-        _set(f"{plank.SCHEMA}:{plank.PATH}", "theme", dock, env)
+    _load(keyfile(Switch(
+        theme=applied,
+        icons=icon_theme,
+        cursor=ui["cursor"],
+        font=ui["font"],
+        dark=theme.get("dark", True),
+        wallpaper=wallpaper if os.path.exists(wallpaper) else None,
+        dock=dock,
+    ), plank.PATH), env)
+
+    _reload_terminals()
 
     # Superseded by the generated theme; left in place it would override it.
     for version in ("gtk-3.0", "gtk-4.0"):
@@ -661,9 +707,9 @@ def apply(name: str) -> list[str]:
             os.remove(stale)
 
     _write(STATE, name + "\n")
-
-    # These read their configuration once at startup.
-    return ["Terminal", "Launcher"]
+    if frozen:
+        _transition("Release", str(SETTLE_MS), str(FADE_MS), env=env)
+    return []
 
 
 def first_login() -> None:
