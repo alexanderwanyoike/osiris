@@ -327,6 +327,13 @@ looks worse than leaving both alone.
 
 ### The dock
 
+The dock is Plank Reloaded, Plank's maintained fork, which keeps its settings
+schema and theme format. Plank itself, unreleased since 2019, aborts on some
+GTK theme changes - its handler notifies a property under a name it has
+already freed, and its log handler dies on the garbage - and an Osiris switch
+is one. Plank Reloaded is in no official repository, so Osiris builds it into
+its own (`iso/bundled/plank-reloaded`).
+
 Plank reads a `dock.theme` ini file and is pointed at one through a relocatable
 schema, `net.launchpad.plank.dock.settings:/net/launchpad/plank/docks/dock1/`.
 Colours in that file are `R;;G;;B;;A`, 0-255 - not hex.

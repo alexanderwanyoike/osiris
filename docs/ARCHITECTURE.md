@@ -39,7 +39,7 @@ that exist.
 
 ### The desktop
 
-Cinnamon, trimmed to a single top panel, with Plank as the dock and rofi on
+Cinnamon, trimmed to a single top panel, with Plank Reloaded as the dock and rofi on
 `Super+Space` as the launcher. `provision/cinnamon.py` configures all three.
 
 Cinnamon's own window list is removed from the panel, because Plank owns that
