@@ -34,6 +34,7 @@ that exist.
 | Bootloader | GRUB (UEFI or BIOS), installed by archinstall, with a themed menu | systemd-boot has no theme engine, and os-prober finds other installed systems |
 | Login manager | LightDM + lightdm-slick-greeter | Branded, themeable, and it works with an X11 Cinnamon session |
 | Terminal | ghostty | GTK4, and the only candidate that renders font ligatures - VTE terminals cannot |
+| Harness engine | opencode 2.0, as a per-user service | Model access and the agent loop are rented; Osiris owns policy, the log and the surfaces. See [HARNESS.md](HARNESS.md) and ADR 0015. |
 
 ## Components
 
@@ -62,6 +63,12 @@ ordinary theme change that GTK, Muffin, Cinnamon and Plank already handle.
 `apps/appearance/` - a GTK4 + libadwaita picker showing a rendered miniature of
 the desktop per theme, plus a creator that derives a full palette from three
 colours. See [THEMING.md](THEMING.md).
+
+### The Harness
+
+`apps/harness/` - a resident GTK4 bar on `Super+A` over `osiris/harness`, which
+rents its Engine from opencode's per-user service, keeps the Harness log and,
+for now, only talks. See [HARNESS.md](HARNESS.md).
 
 ### The installer
 
