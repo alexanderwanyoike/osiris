@@ -13,7 +13,15 @@ import pytest
 
 from osiris.model.colour import Colour
 from osiris.themes.derive import palette
-from osiris.themes.intent import Harmony, Mood, ThemeIntent, partners, seeds
+from osiris.themes.intent import (
+    Harmony,
+    Mood,
+    ThemeIntent,
+    harmonise,
+    partners,
+    seeds,
+    suggestions,
+)
 
 TEAL = Colour("#2aa198")
 
@@ -113,3 +121,42 @@ def test_partners_offer_every_harmony_for_a_colour() -> None:
     offered = partners(TEAL)
     assert set(offered) == set(Harmony)
     assert all(colours for colours in offered.values())
+
+
+def test_suggestions_are_distinct_named_starting_points() -> None:
+    offered = suggestions(TEAL, dark=True)
+    names = [name for name, _ in offered]
+    assert len(names) == len(set(names)) == 6
+    combos = {(i.harmony, i.mood) for _, i in offered}
+    assert len(combos) == 6
+
+
+def test_suggestions_share_the_seed_and_the_variant() -> None:
+    for _, intent in suggestions(TEAL, dark=False):
+        assert intent.seed == TEAL
+        assert intent.dark is False
+
+
+HARMONY_TURNS = [0.0, 30.0, 120.0, 150.0, 180.0, 210.0, 240.0, 330.0]
+
+
+@pytest.mark.parametrize(
+    "hex_", ["#e4572e", "#29335c", "#f3a712", "#a8c686", "#669bbc"]
+)
+def test_harmonising_snaps_a_secondary_to_a_harmony(hex_: str) -> None:
+    accent = Colour("#7aa2f7")
+    fixed = harmonise(accent, Colour(hex_))
+    turn = hue_gap(accent, fixed)
+    assert min(abs(turn - t) for t in HARMONY_TURNS) < 3.0
+
+
+def test_harmonising_makes_the_secondary_support_the_accent() -> None:
+    accent = Colour("#7aa2f7")
+    fixed = harmonise(accent, Colour("#e4572e"))
+    assert fixed.oklch[1] < accent.oklch[1] * 0.85
+
+
+def test_harmonising_twice_changes_nothing_more() -> None:
+    accent = Colour("#7aa2f7")
+    once = harmonise(accent, Colour("#e4572e"))
+    assert harmonise(accent, once) == once

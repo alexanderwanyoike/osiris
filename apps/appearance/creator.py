@@ -1,17 +1,16 @@
-"""The theme creator: a theme from one colour, a picture, or chosen colours.
+"""The theme creator: start from a colour or a picture, pick a finished look.
 
-A theme carries about thirty colours. Asking for thirty is not a feature, it is
-a chore. So there are three ways to start, and each asks for little:
+Asking people to set harmonies and moods asks them to do colour theory; they
+choose far more easily between finished themes. So the creator starts from one
+colour or a picture (which proposes the colour, light or dark, and the mood;
+osiris/themes/from_wallpaper.py), shows the suggested looks for it as desktop
+miniatures (osiris/themes/intent.py), and the person picks one.
 
-* **One colour** - a seed, a harmony and a mood; osiris/themes/intent.py makes
-  the colours, harmonious and legible by construction.
-* **A picture** - which proposes the seed, light or dark, and the mood
-  (osiris/themes/from_wallpaper.py), all of which can be changed, and becomes
-  the theme's wallpaper.
-* **Colours I choose** - background, accent and an optional secondary, with
-  colours that go with the accent offered alongside. Nothing stops a clash.
+Everything else is under Fine-tune: the harmony and mood behind the chosen
+look, and choosing the three colours by hand - where nothing stops a clash, but
+"Make these go together" moves the secondary to a harmony with the accent.
 
-In every mode the rest of the palette is derived the same way.
+In every case the rest of the palette is derived the same way.
 
 The derived values are written into the saved theme rather than recomputed on
 load. That is what makes a theme a document: it can be hand-edited afterwards,
@@ -39,10 +38,11 @@ from osiris.model.colour import Colour  # noqa: E402
 from osiris.themes import derive as rules  # noqa: E402
 from osiris.themes.from_wallpaper import intent_from  # noqa: E402
 from osiris.themes.intent import (  # noqa: E402
-    Harmony, Mood, ThemeIntent, partners, seeds)
+    SUGGESTIONS, Harmony, Mood, ThemeIntent, harmonise, partners, seeds,
+    suggestions)
 
-MODES = ("colour", "picture", "custom")
-MODE_LABELS = ("One colour", "A picture", "Colours I choose")
+STARTS = ("colour", "picture")
+START_LABELS = ("One colour", "A picture")
 HARMONY_LABELS = {
     Harmony.ANALOGOUS: "Analogous - neighbours on the colour wheel",
     Harmony.COMPLEMENTARY: "Complementary - opposites",
@@ -158,6 +158,25 @@ def _combo(title: str, labels) -> Adw.ComboRow:
     return row
 
 
+
+
+class LookCard(Gtk.Box):
+    """One suggested look: a miniature of the desktop and its name."""
+
+    def __init__(self, name: str):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self.name = name
+        self.picture = Gtk.Picture(content_fit=Gtk.ContentFit.COVER)
+        self.picture.set_size_request(200, 125)
+        self.picture.add_css_class("preview")
+        self.append(self.picture)
+        self.append(Gtk.Label(label=name))
+
+    def show(self, path: str) -> None:
+        self.picture.set_filename(None)
+        self.picture.set_filename(path)
+
+
 class Creator(Adw.Dialog):
     """Create a theme, or edit one that was created here before.
 
@@ -174,12 +193,16 @@ class Creator(Adw.Dialog):
         self.editing = editing
         self.original = source["name"] if editing and source else None
         self.pending = 0
-        self.preview_file = os.path.join(
-            GLib.get_user_cache_dir(), "osiris", "creator-preview.png")
+        self.pending_cards = False
+        self.syncing = False
+        cache = os.path.join(GLib.get_user_cache_dir(), "osiris")
+        self.preview_file = os.path.join(cache, "creator-preview.png")
+        self.card_files = [os.path.join(cache, f"creator-look-{i}.png")
+                           for i in range(len(SUGGESTIONS))]
 
         self.set_title("Edit Theme" if editing else "New Theme")
-        self.set_content_width(880)
-        self.set_content_height(720)
+        self.set_content_width(900)
+        self.set_content_height(760)
 
         seeded = self._seed(source)
         self.picture_path: str | None = seeded["picture"]
@@ -207,61 +230,85 @@ class Creator(Adw.Dialog):
         frame.append(self.picture)
 
         page = Adw.PreferencesPage()
+
         identity = Adw.PreferencesGroup()
         self.name_row = Adw.EntryRow(title="Name")
         self.name_row.set_text(seeded["label"])
         self.name_row.connect("changed", lambda *_a: self._validate())
         identity.add(self.name_row)
-
-        self.mode = _combo("Start from", MODE_LABELS)
-        self.mode.set_selected(MODES.index(seeded["mode"]))
-        self.mode.connect("notify::selected", self._mode_changed)
-        identity.add(self.mode)
-
-        self.variant = Adw.SwitchRow(
-            title="Dark", subtitle="Light themes derive lighter neutrals and "
-                                   "push the line work harder")
+        self.start = _combo("Start from", START_LABELS)
+        self.start.set_selected(STARTS.index(seeded["start"]))
+        self.start.connect("notify::selected", self._start_changed)
+        identity.add(self.start)
+        self.seed_row = ColourRow("Colour", "The theme is built around this hue",
+                                  seeded["seed"], self._seed_changed)
+        identity.add(self.seed_row)
+        self.picture_row = Adw.ActionRow(title="Picture")
+        choose = Gtk.Button(label="Choose…", valign=Gtk.Align.CENTER)
+        choose.connect("clicked", self._choose_picture)
+        self.picture_row.add_suffix(choose)
+        identity.add(self.picture_row)
+        self.variant = Adw.SwitchRow(title="Dark")
         self.variant.set_active(seeded["dark"])
         self.variant.connect("notify::active", self._variant_changed)
         identity.add(self.variant)
         page.add(identity)
 
-        # One colour, and a picture: what the theme should be.
-        self.intent_group = Adw.PreferencesGroup(title="Character")
-        self.seed_row = ColourRow("Colour", "The theme is built around this hue",
-                                  seeded["seed"], self._schedule)
-        self.intent_group.add(self.seed_row)
-        self.picture_row = Adw.ActionRow(title="Picture")
-        choose = Gtk.Button(label="Choose…", valign=Gtk.Align.CENTER)
-        choose.connect("clicked", self._choose_picture)
-        self.picture_row.add_suffix(choose)
-        self.intent_group.add(self.picture_row)
+        looks = Adw.PreferencesGroup(
+            title="Pick a look",
+            description="Each is a finished theme built from your colour")
+        self.flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.SINGLE,
+                                max_children_per_line=3, min_children_per_line=2,
+                                homogeneous=True, column_spacing=12,
+                                row_spacing=12)
+        self.cards = [LookCard(name) for name, _h, _m in SUGGESTIONS]
+        for card in self.cards:
+            self.flow.append(card)
+        self.flow.connect("selected-children-changed", self._look_picked)
+        looks.add(self.flow)
+        page.add(looks)
+
+        tune = Adw.PreferencesGroup()
+        self.expander = Adw.ExpanderRow(
+            title="Fine-tune",
+            subtitle="The harmony and mood behind the look, or your own colours")
         self.harmony = _combo("Harmony", HARMONY_LABELS.values())
         self.harmony.set_selected(list(Harmony).index(seeded["harmony"]))
-        self.harmony.connect("notify::selected", lambda *_a: self._schedule())
-        self.intent_group.add(self.harmony)
+        self.harmony.connect("notify::selected", self._tuned)
+        self.expander.add_row(self.harmony)
         self.mood = _combo("Mood", MOOD_LABELS.values())
         self.mood.set_selected(list(Mood).index(seeded["mood"]))
-        self.mood.connect("notify::selected", lambda *_a: self._schedule())
-        self.intent_group.add(self.mood)
-        page.add(self.intent_group)
-
-        # Colours I choose.
-        self.custom_group = Adw.PreferencesGroup(title="Colours")
+        self.mood.connect("notify::selected", self._tuned)
+        self.expander.add_row(self.mood)
+        self.custom = Adw.SwitchRow(
+            title="Choose colours myself",
+            subtitle="Background, accent and secondary by hand")
+        self.custom.set_active(seeded["custom"])
+        self.custom.connect("notify::active", self._custom_toggled)
+        self.expander.add_row(self.custom)
         self.rows: dict[str, ColourRow] = {}
         for key, title, subtitle in SEEDS:
             row = ColourRow(title, subtitle, seeded[key], self._custom_changed)
             self.rows[key] = row
-            self.custom_group.add(row)
+            self.expander.add_row(row)
         self.partners = PartnersRow(self._use_partner)
-        self.custom_group.add(self.partners)
+        self.expander.add_row(self.partners)
+        self.fix_row = Adw.ActionRow(
+            title="Make these go together",
+            subtitle="Moves the secondary to a harmony with the accent")
+        fix = Gtk.Button(label="Fix", valign=Gtk.Align.CENTER)
+        fix.connect("clicked", self._harmonise)
+        self.fix_row.add_suffix(fix)
+        self.expander.add_row(self.fix_row)
         self.use_secondary = Adw.SwitchRow(
             title="Use a secondary colour",
             subtitle="Off derives one from the accent")
         self.use_secondary.set_active(seeded["has_secondary"])
         self.use_secondary.connect("notify::active", self._toggle_secondary)
-        self.custom_group.add(self.use_secondary)
-        page.add(self.custom_group)
+        self.expander.add_row(self.use_secondary)
+        self.expander.set_expanded(seeded["custom"])
+        tune.add(self.expander)
+        page.add(tune)
 
         self.background_group = Adw.PreferencesGroup(title="Wallpaper")
         self.style = Adw.ComboRow(title="Pattern")
@@ -288,8 +335,9 @@ class Creator(Adw.Dialog):
 
         self.rows["secondary"].set_sensitive(seeded["has_secondary"])
         self.partners.show_for(seeded["accent"])
-        self._show_mode()
-        self._render()
+        self._select_matching_look()
+        self._show_state()
+        self._render(cards=True)
         self._validate()
 
     # ----------------------------------------------------------------- state
@@ -297,16 +345,17 @@ class Creator(Adw.Dialog):
     def _seed(self, source: dict | None) -> dict:
         """Starting values for the form.
 
-        A theme made here records its intent, or the colours it was derived
-        from, so reopening it restores the form rather than thirty colours. A
-        shipped theme has neither, so its background and accent - stored
-        verbatim - are read back off its palette.
+        A theme made here records its intent, so reopening it restores the
+        start and the look rather than thirty colours. Anything else - a
+        shipped theme, or one made from hand-picked colours - opens with its
+        background and accent, stored verbatim, under Choose colours myself.
         """
         values = {"label": "My Theme", "dark": True, "background": "#15151c",
                   "accent": "#7aa2f7", "secondary": "#bb9af7",
-                  "has_secondary": False, "style": "contour", "mode": "colour",
-                  "seed": "#7aa2f7", "harmony": Harmony.ANALOGOUS,
-                  "mood": Mood.BALANCED, "picture": None, "picture_seed": None}
+                  "has_secondary": False, "style": "contour", "start": "colour",
+                  "custom": False, "seed": "#7aa2f7",
+                  "harmony": Harmony.ANALOGOUS, "mood": Mood.BALANCED,
+                  "picture": None, "picture_seed": None}
         if source is None:
             return values
         colors = source.get("colors", {})
@@ -322,13 +371,14 @@ class Creator(Adw.Dialog):
             "has_secondary": secondary is not None,
             "style": source.get("wallpaper_style") or wallpaper.style_for(
                 source["name"]),
-            "mode": "custom",
+            "custom": True,
         })
         intent = source.get("intent")
         if intent:
             picture = engine.picture_of(source)
             values.update({
-                "mode": "picture" if picture else "colour",
+                "start": "picture" if picture else "colour",
+                "custom": False,
                 "seed": intent["seed"],
                 "harmony": Harmony(intent["harmony"]),
                 "mood": Mood(intent["mood"]),
@@ -338,36 +388,79 @@ class Creator(Adw.Dialog):
         return values
 
     @property
-    def current_mode(self) -> str:
-        return MODES[self.mode.get_selected()]
+    def current_start(self) -> str:
+        return STARTS[self.start.get_selected()]
 
-    def _show_mode(self) -> None:
-        mode = self.current_mode
-        self.intent_group.set_visible(mode != "custom")
-        self.seed_row.set_visible(mode == "colour")
-        self.picture_row.set_visible(mode == "picture")
+    def _show_state(self) -> None:
+        start = self.current_start
+        custom = self.custom.get_active()
+        self.seed_row.set_visible(start == "colour" and not custom)
+        self.picture_row.set_visible(start == "picture")
         self.picture_row.set_subtitle(
             os.path.basename(self.picture_path) if self.picture_path
             else "None chosen yet")
-        self.custom_group.set_visible(mode == "custom")
+        self.flow.set_sensitive(not custom)
+        self.harmony.set_sensitive(not custom)
+        self.mood.set_sensitive(not custom)
+        for row in self.rows.values():
+            row.set_visible(custom)
+        self.rows["secondary"].set_sensitive(self.use_secondary.get_active())
+        for row in (self.partners, self.fix_row, self.use_secondary):
+            row.set_visible(custom)
         # A theme made from a picture wears the picture, not a pattern.
-        self.background_group.set_visible(mode != "picture")
+        self.background_group.set_visible(start != "picture")
 
-    def _mode_changed(self, *_args) -> None:
-        self._show_mode()
+    def _select_matching_look(self) -> None:
+        """Select the card for the current harmony and mood, if there is one."""
+        current = (list(Harmony)[self.harmony.get_selected()],
+                   list(Mood)[self.mood.get_selected()])
+        self.syncing = True
+        self.flow.unselect_all()
+        for index, (_name, harmony, mood) in enumerate(SUGGESTIONS):
+            if (harmony, mood) == current and not self.custom.get_active():
+                self.flow.select_child(self.flow.get_child_at_index(index))
+        self.syncing = False
+
+    def _look_picked(self, flow) -> None:
+        if self.syncing:
+            return
+        chosen = flow.get_selected_children()
+        if not chosen:
+            return
+        _name, harmony, mood = SUGGESTIONS[chosen[0].get_index()]
+        self.syncing = True
+        self.harmony.set_selected(list(Harmony).index(harmony))
+        self.mood.set_selected(list(Mood).index(mood))
+        self.syncing = False
         self._schedule()
 
+    def _tuned(self, *_args) -> None:
+        if self.syncing:
+            return
+        self._select_matching_look()
+        self._schedule()
+
+    def _start_changed(self, *_args) -> None:
+        self._show_state()
+        self._schedule(cards=True)
+
+    def _seed_changed(self) -> None:
+        self._schedule(cards=True)
+
     def _variant_changed(self, *_args) -> None:
-        """Move a chosen background to the new variant if it is on the wrong
-        side. One colour and a picture need nothing: their background comes
-        from the variant."""
+        """Move a hand-picked background to the new variant if it is on the
+        wrong side; the suggested looks take their background from it."""
         dark = self.variant.get_active()
         background = self.rows["background"].value
-        if (self.current_mode == "custom"
+        if (self.custom.get_active()
                 and (derive.luminance(background) < derive.MID_LUMINANCE) != dark):
             self.rows["background"].set_value(DEFAULT_BACKGROUND[dark])
-        else:
-            self._schedule()
+        self._schedule(cards=True)
+
+    def _custom_toggled(self, *_args) -> None:
+        self._select_matching_look()
+        self._show_state()
+        self._schedule()
 
     def _custom_changed(self) -> None:
         self.partners.show_for(self.rows["accent"].value)
@@ -376,6 +469,12 @@ class Creator(Adw.Dialog):
     def _use_partner(self, colour: str) -> None:
         self.use_secondary.set_active(True)
         self.rows["secondary"].set_value(colour)
+
+    def _harmonise(self, _button) -> None:
+        self.use_secondary.set_active(True)
+        accent = Colour(self.rows["accent"].value)
+        secondary = Colour(self.rows["secondary"].value)
+        self.rows["secondary"].set_value(harmonise(accent, secondary).hex)
 
     def _toggle_secondary(self, *_args) -> None:
         self.rows["secondary"].set_sensitive(self.use_secondary.get_active())
@@ -404,16 +503,22 @@ class Creator(Adw.Dialog):
         self.picture_path = path
         self.picture_seed = proposed.seed.hex
         # The picture proposes; everything stays adjustable afterwards.
+        self.syncing = True
         self.variant.set_active(proposed.dark)
         self.mood.set_selected(list(Mood).index(proposed.mood))
-        self._show_mode()
-        self._schedule()
+        self.syncing = False
+        self._select_matching_look()
+        self._show_state()
+        self._schedule(cards=True)
+
+    def _seed_colour(self) -> str | None:
+        if self.current_start == "picture":
+            return self.picture_seed
+        return self.seed_row.value
 
     def _intent(self) -> ThemeIntent | None:
-        mode = self.current_mode
-        seed = (self.seed_row.value if mode == "colour"
-                else self.picture_seed if mode == "picture" else None)
-        if seed is None:
+        seed = self._seed_colour()
+        if self.custom.get_active() or seed is None:
             return None
         return ThemeIntent(
             seed=Colour(seed),
@@ -422,41 +527,57 @@ class Creator(Adw.Dialog):
             dark=self.variant.get_active(),
         )
 
-    def build(self) -> dict:
-        """The theme the form currently describes."""
-        label = self.name_row.get_text().strip() or "Untitled"
-        style = wallpaper.STYLES[self.style.get_selected()]
-        intent = self._intent()
-        if intent is None:
-            theme = derive.build(
-                engine.slug(label), label,
-                self.rows["background"].value, self.rows["accent"].value,
-                dark=self.variant.get_active(),
-                secondary=(self.rows["secondary"].value
-                           if self.use_secondary.get_active() else None))
-            theme["wallpaper_style"] = style
-            return theme
+    def _from_intent(self, label: str, intent: ThemeIntent) -> dict:
         theme = rules.build(engine.slug(label), label, seeds(intent),
-                            wallpaper_style=style)
+                            wallpaper_style=wallpaper.STYLES[
+                                self.style.get_selected()])
         theme["intent"] = {"seed": intent.seed.hex,
                            "harmony": intent.harmony.value,
                            "mood": intent.mood.value}
-        if self.current_mode == "picture" and self.picture_path:
+        if self.current_start == "picture" and self.picture_path:
+            theme["wallpaper"] = self.picture_path
+        return theme
+
+    def build(self) -> dict:
+        """The theme the form currently describes."""
+        label = self.name_row.get_text().strip() or "Untitled"
+        intent = self._intent()
+        if intent is not None:
+            return self._from_intent(label, intent)
+        theme = derive.build(
+            engine.slug(label), label,
+            self.rows["background"].value, self.rows["accent"].value,
+            dark=self.variant.get_active(),
+            secondary=(self.rows["secondary"].value
+                       if self.use_secondary.get_active() else None))
+        theme["wallpaper_style"] = wallpaper.STYLES[self.style.get_selected()]
+        if self.current_start == "picture" and self.picture_path:
             theme["wallpaper"] = self.picture_path
         return theme
 
     # ---------------------------------------------------------------- render
 
-    def _schedule(self, *_args) -> None:
+    def _schedule(self, *_args, cards: bool = False) -> None:
         if self.pending:
             GLib.source_remove(self.pending)
+        self.pending_cards = cards or self.pending_cards
         self.pending = GLib.timeout_add(DEBOUNCE_MS, self._render)
         self._validate()
 
-    def _render(self) -> bool:
+    def _render(self, cards: bool = False) -> bool:
         self.pending = 0
+        cards = cards or self.pending_cards
+        self.pending_cards = False
         try:
             renderer.render_theme(self.build(), self.preview_file)
+            seed = self._seed_colour()
+            if cards and seed is not None:
+                for card, path, (_name, intent) in zip(
+                        self.cards, self.card_files,
+                        suggestions(Colour(seed), self.variant.get_active()),
+                        strict=True):
+                    renderer.render_theme(self._from_intent("Look", intent), path)
+                    card.show(path)
         except Exception as error:                          # noqa: BLE001
             print(f"osiris-appearance: preview: {error}", file=sys.stderr)
             return GLib.SOURCE_REMOVE
@@ -474,7 +595,7 @@ class Creator(Adw.Dialog):
         problem = ("" if label and not taken else
                    "Enter a name" if not label else
                    "A theme called that already exists")
-        no_picture = self.current_mode == "picture" and not self.picture_path
+        no_picture = self.current_start == "picture" and not self.picture_path
         self.save_button.set_sensitive(not problem and not no_picture)
         if problem and label:
             self.name_row.add_css_class("error")
