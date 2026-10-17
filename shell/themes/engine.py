@@ -624,6 +624,20 @@ def _reload_terminals() -> None:
                 pass
 
 
+def _drift(theme: dict) -> None:
+    """Change the moving wallpaper with everything else.
+
+    Beneath the transition's frozen picture when there is one; drift.py on its
+    own would notice the switch at its next poll, seconds after the rest.
+    """
+    try:
+        # Here rather than at the top: drift imports this module.
+        import drift
+        drift.publish_now(theme)
+    except Exception as error:                          # noqa: BLE001
+        print(f"osiris-theme: moving wallpaper: {error}", file=sys.stderr)
+
+
 def _write(path: str, text: str) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as fh:
@@ -727,6 +741,7 @@ def apply(name: str) -> list[str]:
             os.remove(stale)
 
     _write(STATE, name + "\n")
+    _drift(theme)
     if frozen:
         _transition("Release", str(SETTLE_MS), str(FADE_MS), env=env)
     return []
