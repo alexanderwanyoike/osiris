@@ -22,6 +22,9 @@ that supersedes it and say so in both.
 | [0010](0010-the-installer-imports-the-install.md) | The installer imports the install flow | Accepted |
 | [0011](0011-testing-strategy.md) | Testing strategy, and what is deliberately not tested | Accepted |
 | [0012](0012-do-not-hand-roll-critical-machinery.md) | Do not hand-roll critical system machinery | Accepted |
+| [0013](0013-gtk-skins-are-shape-layers-on-recolourable-bases.md) | GTK skins are shape layers on recolourable bases | Accepted |
+| [0014](0014-cinnamon-extension-for-theme-transitions.md) | A Cinnamon extension for theme transitions | Accepted |
+| [0015](0015-harness-owns-tools-rents-engine.md) | The harness owns its tools and surfaces and rents its engine | Accepted |
 
 ## Format
 
