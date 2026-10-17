@@ -24,13 +24,16 @@ const HOME = GLib.get_home_dir();
 const CACHE = GLib.build_filenamev([HOME, '.cache', 'osiris', 'drift']);
 const CONFIG = GLib.build_filenamev([HOME, '.config', 'osiris']);
 const STATE = GLib.build_filenamev([CACHE, 'current.json']);
+const UNSUPPORTED = GLib.build_filenamev([CACHE, 'unsupported']);
 const PREFERENCE = GLib.build_filenamev([CONFIG, 'drift']);
 const THEME = GLib.build_filenamev([CONFIG, 'theme']);
 
 // Every frame repaints the whole stage, windows included. Thirty a second is
 // smooth for motion this slow. Muffin calls a software renderer accelerated,
 // so rather than ask, the extension watches what Cinnamon spends and halves
-// the rate while it is over BUDGET of a core, down to SLOWEST_MS.
+// the rate while it is over BUDGET of a core, down to SLOWEST_MS. Still over
+// budget there, the machine has no GPU to speak of: the still wallpaper is
+// left showing for the rest of the session, and UNSUPPORTED says why.
 const FASTEST_MS = 33;
 const SLOWEST_MS = 500;
 const BUDGET = 0.15;
@@ -107,6 +110,9 @@ class Drift {
         this._screenSaverActive = false;
         this._target = 0;
         this._effect = null;
+        // Each session finds out afresh; a new GPU or driver may change it.
+        this._unsupported = false;
+        GLib.unlink(UNSUPPORTED);
 
         this._layer = new Clutter.Actor({ opacity: 0 });
         global.bottom_window_group.insert_child_at_index(this._layer, 0);
@@ -158,7 +164,7 @@ class Drift {
         }
         // The state can outlive a theme switch by a moment; a wallpaper is
         // only drawn over the theme it belongs to.
-        if (!state || state.problem || !shadersAvailable() ||
+        if (!state || state.problem || this._unsupported || !shadersAvailable() ||
             readText(PREFERENCE) === 'off' || readText(THEME) !== state.theme)
             state = null;
         if (JSON.stringify(state) !== JSON.stringify(this._state)) {
@@ -265,6 +271,10 @@ class Drift {
         this._measured = [now, cpu];
         let share = (cpu - before) / (now - then);
         let interval = this._interval;
+        if (share > BUDGET && interval === SLOWEST_MS) {
+            this._giveUp();
+            return;
+        }
         if (share > BUDGET)
             interval = Math.min(SLOWEST_MS, interval * 2);
         else if (share < BUDGET / 3)
@@ -273,6 +283,17 @@ class Drift {
             this._interval = interval;
             this._schedule();
         }
+    }
+
+    _giveUp() {
+        this._unsupported = true;
+        try {
+            GLib.file_set_contents(UNSUPPORTED,
+                'Moving wallpapers need a graphics card; showing the still one instead.\n');
+        } catch (e) {
+            logError(e, 'drift@osiris');
+        }
+        this._reload();
     }
 
     _fade(opacity) {

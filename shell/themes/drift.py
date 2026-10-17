@@ -32,6 +32,7 @@ import wallpaper  # noqa: E402
 from paths import home  # noqa: E402
 
 # wallpaper has put the osiris package on sys.path.
+from osiris.platform.hardware import rendering_accelerated  # noqa: E402
 from osiris.platform.process import SubprocessRunner  # noqa: E402
 from osiris.themes import wallpapers as packages  # noqa: E402
 
@@ -43,6 +44,9 @@ RANGE_SAMPLES = 48
 PREFERENCE = os.path.join(home(), ".config", "osiris", "drift")
 CACHE = os.path.join(home(), ".cache", "osiris", "drift")
 STATE = os.path.join(CACHE, "current.json")
+# Written by the extension when drawing live costs more than the machine has.
+UNSUPPORTED = os.path.join(CACHE, "unsupported")
+NO_GPU = "Moving wallpapers need a graphics card; showing the still one instead."
 PRELUDE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                        "wallpapers", "prelude.glsl")
 
@@ -82,6 +86,11 @@ def drifts(theme: dict) -> bool:
 
 def problem() -> str | None:
     """Why the wallpaper is not moving, when something went wrong."""
+    try:
+        with open(UNSUPPORTED) as fh:
+            return fh.read().strip() or None
+    except OSError:
+        pass
     try:
         with open(STATE) as fh:
             return json.load(fh).get("problem")
@@ -157,7 +166,7 @@ def stamp(found: packages.Wallpaper) -> float:
     return max(p.stat().st_mtime for p in found.directory.iterdir() if p.is_file())
 
 
-def state(theme: dict, size: tuple[int, int]) -> dict:
+def state(theme: dict, size: tuple[int, int], accelerated: bool = True) -> dict:
     found = package(theme)
     assert found is not None
     current = {"theme": theme["name"], "style": found.name, "loop": found.loop,
@@ -165,6 +174,9 @@ def state(theme: dict, size: tuple[int, int]) -> dict:
                "prelude": PRELUDE, "shader": str(found.shader),
                "uniforms": palette(theme), "ranges": None,
                "logo": logo(theme, size), "problem": None}
+    if not accelerated:
+        current["problem"] = NO_GPU
+        return current
     try:
         with open(PRELUDE) as fh:
             prelude = fh.read()
@@ -220,6 +232,9 @@ def main() -> None:
         if os.path.isdir(os.path.join(CACHE, name)):
             shutil.rmtree(os.path.join(CACHE, name), ignore_errors=True)
     size = screen_size()
+    # Asked once a session: drawing on the CPU every frame costs more than a
+    # moving wallpaper is worth, so such a machine keeps the still one.
+    accelerated = rendering_accelerated(SubprocessRunner(sink=lambda line: None))
     last: tuple[object, dict | None] = (None, None)
     while True:
         try:
@@ -229,7 +244,7 @@ def main() -> None:
             found = package(theme) if theme is not None else None
             key = (theme, stamp(found)) if found is not None else None
             if theme is not None and key != last[0]:
-                last = (key, state(theme, size))
+                last = (key, state(theme, size, accelerated))
                 publish(last[1])
         except Exception as error:                      # noqa: BLE001
             print(f"osiris-drift: {error}", file=sys.stderr)
