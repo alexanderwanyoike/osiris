@@ -31,6 +31,7 @@ sys.path.insert(0, REPO)
 import grub  # noqa: E402
 import live_packages  # noqa: E402
 from osiris.iso import boot_menu  # noqa: E402
+from osiris.provision import plymouth  # noqa: E402
 from run import stream  # noqa: E402
 
 RELENG = "/usr/share/archiso/configs/releng"
@@ -63,6 +64,7 @@ def profiledef_overrides(version: str) -> str:
         # GRUB rather than releng's systemd-boot on UEFI, because only GRUB
         # draws a theme. BIOS stays on syslinux: archiso has no BIOS GRUB mode.
         "bootmodes=('bios.syslinux' 'uefi.grub')\n"
+        f'kernel_params_x86_64="quiet splash {plymouth.QUIET}"\n'
         f'file_permissions+=(["{LAUNCHER_PATH}"]="0:0:755")\n'
     )
 
@@ -70,10 +72,11 @@ def profiledef_overrides(version: str) -> str:
 # xinit takes the client and then the server on argv, so a graphical session
 # starts here without a shell or a display manager. Conflicts with getty@tty1
 # so the two do not fight over the console; the other consoles keep releng's
-# root login for rescue work.
+# root login for rescue work. After plymouth-quit, as LightDM's own unit is, so
+# X does not race the splash for the display.
 INSTALLER_SERVICE = f"""[Unit]
 Description=Osiris installer
-After=systemd-user-sessions.service
+After=systemd-user-sessions.service plymouth-quit.service
 Conflicts=getty@tty1.service
 After=getty@tty1.service
 
@@ -146,6 +149,32 @@ def theme_boot_menu(out: str) -> None:
                 os.path.join(out, "syslinux", "splash.png"))
 
 
+def install_splash(out: str) -> None:
+    """The installed system's boot splash, in the medium's initramfs.
+
+    mkarchiso lays airootfs down before it installs packages, so these are in
+    place when the kernel's install hook first builds the initramfs. That build
+    reads the theme from plymouthd.conf, which plymouth-set-default-theme would
+    write on an installed system.
+    """
+    root = os.path.join(out, "airootfs")
+    theme = os.path.join(root, plymouth.THEME_DIR.lstrip("/"))
+    write(os.path.join(theme, f"{plymouth.THEME}.plymouth"), plymouth.THEME_FILE)
+    write(os.path.join(theme, f"{plymouth.THEME}.script"), plymouth.SCRIPT)
+    shutil.copy(os.path.join(REPO, "branding", "logo-splash.png"),
+                os.path.join(theme, "logo.png"))
+    write(os.path.join(root, "etc/plymouth/plymouthd.conf"),
+          f"[Daemon]\nTheme={plymouth.THEME}\n")
+
+    hooks = os.path.join(root, "etc/mkinitcpio.conf.d/archiso.conf")
+    with open(hooks) as fh:
+        text = fh.read()
+    with_splash = plymouth.with_hook(text)
+    if not plymouth.has_hook(with_splash):
+        sys.exit(f"no udev hook in {hooks} to put the splash after")
+    write(hooks, with_splash)
+
+
 def drop_apm_entries(out: str) -> None:
     """Remove the BIOS menu's Reboot and Power Off; see boot_menu.APM_MODULES."""
     tail = os.path.join(out, "syslinux", "archiso_tail.cfg")
@@ -180,6 +209,7 @@ def generate(out: str, version: str, repository: str,
     rebrand(out)
     theme_boot_menu(out)
     drop_apm_entries(out)
+    install_splash(out)
 
     root = os.path.join(out, "airootfs")
     write(os.path.join(root, "etc/systemd/system/osiris-installer.service"),
