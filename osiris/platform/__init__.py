@@ -11,6 +11,7 @@ straight for `subprocess.run` and `/etc`. The seam is what lets a test say
 """
 
 from osiris.platform.filesystem import FakeFileSystem, FileSystem, RealFileSystem
+from osiris.platform.http import FakeHttpClient, HttpClient, HttpError, UrllibClient
 from osiris.platform.identity import FakeIdentity, Identity, SystemIdentity
 from osiris.platform.process import (
     CommandError,
@@ -24,12 +25,16 @@ __all__ = [
     "CommandError",
     "CommandRunner",
     "FakeFileSystem",
+    "FakeHttpClient",
     "FakeIdentity",
     "FakeRunner",
     "FileSystem",
+    "HttpClient",
+    "HttpError",
     "Identity",
     "RealFileSystem",
     "RecordedCall",
     "SubprocessRunner",
     "SystemIdentity",
+    "UrllibClient",
 ]
