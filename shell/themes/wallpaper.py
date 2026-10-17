@@ -137,6 +137,41 @@ def _smooth(lattice: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
     return np.asarray(resized, dtype=np.float32)
 
 
+def fbm_lattices(rng: np.random.Generator, cells: int, octaves: int,
+                 drift: np.random.Generator | None = None) -> list:
+    """Each octave's random lattice, and its drifting partner if any.
+
+    A lattice is `cells` rows doubling per octave, by half as many columns.
+    Drawn on their own so the drift extension, which draws these styles live
+    on the GPU, interpolates the same numbers as the still wallpaper.
+    """
+    lattices = []
+    size = cells
+    for _ in range(octaves):
+        lattice = rng.random((size, max(2, size // 2)))
+        # The partner comes from its own generator, so rng's draws - and
+        # phase 0 - are what they were before wallpapers drifted.
+        partner = drift.random(lattice.shape) if drift is not None else None
+        lattices.append((lattice, partner))
+        size *= 2
+    return lattices
+
+
+def fbm_raw(shape: tuple[int, int], lattices: list, gain: float = 0.5,
+            phase: float = 0.0) -> np.ndarray:
+    """The octaves summed, before normalising."""
+    total = np.zeros(shape, dtype=np.float32)
+    amplitude = 1.0
+    for lattice, partner in lattices:
+        if partner is not None and phase:
+            # Turning between two fields on a circle drifts the noise and
+            # comes back round to where it started.
+            lattice = lattice * np.cos(phase) + partner * np.sin(phase)
+        total += amplitude * _smooth(lattice, shape)
+        amplitude *= gain
+    return total
+
+
 def fbm(shape: tuple[int, int], rng: np.random.Generator,
         cells: int = 4, octaves: int = 5, gain: float = 0.5,
         phase: float = 0.0,
@@ -146,20 +181,8 @@ def fbm(shape: tuple[int, int], rng: np.random.Generator,
     Normalised to [0, 1] afterwards so downstream thresholds are meaningful
     whatever the octave count.
     """
-    total = np.zeros(shape, dtype=np.float32)
-    amplitude, size = 1.0, cells
-    for _ in range(octaves):
-        lattice = rng.random((size, max(2, size // 2)))
-        if drift is not None:
-            # Turning between two fields on a circle drifts the noise and comes
-            # back round to where it started. The partner comes from its own
-            # generator, so rng's draws - and phase 0 - are what they were.
-            partner = drift.random(lattice.shape)
-            if phase:
-                lattice = lattice * np.cos(phase) + partner * np.sin(phase)
-        total += amplitude * _smooth(lattice, shape)
-        amplitude *= gain
-        size *= 2
+    total = fbm_raw(shape, fbm_lattices(rng, cells, octaves, drift), gain,
+                    phase)
     total -= total.min()
     return total / max(total.max(), 1e-6)
 
@@ -288,24 +311,38 @@ def aurora(shape, rng, glows: int = 4, phase: float = 0.0,
     y, x = np.mgrid[0:height, 0:width].astype(np.float32)
     fill = np.zeros(shape, dtype=np.float32)
     glow = np.zeros(shape, dtype=np.float32)
-    for index in range(glows):
-        # Around the edge: a point on a wide ellipse just outside the frame.
-        angle = rng.random() * 2 * np.pi
+    for index, g in enumerate(aurora_shape(rng, glows, drift)):
+        angle = g["angle"]
         if drift is not None:
             # Each glow slides along the edge and back, from where it would
             # be still.
-            turn = drift.random() * 2 * np.pi
-            angle += 0.45 * (np.sin(phase + turn) - np.sin(turn))
-        cx = width / 2 + np.cos(angle) * width * (0.45 + rng.random() * 0.2)
-        cy = height / 2 + np.sin(angle) * height * (0.45 + rng.random() * 0.2)
-        rx = width * (0.25 + rng.random() * 0.2)
-        ry = height * (0.3 + rng.random() * 0.25)
+            angle += 0.45 * (np.sin(phase + g["turn"]) - np.sin(g["turn"]))
+        cx = width / 2 + np.cos(angle) * width * g["fx"]
+        cy = height / 2 + np.sin(angle) * height * g["fy"]
+        rx = width * g["rx"]
+        ry = height * g["ry"]
         light = np.exp(-(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2))
         if index % 3 == 2:
             glow = np.maximum(glow, light)
         else:
             fill = np.maximum(fill, light)
     return fill * 0.8, glow * 0.45
+
+
+def aurora_shape(rng: np.random.Generator, glows: int = 4,
+                 drift: np.random.Generator | None = None) -> list[dict]:
+    """Where each glow sits and how large it is, as fractions of the frame."""
+    shape = []
+    for _ in range(glows):
+        # Around the edge: a point on a wide ellipse just outside the frame.
+        angle = rng.random() * 2 * np.pi
+        turn = drift.random() * 2 * np.pi if drift is not None else 0.0
+        shape.append({"angle": angle, "turn": turn,
+                      "fx": 0.45 + rng.random() * 0.2,
+                      "fy": 0.45 + rng.random() * 0.2,
+                      "rx": 0.25 + rng.random() * 0.2,
+                      "ry": 0.3 + rng.random() * 0.25})
+    return shape
 
 
 def dots(shape, rng, spacing: int = 30, phase: float = 0.0,
@@ -340,14 +377,13 @@ def cells(shape, rng, count: int = 16, phase: float = 0.0,
     and none shrinks to a sliver.
     """
     height, width = shape
-    columns = max(2, int(np.sqrt(count * width / height)))
-    rows = max(2, count // columns)
-    gx, gy = np.meshgrid(np.arange(columns), np.arange(rows))
-    sx = (gx.ravel() + 0.15 + 0.7 * rng.random(gx.size)) * width / columns
-    sy = (gy.ravel() + 0.15 + 0.7 * rng.random(gy.size)) * height / rows
+    sites = cells_shape(rng, width / height, count, drift)
+    rows = sites["rows"]
+    sx = sites["x"] * width
+    sy = sites["y"] * height
     if drift is not None:
         # Each site wanders on a small circle, starting where it would be still.
-        turn = drift.random(sx.size) * 2 * np.pi
+        turn = sites["turn"]
         reach = 0.25 * height / rows
         sx = sx + reach * (np.cos(phase + turn) - np.cos(turn))
         sy = sy + reach * (np.sin(phase + turn) - np.sin(turn))
@@ -359,8 +395,21 @@ def cells(shape, rng, count: int = 16, phase: float = 0.0,
         closer = distance < nearest
         nearest[closer] = distance[closer]
         index[closer] = site
-    levels = rng.choice([0.0, 0.16, 0.3], size=sx.size, p=[0.65, 0.25, 0.1])
-    return levels[index].astype(np.float32), _edges(index)
+    return sites["levels"][index].astype(np.float32), _edges(index)
+
+
+def cells_shape(rng: np.random.Generator, aspect: float, count: int = 16,
+                drift: np.random.Generator | None = None) -> dict:
+    """The sites, as fractions of the frame, and each cell's tone."""
+    columns = max(2, int(np.sqrt(count * aspect)))
+    rows = max(2, count // columns)
+    gx, gy = np.meshgrid(np.arange(columns), np.arange(rows))
+    x = (gx.ravel() + 0.15 + 0.7 * rng.random(gx.size)) / columns
+    y = (gy.ravel() + 0.15 + 0.7 * rng.random(gy.size)) / rows
+    turn = (drift.random(x.size) * 2 * np.pi if drift is not None
+            else np.zeros(x.size))
+    levels = rng.choice([0.0, 0.16, 0.3], size=x.size, p=[0.65, 0.25, 0.1])
+    return {"rows": rows, "x": x, "y": y, "turn": turn, "levels": levels}
 
 
 def bubbles(shape, rng, attempts: int = 500, phase: float = 0.0,
