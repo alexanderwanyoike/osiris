@@ -34,13 +34,30 @@ Needs numpy and Pillow, both of which are installed on the target, so this also
 runs for user-authored themes on a live system.
 """
 import argparse
+import importlib.util
 import json
 import os
 import sys
 import zlib
+from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import home  # noqa: E402
+
+# The package is installed beside this file on a target, and lives two
+# directories up in a checkout.
+for _candidate in (
+    "/usr/share/osiris/lib",
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+):
+    if os.path.isdir(os.path.join(_candidate, "osiris")):
+        sys.path.insert(0, _candidate)
+        break
+
+from osiris.themes import wallpapers as packages  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
@@ -61,6 +78,11 @@ STYLES = ("contour", "arcs", "strata", "aurora", "dots", "cells", "bubbles",
 # at the original three: hashing over STYLES would move every such theme to a
 # different wallpaper whenever a style is added.
 FALLBACK_STYLES = ("contour", "arcs", "strata")
+
+# Moving wallpapers as packages (osiris/themes/wallpapers.py): the user's own
+# first, so one there replaces a shipped one of the same name.
+PACKAGE_DIRS = (Path(home()) / packages.USER,
+                Path(os.path.dirname(os.path.abspath(__file__))) / "wallpapers")
 
 LOGO_HEIGHT = 0.36       # of the image height
 LOGO_ALPHA = 0.30        # a watermark, not a sticker
@@ -567,6 +589,27 @@ RENDERERS = {"contour": contour, "arcs": arcs, "strata": strata, "aurora": auror
 # --------------------------------------------------------------------------- #
 # composition
 
+def styles() -> tuple[str, ...]:
+    """Every style a theme can name: the built-in ones, then any packages."""
+    found, _ = packages.discover(PACKAGE_DIRS)
+    return STYLES + tuple(sorted(n for n in found if n not in STYLES))
+
+
+def still_module(wallpaper: packages.Wallpaper):
+    """A package's still.py, loaded as a module.
+
+    Loaded afresh each time, so a package being written - by hand or by an
+    agent - is seen as it is now.
+    """
+    spec = importlib.util.spec_from_file_location(
+        f"osiris_wallpaper_{wallpaper.name}", wallpaper.still)
+    if spec is None or spec.loader is None:
+        raise ValueError(f"cannot load {wallpaper.still}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def style_for(name: str) -> str:
     """Fall back to a style derived from the theme name.
 
@@ -623,8 +666,16 @@ def compose(theme: dict, size: tuple[int, int] = (WIDTH, HEIGHT),
     palette = tones(theme)
     style = style or theme.get("wallpaper_style") or style_for(theme["name"])
     if style not in RENDERERS:
-        raise ValueError(f"unknown style {style!r}; expected one of "
-                         f"{', '.join(STYLES)}")
+        found, _ = packages.discover(PACKAGE_DIRS)
+        if style not in found:
+            raise ValueError(f"unknown style {style!r}; expected one of "
+                             f"{', '.join(styles())}")
+        # A package draws its own still; the mark is Osiris's to add.
+        art = still_module(found[style]).still(theme, size, phase)
+        image = np.asarray(art.convert("RGB"), dtype=np.float32) / 255.0
+        if logo:
+            image = mark(image, palette["ink"], size)
+        return Image.fromarray((np.clip(image, 0, 1) * 255).astype(np.uint8))
 
     rng = _rng(theme)
     if phase is None:

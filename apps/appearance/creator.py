@@ -163,10 +163,16 @@ class Creator(Adw.Dialog):
         background = Adw.PreferencesGroup(title="Wallpaper")
         self.style = Adw.ComboRow(title="Pattern")
         model = Gtk.StringList()
-        for style in wallpaper.STYLES:
-            model.append(STYLE_LABELS[style])
+        # The built-in styles, then any wallpaper packages, made by hand or by
+        # an agent, under their own labels.
+        self.styles = wallpaper.styles()
+        found, _ = wallpaper.packages.discover(wallpaper.PACKAGE_DIRS)
+        for style in self.styles:
+            model.append(STYLE_LABELS.get(style)
+                         or (found[style].label if style in found else style))
         self.style.set_model(model)
-        self.style.set_selected(wallpaper.STYLES.index(seeded["style"]))
+        if seeded["style"] in self.styles:
+            self.style.set_selected(self.styles.index(seeded["style"]))
         self.style.connect("notify::selected", lambda *_a: self._schedule())
         background.add(self.style)
         page.add(background)
@@ -245,7 +251,7 @@ class Creator(Adw.Dialog):
             dark=self.variant.get_active(),
             secondary=(self.rows["secondary"].value
                        if self.use_secondary.get_active() else None))
-        theme["wallpaper_style"] = wallpaper.STYLES[self.style.get_selected()]
+        theme["wallpaper_style"] = self.styles[self.style.get_selected()]
         return theme
 
     # ---------------------------------------------------------------- render
