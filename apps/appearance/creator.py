@@ -320,10 +320,16 @@ class Creator(Adw.Dialog):
         self.background_group = Adw.PreferencesGroup(title="Wallpaper")
         self.style = Adw.ComboRow(title="Pattern")
         model = Gtk.StringList()
-        for style in wallpaper.STYLES:
-            model.append(STYLE_LABELS[style])
+        # The built-in styles, then any wallpaper packages, made by hand or by
+        # an agent, under their own labels.
+        self.styles = wallpaper.styles()
+        found, _ = wallpaper.packages.discover(wallpaper.PACKAGE_DIRS)
+        for style in self.styles:
+            model.append(STYLE_LABELS.get(style)
+                         or (found[style].label if style in found else style))
         self.style.set_model(model)
-        self.style.set_selected(wallpaper.STYLES.index(seeded["style"]))
+        if seeded["style"] in self.styles:
+            self.style.set_selected(self.styles.index(seeded["style"]))
         self.style.connect("notify::selected", lambda *_a: self._schedule())
         self.background_group.add(self.style)
         page.add(self.background_group)
@@ -536,7 +542,7 @@ class Creator(Adw.Dialog):
 
     def _from_intent(self, label: str, intent: ThemeIntent) -> dict:
         theme = rules.build(engine.slug(label), label, seeds(intent),
-                            wallpaper_style=wallpaper.STYLES[
+                            wallpaper_style=self.styles[
                                 self.style.get_selected()])
         theme["intent"] = {"seed": intent.seed.hex,
                            "harmony": intent.harmony.value,
@@ -557,7 +563,7 @@ class Creator(Adw.Dialog):
             dark=self.variant.get_active(),
             secondary=(self.rows["secondary"].value
                        if self.use_secondary.get_active() else None))
-        theme["wallpaper_style"] = wallpaper.STYLES[self.style.get_selected()]
+        theme["wallpaper_style"] = self.styles[self.style.get_selected()]
         if self.current_start == "picture" and self.picture_path:
             theme["wallpaper"] = self.picture_path
         return theme

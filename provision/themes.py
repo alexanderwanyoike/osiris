@@ -134,6 +134,15 @@ def main() -> None:
     n = copy_tree(src_themes, THEMES_DIR, (".json", ".py"))
     print(f"  {n} files -> {THEMES_DIR}")
 
+    # The moving wallpapers, one folder each; see osiris/themes/wallpapers.py.
+    packages = os.path.join(src_themes, "wallpapers")
+    target = os.path.join(THEMES_DIR, "wallpapers")
+    if os.path.isdir(target):
+        shutil.rmtree(target)
+    shutil.copytree(packages, target,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    print(f"  wallpaper packages -> {target}")
+
     previews = os.path.join(src_themes, "previews")
     if os.path.isdir(previews):
         n = copy_tree(previews, f"{THEMES_DIR}/previews", (".png",))

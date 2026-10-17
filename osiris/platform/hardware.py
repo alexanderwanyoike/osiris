@@ -21,7 +21,7 @@ from osiris.model.hardware import (
     GpuVendor,
     Hardware,
 )
-from osiris.platform.process import CommandRunner
+from osiris.platform.process import CommandError, CommandRunner
 
 #: `lspci -mn` writes one quoted field per column; the two we want are the
 #: class and the vendor:device pair, in hex without the 0x.
@@ -137,3 +137,30 @@ class SystemProbe:
         return (self._root / "sys/class/bluetooth").is_dir() and any(
             (self._root / "sys/class/bluetooth").iterdir()
         )
+
+
+#: Mesa's software renderers, for a driver that does not answer
+#: GLX_MESA_query_renderer and so never says "Accelerated" either way.
+_SOFTWARE = ("llvmpipe", "softpipe", "swrast", "software rasterizer")
+
+
+def rendering_accelerated(runner: CommandRunner) -> bool:
+    """Whether a GPU draws the desktop, as glxinfo reports it.
+
+    Muffin counts a software renderer as accelerated, so Cinnamon cannot be
+    asked. Mesa states it outright; NVIDIA's own driver does not, and is
+    judged by its renderer's name. With no answer at all a GPU is assumed:
+    the drift extension's own cost check is the backstop.
+    """
+    try:
+        output = runner.run("glxinfo", "-B", quiet=True).stdout
+    except OSError, CommandError:
+        return True
+    renderer = ""
+    for line in output.splitlines():
+        key, _, value = line.strip().partition(":")
+        if key == "Accelerated":
+            return value.strip() == "yes"
+        if key == "OpenGL renderer string":
+            renderer = value.lower()
+    return not any(name in renderer for name in _SOFTWARE)

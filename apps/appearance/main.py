@@ -218,6 +218,24 @@ class Window(Adw.ApplicationWindow):
     def _drift_toggled(self, button) -> None:
         drift.set_enabled(button.get_active())
 
+    def _explain_drift(self) -> bool:
+        """Say why the wallpaper is not moving, once per reason.
+
+        Asked every few seconds: drift.py checks a shader after a theme is
+        applied, and the extension finds out about the GPU while it draws.
+        """
+        problem = drift.problem() if drift.enabled() else None
+        self.drift.set_tooltip_text(problem or "Let generated wallpapers move")
+        if problem:
+            self.drift.add_css_class("warning")
+        else:
+            self.drift.remove_css_class("warning")
+        if problem and problem != self.explained:
+            self.toasts.add_toast(Adw.Toast(
+                title=problem.splitlines()[0], timeout=8))
+        self.explained = problem
+        return GLib.SOURCE_CONTINUE
+
     def __init__(self, app):
         super().__init__(application=app, title="Appearance")
         self.set_default_size(1080, 760)
@@ -235,9 +253,10 @@ class Window(Adw.ApplicationWindow):
         header.pack_start(new_button)
         self.drift = Gtk.ToggleButton(
             label="Drift", active=drift.enabled(),
-            tooltip_text="Let generated wallpapers drift slowly")
+            tooltip_text="Let generated wallpapers move")
         self.drift.connect("toggled", self._drift_toggled)
         header.pack_end(self.drift)
+        self.explained: str | None = None
         search_button = Gtk.ToggleButton(icon_name="system-search-symbolic",
                                          tooltip_text="Search themes")
         header.pack_end(search_button)
@@ -307,6 +326,8 @@ class Window(Adw.ApplicationWindow):
         toolbar.set_content(self.toasts)
         self.set_content(toolbar)
         self.reload()
+        self._explain_drift()
+        GLib.timeout_add_seconds(5, self._explain_drift)
 
     def _filter_toggled(self, chip, chosen: Filter) -> None:
         if chip.get_active():

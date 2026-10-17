@@ -67,12 +67,14 @@ APPLICATIONS = (
 # What osiris-setup, Appearance and the theme switcher run on. Pillow and
 # numpy render theme previews and wallpapers, including for themes made on the
 # machine, so they are needed at runtime and not only at build time. pycairo is
-# what the GTK apps draw with; python-gobject does not pull it in. grub supplies
-# grub-mkfont and grub-mkconfig for the boot menu theme, and os-prober lets that
-# menu list the other systems on a dual-boot machine.
+# what the GTK apps draw with; python-gobject does not pull it in. glslang
+# checks a wallpaper package's shader before the desktop compiles it, and
+# mesa-utils' glxinfo says whether a GPU is there to draw it at all. grub
+# supplies grub-mkfont and grub-mkconfig for the boot menu theme, and os-prober
+# lets that menu list the other systems on a dual-boot machine.
 RUNTIME = (
     "python", "python-gobject", "gtk4", "libadwaita",
-    "python-pillow", "python-numpy", "python-cairo",
+    "python-pillow", "python-numpy", "python-cairo", "glslang", "mesa-utils",
     "dconf", "glib2",
     "grub", "os-prober", "plymouth", "mkinitcpio",
 )  # fmt: skip

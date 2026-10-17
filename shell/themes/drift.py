@@ -3,13 +3,13 @@
     python3 shell/themes/drift.py              # runs for the session
     python3 shell/themes/drift.py --once       # publish once and exit
 
-Started at login by /etc/xdg/autostart/osiris-drift.desktop. The drift@osiris
-Cinnamon extension draws a DRIFTING style live on the GPU, every frame, so the
-wallpaper genuinely moves rather than dissolving between stills. What it needs
-from here is what only the Python side knows: the theme's tones and the
-style's composition, drawn from the same generator as the still wallpaper
-(wallpaper.tones, wallpaper.wave_shape), plus the Osiris mark as an overlay.
-These go in STATE; the extension follows that file.
+Started at login by /etc/xdg/autostart/osiris-drift.desktop. When the active
+theme's style is a wallpaper package (osiris/themes/wallpapers.py), the
+drift@osiris Cinnamon extension draws its shader live on the GPU, every frame,
+so the wallpaper genuinely moves. What it needs from here goes in STATE: the
+theme's colours, whatever the package's still.py hands its shader, the Osiris
+mark as an overlay, and - if the shader would not compile or still.py fails -
+the problem instead, so the still wallpaper stays and Appearance can say why.
 
 Off when ~/.config/osiris/drift says "off"; the extension reads that itself,
 so switching it off is immediate.
@@ -31,23 +31,24 @@ import engine  # noqa: E402
 import wallpaper  # noqa: E402
 from paths import home  # noqa: E402
 
-# Seconds for a full turn of each style. Calm, but always visibly moving: the
-# wave's faster ribbons turn two and three times per loop, so it can take
-# longest; glows and cells move one turn per loop, so they need less.
-LOOPS = {"wave": 90, "aurora": 60, "cells": 60, "dots": 120, "ridges": 120}
+# wallpaper has put the osiris package on sys.path.
+from osiris.platform.hardware import rendering_accelerated  # noqa: E402
+from osiris.platform.process import SubprocessRunner  # noqa: E402
+from osiris.themes import wallpapers as packages  # noqa: E402
+
 POLL = 2
-# Points round the loop at which a noise style's range is measured; the
+# Points round the loop at which a package's ranges() are measured; the
 # extension interpolates between them.
 RANGE_SAMPLES = 48
 
 PREFERENCE = os.path.join(home(), ".config", "osiris", "drift")
 CACHE = os.path.join(home(), ".cache", "osiris", "drift")
 STATE = os.path.join(CACHE, "current.json")
-
-# The styles the extension can draw live; the shader in drift@osiris has each.
-# Others stay still: blending between pre-rendered stills was tried and reads
-# as a slideshow, not as movement.
-DRIFTING = tuple(LOOPS)
+# Written by the extension when drawing live costs more than the machine has.
+UNSUPPORTED = os.path.join(CACHE, "unsupported")
+NO_GPU = "Moving wallpapers need a graphics card; showing the still one instead."
+PRELUDE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       "wallpapers", "prelude.glsl")
 
 FALLBACK_SIZE = (1920, 1080)
 
@@ -73,8 +74,28 @@ def style_of(theme: dict) -> str | None:
     return theme.get("wallpaper_style") or wallpaper.style_for(theme["name"])
 
 
+def package(theme: dict) -> packages.Wallpaper | None:
+    """The wallpaper package the theme's style names, if it is one."""
+    found, _ = packages.discover(wallpaper.PACKAGE_DIRS)
+    return found.get(style_of(theme) or "")
+
+
 def drifts(theme: dict) -> bool:
-    return style_of(theme) in DRIFTING
+    return package(theme) is not None
+
+
+def problem() -> str | None:
+    """Why the wallpaper is not moving, when something went wrong."""
+    try:
+        with open(UNSUPPORTED) as fh:
+            return fh.read().strip() or None
+    except OSError:
+        pass
+    try:
+        with open(STATE) as fh:
+            return json.load(fh).get("problem")
+    except (OSError, ValueError):
+        return None
 
 
 def screen_size() -> tuple[int, int]:
@@ -107,6 +128,7 @@ def logo(theme: dict, size: tuple[int, int]) -> str | None:
     ink = wallpaper.tones(theme)["ink"]
     digest = hashlib.sha1(json.dumps([list(ink), list(size)]).encode())
     path = os.path.join(CACHE, f"logo-{digest.hexdigest()[:12]}.png")
+    os.makedirs(CACHE, exist_ok=True)
     if not os.path.exists(path):
         rgba = np.zeros((size[1], size[0], 4), dtype=np.uint8)
         rgba[..., :3] = (ink * 255).astype(np.uint8)
@@ -124,83 +146,55 @@ def floats(values) -> list[float]:
     return [float(v) for v in np.ravel(values)]
 
 
-def lattices(found: list) -> tuple[list[float], list[float]]:
-    """Every octave's lattice, and every partner, each run end to end."""
-    return (floats(np.concatenate([a.ravel() for a, _ in found])),
-            floats(np.concatenate([b.ravel() for _, b in found])))
-
-
-def turns() -> list[float]:
-    return [i / RANGE_SAMPLES * 2 * math.pi for i in range(RANGE_SAMPLES)]
-
-
-def composition(theme: dict, style: str,
-                size: tuple[int, int]) -> tuple[dict, list | None]:
-    """The style's uniforms, and its range at RANGE_SAMPLES points if noise.
-
-    Drawn from the same generators, in the same order, as the style's renderer
-    in wallpaper.py, so the live wallpaper is the still one set moving.
-    """
-    rng = wallpaper._rng(theme)
-    drift = wallpaper._rng(theme, "drift")
-    if style == "wave":
-        tilt, offsets = wallpaper.wave_shape(rng)
-        return {"u_tilt": [1, [float(tilt)]],
-                "u_offsets": [1, floats(offsets)]}, None
-    if style == "aurora":
-        glows = wallpaper.aurora_shape(rng, drift=drift)
-        return {"u_glow_a": [4, floats([[g["angle"], g["turn"], g["fx"], g["fy"]]
-                                        for g in glows])],
-                "u_glow_b": [4, floats([[g["rx"], g["ry"], 0, 0]
-                                        for g in glows])]}, None
-    if style == "cells":
-        sites = wallpaper.cells_shape(rng, size[0] / size[1], drift=drift)
-        packed = np.stack([sites["x"], sites["y"], sites["turn"],
-                           sites["levels"]], axis=1)
-        return {"u_sites": [4, floats(packed)],
-                "u_cells": [2, [float(len(packed)), float(sites["rows"])]]}, None
-    if style == "dots":
-        found = wallpaper.fbm_lattices(rng, 2, 3, drift)
-        lattice, partner = lattices(found)
-        small = (size[1] // 4, size[0] // 4)
-        ranges = [[float(f.min()), float(f.max())] for f in (
-            wallpaper.fbm_raw(small, found, phase=turn) for turn in turns())]
-        return {"u_lat": [4, lattice], "u_par": [4, partner]}, ranges
-    # ridges: fbm over (count, width), so each ridge is one row of it. The
-    # rows are interpolated here, once; the shader only interpolates along x.
-    count = 14
-    found = wallpaper.fbm_lattices(rng, 3, 4, drift)
-    rows = [(wallpaper._smooth(a, (count, a.shape[1])),
-             wallpaper._smooth(b, (count, b.shape[1]))) for a, b in found]
-    lattice, partner = lattices(rows)
-    ranges = []
-    for turn in turns():
-        raw = wallpaper.fbm_raw((count, 640), found, phase=turn)
-        ranges.append(floats(np.stack([raw.min(axis=1), raw.max(axis=1)],
-                                      axis=1)))
-    return {"u_rl": [4, lattice], "u_rp": [4, partner]}, ranges
-
-
-def state(theme: dict, size: tuple[int, int]) -> dict:
+def palette(theme: dict) -> dict:
+    """The theme as every shader sees it; prelude.glsl declares these."""
     tones = wallpaper.tones(theme)
-    style = style_of(theme)
-    uniforms, ranges = composition(theme, style, size)
-    return {
-        "theme": theme["name"],
-        "style": style,
-        "loop": LOOPS[style],
-        "uniforms": {
-            "u_base": [3, floats(tones["base"])],
-            "u_shape": [3, floats(tones["shape"])],
-            "u_line": [3, floats(tones["line"])],
-            "u_line_alpha": [1, [float(tones["line_alpha"])]],
-            "u_reach": [1, [float(wallpaper.QUIET_REACH.get(
-                style, wallpaper.QUIET_RADIUS))]],
-            **uniforms,
-        },
-        "ranges": ranges,
-        "logo": logo(theme, size),
-    }
+    colours = theme["colors"]
+    uniforms = {f"u_{key}": [3, floats(tones[key])]
+                for key in ("base", "shape", "line", "ink")}
+    for key in ("background", "surface", "foreground", "accent", "accentMuted",
+                "success", "warning", "danger"):
+        name = "u_" + "".join("_" + c.lower() if c.isupper() else c for c in key)
+        uniforms[name] = [3, floats(wallpaper.to_rgb(colours[key]))]
+    uniforms["u_line_alpha"] = [1, [float(tones["line_alpha"])]]
+    uniforms["u_dark"] = [1, [1.0 if theme.get("dark", True) else 0.0]]
+    return uniforms
+
+
+def stamp(found: packages.Wallpaper) -> float:
+    """When the package last changed; an agent may be editing it as it shows."""
+    return max(p.stat().st_mtime for p in found.directory.iterdir() if p.is_file())
+
+
+def state(theme: dict, size: tuple[int, int], accelerated: bool = True) -> dict:
+    found = package(theme)
+    assert found is not None
+    current = {"theme": theme["name"], "style": found.name, "loop": found.loop,
+               "stamp": stamp(found),
+               "prelude": PRELUDE, "shader": str(found.shader),
+               "uniforms": palette(theme), "ranges": None,
+               "logo": logo(theme, size), "problem": None}
+    if not accelerated:
+        current["problem"] = NO_GPU
+        return current
+    try:
+        with open(PRELUDE) as fh:
+            prelude = fh.read()
+        current["problem"] = packages.check(
+            found, prelude, SubprocessRunner(sink=lambda line: None))
+        if current["problem"] is None:
+            # A package's own code: it may be one an agent has just written,
+            # so whatever it raises is reported rather than fatal.
+            module = wallpaper.still_module(found)
+            if hasattr(module, "uniforms"):
+                current["uniforms"].update(module.uniforms(theme, size))
+            if hasattr(module, "ranges"):
+                phases = [i / RANGE_SAMPLES * 2 * math.pi
+                          for i in range(RANGE_SAMPLES)]
+                current["ranges"] = module.ranges(theme, size, phases)
+    except Exception as error:                          # noqa: BLE001
+        current["problem"] = f"{found.still.name}: {error}"
+    return current
 
 
 def publish(current: dict) -> None:
@@ -238,14 +232,19 @@ def main() -> None:
         if os.path.isdir(os.path.join(CACHE, name)):
             shutil.rmtree(os.path.join(CACHE, name), ignore_errors=True)
     size = screen_size()
-    last: tuple[dict | None, dict | None] = (None, None)
+    # Asked once a session: drawing on the CPU every frame costs more than a
+    # moving wallpaper is worth, so such a machine keeps the still one.
+    accelerated = rendering_accelerated(SubprocessRunner(sink=lambda line: None))
+    last: tuple[object, dict | None] = (None, None)
     while True:
         try:
             theme = wanted()
-            # Worked out again only when the theme changes; the noise styles'
-            # ranges take a moment.
-            if theme is not None and theme != last[0]:
-                last = (theme, state(theme, size))
+            # Worked out again only when the theme or its package changes; a
+            # package's ranges can take a moment.
+            found = package(theme) if theme is not None else None
+            key = (theme, stamp(found)) if found is not None else None
+            if theme is not None and key != last[0]:
+                last = (key, state(theme, size, accelerated))
                 publish(last[1])
         except Exception as error:                      # noqa: BLE001
             print(f"osiris-drift: {error}", file=sys.stderr)
