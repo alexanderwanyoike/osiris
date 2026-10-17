@@ -60,6 +60,12 @@ The ISO boots UEFI, starts X with no display manager, runs the installer, and
 installs a system that boots to a complete Osiris desktop: branded greeter,
 top panel, Plank dock, generated wallpaper with the mark.
 
+Run again on 2026-10-17, from `dev`, through archinstall (UEFI, erase disk,
+ext4): the install took about three minutes, and the installed system has
+Plank Reloaded, both Cinnamon extensions, Super+Space, Super+T and Super+Enter
+working, the medium's repository removed from pacman.conf, no failed units, and
+a theme switch that retints everything, open terminal included.
+
 Seven defects were found by actually doing it, all fixed:
 
 1. **`systemd-firstboot` took tty1** and asked for a timezone before the
