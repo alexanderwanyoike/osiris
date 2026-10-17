@@ -62,6 +62,12 @@ def test_the_dock_is_plank_reloaded() -> None:
     assert "plank" not in names
 
 
+def test_the_harness_engine_comes_from_arch() -> None:
+    """The Harness rents opencode (ADR 0015), which Arch packages in extra."""
+    assert "opencode" in package.depends()
+    assert "opencode" not in package.BUNDLED
+
+
 def test_every_bundled_package_is_built_and_depended_on() -> None:
     assert package.BUNDLED
     for name in package.BUNDLED:
