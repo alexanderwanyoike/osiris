@@ -135,7 +135,9 @@ def _smooth(lattice: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
 
 
 def fbm(shape: tuple[int, int], rng: np.random.Generator,
-        cells: int = 4, octaves: int = 5, gain: float = 0.5) -> np.ndarray:
+        cells: int = 4, octaves: int = 5, gain: float = 0.5,
+        phase: float = 0.0,
+        drift: np.random.Generator | None = None) -> np.ndarray:
     """Fractional Brownian motion: octaves of value noise, each finer and fainter.
 
     Normalised to [0, 1] afterwards so downstream thresholds are meaningful
@@ -144,7 +146,15 @@ def fbm(shape: tuple[int, int], rng: np.random.Generator,
     total = np.zeros(shape, dtype=np.float32)
     amplitude, size = 1.0, cells
     for _ in range(octaves):
-        total += amplitude * _smooth(rng.random((size, max(2, size // 2))), shape)
+        lattice = rng.random((size, max(2, size // 2)))
+        if drift is not None:
+            # Turning between two fields on a circle drifts the noise and comes
+            # back round to where it started. The partner comes from its own
+            # generator, so rng's draws - and phase 0 - are what they were.
+            partner = drift.random(lattice.shape)
+            if phase:
+                lattice = lattice * np.cos(phase) + partner * np.sin(phase)
+        total += amplitude * _smooth(lattice, shape)
         amplitude *= gain
         size *= 2
     total -= total.min()
@@ -182,18 +192,20 @@ def _edges(index: np.ndarray) -> np.ndarray:
 # shape, line is a 0-1 field of accent line work. Both are pre-attenuated by
 # the quiet mask by the caller.
 
-def contour(shape, rng, bands: int = 11):
+def contour(shape, rng, bands: int = 11, phase: float = 0.0,
+            drift=None):
     """Topographic iso-bands through a noise field.
 
     The most forgiving of the three: any field produces bands that nest, so
     there is no seed that composes badly.
     """
-    field = fbm(shape, rng, cells=3, octaves=5)
+    field = fbm(shape, rng, cells=3, octaves=5, phase=phase, drift=drift)
     index = np.floor(field * bands)
     return index / (bands - 1), _edges(index)
 
 
-def arcs(shape, rng, grid: int = 9):
+def arcs(shape, rng, grid: int = 9, phase: float = 0.0,
+         drift=None):
     """Truchet tiling: quarter arcs joining the midpoints of each cell's edges.
 
     Each cell takes one of two orientations, and neighbouring arcs meet at cell
@@ -228,7 +240,8 @@ def arcs(shape, rng, grid: int = 9):
     return line * quiet[cx.astype(int), cy.astype(int)], line
 
 
-def strata(shape, rng, layers: int = 13):
+def strata(shape, rng, layers: int = 13, phase: float = 0.0,
+           drift=None):
     """Horizontal bands warped by a slow field: sedimentary rock, essentially.
 
     The warp amplitude is small relative to the band height, so the bands never
@@ -236,7 +249,7 @@ def strata(shape, rng, layers: int = 13):
     """
     height, width = shape
     y = np.mgrid[0:height, 0:width][0].astype(np.float32) / height
-    warp = fbm(shape, rng, cells=2, octaves=3) - 0.5
+    warp = fbm(shape, rng, cells=2, octaves=3, phase=phase, drift=drift) - 0.5
     index = np.floor((y + warp * 0.26) * layers)
     # 0.34, not 1.0: at full strength the alternating bands read as a flag
     # rather than as a background. The separation comes from the hairline
@@ -258,7 +271,8 @@ def _field(image: Image.Image) -> np.ndarray:
     return np.asarray(image, dtype=np.float32) / 255.0
 
 
-def aurora(shape, rng, glows: int = 4):
+def aurora(shape, rng, glows: int = 4, phase: float = 0.0,
+           drift=None):
     """A few large soft glows bleeding in from the edges, and no line work.
 
     Each glow is a wide elliptical gaussian centred off the canvas or near its
@@ -273,6 +287,11 @@ def aurora(shape, rng, glows: int = 4):
     for index in range(glows):
         # Around the edge: a point on a wide ellipse just outside the frame.
         angle = rng.random() * 2 * np.pi
+        if drift is not None:
+            # Each glow slides along the edge and back, from where it would
+            # be still.
+            turn = drift.random() * 2 * np.pi
+            angle += 0.45 * (np.sin(phase + turn) - np.sin(turn))
         cx = width / 2 + np.cos(angle) * width * (0.45 + rng.random() * 0.2)
         cy = height / 2 + np.sin(angle) * height * (0.45 + rng.random() * 0.2)
         rx = width * (0.25 + rng.random() * 0.2)
@@ -285,7 +304,8 @@ def aurora(shape, rng, glows: int = 4):
     return fill * 0.8, glow * 0.45
 
 
-def dots(shape, rng, spacing: int = 30):
+def dots(shape, rng, spacing: int = 30, phase: float = 0.0,
+         drift=None):
     """A sparse halftone: a grid of dots sized by a slow field.
 
     Most of the field sits below the threshold, so most dots are absent and the
@@ -293,7 +313,7 @@ def dots(shape, rng, spacing: int = 30):
     disappears up close.
     """
     height, width = shape
-    field = fbm(shape, rng, cells=2, octaves=3)
+    field = fbm(shape, rng, cells=2, octaves=3, phase=phase, drift=drift)
     step = height / spacing
     largest = step * 0.22
     lines, draw = _canvas(shape)
@@ -308,7 +328,8 @@ def dots(shape, rng, spacing: int = 30):
     return np.zeros(shape, dtype=np.float32), _field(lines)
 
 
-def cells(shape, rng, count: int = 16):
+def cells(shape, rng, count: int = 16, phase: float = 0.0,
+          drift=None):
     """Voronoi cells: stained glass with soft fills and lead between them.
 
     Sites are jittered off a grid rather than scattered, so no cell grows huge
@@ -320,6 +341,12 @@ def cells(shape, rng, count: int = 16):
     gx, gy = np.meshgrid(np.arange(columns), np.arange(rows))
     sx = (gx.ravel() + 0.15 + 0.7 * rng.random(gx.size)) * width / columns
     sy = (gy.ravel() + 0.15 + 0.7 * rng.random(gy.size)) * height / rows
+    if drift is not None:
+        # Each site wanders on a small circle, starting where it would be still.
+        turn = drift.random(sx.size) * 2 * np.pi
+        reach = 0.25 * height / rows
+        sx = sx + reach * (np.cos(phase + turn) - np.cos(turn))
+        sy = sy + reach * (np.sin(phase + turn) - np.sin(turn))
     y, x = np.mgrid[0:height, 0:width].astype(np.float32)
     index = np.zeros(shape, dtype=np.int32)
     nearest = np.full(shape, np.inf, dtype=np.float32)
@@ -332,7 +359,8 @@ def cells(shape, rng, count: int = 16):
     return levels[index].astype(np.float32), _edges(index)
 
 
-def bubbles(shape, rng, attempts: int = 500):
+def bubbles(shape, rng, attempts: int = 500, phase: float = 0.0,
+            drift=None):
     """Circle packing: circles of many sizes that never touch.
 
     Placed largest first, each tried at random positions until it fits, so the
@@ -359,7 +387,8 @@ def bubbles(shape, rng, attempts: int = 500):
     return _field(tone) * 0.3, _field(lines)
 
 
-def ridges(shape, rng, count: int = 14):
+def ridges(shape, rng, count: int = 14, phase: float = 0.0,
+           drift=None):
     """Stacked ridgelines lifted by noise, each hiding the ones behind it.
 
     Drawn back to front, every ridge's silhouette is filled in the base colour
@@ -367,7 +396,8 @@ def ridges(shape, rng, count: int = 14):
     turns a stack of wiggly lines into a landscape.
     """
     height, width = shape
-    peaks = fbm((count, width), rng, cells=3, octaves=4)
+    peaks = fbm((count, width), rng, cells=3, octaves=4, phase=phase,
+                drift=drift)
     columns = np.arange(width, dtype=np.float32)
     lines, draw_lines = _canvas(shape)
     tone, draw_tone = _canvas(shape)
@@ -391,7 +421,8 @@ def ridges(shape, rng, count: int = 14):
     return _field(tone), _field(lines)
 
 
-def facets(shape, rng, grid: int = 6):
+def facets(shape, rng, grid: int = 6, phase: float = 0.0,
+           drift=None):
     """A low-poly mesh: jittered triangles shaded by a slow field.
 
     Each triangle takes the field's value at its centre, quantised to a few
@@ -399,7 +430,7 @@ def facets(shape, rng, grid: int = 6):
     """
     height, width = shape
     columns = int(grid * width / height) + 1
-    shade = fbm(shape, rng, cells=2, octaves=3)
+    shade = fbm(shape, rng, cells=2, octaves=3, phase=phase, drift=drift)
     px = (np.arange(columns + 1)[None, :] / columns * width
           + (rng.random((grid + 1, columns + 1)) - 0.5) * width / columns * 0.7)
     py = (np.arange(grid + 1)[:, None] / grid * height
@@ -449,7 +480,7 @@ def style_for(name: str) -> str:
     return FALLBACK_STYLES[zlib.crc32(name.encode()) % len(FALLBACK_STYLES)]
 
 
-def _rng(theme: dict) -> np.random.Generator:
+def _rng(theme: dict, purpose: str = "") -> np.random.Generator:
     """The theme's composition: the same for the same name and variation.
 
     Variation 0 keeps the name alone as the seed, so every wallpaper rendered
@@ -457,6 +488,8 @@ def _rng(theme: dict) -> np.random.Generator:
     """
     variation = theme.get("wallpaper_variation", 0)
     key = theme["name"] if not variation else f"{theme['name']}:{variation}"
+    if purpose:
+        key = f"{key}:{purpose}"
     return np.random.default_rng(zlib.crc32(key.encode()))
 
 
@@ -477,8 +510,13 @@ def logo_mask(size: tuple[int, int]) -> np.ndarray | None:
 
 
 def compose(theme: dict, size: tuple[int, int] = (WIDTH, HEIGHT),
-            style: str | None = None, logo: bool = True) -> Image.Image:
-    """Render the wallpaper for a theme as a Pillow image."""
+            style: str | None = None, logo: bool = True,
+            phase: float | None = None) -> Image.Image:
+    """Render the wallpaper for a theme as a Pillow image.
+
+    `phase`, in radians, is how far a drifting wallpaper has turned (see
+    drift.py); a full turn comes back to the start. None is the still wallpaper.
+    """
     width, height = size
     shape = (height, width)
     palette = tones(theme)
@@ -488,7 +526,11 @@ def compose(theme: dict, size: tuple[int, int] = (WIDTH, HEIGHT),
                          f"{', '.join(STYLES)}")
 
     rng = _rng(theme)
-    fill, line = RENDERERS[style](shape, rng)
+    if phase is None:
+        fill, line = RENDERERS[style](shape, rng)
+    else:
+        fill, line = RENDERERS[style](shape, rng, phase=phase,
+                                      drift=_rng(theme, "drift"))
 
     mask = quiet_mask(shape)
     fill *= mask
