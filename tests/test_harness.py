@@ -101,8 +101,9 @@ def test_what_is_sent_is_logged_with_the_time() -> None:
 
 def test_an_answer_is_logged_with_the_model_that_gave_it() -> None:
     subject, _, files = harness()
+    subject.ask("hello")
     subject.handle(Answered("ses_1", GPT, TOKENS, cost=0.0))
-    (entry,) = entries(files)
+    entry = entries(files)[-1]
     assert entry["kind"] == "answered"
     assert entry["provider"] == "openai"
     assert entry["model"] == "gpt-5.5"
@@ -117,9 +118,10 @@ def test_an_answer_is_logged_with_the_model_that_gave_it() -> None:
 
 def test_every_tool_request_is_rejected_because_the_harness_only_talks() -> None:
     subject, engine, files = harness()
+    subject.ask("hello")
     subject.handle(ToolRequested("ses_1", "per_1", "shell", ("ls /etc",)))
     assert engine.replies == [("ses_1", "per_1", False, TALK_ONLY)]
-    (entry,) = entries(files)
+    entry = entries(files)[-1]
     assert entry["kind"] == "rejected"
     assert entry["action"] == "shell"
     assert entry["resources"] == ["ls /etc"]
@@ -127,8 +129,9 @@ def test_every_tool_request_is_rejected_because_the_harness_only_talks() -> None
 
 def test_every_tool_call_is_logged_even_one_that_never_asked() -> None:
     subject, _, files = harness()
+    subject.ask("hello")
     subject.handle(ToolCalled("ses_1", "call_1", {"query": "x"}, executed=True))
-    (entry,) = entries(files)
+    entry = entries(files)[-1]
     assert entry["kind"] == "tool"
     assert entry["input"] == {"query": "x"}
     assert entry["executed"] is True
@@ -136,17 +139,19 @@ def test_every_tool_call_is_logged_even_one_that_never_asked() -> None:
 
 def test_a_failure_is_logged_with_its_reason() -> None:
     subject, _, files = harness()
+    subject.ask("hello")
     subject.handle(Failed("ses_1", "no account connected"))
-    (entry,) = entries(files)
+    entry = entries(files)[-1]
     assert entry["kind"] == "failed"
     assert entry["message"] == "no account connected"
 
 
 def test_streamed_text_is_passed_on_but_not_logged_piece_by_piece() -> None:
     subject, _, files = harness()
+    subject.ask("hello")
     event = Text("ses_1", "hel")
     assert subject.handle(event) is event
-    assert not files.exists(HOME / LOG_FILE)
+    assert [entry["kind"] for entry in entries(files)] == ["sent"]
 
 
 def test_stopping_interrupts_the_conversation_and_is_logged() -> None:
@@ -162,3 +167,22 @@ def test_stopping_before_anything_was_asked_does_nothing() -> None:
     subject, engine, _ = harness()
     subject.stop()
     assert engine.stopped == []
+
+
+def test_another_programs_sessions_are_left_alone() -> None:
+    """opencode's event stream carries every session on the service, including
+    ones its own terminal app opened. The Harness must not answer or log them."""
+    subject, engine, files = harness()
+    subject.ask("hello")
+    elsewhere = ToolRequested("ses_tui", "per_9", "shell", ("make",))
+    assert subject.handle(elsewhere) is None
+    subject.handle(Answered("ses_tui", GPT, TOKENS, cost=0.0))
+    assert engine.replies == []
+    assert [entry["kind"] for entry in entries(files)] == ["sent"]
+
+
+def test_before_anything_is_asked_no_session_is_the_harnesss() -> None:
+    subject, engine, files = harness()
+    assert subject.handle(ToolRequested("ses_tui", "per_9", "shell", ())) is None
+    assert engine.replies == []
+    assert not files.exists(HOME / LOG_FILE)
