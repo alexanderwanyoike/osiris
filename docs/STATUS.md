@@ -141,8 +141,8 @@ desktop, and a second boot entry that starts the installer alone. See
 ## Known gaps
 
 - Four open theming decisions, listed at the end of [THEMING.md](THEMING.md).
-- The installer takes the whole disk: no encryption, no dual boot, no manual
-  partitioning.
+- The installer has no manual partitioning, and cannot encrypt an install
+  that shares another system's EFI partition (see INSTALLER.md).
 - `user-home.svg` and `user-desktop.svg` keep their stock colour, since Papirus
   ships no variants of them.
 - Phase 3 (polish) has not been started: packaging, a themed splash and

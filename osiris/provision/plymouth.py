@@ -41,6 +41,8 @@ logo.image = Image("logo.png");
 logo.sprite = Sprite(logo.image);
 logo.opacity_angle = 0;
 
+status = "normal";
+
 fun refresh_callback ()
   {
     logo.opacity_angle += ((2 * 3.14) / 60) * 0.5;
@@ -48,6 +50,10 @@ fun refresh_callback ()
     opacity = (Math.Cos(logo.opacity_angle) + 1) / 2;
     opacity *= 1 - min_opacity;
     opacity += min_opacity;
+    # Held steady while a passphrase is asked for: a pulsing logo above an
+    # input reads as "still busy", which is the opposite of the truth.
+    if (global.status == "password")
+      opacity = 1;
 
     logo.sprite.SetX(Window.GetX() + Window.GetWidth()  / 2
                      - logo.image.GetWidth()  / 2);
@@ -57,6 +63,64 @@ fun refresh_callback ()
   }
 
 Plymouth.SetRefreshFunction(refresh_callback);
+
+# Passphrase prompt, for an encrypted root.
+#
+# The initramfs `encrypt` hook asks through `plymouth ask-for-password`, and
+# Plymouth hands the question to the theme. A script theme that does not
+# register these two callbacks draws nothing, and the machine looks hung at
+# the logo while it waits for a passphrase nobody was asked for. Text only, so
+# the theme needs no images beyond the logo; the font is the one the plymouth
+# initramfs hook copies in.
+
+prompt.sprite = Sprite();
+bullets.sprite = Sprite();
+
+fun place_below_logo (sprite, image, gap)
+  {
+    sprite.SetX(Window.GetX() + Window.GetWidth() / 2 - image.GetWidth() / 2);
+    sprite.SetY(Window.GetY() + Window.GetHeight() / 2
+                + logo.image.GetHeight() / 2 + gap);
+    sprite.SetZ(10000);
+  }
+
+fun display_password_callback (text, count)
+  {
+    global.status = "password";
+
+    if (!text)
+      text = "Passphrase";
+    prompt.image = Image.Text(text, 0.85, 0.85, 0.88);
+    prompt.sprite.SetImage(prompt.image);
+    place_below_logo(prompt.sprite, prompt.image, 48);
+    prompt.sprite.SetOpacity(1);
+
+    # One mark per character typed, never the characters themselves. ASCII
+    # on purpose: the initramfs text renderer drew U+2022 as an empty box.
+    dots = "";
+    for (index = 0; index < count; index++)
+      dots = dots + "* ";
+    if (count > 0)
+      {
+        bullets.image = Image.Text(dots, 0.85, 0.85, 0.88);
+        bullets.sprite.SetImage(bullets.image);
+        place_below_logo(bullets.sprite, bullets.image,
+                         48 + prompt.image.GetHeight() + 16);
+        bullets.sprite.SetOpacity(1);
+      }
+    else
+      bullets.sprite.SetOpacity(0);
+  }
+
+fun display_normal_callback ()
+  {
+    global.status = "normal";
+    prompt.sprite.SetOpacity(0);
+    bullets.sprite.SetOpacity(0);
+  }
+
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+Plymouth.SetDisplayNormalFunction(display_normal_callback);
 """
 
 _HOOK = re.compile(r"^HOOKS=.*\bplymouth\b", re.MULTILINE)

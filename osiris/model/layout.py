@@ -18,6 +18,13 @@ Installing alongside another system needs UEFI and a GPT disk: Osiris shares
 the existing EFI system partition rather than touching the other system's boot
 code, and a BIOS machine has none to share.
 
+Encryption needs the kernels outside the encrypted root. They are when Osiris
+has its own boot partition - erasing the disk, or free space on a disk with no
+EFI system partition yet - and are not when an existing one is shared, because
+a shared ESP holds only GRUB and the kernels stay in /boot on the root. GRUB
+would then have to unlock the root itself, which archinstall does not set up.
+So that combination is refused here rather than installed and left unbootable.
+
 Everything here is a description. Nothing opens a device.
 """
 
@@ -133,6 +140,8 @@ class Layout:
     filesystem: Filesystem = Filesystem.EXT4
     #: Which existing partition becomes the root, for EXISTING_PARTITION.
     root_partition: Partition | None = None
+    #: The root is encrypted with LUKS.
+    encrypted: bool = False
 
     @property
     def disk(self) -> Disk:
@@ -204,6 +213,8 @@ class Layout:
                 lines.append(f"reuse    existing {esp.path if esp else 'ESP'}")
         if self.filesystem is Filesystem.BTRFS:
             lines.append("         subvolumes @, @home, @log, @pkg")
+        if self.encrypted:
+            lines.append("         root encrypted with LUKS2")
         return lines
 
     @property
@@ -228,4 +239,9 @@ class Layout:
                 # Making one would mean repartitioning, which is the thing
                 # this mode exists to avoid.
                 problems.append("no EFI system partition on this disk to boot from")
+        if self.encrypted and self.reuses_esp:
+            problems.append(
+                "encryption needs a boot partition of Osiris's own, and this "
+                "disk's existing EFI system partition would be shared instead"
+            )
         return problems
