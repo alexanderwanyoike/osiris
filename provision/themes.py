@@ -8,6 +8,8 @@ Lays down:
     /usr/share/osiris/logo-mask.png  the mark, composited into wallpapers
     /usr/share/osiris/appearance/    the Appearance app
     /usr/bin/osiris-appearance       launcher
+    /usr/share/osiris/switcher/      the theme switcher (Super+T)
+    /usr/bin/osiris-switcher         launcher
     /usr/share/applications/         menu entry
     /usr/share/backgrounds/osiris/   generated wallpapers
 
@@ -26,11 +28,16 @@ from run import run  # noqa: E402
 SHARE = "/usr/share/osiris"
 THEMES_DIR = f"{SHARE}/themes"
 APP_DIR = f"{SHARE}/appearance"
+SWITCHER_DIR = f"{SHARE}/switcher"
 # The osiris package itself. Everything on the target that wants the tested
 # code imports it from here; shell/themes/*.py are shims that put this on
 # sys.path. Until the whole legacy tree has moved across, both are installed.
 LIB_DIR = f"{SHARE}/lib"
 WALLPAPERS = "/usr/share/backgrounds/osiris"
+# Cinnamon loads system-wide extensions from here; enabled in provision/cinnamon.py.
+TRANSITION = "transition@osiris"
+DRIFT_EXTENSION = "drift@osiris"
+EXTENSIONS_DIR = "/usr/share/cinnamon/extensions"
 
 LAUNCHER = """#!/usr/bin/env python3
 import runpy
@@ -40,6 +47,30 @@ sys.argv[0] = "osiris-appearance"
 runpy.run_path("/usr/share/osiris/appearance/main.py", run_name="__main__")
 """
 
+SWITCHER_LAUNCHER = """#!/usr/bin/env python3
+import runpy
+import sys
+
+sys.argv[0] = "osiris-switcher"
+runpy.run_path("/usr/share/osiris/switcher/main.py", run_name="__main__")
+"""
+
+# The switcher is resident, so Super+T only has to signal it. Started at login
+# to have its cards ready; D-Bus starts it on demand if it is not running.
+SWITCHER_AUTOSTART = """[Desktop Entry]
+Type=Application
+Name=Osiris theme switcher
+Comment=Keep the Super+T theme switcher ready
+Exec=/usr/bin/osiris-switcher --gapplication-service
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+"""
+
+SWITCHER_SERVICE = """[D-BUS Service]
+Name=dev.osiris.Switcher
+Exec=/usr/bin/osiris-switcher --gapplication-service
+"""
+
 
 # Applies the default theme on a user's first login; see engine.first_login.
 FIRST_LOGIN = """[Desktop Entry]
@@ -47,6 +78,16 @@ Type=Application
 Name=Osiris theme
 Comment=Apply the default Osiris theme on first login
 Exec=/usr/bin/python3 /usr/share/osiris/themes/engine.py --first-login
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+"""
+
+# Drifts the wallpaper for the session; see shell/themes/drift.py.
+DRIFT = """[Desktop Entry]
+Type=Application
+Name=Osiris wallpaper drift
+Comment=Let the wallpaper drift slowly
+Exec=/usr/bin/python3 /usr/share/osiris/themes/drift.py
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
 """
@@ -93,6 +134,15 @@ def main() -> None:
     n = copy_tree(src_themes, THEMES_DIR, (".json", ".py"))
     print(f"  {n} files -> {THEMES_DIR}")
 
+    # The moving wallpapers, one folder each; see osiris/themes/wallpapers.py.
+    packages = os.path.join(src_themes, "wallpapers")
+    target = os.path.join(THEMES_DIR, "wallpapers")
+    if os.path.isdir(target):
+        shutil.rmtree(target)
+    shutil.copytree(packages, target,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    print(f"  wallpaper packages -> {target}")
+
     previews = os.path.join(src_themes, "previews")
     if os.path.isdir(previews):
         n = copy_tree(previews, f"{THEMES_DIR}/previews", (".png",))
@@ -135,11 +185,40 @@ def main() -> None:
     run("update-desktop-database", "/usr/share/applications", check=False)
     print("  /usr/bin/osiris-appearance")
 
+    print("installing the theme switcher")
+    copy_tree(os.path.join(args.repo, "apps", "switcher"), SWITCHER_DIR,
+              (".py",))
+    with open("/usr/bin/osiris-switcher", "w") as fh:
+        fh.write(SWITCHER_LAUNCHER)
+    os.chmod("/usr/bin/osiris-switcher", 0o755)
+    os.makedirs("/usr/share/dbus-1/services", exist_ok=True)
+    with open("/usr/share/dbus-1/services/dev.osiris.Switcher.service",
+              "w") as fh:
+        fh.write(SWITCHER_SERVICE)
+    os.makedirs("/etc/xdg/autostart", exist_ok=True)
+    with open("/etc/xdg/autostart/osiris-switcher.desktop", "w") as fh:
+        fh.write(SWITCHER_AUTOSTART)
+    print("  /usr/bin/osiris-switcher")
+
+    print("installing the theme transition")
+    target = os.path.join(EXTENSIONS_DIR, TRANSITION)
+    n = copy_tree(os.path.join(src_themes, TRANSITION), target, (".js", ".json"))
+    print(f"  {n} files -> {target}")
+
     print("applying the default theme on first login")
     os.makedirs("/etc/xdg/autostart", exist_ok=True)
     with open("/etc/xdg/autostart/osiris-theme.desktop", "w") as fh:
         fh.write(FIRST_LOGIN)
     print("  /etc/xdg/autostart/osiris-theme.desktop")
+
+    print("drifting the wallpaper for each session")
+    with open("/etc/xdg/autostart/osiris-drift.desktop", "w") as fh:
+        fh.write(DRIFT)
+    print("  /etc/xdg/autostart/osiris-drift.desktop")
+    target = os.path.join(EXTENSIONS_DIR, DRIFT_EXTENSION)
+    n = copy_tree(os.path.join(src_themes, DRIFT_EXTENSION), target,
+                  (".js", ".json"))
+    print(f"  {n} files -> {target}")
 
     print("THEMES_INSTALLED")
 

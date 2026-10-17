@@ -1,0 +1,7 @@
+{
+    "uuid": "drift@osiris",
+    "name": "Osiris wallpaper drift",
+    "description": "Keeps a drifting wallpaper moving by blending its frames into one another.",
+    "url": "https://github.com/alexanderwanyoike/osiris",
+    "cinnamon-version": ["6.4", "6.6"]
+}

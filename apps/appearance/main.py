@@ -2,7 +2,10 @@
 """Osiris Appearance - pick a theme from live previews.
 
 GTK4 + libadwaita. Each theme is a card showing a rendered miniature of the
-desktop in that palette; clicking one applies it immediately.
+desktop in that palette; clicking one applies it immediately. With many themes
+the window stays navigable: search as you type, filter to dark, light or your
+own, star favourites, and themes are grouped by the colour family of their
+accent (osiris/themes/library.py).
 
 Run directly, or install the .desktop file alongside it.
 """
@@ -13,7 +16,9 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
+gi.require_version("GdkPixbuf", "2.0")
+from gi.repository import (  # noqa: E402
+    Adw, Gdk, GdkPixbuf, Gio, GLib, GObject, Gtk)
 
 # /usr/bin/osiris-appearance runs this through runpy, which does not put the
 # script's own directory on the path the way running it directly does.
@@ -30,20 +35,27 @@ for candidate in (
         sys.path.insert(0, candidate)
         break
 
+import drift  # noqa: E402
 import engine  # noqa: E402
 
 from creator import Creator  # noqa: E402
 
+# creator has put the osiris package on sys.path.
+from osiris.themes.library import Filter, arrange  # noqa: E402
+
+FILTERS = ((Filter.ALL, "All"), (Filter.DARK, "Dark"),
+           (Filter.LIGHT, "Light"), (Filter.MINE, "Mine"))
+
 CSS = b"""
 .theme-card {
     padding: 0;
-    border-radius: 12px;
+    border-radius: 14px;
     background: transparent;
     border: 2px solid transparent;
+    transition: background 120ms ease;
 }
-.theme-card:hover { background: alpha(currentColor, 0.06); }
+.theme-card:hover { background: alpha(currentColor, 0.05); }
 .theme-card.selected { border-color: @accent_color; }
-.preview { border-radius: 8px; }
 .theme-name { font-weight: 700; }
 .variant-badge {
     font-size: 0.78em;
@@ -51,30 +63,79 @@ CSS = b"""
     border-radius: 999px;
     background: alpha(currentColor, 0.12);
 }
-.card-menu {
+.card-menu, .card-star {
     opacity: 0;
-    min-width: 26px;
-    min-height: 26px;
+    min-width: 28px;
+    min-height: 28px;
     padding: 0;
+    border-radius: 999px;
     transition: opacity 120ms ease;
 }
+.card-star { background: alpha(black, 0.35); color: white; }
+.card-star.starred { opacity: 1; color: #f6c544; }
 overlay:hover .card-menu,
+overlay:hover .card-star,
 .card-menu:focus-within,
 .card-menu:checked { opacity: 1; }
+.section-title { font-weight: 800; font-size: 1.05em; }
+.section-count { opacity: 0.55; }
+.filters { margin: 6px 18px 0 18px; }
 """
 
 
-class ThemeCard(Gtk.Overlay):
-    """A clickable theme card with a menu button in its corner.
+class Preview(Gtk.DrawingArea):
+    """A theme's preview image, cropped to fill and rounded.
 
-    An Overlay wrapping a Button, rather than a Button containing both. A
-    GtkButton takes the pointer across its whole area, so a menu button nested
-    inside one is visible, highlights on hover, and never fires. Overlay
-    children sit above the main child and are offered input first, which gives
-    the card one large hit target and the menu its own small one.
+    A Gtk.Picture asks for its image's full size, so a grid of them lays out
+    two to a row whatever the window's width; this asks for a card's size and
+    draws the image scaled to cover whatever it is given.
     """
 
-    def __init__(self, theme: dict, on_pick):
+    RADIUS = 10
+
+    def __init__(self, path: str | None):
+        super().__init__(content_width=232, content_height=145)
+        self.image = None
+        if path and os.path.exists(path):
+            try:
+                self.image = GdkPixbuf.Pixbuf.new_from_file(path)
+            except GLib.Error:
+                self.image = None
+        self.set_draw_func(self._draw)
+
+    def _draw(self, _area, cr, width: int, height: int) -> None:
+        r = self.RADIUS
+        cr.new_sub_path()
+        cr.arc(width - r, r, r, -1.5708, 0)
+        cr.arc(width - r, height - r, r, 0, 1.5708)
+        cr.arc(r, height - r, r, 1.5708, 3.14159)
+        cr.arc(r, r, r, 3.14159, 4.71239)
+        cr.close_path()
+        cr.clip()
+        if self.image is None:
+            cr.set_source_rgba(0.5, 0.5, 0.5, 0.15)
+            cr.paint()
+            return
+        scale = max(width / self.image.get_width(),
+                    height / self.image.get_height())
+        cr.translate((width - self.image.get_width() * scale) / 2,
+                     (height - self.image.get_height() * scale) / 2)
+        cr.scale(scale, scale)
+        Gdk.cairo_set_source_pixbuf(cr, self.image, 0, 0)
+        cr.paint()
+
+
+class ThemeCard(Gtk.Overlay):
+    """A clickable theme card with a star and a menu button over it.
+
+    An Overlay wrapping a Button, rather than a Button containing the rest. A
+    GtkButton takes the pointer across its whole area, so a button nested
+    inside one is visible, highlights on hover, and never fires. Overlay
+    children sit above the main child and are offered input first, which gives
+    the card one large hit target and its small buttons their own.
+    """
+
+    def __init__(self, theme: dict, on_pick, starred: bool, on_star):
         super().__init__()
         self.theme = theme
 
@@ -84,28 +145,17 @@ class ThemeCard(Gtk.Overlay):
         self.button.connect("clicked", lambda _b: on_pick(theme))
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        box.set_margin_top(8)
-        box.set_margin_bottom(8)
-        box.set_margin_start(8)
-        box.set_margin_end(8)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(box, f"set_margin_{side}")(7)
 
-        preview = theme.get("preview")
-        if preview and os.path.exists(preview):
-            picture = Gtk.Picture.new_for_filename(preview)
-            picture.set_content_fit(Gtk.ContentFit.COVER)
-            picture.set_size_request(280, 175)
-            picture.add_css_class("preview")
-            box.append(picture)
-        else:
-            placeholder = Gtk.Box()
-            placeholder.set_size_request(280, 175)
-            box.append(placeholder)
+        box.append(Preview(theme.get("preview")))
 
         row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        name = Gtk.Label(label=theme["label"], xalign=0)
+        name = Gtk.Label(label=theme["label"], xalign=0,
+                         ellipsize=3)                 # Pango.EllipsizeMode.END
         name.add_css_class("theme-name")
+        name.set_hexpand(True)
         row.append(name)
-        row.append(Gtk.Box(hexpand=True))
         badge = Gtk.Label(label="Dark" if theme.get("dark", True) else "Light")
         badge.add_css_class("variant-badge")
         row.append(badge)
@@ -115,7 +165,24 @@ class ThemeCard(Gtk.Overlay):
 
         self.button.set_child(box)
         self.set_child(self.button)
+        self.add_overlay(self._star(theme, starred, on_star))
         self.add_overlay(self._menu(theme))
+
+    def _star(self, theme: dict, starred: bool, on_star) -> Gtk.ToggleButton:
+        star = Gtk.ToggleButton(active=starred,
+                                tooltip_text="Favourite")
+        star.set_icon_name("starred-symbolic" if starred
+                           else "non-starred-symbolic")
+        star.set_halign(Gtk.Align.END)
+        star.set_valign(Gtk.Align.START)
+        star.set_margin_top(14)
+        star.set_margin_end(14)
+        star.add_css_class("card-star")
+        if starred:
+            star.add_css_class("starred")
+        star.connect("toggled",
+                     lambda b: on_star(theme["name"], b.get_active()))
+        return star
 
     def _menu(self, theme: dict) -> Gtk.MenuButton:
         """Per-card actions.
@@ -148,10 +215,33 @@ class ThemeCard(Gtk.Overlay):
 
 
 class Window(Adw.ApplicationWindow):
+    def _drift_toggled(self, button) -> None:
+        drift.set_enabled(button.get_active())
+
+    def _explain_drift(self) -> bool:
+        """Say why the wallpaper is not moving, once per reason.
+
+        Asked every few seconds: drift.py checks a shader after a theme is
+        applied, and the extension finds out about the GPU while it draws.
+        """
+        problem = drift.problem() if drift.enabled() else None
+        self.drift.set_tooltip_text(problem or "Let generated wallpapers move")
+        if problem:
+            self.drift.add_css_class("warning")
+        else:
+            self.drift.remove_css_class("warning")
+        if problem and problem != self.explained:
+            self.toasts.add_toast(Adw.Toast(
+                title=problem.splitlines()[0], timeout=8))
+        self.explained = problem
+        return GLib.SOURCE_CONTINUE
+
     def __init__(self, app):
         super().__init__(application=app, title="Appearance")
-        self.set_default_size(1000, 720)
+        self.set_default_size(1080, 760)
         self.cards: list[ThemeCard] = []
+        self.themes: list[dict] = []
+        self.chosen = Filter.ALL
 
         toolbar = Adw.ToolbarView()
         header = Adw.HeaderBar()
@@ -161,7 +251,48 @@ class Window(Adw.ApplicationWindow):
                                 tooltip_text="New theme")
         new_button.connect("clicked", lambda _b: self.create())
         header.pack_start(new_button)
+        self.drift = Gtk.ToggleButton(
+            label="Drift", active=drift.enabled(),
+            tooltip_text="Let generated wallpapers move")
+        self.drift.connect("toggled", self._drift_toggled)
+        header.pack_end(self.drift)
+        self.explained: str | None = None
+        search_button = Gtk.ToggleButton(icon_name="system-search-symbolic",
+                                         tooltip_text="Search themes")
+        header.pack_end(search_button)
         toolbar.add_top_bar(header)
+
+        self.search = Gtk.SearchEntry(placeholder_text="Search themes")
+        self.search.connect("search-changed", lambda *_a: self.refresh())
+        search_bar = Gtk.SearchBar(child=Adw.Clamp(child=self.search,
+                                                   maximum_size=520))
+        search_bar.connect_entry(self.search)
+        # Typing anywhere in the window starts a search.
+        search_bar.set_key_capture_widget(self)
+        search_button.bind_property(
+            "active", search_bar, "search-mode-enabled",
+            GObject.BindingFlags.BIDIRECTIONAL)
+        toolbar.add_top_bar(search_bar)
+
+        filters = Gtk.Box(spacing=12)
+        filters.add_css_class("filters")
+        chips = Gtk.Box()
+        chips.add_css_class("linked")
+        first = None
+        for chosen, label in FILTERS:
+            chip = Gtk.ToggleButton(label=label, active=chosen is Filter.ALL)
+            if first is None:
+                first = chip
+            else:
+                chip.set_group(first)
+            chip.connect("toggled", self._filter_toggled, chosen)
+            chips.append(chip)
+        filters.append(chips)
+        filters.append(Gtk.Box(hexpand=True))
+        self.count = Gtk.Label()
+        self.count.add_css_class("dim-label")
+        filters.append(self.count)
+        toolbar.add_top_bar(filters)
 
         # One parameterised action per menu entry, with the theme name as the
         # target, rather than a closure per card: the cards are rebuilt on
@@ -175,46 +306,80 @@ class Window(Adw.ApplicationWindow):
             self.add_action(action)
 
         self.toasts = Adw.ToastOverlay()
-
-        self.flow = Gtk.FlowBox()
-        self.flow.set_valign(Gtk.Align.START)
-        self.flow.set_max_children_per_line(3)
-        self.flow.set_min_children_per_line(2)
-        self.flow.set_selection_mode(Gtk.SelectionMode.NONE)
-        self.flow.set_row_spacing(10)
-        self.flow.set_column_spacing(10)
-        self.flow.set_margin_top(18)
-        self.flow.set_margin_bottom(18)
-        self.flow.set_margin_start(18)
-        self.flow.set_margin_end(18)
-        self.flow.set_homogeneous(True)
-
+        self.sections = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
+                                spacing=26)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(self.sections, f"set_margin_{side}")(18)
+        self.empty = Adw.StatusPage(icon_name="system-search-symbolic",
+                                    title="No themes match",
+                                    description="Try another name or filter")
+        self.stack = Gtk.Stack()
         scroller = Gtk.ScrolledWindow()
         scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scroller.set_child(self.flow)
-        scroller.set_vexpand(True)
+        scroller.set_child(Adw.Clamp(child=self.sections, maximum_size=1280,
+                                     tightening_threshold=1000))
+        self.stack.add_named(scroller, "themes")
+        self.stack.add_named(self.empty, "empty")
+        self.stack.set_vexpand(True)
 
-        self.toasts.set_child(scroller)
+        self.toasts.set_child(self.stack)
         toolbar.set_content(self.toasts)
         self.set_content(toolbar)
         self.reload()
+        self._explain_drift()
+        GLib.timeout_add_seconds(5, self._explain_drift)
+
+    def _filter_toggled(self, chip, chosen: Filter) -> None:
+        if chip.get_active():
+            self.chosen = chosen
+            self.refresh()
+
+    def _starred(self, name: str, starred: bool) -> None:
+        engine.set_favourite(name, starred)
+        # Rebuilt after the click has finished: removing the card that is
+        # handling it, inside its own handler, is asking for trouble.
+        GLib.idle_add(lambda: self.refresh() and False)
 
     def reload(self) -> None:
-        """Rebuild the grid from what is on disk."""
-        while (child := self.flow.get_first_child()) is not None:
-            self.flow.remove(child)
-        self.cards = []
+        """Read the themes from disk, then show them."""
+        self.themes = engine.all_themes()
+        self.refresh()
 
+    def refresh(self) -> None:
+        """Show the themes matching the search and filter, in sections."""
+        while (child := self.sections.get_first_child()) is not None:
+            self.sections.remove(child)
+        self.cards = []
         active = engine.current()
-        themes = engine.all_themes()
-        if not themes:
-            self.flow.append(Gtk.Label(label="No themes found."))
-            return
-        for theme in themes:
-            card = ThemeCard(theme, self.pick)
-            card.set_selected(theme["name"] == active)
-            self.cards.append(card)
-            self.flow.append(card)
+        starred = engine.favourites()
+        mine = {t["name"] for t in self.themes if engine.is_user_theme(t["name"])}
+        arranged = arrange(self.themes, query=self.search.get_text(),
+                           chosen=self.chosen, favourites=starred, mine=mine)
+        shown = sum(len(members) for _title, members in arranged)
+        self.count.set_label(f"{shown} theme{'s' if shown != 1 else ''}")
+        self.stack.set_visible_child_name("themes" if arranged else "empty")
+        for title, members in arranged:
+            section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+            heading = Gtk.Box(spacing=8)
+            label = Gtk.Label(label=title, xalign=0)
+            label.add_css_class("section-title")
+            heading.append(label)
+            count = Gtk.Label(label=str(len(members)))
+            count.add_css_class("section-count")
+            heading.append(count)
+            section.append(heading)
+            flow = Gtk.FlowBox(valign=Gtk.Align.START, homogeneous=True,
+                               max_children_per_line=5, min_children_per_line=2,
+                               selection_mode=Gtk.SelectionMode.NONE,
+                               row_spacing=8, column_spacing=8)
+            for theme in members:
+                card = ThemeCard(theme, self.pick, theme["name"] in starred,
+                                 self._starred)
+                card.set_selected(theme["name"] == active)
+                self.cards.append(card)
+                flow.append(card)
+            section.append(flow)
+            self.sections.append(section)
 
     # --------------------------------------------------------------- actions
 

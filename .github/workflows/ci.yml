@@ -5,9 +5,9 @@ name: CI
 # is run from a development machine instead.
 on:
   push:
-    branches: [main, "refactor/**", "feature/**", "fix/**"]
+    branches: [main, dev, "refactor/**", "feature/**", "fix/**", "docs/**"]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 jobs:
   check:

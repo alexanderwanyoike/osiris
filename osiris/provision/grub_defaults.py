@@ -13,6 +13,8 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Mapping
 
+from osiris.provision.plymouth import QUIET
+
 #: Where archinstall may have put GRUB's files. /boot/grub when Osiris has the
 #: disk to itself; /efi/grub when it shares another system's EFI system
 #: partition, which is mounted at /efi so the kernels stay off it.
@@ -36,11 +38,8 @@ SETTINGS: Mapping[str, str] = {
     "GRUB_TIMEOUT": "3",
     "GRUB_TIMEOUT_STYLE": "menu",
     "GRUB_DISTRIBUTOR": '"Osiris"',
-    # Kept quiet so Plymouth has the screen. archinstall adds `quiet splash`
-    # to GRUB_CMDLINE_LINUX; this is the rest.
-    "GRUB_CMDLINE_LINUX_DEFAULT": (
-        '"loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0"'
-    ),
+    # archinstall adds `quiet splash` to GRUB_CMDLINE_LINUX; this is the rest.
+    "GRUB_CMDLINE_LINUX_DEFAULT": f'"{QUIET}"',
     # The theme needs a graphical mode. `auto` takes the firmware's preferred
     # resolution; `keep` holds it through the handover, so Plymouth does not
     # bring the mode up again and flicker.

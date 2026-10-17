@@ -34,13 +34,30 @@ Needs numpy and Pillow, both of which are installed on the target, so this also
 runs for user-authored themes on a live system.
 """
 import argparse
+import importlib.util
 import json
 import os
 import sys
 import zlib
+from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import home  # noqa: E402
+
+# The package is installed beside this file on a target, and lives two
+# directories up in a checkout.
+for _candidate in (
+    "/usr/share/osiris/lib",
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+):
+    if os.path.isdir(os.path.join(_candidate, "osiris")):
+        sys.path.insert(0, _candidate)
+        break
+
+from osiris.themes import wallpapers as packages  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
@@ -55,11 +72,24 @@ MASK_PATHS = (
     "/usr/share/osiris/logo-mask.png",
 )
 
-STYLES = ("contour", "arcs", "strata")
+STYLES = ("contour", "arcs", "strata", "aurora", "dots", "cells", "bubbles",
+          "ridges", "facets", "wave")
+# What a theme naming no style falls back to, chosen by hashing its name. Fixed
+# at the original three: hashing over STYLES would move every such theme to a
+# different wallpaper whenever a style is added.
+FALLBACK_STYLES = ("contour", "arcs", "strata")
+
+# Moving wallpapers as packages (osiris/themes/wallpapers.py): the user's own
+# first, so one there replaces a shipped one of the same name.
+PACKAGE_DIRS = (Path(home()) / packages.USER,
+                Path(os.path.dirname(os.path.abspath(__file__))) / "wallpapers")
 
 LOGO_HEIGHT = 0.36       # of the image height
 LOGO_ALPHA = 0.30        # a watermark, not a sticker
 QUIET_RADIUS = 0.70      # of the image height; pattern fades inside this
+# The wave runs beneath the mark rather than around it, and the full radius
+# would put most of its length in the faded zone; this still clears the mark.
+QUIET_REACH = {"wave": 0.40}
 
 
 # --------------------------------------------------------------------------- #
@@ -129,24 +159,58 @@ def _smooth(lattice: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
     return np.asarray(resized, dtype=np.float32)
 
 
+def fbm_lattices(rng: np.random.Generator, cells: int, octaves: int,
+                 drift: np.random.Generator | None = None) -> list:
+    """Each octave's random lattice, and its drifting partner if any.
+
+    A lattice is `cells` rows doubling per octave, by half as many columns.
+    Drawn on their own so the drift extension, which draws these styles live
+    on the GPU, interpolates the same numbers as the still wallpaper.
+    """
+    lattices = []
+    size = cells
+    for _ in range(octaves):
+        lattice = rng.random((size, max(2, size // 2)))
+        # The partner comes from its own generator, so rng's draws - and
+        # phase 0 - are what they were before wallpapers drifted.
+        partner = drift.random(lattice.shape) if drift is not None else None
+        lattices.append((lattice, partner))
+        size *= 2
+    return lattices
+
+
+def fbm_raw(shape: tuple[int, int], lattices: list, gain: float = 0.5,
+            phase: float = 0.0) -> np.ndarray:
+    """The octaves summed, before normalising."""
+    total = np.zeros(shape, dtype=np.float32)
+    amplitude = 1.0
+    for lattice, partner in lattices:
+        if partner is not None and phase:
+            # Turning between two fields on a circle drifts the noise and
+            # comes back round to where it started.
+            lattice = lattice * np.cos(phase) + partner * np.sin(phase)
+        total += amplitude * _smooth(lattice, shape)
+        amplitude *= gain
+    return total
+
+
 def fbm(shape: tuple[int, int], rng: np.random.Generator,
-        cells: int = 4, octaves: int = 5, gain: float = 0.5) -> np.ndarray:
+        cells: int = 4, octaves: int = 5, gain: float = 0.5,
+        phase: float = 0.0,
+        drift: np.random.Generator | None = None) -> np.ndarray:
     """Fractional Brownian motion: octaves of value noise, each finer and fainter.
 
     Normalised to [0, 1] afterwards so downstream thresholds are meaningful
     whatever the octave count.
     """
-    total = np.zeros(shape, dtype=np.float32)
-    amplitude, size = 1.0, cells
-    for _ in range(octaves):
-        total += amplitude * _smooth(rng.random((size, max(2, size // 2))), shape)
-        amplitude *= gain
-        size *= 2
+    total = fbm_raw(shape, fbm_lattices(rng, cells, octaves, drift), gain,
+                    phase)
     total -= total.min()
     return total / max(total.max(), 1e-6)
 
 
-def quiet_mask(shape: tuple[int, int]) -> np.ndarray:
+def quiet_mask(shape: tuple[int, int],
+               reach: float = QUIET_RADIUS) -> np.ndarray:
     """1 at the edges, 0 in the middle: how much pattern a pixel may carry.
 
     Smoothstep rather than a linear ramp - a linear falloff leaves a visible
@@ -158,7 +222,7 @@ def quiet_mask(shape: tuple[int, int]) -> np.ndarray:
     # Cubed rather than a plain smoothstep: the falloff has to be wide and very
     # gradual, or the pattern dissolving into the centre reads as a smudge
     # behind the mark instead of as lighting.
-    t = np.clip(radius / QUIET_RADIUS, 0, 1)
+    t = np.clip(radius / reach, 0, 1)
     return (t * t * (3 - 2 * t)) ** 1.6
 
 
@@ -177,18 +241,20 @@ def _edges(index: np.ndarray) -> np.ndarray:
 # shape, line is a 0-1 field of accent line work. Both are pre-attenuated by
 # the quiet mask by the caller.
 
-def contour(shape, rng, bands: int = 11):
+def contour(shape, rng, bands: int = 11, phase: float = 0.0,
+            drift=None):
     """Topographic iso-bands through a noise field.
 
     The most forgiving of the three: any field produces bands that nest, so
     there is no seed that composes badly.
     """
-    field = fbm(shape, rng, cells=3, octaves=5)
+    field = fbm(shape, rng, cells=3, octaves=5, phase=phase, drift=drift)
     index = np.floor(field * bands)
     return index / (bands - 1), _edges(index)
 
 
-def arcs(shape, rng, grid: int = 9):
+def arcs(shape, rng, grid: int = 9, phase: float = 0.0,
+         drift=None):
     """Truchet tiling: quarter arcs joining the midpoints of each cell's edges.
 
     Each cell takes one of two orientations, and neighbouring arcs meet at cell
@@ -223,7 +289,8 @@ def arcs(shape, rng, grid: int = 9):
     return line * quiet[cx.astype(int), cy.astype(int)], line
 
 
-def strata(shape, rng, layers: int = 13):
+def strata(shape, rng, layers: int = 13, phase: float = 0.0,
+           drift=None):
     """Horizontal bands warped by a slow field: sedimentary rock, essentially.
 
     The warp amplitude is small relative to the band height, so the bands never
@@ -231,7 +298,7 @@ def strata(shape, rng, layers: int = 13):
     """
     height, width = shape
     y = np.mgrid[0:height, 0:width][0].astype(np.float32) / height
-    warp = fbm(shape, rng, cells=2, octaves=3) - 0.5
+    warp = fbm(shape, rng, cells=2, octaves=3, phase=phase, drift=drift) - 0.5
     index = np.floor((y + warp * 0.26) * layers)
     # 0.34, not 1.0: at full strength the alternating bands read as a flag
     # rather than as a background. The separation comes from the hairline
@@ -239,11 +306,309 @@ def strata(shape, rng, layers: int = 13):
     return (index % 2 == 0).astype(np.float32) * 0.34, _edges(index)
 
 
-RENDERERS = {"contour": contour, "arcs": arcs, "strata": strata}
+def _hairline(shape: tuple[int, int]) -> int:
+    """Line width in pixels: one at 720p, scaling with the image."""
+    return max(1, round(shape[0] / 720))
+
+
+def _canvas(shape: tuple[int, int]) -> tuple[Image.Image, ImageDraw.ImageDraw]:
+    image = Image.new("L", (shape[1], shape[0]), 0)
+    return image, ImageDraw.Draw(image)
+
+
+def _field(image: Image.Image) -> np.ndarray:
+    return np.asarray(image, dtype=np.float32) / 255.0
+
+
+def aurora(shape, rng, glows: int = 4, phase: float = 0.0,
+           drift=None):
+    """A few large soft glows bleeding in from the edges, and no line work.
+
+    Each glow is a wide elliptical gaussian centred off the canvas or near its
+    edge, in the second tone; one in three carries the accent, faintly. The
+    quiet mask leaves the middle dark, so the light reads as coming from beyond
+    the screen.
+    """
+    height, width = shape
+    y, x = np.mgrid[0:height, 0:width].astype(np.float32)
+    fill = np.zeros(shape, dtype=np.float32)
+    glow = np.zeros(shape, dtype=np.float32)
+    for index, g in enumerate(aurora_shape(rng, glows, drift)):
+        angle = g["angle"]
+        if drift is not None:
+            # Each glow slides along the edge and back, from where it would
+            # be still.
+            angle += 0.45 * (np.sin(phase + g["turn"]) - np.sin(g["turn"]))
+        cx = width / 2 + np.cos(angle) * width * g["fx"]
+        cy = height / 2 + np.sin(angle) * height * g["fy"]
+        rx = width * g["rx"]
+        ry = height * g["ry"]
+        light = np.exp(-(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2))
+        if index % 3 == 2:
+            glow = np.maximum(glow, light)
+        else:
+            fill = np.maximum(fill, light)
+    return fill * 0.8, glow * 0.45
+
+
+def aurora_shape(rng: np.random.Generator, glows: int = 4,
+                 drift: np.random.Generator | None = None) -> list[dict]:
+    """Where each glow sits and how large it is, as fractions of the frame."""
+    shape = []
+    for _ in range(glows):
+        # Around the edge: a point on a wide ellipse just outside the frame.
+        angle = rng.random() * 2 * np.pi
+        turn = drift.random() * 2 * np.pi if drift is not None else 0.0
+        shape.append({"angle": angle, "turn": turn,
+                      "fx": 0.45 + rng.random() * 0.2,
+                      "fy": 0.45 + rng.random() * 0.2,
+                      "rx": 0.25 + rng.random() * 0.2,
+                      "ry": 0.3 + rng.random() * 0.25})
+    return shape
+
+
+def dots(shape, rng, spacing: int = 30, phase: float = 0.0,
+         drift=None):
+    """A sparse halftone: a grid of dots sized by a slow field.
+
+    Most of the field sits below the threshold, so most dots are absent and the
+    rest gather in loose clusters - a texture that reads at a distance and
+    disappears up close.
+    """
+    height, width = shape
+    field = fbm(shape, rng, cells=2, octaves=3, phase=phase, drift=drift)
+    step = height / spacing
+    largest = step * 0.22
+    lines, draw = _canvas(shape)
+    for row in range(int(height / step) + 1):
+        for column in range(int(width / step) + 1):
+            cx, cy = (column + 0.5) * step, (row + 0.5) * step
+            value = field[min(int(cy), height - 1), min(int(cx), width - 1)]
+            radius = (value - 0.55) / 0.45 * largest
+            if radius > step * 0.04:
+                draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius),
+                             fill=255)
+    return np.zeros(shape, dtype=np.float32), _field(lines)
+
+
+def cells(shape, rng, count: int = 16, phase: float = 0.0,
+          drift=None):
+    """Voronoi cells: stained glass with soft fills and lead between them.
+
+    Sites are jittered off a grid rather than scattered, so no cell grows huge
+    and none shrinks to a sliver.
+    """
+    height, width = shape
+    sites = cells_shape(rng, width / height, count, drift)
+    rows = sites["rows"]
+    sx = sites["x"] * width
+    sy = sites["y"] * height
+    if drift is not None:
+        # Each site wanders on a small circle, starting where it would be still.
+        turn = sites["turn"]
+        reach = 0.25 * height / rows
+        sx = sx + reach * (np.cos(phase + turn) - np.cos(turn))
+        sy = sy + reach * (np.sin(phase + turn) - np.sin(turn))
+    y, x = np.mgrid[0:height, 0:width].astype(np.float32)
+    index = np.zeros(shape, dtype=np.int32)
+    nearest = np.full(shape, np.inf, dtype=np.float32)
+    for site, (px, py) in enumerate(zip(sx, sy, strict=True)):
+        distance = (x - px) ** 2 + (y - py) ** 2
+        closer = distance < nearest
+        nearest[closer] = distance[closer]
+        index[closer] = site
+    return sites["levels"][index].astype(np.float32), _edges(index)
+
+
+def cells_shape(rng: np.random.Generator, aspect: float, count: int = 16,
+                drift: np.random.Generator | None = None) -> dict:
+    """The sites, as fractions of the frame, and each cell's tone."""
+    columns = max(2, int(np.sqrt(count * aspect)))
+    rows = max(2, count // columns)
+    gx, gy = np.meshgrid(np.arange(columns), np.arange(rows))
+    x = (gx.ravel() + 0.15 + 0.7 * rng.random(gx.size)) / columns
+    y = (gy.ravel() + 0.15 + 0.7 * rng.random(gy.size)) / rows
+    turn = (drift.random(x.size) * 2 * np.pi if drift is not None
+            else np.zeros(x.size))
+    levels = rng.choice([0.0, 0.16, 0.3], size=x.size, p=[0.65, 0.25, 0.1])
+    return {"rows": rows, "x": x, "y": y, "turn": turn, "levels": levels}
+
+
+def bubbles(shape, rng, attempts: int = 500, phase: float = 0.0,
+            drift=None):
+    """Circle packing: circles of many sizes that never touch.
+
+    Placed largest first, each tried at random positions until it fits, so the
+    big ones anchor the composition and the small ones fill the gaps.
+    """
+    height, width = shape
+    placed: list[tuple[float, float, float]] = []
+    gap = height / 160
+    largest, smallest = height / 5, height / 30
+    for attempt in range(attempts):
+        radius = largest * (smallest / largest) ** (attempt / attempts)
+        x, y = rng.random() * width, rng.random() * height
+        if all((x - px) ** 2 + (y - py) ** 2 > (radius + pr + gap) ** 2
+               for px, py, pr in placed):
+            placed.append((x, y, radius))
+    lines, draw_lines = _canvas(shape)
+    tone, draw_tone = _canvas(shape)
+    width_px = _hairline(shape)
+    for x, y, radius in placed:
+        box = (x - radius, y - radius, x + radius, y + radius)
+        draw_lines.ellipse(box, outline=255, width=width_px)
+        if rng.random() < 0.3:
+            draw_tone.ellipse(box, fill=255)
+    return _field(tone) * 0.3, _field(lines)
+
+
+def ridges(shape, rng, count: int = 14, phase: float = 0.0,
+           drift=None):
+    """Stacked ridgelines lifted by noise, each hiding the ones behind it.
+
+    Drawn back to front, every ridge's silhouette is filled in the base colour
+    before its line, so nearer ridges occlude farther ones - which is what
+    turns a stack of wiggly lines into a landscape.
+    """
+    height, width = shape
+    peaks = fbm((count, width), rng, cells=3, octaves=4, phase=phase,
+                drift=drift)
+    columns = np.arange(width, dtype=np.float32)
+    lines, draw_lines = _canvas(shape)
+    tone, draw_tone = _canvas(shape)
+    width_px = _hairline(shape)
+    spacing = height / (count - 2)
+    for row in range(count):
+        base = spacing * (row + 1)
+        # Each ridge spans the full range on its own, then cubed, so most of
+        # it lies low and a couple of peaks rise sharply: that contrast is what
+        # makes it a ridgeline rather than a stripe.
+        profile = peaks[row] - peaks[row].min()
+        profile /= max(float(profile.max()), 1e-6)
+        lift = profile ** 3 * spacing * 5
+        ys = base - lift
+        outline = list(zip(columns[::4], ys[::4], strict=True))
+        silhouette = [*outline, (width, height), (0, height)]
+        # Clear what this ridge hides, then draw it.
+        draw_lines.polygon(silhouette, fill=0)
+        draw_tone.polygon(silhouette, fill=60 if row % 3 == 0 else 0)
+        draw_lines.line(outline, fill=255, width=width_px)
+    return _field(tone), _field(lines)
+
+
+def facets(shape, rng, grid: int = 6, phase: float = 0.0,
+           drift=None):
+    """A low-poly mesh: jittered triangles shaded by a slow field.
+
+    Each triangle takes the field's value at its centre, quantised to a few
+    levels, so the surface reads as faceted stone rather than a gradient.
+    """
+    height, width = shape
+    columns = int(grid * width / height) + 1
+    shade = fbm(shape, rng, cells=2, octaves=3, phase=phase, drift=drift)
+    px = (np.arange(columns + 1)[None, :] / columns * width
+          + (rng.random((grid + 1, columns + 1)) - 0.5) * width / columns * 0.7)
+    py = (np.arange(grid + 1)[:, None] / grid * height
+          + (rng.random((grid + 1, columns + 1)) - 0.5) * height / grid * 0.7)
+    lines, draw_lines = _canvas(shape)
+    tone, draw_tone = _canvas(shape)
+    width_px = _hairline(shape)
+    for row in range(grid):
+        for column in range(columns):
+            corners = [(px[row, column], py[row, column]),
+                       (px[row, column + 1], py[row, column + 1]),
+                       (px[row + 1, column + 1], py[row + 1, column + 1]),
+                       (px[row + 1, column], py[row + 1, column])]
+            split = (rng.random() < 0.5)
+            pairs = ([corners[0], corners[1], corners[2]],
+                     [corners[0], corners[2], corners[3]]) if split else (
+                    [corners[0], corners[1], corners[3]],
+                    [corners[1], corners[2], corners[3]])
+            for triangle in pairs:
+                cx = int(sum(p[0] for p in triangle) / 3) % width
+                cy = int(sum(p[1] for p in triangle) / 3) % height
+                level = round(shade[cy, cx] * 4) / 4
+                draw_tone.polygon(triangle, fill=int(level * 90))
+                draw_lines.polygon(triangle, outline=255, width=width_px)
+    return _field(tone), _field(lines) * 0.35
+
+
+WAVE_RIBBONS = 6
+
+
+def wave_shape(rng: np.random.Generator,
+               ribbons: int = WAVE_RIBBONS) -> tuple[float, list[list[float]]]:
+    """The wave's composition: its tilt and each ribbon's three offsets.
+
+    Drawn on their own so the drift extension, which draws the wave live on
+    the GPU, gets the same numbers as the still wallpaper.
+    """
+    tilt = (rng.random() - 0.5) * 0.08
+    return tilt, [list(rng.random(3) * 2 * np.pi) for _ in range(ribbons)]
+
+
+def wave(shape, rng, ribbons: int = WAVE_RIBBONS, phase: float = 0.0,
+         drift=None):
+    """Ribbons of light rolling across the lower third, after the PS3's XMB.
+
+    Each ribbon is three sines; the phase moves them by whole turns per loop
+    (one, two and three), so a full turn of `phase` brings every ribbon back to
+    where it started. A hairline core with a soft halo carries the light, and
+    beneath each ribbon hangs a faint sheet that fades out, which is what gives
+    the band depth rather than a bundle of strings.
+    """
+    height, width = shape
+    x = np.linspace(0.0, 1.0, width, dtype=np.float32)[None, :]
+    y = (np.arange(height, dtype=np.float32) / height)[:, None]
+    t = phase / (2 * np.pi)
+    turn = 2 * np.pi
+    core = max(0.8, height * 0.0012) / height
+    halo = 0.022
+    tilt, composition = wave_shape(rng, ribbons)
+    fill = np.zeros(shape, dtype=np.float32)
+    line = np.zeros(shape, dtype=np.float32)
+    for index, offsets in enumerate(composition):
+        centre = (0.76 + tilt * (x - 0.5)
+                  + 0.060 * np.sin(turn * (0.55 * x + t) + offsets[0])
+                  + 0.030 * np.sin(turn * (1.35 * x - 2 * t) + offsets[1])
+                  + 0.012 * np.sin(turn * (2.70 * x + 3 * t) + offsets[2]))
+        d = y - centre
+        # The middle ribbons brightest, so the band has a body and soft edges.
+        strength = 0.45 + 0.55 * (1 - abs(index / (ribbons - 1) - 0.5) * 2)
+        line += (np.exp(-(d / core) ** 2)
+                 + 0.18 * np.exp(-(d / halo) ** 2)) * strength
+        fill += np.where(d > 0, np.exp(-np.maximum(d, 0) / 0.08), 0) * 0.12
+    return np.clip(fill, 0, 1), np.clip(line, 0, 1)
+
+
+RENDERERS = {"contour": contour, "arcs": arcs, "strata": strata, "aurora": aurora, "dots": dots,
+             "cells": cells, "bubbles": bubbles, "ridges": ridges,
+             "facets": facets, "wave": wave}
 
 
 # --------------------------------------------------------------------------- #
 # composition
+
+def styles() -> tuple[str, ...]:
+    """Every style a theme can name: the built-in ones, then any packages."""
+    found, _ = packages.discover(PACKAGE_DIRS)
+    return STYLES + tuple(sorted(n for n in found if n not in STYLES))
+
+
+def still_module(wallpaper: packages.Wallpaper):
+    """A package's still.py, loaded as a module.
+
+    Loaded afresh each time, so a package being written - by hand or by an
+    agent - is seen as it is now.
+    """
+    spec = importlib.util.spec_from_file_location(
+        f"osiris_wallpaper_{wallpaper.name}", wallpaper.still)
+    if spec is None or spec.loader is None:
+        raise ValueError(f"cannot load {wallpaper.still}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
 
 def style_for(name: str) -> str:
     """Fall back to a style derived from the theme name.
@@ -256,7 +621,20 @@ def style_for(name: str) -> str:
     crc32 rather than hash(): Python salts hash() per process, so a user theme
     would drift between styles on every regeneration.
     """
-    return STYLES[zlib.crc32(name.encode()) % len(STYLES)]
+    return FALLBACK_STYLES[zlib.crc32(name.encode()) % len(FALLBACK_STYLES)]
+
+
+def _rng(theme: dict, purpose: str = "") -> np.random.Generator:
+    """The theme's composition: the same for the same name and variation.
+
+    Variation 0 keeps the name alone as the seed, so every wallpaper rendered
+    before variations existed stays exactly as it was.
+    """
+    variation = theme.get("wallpaper_variation", 0)
+    key = theme["name"] if not variation else f"{theme['name']}:{variation}"
+    if purpose:
+        key = f"{key}:{purpose}"
+    return np.random.default_rng(zlib.crc32(key.encode()))
 
 
 def logo_mask(size: tuple[int, int]) -> np.ndarray | None:
@@ -276,20 +654,37 @@ def logo_mask(size: tuple[int, int]) -> np.ndarray | None:
 
 
 def compose(theme: dict, size: tuple[int, int] = (WIDTH, HEIGHT),
-            style: str | None = None, logo: bool = True) -> Image.Image:
-    """Render the wallpaper for a theme as a Pillow image."""
+            style: str | None = None, logo: bool = True,
+            phase: float | None = None) -> Image.Image:
+    """Render the wallpaper for a theme as a Pillow image.
+
+    `phase`, in radians, is how far a drifting wallpaper has turned (see
+    drift.py); a full turn comes back to the start. None is the still wallpaper.
+    """
     width, height = size
     shape = (height, width)
     palette = tones(theme)
     style = style or theme.get("wallpaper_style") or style_for(theme["name"])
     if style not in RENDERERS:
-        raise ValueError(f"unknown style {style!r}; expected one of "
-                         f"{', '.join(STYLES)}")
+        found, _ = packages.discover(PACKAGE_DIRS)
+        if style not in found:
+            raise ValueError(f"unknown style {style!r}; expected one of "
+                             f"{', '.join(styles())}")
+        # A package draws its own still; the mark is Osiris's to add.
+        art = still_module(found[style]).still(theme, size, phase)
+        image = np.asarray(art.convert("RGB"), dtype=np.float32) / 255.0
+        if logo:
+            image = mark(image, palette["ink"], size)
+        return Image.fromarray((np.clip(image, 0, 1) * 255).astype(np.uint8))
 
-    rng = np.random.default_rng(zlib.crc32(theme["name"].encode()))
-    fill, line = RENDERERS[style](shape, rng)
+    rng = _rng(theme)
+    if phase is None:
+        fill, line = RENDERERS[style](shape, rng)
+    else:
+        fill, line = RENDERERS[style](shape, rng, phase=phase,
+                                      drift=_rng(theme, "drift"))
 
-    mask = quiet_mask(shape)
+    mask = quiet_mask(shape, QUIET_REACH.get(style, QUIET_RADIUS))
     fill *= mask
     line *= mask
 
@@ -302,11 +697,18 @@ def compose(theme: dict, size: tuple[int, int] = (WIDTH, HEIGHT),
         line * palette["line_alpha"])[..., None]
 
     if logo:
-        ink = logo_mask(size)
-        if ink is not None:
-            image = image + (palette["ink"] - image) * (ink * LOGO_ALPHA)[..., None]
+        image = mark(image, palette["ink"], size)
 
     return Image.fromarray((np.clip(image, 0, 1) * 255).astype(np.uint8))
+
+
+def mark(image: np.ndarray, ink: np.ndarray,
+         size: tuple[int, int]) -> np.ndarray:
+    """The Osiris mark over an image of 0-1 floats, faintly, in `ink`."""
+    mask = logo_mask(size)
+    if mask is None:
+        return image
+    return image + (ink - image) * (mask * LOGO_ALPHA)[..., None]
 
 
 def boot_background(theme: dict,
@@ -322,7 +724,7 @@ def boot_background(theme: dict,
     width, height = size
     palette = tones(theme)
     style = theme.get("wallpaper_style") or style_for(theme["name"])
-    rng = np.random.default_rng(zlib.crc32(theme["name"].encode()))
+    rng = _rng(theme)
     fill, line = RENDERERS[style]((height, width), rng)
 
     mask = quiet_mask((height, width))

@@ -16,15 +16,10 @@ import json
 import os
 import sys
 
-# The package is installed beside this file on a target, and lives two
-# directories up in a checkout.
-for candidate in (
-    "/usr/share/osiris/lib",
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-):
-    if os.path.isdir(os.path.join(candidate, "osiris")):
-        sys.path.insert(0, candidate)
-        break
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import use_osiris_package  # noqa: E402
+
+use_osiris_package()
 
 from osiris.model.colour import MID_LUMINANCE, Colour  # noqa: E402
 from osiris.themes import derive as _derive  # noqa: E402

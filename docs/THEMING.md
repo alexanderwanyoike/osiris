@@ -2,6 +2,11 @@
 
 How themes, icons, fonts and wallpapers are defined, shipped and switched.
 
+This describes the system as built. Where it is going - a **Theme** that is
+colours only, **Skins** for shape, Boot screens that follow a **System theme**,
+and themes made from a wallpaper or a sentence - is roadmap phase P3, with the
+terms in [CONTEXT.md](../CONTEXT.md) and the decisions in ADRs 0013 and 0014.
+
 ## Principle
 
 **Osiris does not implement a theming engine. It orchestrates the ones that
@@ -67,6 +72,9 @@ One JSON file per theme in `shell/themes/<name>.json`.
 }
 ```
 
+The `ui` block and `requires` describe shape, not colour: under P3.2 they move
+out of the theme into **Skins** (see CONTEXT.md).
+
 Two fields matter more than they look:
 
 **`requires`** - a theme that names an icon theme which is not installed does
@@ -117,8 +125,8 @@ so `~/.themes` does not accumulate.
 | Dock (Plank) | generated `dock.theme` | **live** |
 | Cursor, fonts | dconf | **live** |
 | Server-side title bars | Muffin, from the GTK theme | **live** |
-| Terminal (ghostty) | generated config file | next launch |
-| Launcher (rofi) | generated `.rasi` | next launch |
+| Terminal (ghostty) | generated config file, `SIGUSR2` | **live** |
+| Launcher (rofi) | generated `.rasi` | each time it opens |
 | Login greeter, boot splash | fixed to Osiris branding | n/a |
 
 **Nothing restarts the shell.** An earlier version ended `apply()` with
@@ -133,9 +141,50 @@ several times in quick succession leaves Cinnamon wedged - a black desktop and
 a half-drawn panel - which is exactly the kind of fragility a theme switcher
 must not have.
 
-**Terminal and launcher** read their configuration once at startup, so running
-instances keep the old palette. The switcher says so rather than leaving the
-user wondering.
+**Running terminals reload.** ghostty re-reads its configuration on `SIGUSR2`,
+so the switcher signals the user's ghostty processes once the new config is
+written. The generated config turns off ghostty's "configuration reloaded"
+toast, which would otherwise appear in every open terminal on every switch.
+rofi is started afresh each time it opens, so it always has the current theme.
+
+## Switching without the in-between
+
+A switch is written as **one dconf change**. Setting each key with its own
+`gsettings set` reached the desktop as one notification per key, and every one
+repainted on its own: applications restyled, then title bars, then the panel,
+then icons, then the wallpaper. `osiris/themes/switch.py` builds a single
+keyfile that `dconf load /` applies, and every client receives one notification
+carrying all the keys - measured with dbus-monitor: one `Notify` signal against
+one per key for separate writes.
+
+On top of that, the change happens **out of sight** (ADR 0014). The Cinnamon
+extension `transition@osiris` covers the screen with a picture of itself, the
+switch is applied beneath it, and the picture fades out. The sequence, driven by
+`engine.apply()` over D-Bus (`dev.osiris.Transition`):
+
+1. `Freeze` takes a screenshot with Cinnamon's own screenshot API, puts it over
+   everything, and answers only once the stage has painted it.
+2. The theme is built and loaded, and terminals are signalled.
+3. `Release(400, 300)` holds the picture 400ms while applications repaint, then
+   fades it over 300ms, easing in and out.
+
+Things that were got wrong first and are worth not repeating:
+
+- The picture is loaded with GdkPixbuf into a `Clutter.Image`, not set as a CSS
+  `background-image`. St loads those asynchronously, so the cover was still
+  transparent when `Freeze` answered and the switch happened in plain view.
+- An ease-out fade looks like a jump in its first frame: a 300ms ease-out is
+  already about a third of the way after 50ms. Ease-in-out starts gently.
+- The wallpaper keeps fading a little after the picture has gone. That is
+  Cinnamon's own crossfade between backgrounds, and it is welcome.
+
+If the extension is missing or fails, `Freeze` fails at once and the switch
+still applies as one change, without the fade. If the switcher dies between the
+two calls, the extension releases the picture after five seconds on its own, so
+the desktop is never left frozen.
+
+Cinnamon accepts the extension on version 6.4 and anything newer, so it does not
+need bumping with each Cinnamon release, but its JavaScript API can change.
 
 ## Where themes live
 
@@ -169,6 +218,7 @@ palette. Click a card and it applies immediately.
 
     apps/appearance/main.py          the picker
     apps/appearance/creator.py       the creator dialog
+    apps/switcher/main.py            the Super+T carousel
     shell/themes/engine.py           load and apply; shared, not duplicated
     shell/themes/derive.py           a full palette from two or three seeds
     shell/themes/wallpaper.py        generative backgrounds from a palette
@@ -176,6 +226,8 @@ palette. Click a card and it applies immediately.
     shell/themes/plank.py            the dock theme
     shell/themes/preview.py          renders the card thumbnails (Pillow)
     shell/themes/paths.py            the running user's home, done right
+    shell/themes/transition@osiris/  the Cinnamon extension that fades a switch
+    osiris/themes/switch.py          a switch as one dconf change
     provision/themes.py              installs all of the above
 
 Written in Python against PyGObject because GTK4, libadwaita and Pillow are
@@ -190,9 +242,39 @@ Details that matter for it feeling finished:
   as soon as you pick a light or dark one.
 - **It refuses rather than half-applying.** If a theme's `requires` packages are
   missing it says which, instead of letting GTK silently fall back.
-- **It says what will not update.** Terminal and launcher read their config at
-  startup, so running instances keep the old palette. The toast says so rather
-  than leaving you wondering.
+- **It restyles itself under the fade.** Appearance changes its own light or dark
+  look right after `apply()` returns, inside the 400ms the frozen picture is
+  held, so it changes with everything else.
+- **It scales past a screenful.** Themes are grouped by colour family (Reds
+  round the wheel to Pinks, then Neutrals), with favourites first. Typing
+  anywhere searches by name or family ("blue" finds the Blues), and chips
+  narrow to dark, light or the user's own themes. The grouping, search and
+  filters are pure logic in `osiris/themes/library.py`, tested without GTK;
+  the starred names live one per line in `~/.config/osiris/favourites`.
+
+### Super+T
+
+For switching without opening a window, **Super+T** brings up a full-screen
+carousel (`apps/switcher/main.py`): the focused theme as a large card of its
+wallpaper and palette, neighbours smaller and dimmer either side, over a
+blurred backdrop of the focused wallpaper. Arrows, the scroll wheel or a click
+on a neighbour slide along; Enter or a click on the centre card applies;
+Escape or a click outside closes with nothing changed. Pressing Super+T again
+while it is open steps on, the way Alt+Tab does. The order is the library's,
+so favourites come first, and the carousel's geometry is pure logic in
+`osiris/themes/carousel.py`.
+
+It has to open at once, which is why it is resident. The autostart entry and
+a D-Bus service file both start it with `--gapplication-service`, and the
+keybinding runs `gapplication action dev.osiris.Switcher show`: a C tool
+sending one D-Bus call, so a key press never waits for a Python interpreter
+to start. If the switcher is not running, D-Bus starts it. Wallpapers are
+decoded at 1280px and only the sixteen nearest the focus are kept, with the
+small preview thumbnail standing in until a wallpaper has loaded.
+
+Everything on screen is drawn in one cairo pass rather than built from
+widgets, so cards, labels and backdrop move in step on every frame of the
+slide.
 
 `engine.py` is importable, so scripting a switch is `engine.apply("nord")`, and
 `engine.save()` / `engine.delete()` manage user themes. There is deliberately
@@ -202,6 +284,11 @@ One structural note, because it is easy to repeat: a card is a `Gtk.Overlay`
 wrapping a `Gtk.Button`, not a `Gtk.Button` containing one. A GtkButton takes
 the pointer across its whole area, so a menu button nested inside one renders,
 highlights on hover, and never fires.
+
+A second: card thumbnails are drawn by a small `Gtk.DrawingArea`, not a
+`Gtk.Picture`. A FlowBox lays children out by their natural width, and a
+Picture's natural width is its image's, so cards came out two to a row however
+wide the window was.
 
 ## Folder icons and the dock
 
@@ -257,13 +344,32 @@ behind it.
 
 ## Creating a theme
 
-**Appearance** has a creator: name, light or dark, and three colours.
+**Appearance** has a creator that starts from **one colour** or **a picture**
+and offers finished themes to pick from, rather than controls to set. Asking
+people to choose a harmony and a mood asks them to do colour theory; choosing
+between finished themes is easy. Each start shows six looks - Calm, Contrast,
+Lively, Playful, Tonal and Soft (`SUGGESTIONS` in `osiris/themes/intent.py`) -
+as miniatures of the desktop, and the person picks one.
 
-A theme carries about thirty colours. Asking for thirty is a chore, so the
-creator asks for the three that decide the character - background, accent, and
-an optional secondary - and `shell/themes/derive.py` fills in the rest. The
-preview re-renders on every change, debounced by 120ms against a render that
-costs about 25ms.
+A picture also proposes light or dark and the mood, and becomes the theme's
+wallpaper. **Fine-tune**, collapsed by default, holds the harmony and mood
+behind the chosen look and **Choose colours myself**: background, accent and
+secondary by hand, with the colours that go with the accent offered as swatches.
+Nothing stops a clash there - a **User theme** is the user's - but **Make these
+go together** moves the secondary to the nearest harmony with the accent, at a
+supporting strength.
+
+A theme carries about thirty colours; however it starts, the rest are derived
+the same way. The preview re-renders on every change, debounced by 120ms against a
+render that costs about 25ms.
+
+A theme made from a picture names it in `wallpaper` by absolute path. On save
+the picture is copied to `~/.local/share/osiris/wallpapers/<name>-picture.*`,
+so moving or deleting the original does not take the wallpaper with it, and it
+is copied again under the new name on a rename, because a rename deletes the old
+theme. The engine never renders a generated wallpaper over a picture, its card
+shows the picture, and deleting the theme removes only that copy. The theme
+records its intent under `intent`, so reopening it restores the form.
 
 Derived values are **written into the saved theme**, not recomputed on load.
 That is what makes a theme a document: it can be hand-edited afterwards, it
@@ -295,6 +401,36 @@ Every combination now clears 7:1 for body text and 4:1 for state colours. The
 accent is left exactly as chosen - it is the user's decision, and it is used
 for borders and fills rather than body text.
 
+### Themes from an intent
+
+`osiris/themes/intent.py` makes a theme from what it should be rather than from
+chosen colours: a seed colour, a harmony (analogous, complementary,
+split-complementary, triadic, monochrome), light or dark, and a mood (muted,
+balanced, vivid, pastel). It produces the seeds above, so the rest of the
+derivation is shared.
+
+The rules work in **OKLCH**, where equal steps look equal; HLS does not, and a
+yellow and a blue at the same HLS lightness look nothing alike. Harmony is a
+turn of the hue wheel, mood is a band of lightness and chroma, and the variant
+fixes the background's lightness. The seed contributes only its hue.
+
+The secondary takes the harmony's hue at 60% of the accent's chroma. One strong
+colour with a quieter partner reads as a palette; at equal strength,
+complementary and triadic pairs fought each other.
+
+The tests sweep every combination - twelve hues, five harmonies, four moods,
+light and dark - and require body text at 7:1 and both accents at 3:1 against
+the background. This is the path a model takes too: it writes an intent, never
+colours (see CONTEXT.md).
+
+**From a wallpaper**, `osiris/themes/from_wallpaper.py` reads the picture and
+proposes an intent; the rules above still make every colour. The picture is
+reduced to twelve colours. Its subject is the most colourful one, weighted by
+the square root of how much of the picture it covers, so a small red car
+outweighs a large grey sky and anything under 2% is a speck. Its average
+lightness proposes light or dark, and its average chroma proposes the mood. Any
+of those the person chooses wins over the proposal.
+
 ## Wallpapers
 
 Every theme gets a generated wallpaper. `shell/themes/wallpaper.py` renders it
@@ -316,7 +452,7 @@ put their most interesting structure exactly where the mark goes.
 lightness, not by colour. The structure comes from accent hairlines on the
 boundaries. That is the difference between a wallpaper and a poster.
 
-Three styles, all deterministic in the theme's name, so a theme's wallpaper is
+Ten styles, all deterministic in the theme's name, so a theme's wallpaper is
 stable across regeneration and no two themes compose alike:
 
 | Style | Mathematics | Reads as |
@@ -324,6 +460,104 @@ stable across regeneration and no two themes compose alike:
 | `contour` | iso-bands through fractional Brownian motion | topography |
 | `arcs` | Truchet tiling of quarter circles | woven circuitry |
 | `strata` | horizontal bands warped by a slow noise field | sedimentary layers |
+| `aurora` | wide gaussian glows centred just beyond the frame, no line work | light from off screen |
+| `dots` | a dot grid sized by a slow field, mostly below threshold | a sparse halftone |
+| `cells` | Voronoi cells around sites jittered off a grid | stained glass |
+| `bubbles` | circle packing, largest first | circles that never touch |
+| `ridges` | noise-lifted ridgelines drawn back to front, each hiding those behind | a ridgeline landscape |
+| `facets` | a jittered triangle mesh shaded by a slow field | low-poly stone |
+| `wave` | sums of sines with a hairline core, a soft halo and a fading sheet beneath | the PS3's rolling ribbons of light |
+
+`wallpaper_variation` in a theme gives it a different composition in the same
+style; 0, the default, keeps the name alone as the seed, so wallpapers rendered
+before variations existed did not change. A theme that names no style falls
+back to one of the original three, chosen by hashing its name; hashing over all
+ten would move every such theme to a new wallpaper whenever a style is added.
+
+### Drift
+
+A generated wallpaper **drifts**: it is always gently moving, the way a games
+console's home screen is. Two earlier designs did not work and are worth not
+repeating. A new frame every few minutes was never seen to move. Blending
+between pre-rendered frames was smoother on paper but reads as a slideshow:
+shapes dissolve into the next frame's shapes rather than travelling.
+
+So the wallpaper is drawn live, on the GPU, every frame:
+
+- Each moving wallpaper is a **package** (below). The `drift@osiris` Cinnamon
+  extension compiles the active one's shader after a shared prelude and draws
+  it as the first child of `global.bottom_window_group`: under nemo-desktop's
+  transparent icon window and every other window, and a group Muffin never
+  restacks. The Osiris mark is an overlay above it, as `compose()` draws it
+  above the still wallpaper.
+- `shell/themes/drift.py`, started at login, publishes what the extension
+  needs in `~/.cache/osiris/drift/current.json`: the package, the theme's
+  colours, whatever the package's `still.py` hands its shader - for the
+  built-in five, the same random draws as the still renderer, so the two are
+  the same picture - and the mark. Or, instead, the reason it cannot move.
+
+The extension paces itself on what Cinnamon spends: up to 30 frames a second,
+halved while Cinnamon is over 15% of a core, down to two a second. On a GPU
+the wave costs about 5% of a core and ridges, the heaviest, about 4%. It
+pauses while anything is fullscreen or the screensaver is up, and draws only
+over the theme its state belongs to.
+
+A theme switch changes the moving wallpaper with everything else, beneath the
+transition's frozen picture: `engine.apply()` publishes the new theme's state
+itself before it releases the picture, rather than leaving drift.py to notice
+at its next poll, and the extension swaps at once when the theme has changed.
+The one fade of the frozen picture then covers the wallpaper too. Only the
+**Drift** switch in Appearance (`~/.config/osiris/drift`), which the extension
+reads itself, fades the motion in or out on its own.
+
+### When it does not move
+
+The still wallpaper is always underneath, so every failure leaves the desktop
+as it would have been without drift, and Appearance turns its **Drift** button
+amber and says why:
+
+- **No GPU.** Drawing every frame on the CPU costs more than a moving
+  wallpaper is worth. Muffin reports a software renderer as accelerated, so
+  drift.py asks `glxinfo -B` instead: Mesa states "Accelerated: no" outright,
+  and NVIDIA's own driver, which does not, is judged by its renderer's name.
+  As a backstop, the extension gives up for the session if drawing is still
+  over budget at its slowest rate.
+- **A shader that does not compile.** drift.py checks every package with
+  `glslangValidator` against the exact program Cogl will compile
+  (`osiris/themes/wallpapers.py`), and reports errors by the package's own
+  line numbers, `name/shader.glsl:3: ...`, so an agent can fix them.
+- **A `still.py` that raises.** Reported the same way.
+
+### Wallpaper packages
+
+A package is a folder named after the wallpaper, in
+`/usr/share/osiris/themes/wallpapers/` for the shipped five (aurora, cells,
+dots, ridges, wave) or `~/.local/share/osiris/wallpapers/` for a user's own -
+written by hand or by an agent. A theme names one in `wallpaper_style`, and it
+appears in the creator's pattern list under its label. A user's package
+replaces a shipped one of the same name.
+
+    wallpaper.json   {"name": "<folder>", "label": "Shown in Appearance", "loop": 60}
+    shader.glsl      vec3 wallpaper(vec2 uv) { ... }
+    still.py         def still(theme, size, phase=None) -> PIL.Image
+
+- `shader.glsl` is GLSL 1.20, which is what Cogl compiles, after
+  `shell/themes/wallpapers/prelude.glsl`. The prelude declares what every
+  shader is given - where the loop is (`u_time`, 0 to 1), the monitor
+  (`u_size`), and the theme's colours - and a few helpers, `compose()` among
+  them. `uv` runs from (0, 0) at the top left to (1, 1). The function returns
+  the colour; the mark is drawn above it.
+- `still.py` draws the same picture without motion, from the same colours,
+  at `phase` radians round the loop (None for the still itself), without the
+  mark. It is what previews, the boot screen and a machine without a GPU
+  show. It may import `wallpaper` for the theme's tones and helpers.
+- `still.py` may also define `uniforms(theme, size)`, returning
+  `{"u_name": [components, [floats]]}` for the shader to declare and use, and
+  `ranges(theme, size, phases)`, values measured round the loop that the
+  extension interpolates into the prelude's `u_range`.
+
+Edit a package while it is showing and drift.py notices within seconds,
+checks it again and the desktop picks it up.
 
 Truchet tiling earns its place: each cell's arcs meet the midpoints of its
 edges whichever orientation it takes, so neighbouring tiles always connect into
@@ -371,13 +605,13 @@ being a font that was never installed.
 1. **How many themes ship by default?** Seven exist. More is not obviously
    better - each is a support surface. A curated six to eight, half light and
    half dark, is probably right.
-2. **Do splash and greeter follow the theme, or stay branded?** Argument for
-   branded: they are the first impression and identity matters more than
-   preference. Argument for themed: a user on a light theme gets a dark login
-   screen, which feels broken.
+2. ~~**Do splash and greeter follow the theme, or stay branded?**~~ Resolved:
+   the **Boot screens** take the colours of one **System theme** per machine,
+   chosen with administrator approval, and keep the Osiris mark (CONTEXT.md,
+   roadmap P3.3).
 3. **Accent independent of theme?** COSMIC and GNOME let you pick an accent
    colour separately from light/dark. It is a nice affordance but multiplies the
    combinations every generated file has to cover.
-4. **Per-theme icon themes, really?** Changing icon theme with the palette is
-   striking, but icon themes vary enormously in coverage. A theme that selects a
-   sparse icon set will show generic fallback icons for half the menu.
+4. ~~**Per-theme icon themes, really?**~~ Resolved: no. The icon set belongs to
+   a **Skin**, so it stays put when the colours change; only the folder tint
+   follows the **Theme**.
