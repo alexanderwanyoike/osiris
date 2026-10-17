@@ -117,8 +117,8 @@ so `~/.themes` does not accumulate.
 | Dock (Plank) | generated `dock.theme` | **live** |
 | Cursor, fonts | dconf | **live** |
 | Server-side title bars | Muffin, from the GTK theme | **live** |
-| Terminal (ghostty) | generated config file | next launch |
-| Launcher (rofi) | generated `.rasi` | next launch |
+| Terminal (ghostty) | generated config file, `SIGUSR2` | **live** |
+| Launcher (rofi) | generated `.rasi` | each time it opens |
 | Login greeter, boot splash | fixed to Osiris branding | n/a |
 
 **Nothing restarts the shell.** An earlier version ended `apply()` with
@@ -133,9 +133,50 @@ several times in quick succession leaves Cinnamon wedged - a black desktop and
 a half-drawn panel - which is exactly the kind of fragility a theme switcher
 must not have.
 
-**Terminal and launcher** read their configuration once at startup, so running
-instances keep the old palette. The switcher says so rather than leaving the
-user wondering.
+**Running terminals reload.** ghostty re-reads its configuration on `SIGUSR2`,
+so the switcher signals the user's ghostty processes once the new config is
+written. The generated config turns off ghostty's "configuration reloaded"
+toast, which would otherwise appear in every open terminal on every switch.
+rofi is started afresh each time it opens, so it always has the current theme.
+
+## Switching without the in-between
+
+A switch is written as **one dconf change**. Setting each key with its own
+`gsettings set` reached the desktop as one notification per key, and every one
+repainted on its own: applications restyled, then title bars, then the panel,
+then icons, then the wallpaper. `osiris/themes/switch.py` builds a single
+keyfile that `dconf load /` applies, and every client receives one notification
+carrying all the keys - measured with dbus-monitor: one `Notify` signal against
+one per key for separate writes.
+
+On top of that, the change happens **out of sight** (ADR 0014). The Cinnamon
+extension `transition@osiris` covers the screen with a picture of itself, the
+switch is applied beneath it, and the picture fades out. The sequence, driven by
+`engine.apply()` over D-Bus (`dev.osiris.Transition`):
+
+1. `Freeze` takes a screenshot with Cinnamon's own screenshot API, puts it over
+   everything, and answers only once the stage has painted it.
+2. The theme is built and loaded, and terminals are signalled.
+3. `Release(400, 300)` holds the picture 400ms while applications repaint, then
+   fades it over 300ms, easing in and out.
+
+Things that were got wrong first and are worth not repeating:
+
+- The picture is loaded with GdkPixbuf into a `Clutter.Image`, not set as a CSS
+  `background-image`. St loads those asynchronously, so the cover was still
+  transparent when `Freeze` answered and the switch happened in plain view.
+- An ease-out fade looks like a jump in its first frame: a 300ms ease-out is
+  already about a third of the way after 50ms. Ease-in-out starts gently.
+- The wallpaper keeps fading a little after the picture has gone. That is
+  Cinnamon's own crossfade between backgrounds, and it is welcome.
+
+If the extension is missing or fails, `Freeze` fails at once and the switch
+still applies as one change, without the fade. If the switcher dies between the
+two calls, the extension releases the picture after five seconds on its own, so
+the desktop is never left frozen.
+
+Cinnamon accepts the extension on version 6.4 and anything newer, so it does not
+need bumping with each Cinnamon release, but its JavaScript API can change.
 
 ## Where themes live
 
@@ -177,6 +218,8 @@ palette. Click a card and it applies immediately.
     shell/themes/plank.py            the dock theme
     shell/themes/preview.py          renders the card thumbnails (Pillow)
     shell/themes/paths.py            the running user's home, done right
+    shell/themes/transition@osiris/  the Cinnamon extension that fades a switch
+    osiris/themes/switch.py          a switch as one dconf change
     provision/themes.py              installs all of the above
 
 Written in Python against PyGObject because GTK4, libadwaita and Pillow are
@@ -191,9 +234,9 @@ Details that matter for it feeling finished:
   as soon as you pick a light or dark one.
 - **It refuses rather than half-applying.** If a theme's `requires` packages are
   missing it says which, instead of letting GTK silently fall back.
-- **It says what will not update.** Terminal and launcher read their config at
-  startup, so running instances keep the old palette. The toast says so rather
-  than leaving you wondering.
+- **It restyles itself under the fade.** Appearance changes its own light or dark
+  look right after `apply()` returns, inside the 400ms the frozen picture is
+  held, so it changes with everything else.
 - **It scales past a screenful.** Themes are grouped by colour family (Reds
   round the wheel to Pinks, then Neutrals), with favourites first. Typing
   anywhere searches by name or family ("blue" finds the Blues), and chips

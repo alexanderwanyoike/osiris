@@ -35,6 +35,7 @@ SWITCHER_DIR = f"{SHARE}/switcher"
 LIB_DIR = f"{SHARE}/lib"
 WALLPAPERS = "/usr/share/backgrounds/osiris"
 # Cinnamon loads system-wide extensions from here; enabled in provision/cinnamon.py.
+TRANSITION = "transition@osiris"
 DRIFT_EXTENSION = "drift@osiris"
 EXTENSIONS_DIR = "/usr/share/cinnamon/extensions"
 
@@ -198,6 +199,11 @@ def main() -> None:
     with open("/etc/xdg/autostart/osiris-switcher.desktop", "w") as fh:
         fh.write(SWITCHER_AUTOSTART)
     print("  /usr/bin/osiris-switcher")
+
+    print("installing the theme transition")
+    target = os.path.join(EXTENSIONS_DIR, TRANSITION)
+    n = copy_tree(os.path.join(src_themes, TRANSITION), target, (".js", ".json"))
+    print(f"  {n} files -> {target}")
 
     print("applying the default theme on first login")
     os.makedirs("/etc/xdg/autostart", exist_ok=True)
