@@ -119,7 +119,7 @@ def test_errors_point_at_the_wallpapers_own_lines(tmp_path: Path) -> None:
         }
     )
     assert check(wallpaper, PRELUDE, runner) == (
-        "shader.glsl:2: 'floot' : undeclared identifier"
+        "glow/shader.glsl:2: 'floot' : undeclared identifier"
     )
 
 
