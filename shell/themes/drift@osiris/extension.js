@@ -110,6 +110,7 @@ class Drift {
         this._screenSaverActive = false;
         this._target = 0;
         this._effect = null;
+        this._theme = readText(THEME);
         // Each session finds out afresh; a new GPU or driver may change it.
         this._unsupported = false;
         GLib.unlink(UNSUPPORTED);
@@ -144,11 +145,12 @@ class Drift {
         this._reload();
     }
 
-    // Several files change at once when a theme is applied; read them once.
+    // Several files change at once when a theme is applied; read them once,
+    // and soon: a switch holds its frozen picture for only 400ms.
     _soon() {
         if (this._debounce)
             GLib.source_remove(this._debounce);
-        this._debounce = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
+        this._debounce = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
             this._debounce = 0;
             this._reload();
             return GLib.SOURCE_REMOVE;
@@ -156,6 +158,12 @@ class Drift {
     }
 
     _reload() {
+        // A theme switch happens beneath the transition's frozen picture, so
+        // the wallpaper changes at once with everything else; only the Drift
+        // switch, seen as it happens, fades.
+        let theme = readText(THEME);
+        let instant = theme !== this._theme;
+        this._theme = theme;
         let state = null;
         try {
             state = JSON.parse(readText(STATE));
@@ -181,7 +189,7 @@ class Drift {
                 }
             }
         }
-        this._update();
+        this._update(instant);
     }
 
     _configure() {
@@ -219,7 +227,7 @@ class Drift {
         return false;
     }
 
-    _update() {
+    _update(instant = false) {
         let run = this._state !== null && !this._paused();
         if (run && !this._tick) {
             this._measured = null;
@@ -229,7 +237,7 @@ class Drift {
             GLib.source_remove(this._tick);
             this._tick = 0;
         }
-        this._fade(this._state === null ? 0 : 255);
+        this._fade(this._state === null ? 0 : 255, instant);
     }
 
     _schedule() {
@@ -296,7 +304,13 @@ class Drift {
         this._reload();
     }
 
-    _fade(opacity) {
+    _fade(opacity, instant = false) {
+        if (instant) {
+            this._layer.remove_all_transitions();
+            this._layer.opacity = opacity;
+            this._target = opacity;
+            return;
+        }
         if (this._target === opacity)
             return;
         this._target = opacity;
