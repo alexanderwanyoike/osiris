@@ -462,7 +462,21 @@ def facets(shape, rng, grid: int = 6, phase: float = 0.0,
     return _field(tone), _field(lines) * 0.35
 
 
-def wave(shape, rng, ribbons: int = 6, phase: float = 0.0,
+WAVE_RIBBONS = 6
+
+
+def wave_shape(rng: np.random.Generator,
+               ribbons: int = WAVE_RIBBONS) -> tuple[float, list[list[float]]]:
+    """The wave's composition: its tilt and each ribbon's three offsets.
+
+    Drawn on their own so the drift extension, which draws the wave live on
+    the GPU, gets the same numbers as the still wallpaper.
+    """
+    tilt = (rng.random() - 0.5) * 0.08
+    return tilt, [list(rng.random(3) * 2 * np.pi) for _ in range(ribbons)]
+
+
+def wave(shape, rng, ribbons: int = WAVE_RIBBONS, phase: float = 0.0,
          drift=None):
     """Ribbons of light rolling across the lower third, after the PS3's XMB.
 
@@ -479,11 +493,10 @@ def wave(shape, rng, ribbons: int = 6, phase: float = 0.0,
     turn = 2 * np.pi
     core = max(0.8, height * 0.0012) / height
     halo = 0.022
-    tilt = (rng.random() - 0.5) * 0.08
+    tilt, composition = wave_shape(rng, ribbons)
     fill = np.zeros(shape, dtype=np.float32)
     line = np.zeros(shape, dtype=np.float32)
-    for index in range(ribbons):
-        offsets = rng.random(3) * turn
+    for index, offsets in enumerate(composition):
         centre = (0.76 + tilt * (x - 0.5)
                   + 0.060 * np.sin(turn * (0.55 * x + t) + offsets[0])
                   + 0.030 * np.sin(turn * (1.35 * x - 2 * t) + offsets[1])
