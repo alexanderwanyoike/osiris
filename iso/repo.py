@@ -80,6 +80,11 @@ def build(out: str) -> str:
         os.chdir(recipe)
         stream("makepkg", "--force", "--cleanbuild", "--noconfirm")
 
+    # makepkg also splits out debug symbols, as Arch's makepkg.conf asks;
+    # nothing installs them, so they stay off the medium.
+    for name in os.listdir(repository):
+        if "-debug-" in name:
+            os.remove(os.path.join(repository, name))
     packages = sorted(name for name in os.listdir(repository)
                       if ".pkg.tar" in name and not name.endswith(".sig"))
     run("repo-add", os.path.join(repository, f"{package.NAME}.db.tar.gz"),
