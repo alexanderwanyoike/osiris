@@ -1,10 +1,10 @@
 // Draws a drifting wallpaper live on the GPU. See shell/themes/drift.py.
 //
-// drift.py publishes the active theme's tones and the style's composition in
-// STATE; this draws the style from them every frame in a fragment shader, so
-// the wallpaper genuinely moves. Each style is its renderer in wallpaper.py,
-// and compose(), written again in GLSL: keep the two in step, or the moving
-// wallpaper and the still one beneath it stop matching.
+// drift.py names the active theme's wallpaper package in STATE, with the
+// theme's colours and what the package's still.py hands its shader; this
+// compiles the package's shader after the prelude and draws it every frame,
+// so the wallpaper genuinely moves. The still one stays beneath, and shows
+// whenever this is not drawing.
 //
 // The layer is the first child of global.bottom_window_group: Muffin never
 // restacks that group on X11, and nemo-desktop's window in it is transparent,
@@ -37,254 +37,36 @@ const BUDGET = 0.15;
 const MEASURE_MS = 5000;
 const FADE_MS = 1500;
 
-// Index into the shader's styles; keep in step with drift.py's LOOPS.
-const STYLES = ['wave', 'aurora', 'cells', 'dots', 'ridges'];
+// The body of the fragment snippet: osiris/themes/wallpapers.py's CODE, which
+// is also what a package's shader is checked against.
+const CODE = 'cogl_color_out = vec4(wallpaper(cogl_tex_coord_in[0].xy), 1.0);';
 
-// Cogl compiles GLSL 1.20: no %, so a vec4's component is picked by hand.
-const DECLARATIONS = `
-uniform float u_style;
-uniform float u_time;
-uniform vec2 u_size;
-uniform vec3 u_base;
-uniform vec3 u_shape;
-uniform vec3 u_line;
-uniform float u_line_alpha;
-uniform float u_reach;
-uniform vec4 u_range[8];
-uniform float u_tilt;
-uniform float u_offsets[18];
-uniform vec4 u_glow_a[4];
-uniform vec4 u_glow_b[4];
-uniform vec4 u_sites[24];
-uniform vec2 u_cells;
-uniform vec4 u_lat[11];
-uniform vec4 u_par[11];
-uniform vec4 u_rl[81];
-uniform vec4 u_rp[81];
+// One effect class per shader, kept for the Cinnamon session: Cogl builds a
+// class's pipeline once, and an extension that is disabled and enabled again
+// runs this file again, when a GType cannot be registered twice.
+globalThis.osirisDriftEffects = globalThis.osirisDriftEffects || new Map();
 
-const float TURN = 6.28318530718;
-float g_cos;
-float g_sin;
+function effectFor(declarations) {
+    let key = GLib.compute_checksum_for_string(GLib.ChecksumType.SHA1, declarations, -1);
+    if (!globalThis.osirisDriftEffects.has(key)) {
+        globalThis.osirisDriftEffects.set(key, GObject.registerClass({
+            GTypeName: `OsirisDriftEffect_${key.slice(0, 16)}`,
+        }, class extends Cinnamon.GLSLEffect {
+            vfunc_build_pipeline() {
+                this.add_glsl_snippet(Cinnamon.SnippetHook.FRAGMENT, declarations, CODE, true);
+            }
 
-float pick(vec4 v, int c) {
-    if (c == 0) return v.x;
-    if (c == 1) return v.y;
-    if (c == 2) return v.z;
-    return v.w;
-}
-
-float latticeAt(int i, int which) {
-    int slot = i / 4;
-    int c = i - slot * 4;
-    if (which == 0) return pick(u_lat[slot], c) * g_cos + pick(u_par[slot], c) * g_sin;
-    return pick(u_rl[slot], c) * g_cos + pick(u_rp[slot], c) * g_sin;
-}
-
-float rangeAt(int i) {
-    return pick(u_range[i / 4], i - (i / 4) * 4);
-}
-
-// Keys' cubic with a = -0.5, which is Pillow's BICUBIC.
-float keys(float x) {
-    x = abs(x);
-    if (x < 1.0) return (1.5 * x - 2.5) * x * x + 1.0;
-    if (x < 2.0) return ((-0.5 * x + 2.5) * x - 4.0) * x + 2.0;
-    return 0.0;
-}
-
-// The taps and weights Pillow uses to upsample n samples to coordinate u,
-// edges included, so the live noise matches wallpaper._smooth exactly.
-void taps(float u, int n, out int first, out int count, out vec4 w) {
-    float centre = u * float(n);
-    first = int(centre - 1.5);
-    if (first < 0) first = 0;
-    int last = int(centre + 2.5);
-    if (last > n) last = n;
-    count = last - first;
-    float o = float(first) - centre + 0.5;
-    w = vec4(keys(o), keys(o + 1.0), keys(o + 2.0), keys(o + 3.0));
-    if (count < 4) w.w = 0.0;
-    if (count < 3) w.z = 0.0;
-    if (count < 2) w.y = 0.0;
-    w /= (w.x + w.y + w.z + w.w);
-}
-
-// One octave of the dots' noise: rows doubling, half as many columns.
-float octave2(float u, float v, int rows, int cols, int offset) {
-    int fx; int nx; vec4 wx;
-    int fy; int ny; vec4 wy;
-    taps(u, cols, fx, nx, wx);
-    taps(v, rows, fy, ny, wy);
-    float total = 0.0;
-    for (int j = 0; j < 4; j++) {
-        if (j >= ny) break;
-        float row = 0.0;
-        for (int i = 0; i < 4; i++) {
-            if (i >= nx) break;
-            row += pick(wx, i) * latticeAt(offset + (fy + j) * cols + fx + i, 0);
-        }
-        total += pick(wy, j) * row;
+            set(name, components, values) {
+                // Cogl takes whole components; a short last one is padded.
+                let padded = values.slice();
+                while (padded.length % components)
+                    padded.push(0);
+                this.set_uniform_float(this.get_uniform_location(name), components, padded);
+            }
+        }));
     }
-    return total;
+    return globalThis.osirisDriftEffects.get(key);
 }
-
-// One ridge's height along x: its row of each octave, interpolated in x.
-float ridge(float u, int r) {
-    float total = 0.0;
-    float amplitude = 1.0;
-    int offset = 0;
-    for (int k = 0; k < 4; k++) {
-        int cols = 2;
-        if (k == 1) cols = 3;
-        if (k == 2) cols = 6;
-        if (k == 3) cols = 12;
-        int f; int n; vec4 w;
-        taps(u, cols, f, n, w);
-        float value = 0.0;
-        for (int i = 0; i < 4; i++) {
-            if (i >= n) break;
-            value += pick(w, i) * latticeAt(offset + r * cols + f + i, 1);
-        }
-        total += amplitude * value;
-        amplitude *= 0.5;
-        offset += 14 * cols;
-    }
-    return total;
-}
-`;
-
-// Each style is its renderer in wallpaper.py, per pixel; then compose().
-const CODE = `
-float x = cogl_tex_coord_in[0].x;
-float y = cogl_tex_coord_in[0].y;
-float phase = u_time * TURN;
-g_cos = cos(phase);
-g_sin = sin(phase);
-vec2 px = vec2(x, y) * u_size;
-float fill = 0.0;
-float line = 0.0;
-
-if (u_style < 0.5) {
-    // wave
-    float core = max(0.8, u_size.y * 0.0012) / u_size.y;
-    for (int i = 0; i < 6; i++) {
-        float centre = 0.76 + u_tilt * (x - 0.5)
-            + 0.060 * sin(TURN * (0.55 * x + u_time) + u_offsets[i * 3])
-            + 0.030 * sin(TURN * (1.35 * x - 2.0 * u_time) + u_offsets[i * 3 + 1])
-            + 0.012 * sin(TURN * (2.70 * x + 3.0 * u_time) + u_offsets[i * 3 + 2]);
-        float d = y - centre;
-        float strength = 0.45 + 0.55 * (1.0 - abs(float(i) / 5.0 - 0.5) * 2.0);
-        float c = d / core;
-        float h = d / 0.022;
-        line += (exp(-c * c) + 0.18 * exp(-h * h)) * strength;
-        if (d > 0.0)
-            fill += exp(-d / 0.08) * 0.12;
-    }
-    fill = clamp(fill, 0.0, 1.0);
-    line = clamp(line, 0.0, 1.0);
-} else if (u_style < 1.5) {
-    // aurora
-    float glow = 0.0;
-    for (int i = 0; i < 4; i++) {
-        vec4 a = u_glow_a[i];
-        vec4 b = u_glow_b[i];
-        float angle = a.x + 0.45 * (sin(phase + a.y) - sin(a.y));
-        float dx = (x - 0.5 - cos(angle) * a.z) / b.x;
-        float dy = (y - 0.5 - sin(angle) * a.w) / b.y;
-        float light = exp(-(dx * dx + dy * dy));
-        if (i == 2)
-            glow = max(glow, light);
-        else
-            fill = max(fill, light);
-    }
-    fill *= 0.8;
-    line = glow * 0.45;
-} else if (u_style < 2.5) {
-    // cells, in units of the height so both axes move alike
-    float aspect = u_size.x / u_size.y;
-    vec2 p = vec2(x * aspect, y);
-    float reach = 0.25 / u_cells.y;
-    float best = 1e9;
-    float second = 1e9;
-    vec2 near = vec2(0.0);
-    vec2 next = vec2(0.0);
-    for (int i = 0; i < 24; i++) {
-        if (float(i) >= u_cells.x) break;
-        vec4 s = u_sites[i];
-        vec2 site = vec2(s.x * aspect, s.y)
-            + reach * vec2(cos(phase + s.z) - cos(s.z), sin(phase + s.z) - sin(s.z));
-        float d = dot(p - site, p - site);
-        if (d < best) {
-            second = best; next = near;
-            best = d; near = site; fill = s.w;
-        } else if (d < second) {
-            second = d; next = site;
-        }
-    }
-    // Lead along the bisector of the two nearest sites, a pixel wide.
-    float edge = dot((near + next) * 0.5 - p, normalize(next - near)) * u_size.y;
-    line = 1.0 - smoothstep(0.0, 1.0, edge);
-} else if (u_style < 3.5) {
-    // dots: a halftone grid sized by the noise at each dot's centre
-    float stepPx = u_size.y / 30.0;
-    vec2 cell = floor(px / stepPx);
-    vec2 centre = (cell + 0.5) * stepPx;
-    vec2 at = (min(floor(centre), u_size - 1.0) + 0.5) / u_size;
-    float raw = octave2(at.x, at.y, 2, 2, 0)
-        + 0.5 * octave2(at.x, at.y, 4, 2, 4)
-        + 0.25 * octave2(at.x, at.y, 8, 4, 12);
-    float value = (raw - rangeAt(0)) / max(rangeAt(1) - rangeAt(0), 1e-6);
-    float radius = (value - 0.55) / 0.45 * stepPx * 0.22;
-    if (radius > stepPx * 0.04)
-        line = 1.0 - smoothstep(radius - 0.5, radius + 0.5, length(px - centre));
-} else {
-    // ridges, front to back: the nearest whose silhouette covers the pixel
-    float spacing = u_size.y / 12.0;
-    float half_width = max(1.0, floor(u_size.y / 720.0 + 0.5)) * 0.5;
-    for (int r = 13; r >= 0; r--) {
-        float low = rangeAt(r * 2);
-        float high = rangeAt(r * 2 + 1);
-        float profile = (ridge(x, r) - low) / max(high - low, 1e-6);
-        float top = spacing * float(r + 1) - profile * profile * profile * spacing * 5.0;
-        if (px.y >= top - half_width - 0.5) {
-            line = 1.0 - smoothstep(half_width - 0.5, half_width + 0.5, abs(px.y - top));
-            if (px.y > top && (r == 0 || r == 3 || r == 6 || r == 9 || r == 12))
-                fill = 60.0 / 255.0;
-            break;
-        }
-    }
-}
-
-float radius = length(vec2((x - 0.5) * u_size.x / u_size.y, y - 0.5));
-float t = clamp(radius / u_reach, 0.0, 1.0);
-float quiet = pow(t * t * (3.0 - 2.0 * t), 1.6);
-fill *= quiet;
-line *= quiet;
-vec3 base = u_base * (1.0 - 0.12 * y);
-vec3 colour = base + (u_shape - base) * fill;
-colour = colour + (u_line - colour) * (line * u_line_alpha);
-cogl_color_out = vec4(colour, 1.0);
-`;
-
-// Registered once per Cinnamon session: an extension that is disabled and
-// enabled again runs this file again, and a GType cannot be registered twice.
-if (!globalThis.osirisDriftEffect) {
-    globalThis.osirisDriftEffect = GObject.registerClass(
-    class OsirisDriftEffect extends Cinnamon.GLSLEffect {
-        vfunc_build_pipeline() {
-            this.add_glsl_snippet(Cinnamon.SnippetHook.FRAGMENT, DECLARATIONS, CODE, true);
-        }
-
-        set(name, components, values) {
-            // Cogl takes whole components; a short last one is padded.
-            let padded = values.slice();
-            while (padded.length % components)
-                padded.push(0);
-            this.set_uniform_float(this.get_uniform_location(name), components, padded);
-        }
-    });
-}
-const DriftEffect = globalThis.osirisDriftEffect;
 
 let drift = null;
 
@@ -324,6 +106,7 @@ class Drift {
         this._measured = null;
         this._screenSaverActive = false;
         this._target = 0;
+        this._effect = null;
 
         this._layer = new Clutter.Actor({ opacity: 0 });
         global.bottom_window_group.insert_child_at_index(this._layer, 0);
@@ -375,14 +158,21 @@ class Drift {
         }
         // The state can outlive a theme switch by a moment; a wallpaper is
         // only drawn over the theme it belongs to.
-        if (!state || !STYLES.includes(state.style) || !shadersAvailable() ||
+        if (!state || state.problem || !shadersAvailable() ||
             readText(PREFERENCE) === 'off' || readText(THEME) !== state.theme)
             state = null;
         if (JSON.stringify(state) !== JSON.stringify(this._state)) {
             this._state = state;
             if (state) {
-                this._configure();
-                this._loadLogo(state.logo);
+                let prelude = readText(state.prelude);
+                let shader = readText(state.shader);
+                this._effect = prelude && shader ? effectFor(`${prelude}\n${shader}\n`) : null;
+                if (!this._effect)
+                    this._state = null;
+                else {
+                    this._buildMonitors();
+                    this._loadLogo(state.logo);
+                }
             }
         }
         this._update();
@@ -392,7 +182,6 @@ class Drift {
         let s = this._state;
         for (let view of this._views) {
             let effect = view.effect;
-            effect.set('u_style', 1, [STYLES.indexOf(s.style)]);
             effect.set('u_size', 2, [view.monitor.width, view.monitor.height]);
             for (let name in s.uniforms) {
                 let [components, values] = s.uniforms[name];
@@ -566,8 +355,9 @@ class Drift {
                 width: monitor.width, height: monitor.height,
                 background_color: new Clutter.Color({ red: 0, green: 0, blue: 0, alpha: 255 }),
             });
-            let effect = new DriftEffect();
-            canvas.add_effect(effect);
+            let effect = this._effect ? new this._effect() : null;
+            if (effect)
+                canvas.add_effect(effect);
             let logo = new Clutter.Actor();
             frame.add_child(canvas);
             frame.add_child(logo);
