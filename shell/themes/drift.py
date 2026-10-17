@@ -38,7 +38,7 @@ FRAMES = os.path.join(home(), ".local", "share", "osiris", "drift")
 # The styles that drift; the rest stay still. Chosen for how they move, not
 # for whether they can: a slowly turning contour or facet mesh reads as
 # restlessness, where these read as light, weather and terrain.
-DRIFTING = ("aurora", "dots", "ridges", "cells")
+DRIFTING = ("aurora", "dots", "ridges", "cells", "wave")
 
 
 def enabled() -> bool:
