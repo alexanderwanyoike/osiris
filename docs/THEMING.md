@@ -499,10 +499,16 @@ So the wallpaper is drawn live, on the GPU, every frame:
 The extension paces itself on what Cinnamon spends: up to 30 frames a second,
 halved while Cinnamon is over 15% of a core, down to two a second. On a GPU
 the wave costs about 5% of a core and ridges, the heaviest, about 4%. It
-pauses while anything is fullscreen or the screensaver is up, draws only over
-the theme its state belongs to, and reads the **Drift** switch in Appearance
-(`~/.config/osiris/drift`) itself, so a theme switch or switching it off fades
-the motion out at once and the still wallpaper underneath shows through.
+pauses while anything is fullscreen or the screensaver is up, and draws only
+over the theme its state belongs to.
+
+A theme switch changes the moving wallpaper with everything else, beneath the
+transition's frozen picture: `engine.apply()` publishes the new theme's state
+itself before it releases the picture, rather than leaving drift.py to notice
+at its next poll, and the extension swaps at once when the theme has changed.
+The one fade of the frozen picture then covers the wallpaper too. Only the
+**Drift** switch in Appearance (`~/.config/osiris/drift`), which the extension
+reads itself, fades the motion in or out on its own.
 
 ### When it does not move
 

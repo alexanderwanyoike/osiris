@@ -170,7 +170,8 @@ def state(theme: dict, size: tuple[int, int], accelerated: bool = True) -> dict:
     found = package(theme)
     assert found is not None
     current = {"theme": theme["name"], "style": found.name, "loop": found.loop,
-               "stamp": stamp(found),
+               "stamp": stamp(found), "size": list(size),
+               "accelerated": accelerated,
                "prelude": PRELUDE, "shader": str(found.shader),
                "uniforms": palette(theme), "ranges": None,
                "logo": logo(theme, size), "problem": None}
@@ -208,6 +209,26 @@ def publish(current: dict) -> None:
     with open(temporary, "w") as fh:
         json.dump(current, fh)
     os.replace(temporary, STATE)
+
+
+def publish_now(theme: dict) -> None:
+    """Publish for `theme` at once, rather than at the next poll.
+
+    For a theme switch, which wants the moving wallpaper changed beneath its
+    frozen picture. Runs in the switching process, so it reuses the screen
+    size and the GPU answer this process found at login instead of asking a
+    display again.
+    """
+    if not enabled() or not drifts(theme):
+        return
+    try:
+        with open(STATE) as fh:
+            previous = json.load(fh)
+    except (OSError, ValueError):
+        previous = {}
+    size = tuple(previous.get("size") or FALLBACK_SIZE)
+    publish(state(theme, (int(size[0]), int(size[1])),
+                  previous.get("accelerated", True)))
 
 
 def wanted() -> dict | None:

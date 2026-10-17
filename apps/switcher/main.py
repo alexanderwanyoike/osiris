@@ -192,6 +192,7 @@ class Carousel(Gtk.DrawingArea):
         self.target = 0.0
         self.reveal = 0.0
         self.note: tuple[str, float] | None = None
+        self.pending: str | None = None
         self.images = Images(self.queue_draw)
         self.slide = Adw.TimedAnimation.new(
             self, 0, 0, SLIDE_MS, Adw.CallbackAnimationTarget.new(self._slid))
@@ -279,6 +280,16 @@ class Carousel(Gtk.DrawingArea):
     def _fade_done(self, _animation) -> None:
         if self.reveal == 0:
             self.window.set_visible(False)
+            if self.pending:
+                # Once the overlay is off screen: the switch freezes a picture
+                # of the desktop to fade from, and it must not be of this.
+                name, self.pending = self.pending, None
+                GLib.timeout_add(120, self._start_apply, name)
+
+    def _start_apply(self, name: str) -> bool:
+        # Off the main loop, which a switch would otherwise hold for a second.
+        threading.Thread(target=self._apply, args=(name,), daemon=True).start()
+        return GLib.SOURCE_REMOVE
 
     def say(self, text: str) -> None:
         self.note = (text, time.monotonic() + 4)
@@ -299,12 +310,9 @@ class Carousel(Gtk.DrawingArea):
         if absent:
             self.say(f"{theme['label']} needs {', '.join(absent)}")
             return
-        self.close()
         if theme["name"] != self.active:
-            # Off the main loop, so the overlay fades out while the theme is
-            # written rather than freezing on screen until it is done.
-            threading.Thread(target=self._apply, args=(theme["name"],),
-                             daemon=True).start()
+            self.pending = theme["name"]
+        self.close()
 
     @staticmethod
     def _apply(name: str) -> None:
