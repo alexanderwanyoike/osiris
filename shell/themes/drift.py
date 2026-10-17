@@ -17,6 +17,7 @@ so switching it off is immediate.
 import argparse
 import hashlib
 import json
+import math
 import os
 import shutil
 import sys
@@ -30,19 +31,23 @@ import engine  # noqa: E402
 import wallpaper  # noqa: E402
 from paths import home  # noqa: E402
 
-# A full turn of the wave's slowest ribbon. Its others turn two and three
-# times as fast, so something is always visibly moving without hurrying.
-LOOP = 90
+# Seconds for a full turn of each style. Calm, but always visibly moving: the
+# wave's faster ribbons turn two and three times per loop, so it can take
+# longest; glows and cells move one turn per loop, so they need less.
+LOOPS = {"wave": 90, "aurora": 60, "cells": 60, "dots": 120, "ridges": 120}
 POLL = 2
+# Points round the loop at which a noise style's range is measured; the
+# extension interpolates between them.
+RANGE_SAMPLES = 48
 
 PREFERENCE = os.path.join(home(), ".config", "osiris", "drift")
 CACHE = os.path.join(home(), ".cache", "osiris", "drift")
 STATE = os.path.join(CACHE, "current.json")
 
-# The styles the extension can draw live. Others stay still until they have a
-# shader: blending between pre-rendered stills was tried and reads as a
-# slideshow, not as movement.
-DRIFTING = ("wave",)
+# The styles the extension can draw live; the shader in drift@osiris has each.
+# Others stay still: blending between pre-rendered stills was tried and reads
+# as a slideshow, not as movement.
+DRIFTING = tuple(LOOPS)
 
 FALLBACK_SIZE = (1920, 1080)
 
@@ -115,20 +120,85 @@ def logo(theme: dict, size: tuple[int, int]) -> str | None:
     return path
 
 
+def floats(values) -> list[float]:
+    return [float(v) for v in np.ravel(values)]
+
+
+def lattices(found: list) -> tuple[list[float], list[float]]:
+    """Every octave's lattice, and every partner, each run end to end."""
+    return (floats(np.concatenate([a.ravel() for a, _ in found])),
+            floats(np.concatenate([b.ravel() for _, b in found])))
+
+
+def turns() -> list[float]:
+    return [i / RANGE_SAMPLES * 2 * math.pi for i in range(RANGE_SAMPLES)]
+
+
+def composition(theme: dict, style: str,
+                size: tuple[int, int]) -> tuple[dict, list | None]:
+    """The style's uniforms, and its range at RANGE_SAMPLES points if noise.
+
+    Drawn from the same generators, in the same order, as the style's renderer
+    in wallpaper.py, so the live wallpaper is the still one set moving.
+    """
+    rng = wallpaper._rng(theme)
+    drift = wallpaper._rng(theme, "drift")
+    if style == "wave":
+        tilt, offsets = wallpaper.wave_shape(rng)
+        return {"u_tilt": [1, [float(tilt)]],
+                "u_offsets": [1, floats(offsets)]}, None
+    if style == "aurora":
+        glows = wallpaper.aurora_shape(rng, drift=drift)
+        return {"u_glow_a": [4, floats([[g["angle"], g["turn"], g["fx"], g["fy"]]
+                                        for g in glows])],
+                "u_glow_b": [4, floats([[g["rx"], g["ry"], 0, 0]
+                                        for g in glows])]}, None
+    if style == "cells":
+        sites = wallpaper.cells_shape(rng, size[0] / size[1], drift=drift)
+        packed = np.stack([sites["x"], sites["y"], sites["turn"],
+                           sites["levels"]], axis=1)
+        return {"u_sites": [4, floats(packed)],
+                "u_cells": [2, [float(len(packed)), float(sites["rows"])]]}, None
+    if style == "dots":
+        found = wallpaper.fbm_lattices(rng, 2, 3, drift)
+        lattice, partner = lattices(found)
+        small = (size[1] // 4, size[0] // 4)
+        ranges = [[float(f.min()), float(f.max())] for f in (
+            wallpaper.fbm_raw(small, found, phase=turn) for turn in turns())]
+        return {"u_lat": [4, lattice], "u_par": [4, partner]}, ranges
+    # ridges: fbm over (count, width), so each ridge is one row of it. The
+    # rows are interpolated here, once; the shader only interpolates along x.
+    count = 14
+    found = wallpaper.fbm_lattices(rng, 3, 4, drift)
+    rows = [(wallpaper._smooth(a, (count, a.shape[1])),
+             wallpaper._smooth(b, (count, b.shape[1]))) for a, b in found]
+    lattice, partner = lattices(rows)
+    ranges = []
+    for turn in turns():
+        raw = wallpaper.fbm_raw((count, 640), found, phase=turn)
+        ranges.append(floats(np.stack([raw.min(axis=1), raw.max(axis=1)],
+                                      axis=1)))
+    return {"u_rl": [4, lattice], "u_rp": [4, partner]}, ranges
+
+
 def state(theme: dict, size: tuple[int, int]) -> dict:
     tones = wallpaper.tones(theme)
-    tilt, offsets = wallpaper.wave_shape(wallpaper._rng(theme))
+    style = style_of(theme)
+    uniforms, ranges = composition(theme, style, size)
     return {
         "theme": theme["name"],
-        "style": style_of(theme),
-        "loop": LOOP,
-        "base": [float(v) for v in tones["base"]],
-        "shape": [float(v) for v in tones["shape"]],
-        "line": [float(v) for v in tones["line"]],
-        "line_alpha": tones["line_alpha"],
-        "reach": wallpaper.QUIET_REACH.get("wave", wallpaper.QUIET_RADIUS),
-        "tilt": float(tilt),
-        "offsets": [float(v) for ribbon in offsets for v in ribbon],
+        "style": style,
+        "loop": LOOPS[style],
+        "uniforms": {
+            "u_base": [3, floats(tones["base"])],
+            "u_shape": [3, floats(tones["shape"])],
+            "u_line": [3, floats(tones["line"])],
+            "u_line_alpha": [1, [float(tones["line_alpha"])]],
+            "u_reach": [1, [float(wallpaper.QUIET_REACH.get(
+                style, wallpaper.QUIET_RADIUS))]],
+            **uniforms,
+        },
+        "ranges": ranges,
         "logo": logo(theme, size),
     }
 
@@ -168,11 +238,15 @@ def main() -> None:
         if os.path.isdir(os.path.join(CACHE, name)):
             shutil.rmtree(os.path.join(CACHE, name), ignore_errors=True)
     size = screen_size()
+    last: tuple[dict | None, dict | None] = (None, None)
     while True:
         try:
             theme = wanted()
-            if theme is not None:
-                publish(state(theme, size))
+            # Worked out again only when the theme changes; the noise styles'
+            # ranges take a moment.
+            if theme is not None and theme != last[0]:
+                last = (theme, state(theme, size))
+                publish(last[1])
         except Exception as error:                      # noqa: BLE001
             print(f"osiris-drift: {error}", file=sys.stderr)
         if args.once:
