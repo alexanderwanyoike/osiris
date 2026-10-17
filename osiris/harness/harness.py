@@ -42,8 +42,13 @@ class Harness:
         if self._session is not None:
             self._engine.stop(self._session)
 
-    def handle(self, event: Event) -> Event:
-        """Log what the Engine reports and apply policy; the event is passed on."""
+    def handle(self, event: Event) -> Event | None:
+        """Log what the Engine reports and apply policy; the event is passed on.
+
+        None for another program's session: the Engine's stream carries them all.
+        """
+        if self._session is None or event.session != self._session:
+            return None
         match event:
             case Answered(session, model, tokens, cost):
                 self._log.write(
