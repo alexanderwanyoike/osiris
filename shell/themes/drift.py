@@ -1,18 +1,15 @@
-"""Render the active theme's drifting wallpaper as a loop of frames.
+"""Tell the drift extension how to draw the active theme's moving wallpaper.
 
     python3 shell/themes/drift.py              # runs for the session
-    python3 shell/themes/drift.py --once       # render the current loop and exit
+    python3 shell/themes/drift.py --once       # publish once and exit
 
-Started at login by /etc/xdg/autostart/osiris-drift.desktop. When the active
-theme's wallpaper is one of the DRIFTING styles, this renders COUNT frames
-round its phase (wallpaper.compose) at the screen's size and publishes them in
-STATE. The drift@osiris Cinnamon extension plays them by the clock, blending
-each frame into the next, so the wallpaper is always moving; this process only
-draws, once per theme.
-
-The frame due now is rendered first (osiris/themes/frames.py), so playback
-starts within seconds of a theme being applied. Only the current theme's
-frames are kept.
+Started at login by /etc/xdg/autostart/osiris-drift.desktop. The drift@osiris
+Cinnamon extension draws a DRIFTING style live on the GPU, every frame, so the
+wallpaper genuinely moves rather than dissolving between stills. What it needs
+from here is what only the Python side knows: the theme's tones and the
+style's composition, drawn from the same generator as the still wallpaper
+(wallpaper.tones, wallpaper.wave_shape), plus the Osiris mark as an overlay.
+These go in STATE; the extension follows that file.
 
 Off when ~/.config/osiris/drift says "off"; the extension reads that itself,
 so switching it off is immediate.
@@ -20,46 +17,32 @@ so switching it off is immediate.
 import argparse
 import hashlib
 import json
-import math
 import os
 import shutil
-import subprocess
 import sys
 import time
 
+import numpy as np
+from PIL import Image
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import engine  # noqa: E402
-import preview  # noqa: E402
 import wallpaper  # noqa: E402
 from paths import home  # noqa: E402
 
-for candidate in (
-    "/usr/share/osiris/lib",
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-):
-    if os.path.isdir(os.path.join(candidate, "osiris")):
-        sys.path.insert(0, candidate)
-        break
-
-from osiris.themes.frames import render_order  # noqa: E402
-
-# Calm, but visibly moving: all the way round in ten minutes, a new frame
-# every five seconds, each blended into the next for the whole five.
-LOOP = 10 * 60
-COUNT = 120
-POLL = 5
+# A full turn of the wave's slowest ribbon. Its others turn two and three
+# times as fast, so something is always visibly moving without hurrying.
+LOOP = 90
+POLL = 2
 
 PREFERENCE = os.path.join(home(), ".config", "osiris", "drift")
 CACHE = os.path.join(home(), ".cache", "osiris", "drift")
-# What the extension plays: {"theme", "dir", "count", "loop"}.
 STATE = os.path.join(CACHE, "current.json")
-# Where the previous design pointed the desktop background; put back on start.
-STILL_FRAMES = os.path.join(home(), ".local", "share", "osiris", "drift")
 
-# The styles that drift; the rest stay still. Chosen for how they move, not
-# for whether they can: a slowly turning contour or facet mesh reads as
-# restlessness, where these read as light, weather and terrain.
-DRIFTING = ("aurora", "dots", "ridges", "cells", "wave")
+# The styles the extension can draw live. Others stay still until they have a
+# shader: blending between pre-rendered stills was tried and reads as a
+# slideshow, not as movement.
+DRIFTING = ("wave",)
 
 FALLBACK_SIZE = (1920, 1080)
 
@@ -78,16 +61,19 @@ def set_enabled(on: bool) -> None:
         fh.write("on\n" if on else "off\n")
 
 
-def drifts(theme: dict) -> bool:
+def style_of(theme: dict) -> str | None:
     named = theme.get("wallpaper")
     if named and named != "generated":
-        return False
-    style = theme.get("wallpaper_style") or wallpaper.style_for(theme["name"])
-    return style in DRIFTING
+        return None
+    return theme.get("wallpaper_style") or wallpaper.style_for(theme["name"])
+
+
+def drifts(theme: dict) -> bool:
+    return style_of(theme) in DRIFTING
 
 
 def screen_size() -> tuple[int, int]:
-    """The largest monitor, in device pixels; frames are drawn to fill it."""
+    """The largest monitor, in device pixels; the mark is drawn to fill it."""
     try:
         import gi
         gi.require_version("Gdk", "4.0")
@@ -104,82 +90,64 @@ def screen_size() -> tuple[int, int]:
     return max(sizes, key=lambda s: s[0] * s[1]) if sizes else FALLBACK_SIZE
 
 
-def key(theme: dict, size: tuple[int, int]) -> str:
-    """Names a loop by everything that changes what it looks like."""
-    look = {k: theme.get(k) for k in (
-        "name", "colors", "dark", "wallpaper_style", "wallpaper_variation")}
-    look.update(size=list(size), count=COUNT,
-                renderer=preview.RENDERER_VERSION)
-    digest = hashlib.sha1(json.dumps(look, sort_keys=True).encode())
-    return digest.hexdigest()[:16]
+def logo(theme: dict, size: tuple[int, int]) -> str | None:
+    """The Osiris mark in the theme's ink, transparent elsewhere.
+
+    Drawn over the live wallpaper the way compose() draws it over the still
+    one, so the mark does not vanish while the wallpaper moves.
+    """
+    mask = wallpaper.logo_mask(size)
+    if mask is None:
+        return None
+    ink = wallpaper.tones(theme)["ink"]
+    digest = hashlib.sha1(json.dumps([list(ink), list(size)]).encode())
+    path = os.path.join(CACHE, f"logo-{digest.hexdigest()[:12]}.png")
+    if not os.path.exists(path):
+        rgba = np.zeros((size[1], size[0], 4), dtype=np.uint8)
+        rgba[..., :3] = (ink * 255).astype(np.uint8)
+        rgba[..., 3] = (mask * wallpaper.LOGO_ALPHA * 255).astype(np.uint8)
+        temporary = path + ".tmp"
+        Image.fromarray(rgba, "RGBA").save(temporary, "PNG")
+        os.replace(temporary, path)
+    for name in os.listdir(CACHE):
+        if name.startswith("logo-") and os.path.join(CACHE, name) != path:
+            os.remove(os.path.join(CACHE, name))
+    return path
 
 
-def frame_path(directory: str, index: int) -> str:
-    return os.path.join(directory, f"frame-{index:03d}.jpg")
+def state(theme: dict, size: tuple[int, int]) -> dict:
+    tones = wallpaper.tones(theme)
+    tilt, offsets = wallpaper.wave_shape(wallpaper._rng(theme))
+    return {
+        "theme": theme["name"],
+        "style": style_of(theme),
+        "loop": LOOP,
+        "base": [float(v) for v in tones["base"]],
+        "shape": [float(v) for v in tones["shape"]],
+        "line": [float(v) for v in tones["line"]],
+        "line_alpha": tones["line_alpha"],
+        "reach": wallpaper.QUIET_REACH.get("wave", wallpaper.QUIET_RADIUS),
+        "tilt": float(tilt),
+        "offsets": [float(v) for ribbon in offsets for v in ribbon],
+        "logo": logo(theme, size),
+    }
 
 
-def publish(theme: dict, directory: str) -> None:
-    state = {"theme": theme["name"], "dir": directory,
-             "count": COUNT, "loop": LOOP}
+def publish(current: dict) -> None:
     try:
         with open(STATE) as fh:
-            if json.load(fh) == state:
+            if json.load(fh) == current:
                 return
     except (OSError, ValueError):
         pass
     temporary = STATE + ".tmp"
     with open(temporary, "w") as fh:
-        json.dump(state, fh)
+        json.dump(current, fh)
     os.replace(temporary, STATE)
 
 
-def forget_others(keep: str) -> None:
-    for name in os.listdir(CACHE):
-        path = os.path.join(CACHE, name)
-        if os.path.isdir(path) and path != keep:
-            shutil.rmtree(path, ignore_errors=True)
-
-
-def render(theme: dict, size: tuple[int, int],
-           still_wanted=lambda: True) -> None:
-    """Render whichever frames of the theme's loop are missing.
-
-    `still_wanted` is asked between frames, so a theme switched away from
-    mid-render stops costing anything.
-    """
-    directory = os.path.join(CACHE, key(theme, size))
-    os.makedirs(directory, exist_ok=True)
-    publish(theme, directory)
-    forget_others(directory)
-    for index in render_order(time.time(), LOOP, COUNT):
-        path = frame_path(directory, index)
-        if os.path.exists(path):
-            continue
-        if not still_wanted():
-            return
-        image = wallpaper.compose(theme, size,
-                                  phase=index / COUNT * 2 * math.pi)
-        # Written aside and moved into place, so the extension never loads a
-        # half-written frame. Full chroma keeps the accent hairlines crisp.
-        temporary = path + ".tmp"
-        image.save(temporary, "JPEG", quality=92, subsampling=0)
-        os.replace(temporary, path)
-
-
-def _put_back_still() -> None:
-    result = subprocess.run(
-        ["dconf", "read", "/org/cinnamon/desktop/background/picture-uri"],
-        check=False, capture_output=True, text=True, env=engine._session_env())
-    name = engine.current()
-    if STILL_FRAMES in result.stdout and name is not None:
-        subprocess.run(
-            ["dconf", "write", "/org/cinnamon/desktop/background/picture-uri",
-             f"'file://{engine.wallpaper_for(engine.load(name))}'"],
-            check=False, capture_output=True, env=engine._session_env())
-
-
 def wanted() -> dict | None:
-    """The theme whose loop should exist now, if any."""
+    """The theme whose wallpaper should be moving now, if any."""
     name = engine.current()
     if name is None or not enabled():
         return None
@@ -190,21 +158,21 @@ def wanted() -> dict | None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--once", action="store_true",
-                        help="render the current loop and exit")
+                        help="publish once and exit")
     args = parser.parse_args()
 
-    # Rendering is background work; the desktop it draws for comes first.
-    os.nice(10)
-    _put_back_still()
     os.makedirs(CACHE, exist_ok=True)
+    # Loops of pre-rendered frames, from when the wallpaper was played as a
+    # slideshow; nothing reads them now.
+    for name in os.listdir(CACHE):
+        if os.path.isdir(os.path.join(CACHE, name)):
+            shutil.rmtree(os.path.join(CACHE, name), ignore_errors=True)
     size = screen_size()
     while True:
         try:
             theme = wanted()
             if theme is not None:
-                name = theme["name"]
-                render(theme, size, still_wanted=lambda n=name: (
-                    (now := wanted()) is not None and now["name"] == n))
+                publish(state(theme, size))
         except Exception as error:                      # noqa: BLE001
             print(f"osiris-drift: {error}", file=sys.stderr)
         if args.once:
