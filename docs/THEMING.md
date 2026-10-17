@@ -346,6 +346,24 @@ Every combination now clears 7:1 for body text and 4:1 for state colours. The
 accent is left exactly as chosen - it is the user's decision, and it is used
 for borders and fills rather than body text.
 
+### Themes from an intent
+
+`osiris/themes/intent.py` makes a theme from what it should be rather than from
+chosen colours: a seed colour, a harmony (analogous, complementary,
+split-complementary, triadic, monochrome), light or dark, and a mood (muted,
+balanced, vivid, pastel). It produces the seeds above, so the rest of the
+derivation is shared.
+
+The rules work in **OKLCH**, where equal steps look equal; HLS does not, and a
+yellow and a blue at the same HLS lightness look nothing alike. Harmony is a
+turn of the hue wheel, mood is a band of lightness and chroma, and the variant
+fixes the background's lightness. The seed contributes only its hue.
+
+The tests sweep every combination - twelve hues, five harmonies, four moods,
+light and dark - and require body text at 7:1 and both accents at 3:1 against
+the background. This is the path a model takes too: it writes an intent, never
+colours (see CONTEXT.md).
+
 ## Wallpapers
 
 Every theme gets a generated wallpaper. `shell/themes/wallpaper.py` renders it
