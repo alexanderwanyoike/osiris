@@ -54,8 +54,10 @@ sudo python3 iso/profile.py
 The first builds the `osiris` package as a normal user (makepkg refuses root).
 The second needs root, because mkarchiso mounts and chroots, and these packages
 on the build host: `archiso`, plus `grub`, `freetype2`, `noto-fonts` and
-`ttf-firacode-nerd`, from which the medium's boot menu fonts are made.
-Budget around 8GB of scratch space and twelve minutes. Writes
+`ttf-firacode-nerd`, from which the medium's boot menu fonts are made, and
+`git` with a network connection, to clone oh-my-zsh for the live session.
+Budget around 12GB of scratch space and half an hour: the live desktop roughly
+doubles what squashfs has to compress. Writes
 `build/out/osiris-<version>-x86_64.iso` and leaves the generated profile at
 `build/iso-profile` for inspection.
 

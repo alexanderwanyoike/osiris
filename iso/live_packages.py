@@ -1,18 +1,21 @@
 """What the Osiris medium adds to archiso's releng package list.
 
 releng is Arch's own install medium, and already carries archinstall, the
-disk and filesystem tools, firmware, microcode and networking. These are only
-what the graphical installer needs on top of it. Everything the installed
-system gets comes from the `osiris` package and archinstall's choices, so
-adding a desktop package here would make the medium bigger without reaching
-the target.
+disk and filesystem tools, firmware, microcode and networking. On top of it
+the medium carries the `osiris` package itself, so the live session is the
+desktop an install produces, and what the installer needs to run without it.
 """
 
-# A minimal X session to host the installer. xinit takes a client and a server
-# on argv, which is how the installer service starts without a shell or a
-# display manager. mesa renders in software where there is no driver, as in
-# most virtual machines.
-GRAPHICS = ["xorg-server", "xorg-xinit", "xorg-xrandr", "mesa"]
+# The live session: the installed desktop, from the same package archinstall
+# installs. It brings Cinnamon, LightDM and the boot splash with it.
+DESKTOP = ["osiris"]
+
+# A bare X session to host the installer when the medium is booted without the
+# live desktop. xinit takes a client and a server on argv, which is how the
+# installer service starts without a shell or a display manager. mesa renders
+# in software where there is no driver, as in most virtual machines.
+# xsetroot gives that bare screen a pointer rather than X's default X shape.
+GRAPHICS = ["xorg-server", "xorg-xinit", "xorg-xrandr", "xorg-xsetroot", "mesa"]
 
 # The installer itself: GTK4 and libadwaita in Python, same as the Appearance
 # app. adwaita-icon-theme supplies the symbolic icons the UI asks for.
@@ -27,10 +30,10 @@ INSTALLER = [
     "gparted",
 ]
 
-
-# The boot splash, the same one the installed system shows.
-SPLASH = ["plymouth"]
+# The installed system's network manager, in place of releng's; see
+# iso/live_session.py.
+NETWORK = ["networkmanager"]
 
 
 def additions() -> list[str]:
-    return GRAPHICS + INSTALLER + SPLASH
+    return DESKTOP + GRAPHICS + INSTALLER + NETWORK
