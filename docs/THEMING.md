@@ -452,7 +452,7 @@ put their most interesting structure exactly where the mark goes.
 lightness, not by colour. The structure comes from accent hairlines on the
 boundaries. That is the difference between a wallpaper and a poster.
 
-Nine styles, all deterministic in the theme's name, so a theme's wallpaper is
+Ten styles, all deterministic in the theme's name, so a theme's wallpaper is
 stable across regeneration and no two themes compose alike:
 
 | Style | Mathematics | Reads as |
@@ -466,33 +466,59 @@ stable across regeneration and no two themes compose alike:
 | `bubbles` | circle packing, largest first | circles that never touch |
 | `ridges` | noise-lifted ridgelines drawn back to front, each hiding those behind | a ridgeline landscape |
 | `facets` | a jittered triangle mesh shaded by a slow field | low-poly stone |
+| `wave` | sums of sines with a hairline core, a soft halo and a fading sheet beneath | the PS3's rolling ribbons of light |
 
 `wallpaper_variation` in a theme gives it a different composition in the same
 style; 0, the default, keeps the name alone as the seed, so wallpapers rendered
 before variations existed did not change. A theme that names no style falls
 back to one of the original three, chosen by hashing its name; hashing over all
-nine would move every such theme to a new wallpaper whenever a style is added.
+ten would move every such theme to a new wallpaper whenever a style is added.
 
 ### Drift
 
-A generated wallpaper can **drift**: it changes a little every three minutes
-and comes all the way round in four hours, so the desktop is alive without
-anything moving moment to moment. `shell/themes/drift.py`, started at login,
-renders the next frame and points the desktop at it, and Cinnamon's own
-crossfade between backgrounds does the animating - no shell code draws it.
+A generated wallpaper **drifts**: it is always gently moving, the way a games
+console's home screen is. Two earlier designs did not work and are worth not
+repeating. A new frame every few minutes was never seen to move. Blending
+between pre-rendered frames was smoother on paper but reads as a slideshow:
+shapes dissolve into the next frame's shapes rather than travelling.
 
-Each frame is the same composition turned slightly further. Every noise field
-behind a style is blended between its own lattice and a partner from a separate
-generator, on a circle: phase 0 is the still wallpaper exactly, a small step is
-a small change, and a full turn returns to the start. Cells move their sites on
-small circles the same way, and aurora's glows slide along the edges and back.
-Four styles drift - aurora, dots, ridges and cells, which move like light,
-weather and terrain - and the rest stay still, as do pictures and named
-wallpapers. The phase comes from the clock, so it carries on across logins.
+So the wallpaper is drawn live, on the GPU, every frame:
 
-Frames alternate between two files, because Cinnamon only loads a background
-when the name changes. The **Drift** switch in Appearance turns it on or off
-(`~/.config/osiris/drift`); turning it off puts the still wallpaper back.
+- The `drift@osiris` Cinnamon extension has one fragment shader holding each
+  drifting style - aurora, cells, dots, ridges and wave - written again from
+  its renderer in `wallpaper.py`, plus `compose()`. It sits as the first child
+  of `global.bottom_window_group`: under nemo-desktop's transparent icon window
+  and every other window, and a group Muffin never restacks. The Osiris mark is
+  an overlay above it, as `compose()` draws it above the still wallpaper.
+- `shell/themes/drift.py`, started at login, publishes what only the Python
+  side knows in `~/.cache/osiris/drift/current.json`: the theme's tones and the
+  style's composition, drawn from the same generators in the same order as the
+  still renderer (`wave_shape`, `aurora_shape`, `cells_shape`,
+  `fbm_lattices`). Dots and ridges are noise normalised by the whole image's
+  range, which a shader cannot see; that range is measured at 48 points round
+  the loop and the extension interpolates between them.
+
+The noise styles match the still wallpaper because the shader does Pillow's
+own bicubic upsampling, edge handling included, rather than a lookalike. Keep
+the shader and `wallpaper.py` in step: the moving wallpaper and the still one
+beneath it are meant to be the same picture.
+
+Each style comes round in a minute or two (`LOOPS` in drift.py): noise and the
+wave's ribbons turn by whole turns per loop, cells move their sites on small
+circles, aurora's glows slide along the edges and back. Phase 0 is the still
+wallpaper exactly. The rest of the styles stay still, as do pictures and named
+wallpapers.
+
+The extension paces itself on what Cinnamon spends: up to 30 frames a second,
+halved while Cinnamon is over 15% of a core, down to two a second. Muffin
+reports software rendering as accelerated, so it cannot simply be asked. On a
+GPU the wave costs about 5% of a core and ridges, the heaviest, about 4%. It
+pauses while anything is fullscreen or the screensaver is up.
+
+The extension only draws over the theme its state belongs to, and reads the
+**Drift** switch in Appearance (`~/.config/osiris/drift`) itself, so a theme
+switch or switching it off fades the motion out at once and the still
+wallpaper underneath shows through.
 
 Truchet tiling earns its place: each cell's arcs meet the midpoints of its
 edges whichever orientation it takes, so neighbouring tiles always connect into

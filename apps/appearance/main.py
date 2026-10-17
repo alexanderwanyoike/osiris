@@ -217,10 +217,6 @@ class ThemeCard(Gtk.Overlay):
 class Window(Adw.ApplicationWindow):
     def _drift_toggled(self, button) -> None:
         drift.set_enabled(button.get_active())
-        # Now, rather than at the next tick: the drift process itself only
-        # looks every few minutes.
-        GLib.spawn_async([sys.executable, drift.__file__, "--once"],
-                         flags=GLib.SpawnFlags.DEFAULT)
 
     def __init__(self, app):
         super().__init__(application=app, title="Appearance")

@@ -36,6 +36,7 @@ LIB_DIR = f"{SHARE}/lib"
 WALLPAPERS = "/usr/share/backgrounds/osiris"
 # Cinnamon loads system-wide extensions from here; enabled in provision/cinnamon.py.
 TRANSITION = "transition@osiris"
+DRIFT_EXTENSION = "drift@osiris"
 EXTENSIONS_DIR = "/usr/share/cinnamon/extensions"
 
 LAUNCHER = """#!/usr/bin/env python3
@@ -205,6 +206,10 @@ def main() -> None:
     with open("/etc/xdg/autostart/osiris-drift.desktop", "w") as fh:
         fh.write(DRIFT)
     print("  /etc/xdg/autostart/osiris-drift.desktop")
+    target = os.path.join(EXTENSIONS_DIR, DRIFT_EXTENSION)
+    n = copy_tree(os.path.join(src_themes, DRIFT_EXTENSION), target,
+                  (".js", ".json"))
+    print(f"  {n} files -> {target}")
 
     print("THEMES_INSTALLED")
 

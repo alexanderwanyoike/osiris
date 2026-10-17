@@ -19,8 +19,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import homes  # noqa: E402
 import services  # noqa: E402
-from themes import TRANSITION  # noqa: E402
 from run import run  # noqa: E402
+from themes import DRIFT_EXTENSION, TRANSITION  # noqa: E402
 
 WALLPAPER = "/usr/share/backgrounds/osiris/osiris-obsidian.png"
 
@@ -52,7 +52,7 @@ panels-autohide=['1:false']
 enabled-applets=[{applets}]
 desktop-effects=true
 startup-animation=false
-enabled-extensions=['{TRANSITION}']
+enabled-extensions=['{TRANSITION}', '{DRIFT_EXTENSION}']
 alttab-switcher-style='coverflow'
 
 [org/cinnamon/desktop/background]

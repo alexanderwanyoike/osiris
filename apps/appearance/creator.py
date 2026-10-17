@@ -69,6 +69,7 @@ STYLE_LABELS = {
     "bubbles": "Bubbles - circles that never touch",
     "ridges": "Ridges - a ridgeline landscape",
     "facets": "Facets - low-poly stone",
+    "wave": "Wave - rolling ribbons of light",
 }
 
 # Starting backgrounds for each variant. Flipping the switch moves the
