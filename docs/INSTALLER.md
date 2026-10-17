@@ -48,7 +48,9 @@ sudo python3 iso/profile.py
 ```
 
 `iso/repo.py` builds the `osiris` package with makepkg and indexes it with
-repo-add into `build/repo`. `iso/profile.py` copies archiso's releng profile,
+repo-add into `build/repo`, along with the packages Osiris bundles from pinned
+PKGBUILDs in `iso/bundled/` because no official repository has them (Plank
+Reloaded). `iso/profile.py` copies archiso's releng profile,
 adds the `osiris` package, the installer and that repository, and runs
 mkarchiso. It needs the `archiso` package, root and a network connection: it
 clones oh-my-zsh for the live session (see below). Writes `build/out/osiris-<version>-x86_64.iso` and

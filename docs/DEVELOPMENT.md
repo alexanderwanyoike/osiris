@@ -52,6 +52,10 @@ sudo python3 iso/profile.py
 ```
 
 The first builds the `osiris` package as a normal user (makepkg refuses root).
+It also compiles the packages Osiris bundles because no official repository
+has them - today only Plank Reloaded, from `iso/bundled/plank-reloaded` - so
+their PKGBUILDs' `depends` and `makedepends` must be installed first; makepkg
+names any that are missing.
 The second needs root, because mkarchiso mounts and chroots, and these packages
 on the build host: `archiso`, plus `grub`, `freetype2`, `noto-fonts` and
 `ttf-firacode-nerd`, from which the medium's boot menu fonts are made, and
