@@ -622,26 +622,34 @@ def _transition(method: str, *args: str, env: dict) -> bool:
     return result.returncode == 0
 
 
+def _own_processes(command: str) -> list[int]:
+    """The ids of this user's processes running `command`."""
+    found = []
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            with open(f"/proc/{entry}/comm") as fh:
+                name = fh.read().strip()
+            owner = os.stat(f"/proc/{entry}").st_uid
+        except OSError:
+            continue
+        if name == command and owner == os.getuid():
+            found.append(int(entry))
+    return found
+
+
 def _reload_terminals() -> None:
     """Have the user's running ghostty processes re-read their config.
 
     ghostty reloads on SIGUSR2; it would otherwise keep the old palette until
     relaunched.
     """
-    for entry in os.listdir("/proc"):
-        if not entry.isdigit():
-            continue
+    for pid in _own_processes("ghostty"):
         try:
-            with open(f"/proc/{entry}/comm") as fh:
-                command = fh.read().strip()
-            owner = os.stat(f"/proc/{entry}").st_uid
+            os.kill(pid, signal.SIGUSR2)
         except OSError:
-            continue
-        if command == "ghostty" and owner == os.getuid():
-            try:
-                os.kill(int(entry), signal.SIGUSR2)
-            except OSError:
-                pass
+            pass
 
 
 def _drift(theme: dict) -> None:
