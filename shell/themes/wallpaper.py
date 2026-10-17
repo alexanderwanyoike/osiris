@@ -646,11 +646,18 @@ def compose(theme: dict, size: tuple[int, int] = (WIDTH, HEIGHT),
         line * palette["line_alpha"])[..., None]
 
     if logo:
-        ink = logo_mask(size)
-        if ink is not None:
-            image = image + (palette["ink"] - image) * (ink * LOGO_ALPHA)[..., None]
+        image = mark(image, palette["ink"], size)
 
     return Image.fromarray((np.clip(image, 0, 1) * 255).astype(np.uint8))
+
+
+def mark(image: np.ndarray, ink: np.ndarray,
+         size: tuple[int, int]) -> np.ndarray:
+    """The Osiris mark over an image of 0-1 floats, faintly, in `ink`."""
+    mask = logo_mask(size)
+    if mask is None:
+        return image
+    return image + (ink - image) * (mask * LOGO_ALPHA)[..., None]
 
 
 def boot_background(theme: dict,
