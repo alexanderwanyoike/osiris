@@ -39,7 +39,7 @@ that exist.
 
 ### The desktop
 
-Cinnamon, trimmed to a single top panel, with Plank as the dock and rofi on
+Cinnamon, trimmed to a single top panel, with Plank Reloaded as the dock and rofi on
 `Super+Space` as the launcher. `provision/cinnamon.py` configures all three.
 
 Cinnamon's own window list is removed from the panel, because Plank owns that
@@ -90,16 +90,19 @@ archiso is the tool for this. The "no bash we author" rule survives intact:
   variable assignments. `iso/profile.py` **generates** it, so the artefact is
   bash and the source is not - the same arrangement as a compiler emitting
   assembly.
+- The live desktop is provisioned while the ISO is built, by a pacman hook
+  whose `Exec=` is a Python program run as argv.
 
-**No display manager on the ISO.** A systemd unit runs
-`xinit /usr/local/bin/osiris-installer -- /usr/bin/X :0 vt1`. xinit takes the
-client and then the server on argv, so a graphical session starts with no shell
-and no login manager to configure.
+**The medium boots into the live desktop**, provisioned at build time from the
+same `osiris` package and `osiris-setup` an install uses, so trying Osiris and
+installing it show the same system. The installer is launched from it, and a
+second boot entry starts the installer alone on bare X for machines where the
+desktop does not come up. See [INSTALLER.md](INSTALLER.md#decisions-worth-knowing).
 
-**Running as root** is deliberate. The alternative is a polkit action and a
-privilege boundary in the middle of a program whose whole purpose is to
-repartition the disk, on a medium with nothing to protect and no other user to
-protect it from.
+**Running as root** is deliberate. The installer is started as root as a
+whole, through `pkexec` from the live desktop. The alternative is a privilege
+boundary in the middle of a program whose whole purpose is to repartition the
+disk, on a medium with nothing to protect and no other user to protect it from.
 
 ## Conventions
 

@@ -60,6 +60,12 @@ The ISO boots UEFI, starts X with no display manager, runs the installer, and
 installs a system that boots to a complete Osiris desktop: branded greeter,
 top panel, Plank dock, generated wallpaper with the mark.
 
+Run again on 2026-10-17, from `dev`, through archinstall (UEFI, erase disk,
+ext4): the install took about three minutes, and the installed system has
+Plank Reloaded, both Cinnamon extensions, Super+Space, Super+T and Super+Enter
+working, the medium's repository removed from pacman.conf, no failed units, and
+a theme switch that retints everything, open terminal included.
+
 Seven defects were found by actually doing it, all fixed:
 
 1. **`systemd-firstboot` took tty1** and asked for a timezone before the
@@ -126,7 +132,11 @@ dict and the `--desktop` flag are removed. Cinnamon is the desktop, settled.
 **GRUB replaced systemd-boot**, so the boot menu can carry the mark.
 systemd-boot has no theme engine at all. See [INSTALLER.md](INSTALLER.md#the-boot-menu).
 The install medium's menu now carries it too: themed GRUB on UEFI, the Osiris
-backdrop behind syslinux on BIOS.
+backdrop behind syslinux on BIOS. The medium also shows the Osiris boot splash.
+
+**The medium boots into the live desktop**, with the installer on its dock and
+desktop, and a second boot entry that starts the installer alone. See
+[INSTALLER.md](INSTALLER.md#decisions-worth-knowing).
 
 ## Known gaps
 

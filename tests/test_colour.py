@@ -103,3 +103,42 @@ class TestHueDistance:
             Colour.from_hls(0.0, 0.5, 0.8), Colour.from_hls(0.5, 0.5, 0.8)
         )
         assert distance == pytest.approx(0.5, abs=0.005)
+
+
+class TestOklch:
+    """OKLCH, from Björn Ottosson's OKLab, against its published values."""
+
+    @pytest.mark.parametrize(
+        ("hex_", "lightness", "chroma", "hue"),
+        [
+            ("#ff0000", 0.6280, 0.2577, 29.23),
+            ("#00ff00", 0.8664, 0.2948, 142.50),
+            ("#0000ff", 0.4520, 0.3132, 264.05),
+        ],
+    )
+    def test_primaries_match_the_reference(
+        self, hex_: str, lightness: float, chroma: float, hue: float
+    ) -> None:
+        got = Colour(hex_).oklch
+        assert got[0] == pytest.approx(lightness, abs=1e-3)
+        assert got[1] == pytest.approx(chroma, abs=1e-3)
+        assert got[2] == pytest.approx(hue, abs=0.1)
+
+    def test_white_is_full_lightness_and_no_chroma(self) -> None:
+        lightness, chroma, _ = WHITE.oklch
+        assert lightness == pytest.approx(1.0, abs=1e-3)
+        assert chroma == pytest.approx(0.0, abs=1e-3)
+
+    def test_black_is_zero_lightness(self) -> None:
+        assert BLACK.oklch[0] == pytest.approx(0.0, abs=1e-6)
+
+    @pytest.mark.parametrize("hex_", ["#7c8aeb", "#2e3440", "#a7c080", "#eb6f92"])
+    def test_round_trips(self, hex_: str) -> None:
+        assert Colour.from_oklch(*Colour(hex_).oklch) == Colour(hex_)
+
+    def test_an_unreachable_colour_keeps_its_lightness_and_hue(self) -> None:
+        colour = Colour.from_oklch(0.7, 0.4, 150.0)
+        lightness, chroma, hue = colour.oklch
+        assert lightness == pytest.approx(0.7, abs=0.02)
+        assert hue == pytest.approx(150.0, abs=2.0)
+        assert chroma < 0.4

@@ -16,6 +16,9 @@ The full design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Read it befo
 
 The build order and priorities are in [docs/ROADMAP.md](docs/ROADMAP.md). Refer to it before starting new work.
 
+The project's language - Theme, Skin, Harness, Engine, Program and the rest - is
+defined in [CONTEXT.md](CONTEXT.md). Use those terms as defined there.
+
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) has the iteration loop, the bash
 accounting, and a list of traps that have each cost a day. Read it before
 writing code that touches a user's home directory, a disk, or a GTK widget.

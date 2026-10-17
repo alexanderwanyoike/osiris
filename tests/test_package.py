@@ -51,3 +51,19 @@ def test_makepkg_reads_it_back(tmp_path: Path) -> None:
     assert ["pkgname", package.NAME] in fields
     assert ["pkgver", "0.1.0"] in fields
     assert [value for key, value in fields if key == "depends"] == package.depends()
+
+
+REPOSITORY = Path(__file__).resolve().parent.parent
+
+
+def test_the_dock_is_plank_reloaded() -> None:
+    names = package.depends()
+    assert "plank-reloaded" in names
+    assert "plank" not in names
+
+
+def test_every_bundled_package_is_built_and_depended_on() -> None:
+    assert package.BUNDLED
+    for name in package.BUNDLED:
+        assert (REPOSITORY / "iso" / "bundled" / name / "PKGBUILD").is_file()
+        assert name in package.depends()

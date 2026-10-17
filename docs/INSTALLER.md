@@ -18,6 +18,7 @@ osiris/iso/package.py               what the `osiris` package contains and needs
 provision/setup.py                  `osiris-setup`, run inside the new system
 iso/repo.py                         builds the package and its repository
 iso/live_packages.py                what the medium adds to archiso's releng
+iso/live_session.py                 provisions the medium's live desktop, at build time
 iso/profile.py                      generates the archiso profile, builds the ISO
 ```
 
@@ -47,9 +48,12 @@ sudo python3 iso/profile.py
 ```
 
 `iso/repo.py` builds the `osiris` package with makepkg and indexes it with
-repo-add into `build/repo`. `iso/profile.py` copies archiso's releng profile,
-adds the installer and that repository, and runs mkarchiso. It needs the
-`archiso` package and root. Writes `build/out/osiris-<version>-x86_64.iso` and
+repo-add into `build/repo`, along with the packages Osiris bundles from pinned
+PKGBUILDs in `iso/bundled/` because no official repository has them (Plank
+Reloaded). `iso/profile.py` copies archiso's releng profile,
+adds the `osiris` package, the installer and that repository, and runs
+mkarchiso. It needs the `archiso` package, root and a network connection: it
+clones oh-my-zsh for the live session (see below). Writes `build/out/osiris-<version>-x86_64.iso` and
 leaves the generated profile in `build/iso-profile`.
 
 ```
@@ -96,19 +100,51 @@ The one boot mode it changes is UEFI's; see [the boot menu](#the-boot-menu).
 does. The PKGBUILD is generated from Python (`osiris/iso/package.py`) and holds
 assignments and one copy - the project authors no bash.
 
-**No display manager on the ISO.** A systemd unit runs:
+**The medium boots into the live desktop.** It carries the `osiris` package,
+the same one archinstall installs, and while the ISO is built a pacman hook
+runs `iso/live_session.py` inside the live root the moment that package lands.
+That runs `osiris-setup --live` - the install's own provisioning, minus the
+GRUB theme and the initramfs, which the medium does not need - then creates a
+passwordless `live` account that LightDM logs in. Every boot gets the desktop
+an install produces, already provisioned. Install Osiris is pinned first on
+the dock and sits on the desktop; it runs the installer through `pkexec`, with
+a polkit action that lets the active session do so without a password.
+
+The hook's `Exec=` is that Python program, as argv. releng's own last hook
+deletes every hook marked "remove from airootfs" once the build's packages are
+in, so it never runs again on the medium. It runs in a chroot without name
+resolution, so `iso/profile.py` clones oh-my-zsh on the build host first.
+
+The live session's network is NetworkManager, as on an installed system,
+rather than releng's systemd-networkd and iwd. Its writes go to a tmpfs of up
+to 4G, where archiso's default is 256M.
+
+**The second entry boots the installer alone.** "Osiris installer only" starts
+`osiris-installer.target` in place of the desktop, for a machine whose graphics
+will not bring the desktop up. A systemd unit in that target runs:
 
 ```
-xinit /usr/local/bin/osiris-installer -- /usr/bin/X :0 vt1 -keeptty -nolisten tcp
+xinit /usr/local/bin/osiris-installer --bare-x -- /usr/bin/X :0 vt1 -keeptty -nolisten tcp
 ```
 
 xinit takes the client and then the server on argv, so a graphical session
-starts with no shell and no login manager to configure.
+starts with no shell and no login manager to configure. `--bare-x` has the
+launcher give the empty screen an arrow pointer, which no window manager is
+there to do. The unit is ordered after `plymouth-quit`, as LightDM's own is, so
+X does not race the splash for the display.
 
-**The installer runs as root.** The alternative is a polkit action and a
-privilege boundary in the middle of a program whose entire purpose is to
-repartition the disk, on a medium with nothing to protect and no other user to
-protect it from.
+**The medium shows the installed system's boot splash.** The theme files come
+from `osiris/provision/plymouth.py`, the same source `provision/branding.py`
+installs from, and go into the live root before archiso builds the initramfs,
+with the `plymouth` hook after `udev` and `quiet splash` on the kernel line.
+In QEMU the splash appears a few seconds after the menu: the initramfs takes
+that long to load from a virtual CD, and the screen is black until then.
+
+**The installer runs as root, all of it.** From the live desktop `pkexec`
+starts it as root; there is no privilege boundary inside it. The alternative
+is a polkit action per operation in the middle of a program whose entire
+purpose is to repartition the disk, on a medium with nothing to protect and no
+other user to protect it from.
 
 ## What the user chooses
 

@@ -22,7 +22,6 @@ from paths import home  # noqa: E402
 
 THEMES_DIR = os.path.join(home(), ".local", "share", "plank", "themes")
 PREFIX = "Osiris-"
-SCHEMA = "net.launchpad.plank.dock.settings"
 PATH = "/net/launchpad/plank/docks/dock1/"
 
 # How solid the dock sits over the wallpaper. Matched to the terminal's
