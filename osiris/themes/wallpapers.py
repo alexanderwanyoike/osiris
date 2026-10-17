@@ -146,7 +146,8 @@ def check(wallpaper: Wallpaper, prelude: str, runner: CommandRunner) -> str | No
             continue
         number, message = int(match.group(1)), match.group(2)
         if first <= number < first + count:
-            reasons.append(f"{wallpaper.shader.name}:{number - first + 1}: {message}")
+            where = f"{wallpaper.name}/{wallpaper.shader.name}:{number - first + 1}"
+            reasons.append(f"{where}: {message}")
         else:
             reasons.append(f"line {number} of the program: {message}")
     return "\n".join(reasons) or result.stdout.strip()
