@@ -161,7 +161,8 @@ def fbm(shape: tuple[int, int], rng: np.random.Generator,
     return total / max(total.max(), 1e-6)
 
 
-def quiet_mask(shape: tuple[int, int]) -> np.ndarray:
+def quiet_mask(shape: tuple[int, int],
+               reach: float = QUIET_RADIUS) -> np.ndarray:
     """1 at the edges, 0 in the middle: how much pattern a pixel may carry.
 
     Smoothstep rather than a linear ramp - a linear falloff leaves a visible
@@ -173,7 +174,7 @@ def quiet_mask(shape: tuple[int, int]) -> np.ndarray:
     # Cubed rather than a plain smoothstep: the falloff has to be wide and very
     # gradual, or the pattern dissolving into the centre reads as a smudge
     # behind the mark instead of as lighting.
-    t = np.clip(radius / QUIET_RADIUS, 0, 1)
+    t = np.clip(radius / reach, 0, 1)
     return (t * t * (3 - 2 * t)) ** 1.6
 
 
