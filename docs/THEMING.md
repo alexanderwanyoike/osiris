@@ -384,41 +384,74 @@ shapes dissolve into the next frame's shapes rather than travelling.
 
 So the wallpaper is drawn live, on the GPU, every frame:
 
-- The `drift@osiris` Cinnamon extension has one fragment shader holding each
-  drifting style - aurora, cells, dots, ridges and wave - written again from
-  its renderer in `wallpaper.py`, plus `compose()`. It sits as the first child
-  of `global.bottom_window_group`: under nemo-desktop's transparent icon window
-  and every other window, and a group Muffin never restacks. The Osiris mark is
-  an overlay above it, as `compose()` draws it above the still wallpaper.
-- `shell/themes/drift.py`, started at login, publishes what only the Python
-  side knows in `~/.cache/osiris/drift/current.json`: the theme's tones and the
-  style's composition, drawn from the same generators in the same order as the
-  still renderer (`wave_shape`, `aurora_shape`, `cells_shape`,
-  `fbm_lattices`). Dots and ridges are noise normalised by the whole image's
-  range, which a shader cannot see; that range is measured at 48 points round
-  the loop and the extension interpolates between them.
-
-The noise styles match the still wallpaper because the shader does Pillow's
-own bicubic upsampling, edge handling included, rather than a lookalike. Keep
-the shader and `wallpaper.py` in step: the moving wallpaper and the still one
-beneath it are meant to be the same picture.
-
-Each style comes round in a minute or two (`LOOPS` in drift.py): noise and the
-wave's ribbons turn by whole turns per loop, cells move their sites on small
-circles, aurora's glows slide along the edges and back. Phase 0 is the still
-wallpaper exactly. The rest of the styles stay still, as do pictures and named
-wallpapers.
+- Each moving wallpaper is a **package** (below). The `drift@osiris` Cinnamon
+  extension compiles the active one's shader after a shared prelude and draws
+  it as the first child of `global.bottom_window_group`: under nemo-desktop's
+  transparent icon window and every other window, and a group Muffin never
+  restacks. The Osiris mark is an overlay above it, as `compose()` draws it
+  above the still wallpaper.
+- `shell/themes/drift.py`, started at login, publishes what the extension
+  needs in `~/.cache/osiris/drift/current.json`: the package, the theme's
+  colours, whatever the package's `still.py` hands its shader - for the
+  built-in five, the same random draws as the still renderer, so the two are
+  the same picture - and the mark. Or, instead, the reason it cannot move.
 
 The extension paces itself on what Cinnamon spends: up to 30 frames a second,
-halved while Cinnamon is over 15% of a core, down to two a second. Muffin
-reports software rendering as accelerated, so it cannot simply be asked. On a
-GPU the wave costs about 5% of a core and ridges, the heaviest, about 4%. It
-pauses while anything is fullscreen or the screensaver is up.
+halved while Cinnamon is over 15% of a core, down to two a second. On a GPU
+the wave costs about 5% of a core and ridges, the heaviest, about 4%. It
+pauses while anything is fullscreen or the screensaver is up, draws only over
+the theme its state belongs to, and reads the **Drift** switch in Appearance
+(`~/.config/osiris/drift`) itself, so a theme switch or switching it off fades
+the motion out at once and the still wallpaper underneath shows through.
 
-The extension only draws over the theme its state belongs to, and reads the
-**Drift** switch in Appearance (`~/.config/osiris/drift`) itself, so a theme
-switch or switching it off fades the motion out at once and the still
-wallpaper underneath shows through.
+### When it does not move
+
+The still wallpaper is always underneath, so every failure leaves the desktop
+as it would have been without drift, and Appearance turns its **Drift** button
+amber and says why:
+
+- **No GPU.** Drawing every frame on the CPU costs more than a moving
+  wallpaper is worth. Muffin reports a software renderer as accelerated, so
+  drift.py asks `glxinfo -B` instead: Mesa states "Accelerated: no" outright,
+  and NVIDIA's own driver, which does not, is judged by its renderer's name.
+  As a backstop, the extension gives up for the session if drawing is still
+  over budget at its slowest rate.
+- **A shader that does not compile.** drift.py checks every package with
+  `glslangValidator` against the exact program Cogl will compile
+  (`osiris/themes/wallpapers.py`), and reports errors by the package's own
+  line numbers, `name/shader.glsl:3: ...`, so an agent can fix them.
+- **A `still.py` that raises.** Reported the same way.
+
+### Wallpaper packages
+
+A package is a folder named after the wallpaper, in
+`/usr/share/osiris/themes/wallpapers/` for the shipped five (aurora, cells,
+dots, ridges, wave) or `~/.local/share/osiris/wallpapers/` for a user's own -
+written by hand or by an agent. A theme names one in `wallpaper_style`, and it
+appears in the creator's pattern list under its label. A user's package
+replaces a shipped one of the same name.
+
+    wallpaper.json   {"name": "<folder>", "label": "Shown in Appearance", "loop": 60}
+    shader.glsl      vec3 wallpaper(vec2 uv) { ... }
+    still.py         def still(theme, size, phase=None) -> PIL.Image
+
+- `shader.glsl` is GLSL 1.20, which is what Cogl compiles, after
+  `shell/themes/wallpapers/prelude.glsl`. The prelude declares what every
+  shader is given - where the loop is (`u_time`, 0 to 1), the monitor
+  (`u_size`), and the theme's colours - and a few helpers, `compose()` among
+  them. `uv` runs from (0, 0) at the top left to (1, 1). The function returns
+  the colour; the mark is drawn above it.
+- `still.py` draws the same picture without motion, from the same colours,
+  at `phase` radians round the loop (None for the still itself), without the
+  mark. It is what previews, the boot screen and a machine without a GPU
+  show. It may import `wallpaper` for the theme's tones and helpers.
+- `still.py` may also define `uniforms(theme, size)`, returning
+  `{"u_name": [components, [floats]]}` for the shader to declare and use, and
+  `ranges(theme, size, phases)`, values measured round the loop that the
+  extension interpolates into the prelude's `u_range`.
+
+Edit a package while it is showing and drift.py notices within seconds,
+checks it again and the desktop picks it up.
 
 Truchet tiling earns its place: each cell's arcs meet the midpoints of its
 edges whichever orientation it takes, so neighbouring tiles always connect into
