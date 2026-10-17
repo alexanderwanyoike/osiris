@@ -40,7 +40,10 @@ runpy.run_path("{SOURCE_DIR}/provision/setup.py", run_name="__main__")
 #: Packages that are in no official Arch repository, built from the pinned
 #: PKGBUILDs in iso/bundled/<name>/ into Osiris's own repository alongside this
 #: one, so the install can depend on them without the AUR.
-BUNDLED: tuple[str, ...] = ()
+#:
+#: plank-reloaded is Plank, maintained: Plank 0.11.89, unreleased since 2019,
+#: aborts on some GTK theme changes, and an Osiris theme switch is one.
+BUNDLED: tuple[str, ...] = ("plank-reloaded",)
 
 # What Osiris needs on top of the system archinstall builds. The kernel, the
 # base system, the bootloader, microcode, graphics drivers, NetworkManager,
@@ -48,7 +51,7 @@ BUNDLED: tuple[str, ...] = ()
 # archinstall's, chosen per machine, and are not repeated here.
 DESKTOP = (
     "cinnamon", "cinnamon-translations", "nemo",
-    "plank", "rofi",
+    "plank-reloaded", "rofi",
     "lightdm", "lightdm-slick-greeter",
     "xdg-desktop-portal-gtk", "xdg-user-dirs",
     "xed", "gnome-screenshot",
