@@ -352,7 +352,7 @@ put their most interesting structure exactly where the mark goes.
 lightness, not by colour. The structure comes from accent hairlines on the
 boundaries. That is the difference between a wallpaper and a poster.
 
-Nine styles, all deterministic in the theme's name, so a theme's wallpaper is
+Ten styles, all deterministic in the theme's name, so a theme's wallpaper is
 stable across regeneration and no two themes compose alike:
 
 | Style | Mathematics | Reads as |
@@ -366,33 +366,54 @@ stable across regeneration and no two themes compose alike:
 | `bubbles` | circle packing, largest first | circles that never touch |
 | `ridges` | noise-lifted ridgelines drawn back to front, each hiding those behind | a ridgeline landscape |
 | `facets` | a jittered triangle mesh shaded by a slow field | low-poly stone |
+| `wave` | sums of sines with a hairline core, a soft halo and a fading sheet beneath | the PS3's rolling ribbons of light |
 
 `wallpaper_variation` in a theme gives it a different composition in the same
 style; 0, the default, keeps the name alone as the seed, so wallpapers rendered
 before variations existed did not change. A theme that names no style falls
 back to one of the original three, chosen by hashing its name; hashing over all
-nine would move every such theme to a new wallpaper whenever a style is added.
+ten would move every such theme to a new wallpaper whenever a style is added.
 
 ### Drift
 
-A generated wallpaper can **drift**: it changes a little every three minutes
-and comes all the way round in four hours, so the desktop is alive without
-anything moving moment to moment. `shell/themes/drift.py`, started at login,
-renders the next frame and points the desktop at it, and Cinnamon's own
-crossfade between backgrounds does the animating - no shell code draws it.
+A generated wallpaper **drifts**: it is always gently moving, the way a games
+console's home screen is, and comes all the way round in ten minutes. A
+wallpaper that changed every few minutes was tried first; nobody ever saw it
+move, which is the same as it not moving.
 
 Each frame is the same composition turned slightly further. Every noise field
 behind a style is blended between its own lattice and a partner from a separate
 generator, on a circle: phase 0 is the still wallpaper exactly, a small step is
 a small change, and a full turn returns to the start. Cells move their sites on
-small circles the same way, and aurora's glows slide along the edges and back.
-Four styles drift - aurora, dots, ridges and cells, which move like light,
-weather and terrain - and the rest stay still, as do pictures and named
-wallpapers. The phase comes from the clock, so it carries on across logins.
+small circles the same way, aurora's glows slide along the edges and back, and
+the wave's ribbons travel by whole turns per loop. Five styles drift - aurora,
+dots, ridges, cells and wave, which move like light, weather, terrain and water
+- and the rest stay still, as do pictures and named wallpapers.
 
-Frames alternate between two files, because Cinnamon only loads a background
-when the name changes. The **Drift** switch in Appearance turns it on or off
-(`~/.config/osiris/drift`); turning it off puts the still wallpaper back.
+Two pieces do it, so the expensive part happens once:
+
+- `shell/themes/drift.py`, started at login, renders the active theme's loop:
+  120 frames at the largest monitor's size, cached under
+  `~/.cache/osiris/drift/` for the current theme only, and named in
+  `current.json`. The frame due now is rendered first, so a newly applied theme
+  starts moving within seconds.
+- The `drift@osiris` Cinnamon extension plays the loop by the clock
+  (`osiris/themes/frames.py` has the arithmetic), fading each frame into the
+  next for the whole five seconds between them, so there is never a still
+  moment. It sits as the first child of `global.bottom_window_group`: under
+  nemo-desktop's transparent icon window and every other window, and a group
+  Muffin never restacks.
+
+Every update repaints the whole stage, so the extension paces itself on what
+it costs: four updates a second, halved while Cinnamon spends more than 15% of
+a core, down to one every two seconds. That is for machines rendering in
+software, which Muffin still reports as accelerated, so it cannot simply be
+asked. It pauses while anything is fullscreen or the screensaver is up.
+
+The extension only plays a loop over the theme it was rendered for, and reads
+the **Drift** switch in Appearance (`~/.config/osiris/drift`) itself, so a theme
+switch or switching it off fades the motion out at once and the still
+wallpaper underneath shows through.
 
 Truchet tiling earns its place: each cell's arcs meet the midpoints of its
 edges whichever orientation it takes, so neighbouring tiles always connect into
