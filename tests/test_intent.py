@@ -41,6 +41,17 @@ def test_the_secondary_sits_at_its_harmony(harmony: Harmony, offset: float) -> N
     assert hue_gap(result.accent, result.secondary) == pytest.approx(offset, abs=4.0)
 
 
+@pytest.mark.parametrize("harmony", [h for h in Harmony if h is not Harmony.MONOCHROME])
+@pytest.mark.parametrize("mood", list(Mood))
+def test_the_secondary_supports_rather_than_competes(
+    harmony: Harmony, mood: Mood
+) -> None:
+    """One strong colour and a quieter partner: two at equal strength fight."""
+    result = seeds(ThemeIntent(seed=TEAL, harmony=harmony, mood=mood))
+    assert result.secondary is not None
+    assert result.secondary.oklch[1] < result.accent.oklch[1] * 0.85
+
+
 def test_a_monochrome_secondary_keeps_the_hue_and_moves_lightness() -> None:
     result = seeds(ThemeIntent(seed=TEAL, harmony=Harmony.MONOCHROME))
     assert result.secondary is not None

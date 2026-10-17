@@ -87,7 +87,15 @@ def _accent(hue: float, band: _Band, dark: bool) -> Colour:
     return Colour.from_oklch(band.on_dark if dark else band.on_light, band.chroma, hue)
 
 
-def _secondary(hue: float, harmony: Harmony, band: _Band, dark: bool) -> Colour:
+#: The secondary's chroma as a share of the accent's. One strong colour and a
+#: quieter partner read as a palette; two at equal strength fight, which is
+#: what complementary and triadic pairs did before this.
+SECONDARY_CHROMA = 0.6
+
+
+def _secondary(
+    hue: float, harmony: Harmony, band: _Band, dark: bool, accent: Colour
+) -> Colour:
     if harmony is Harmony.MONOCHROME:
         lightness = (
             band.on_dark + MONOCHROME_STEP if dark else band.on_light - MONOCHROME_STEP
@@ -95,17 +103,23 @@ def _secondary(hue: float, harmony: Harmony, band: _Band, dark: bool) -> Colour:
         low, high = MONOCHROME_BOUNDS
         lightness = max(low, min(high, lightness))
         return Colour.from_oklch(lightness, band.chroma * 0.7, hue)
-    return _accent((hue + HUE_TURNS[harmony][0]) % 360.0, band, dark)
+    lightness, chroma, _ = accent.oklch
+    return Colour.from_oklch(
+        lightness,
+        chroma * SECONDARY_CHROMA,
+        (hue + HUE_TURNS[harmony][0]) % 360.0,
+    )
 
 
 def seeds(intent: ThemeIntent) -> Seeds:
     """What osiris.themes.derive needs to build the theme's full palette."""
     hue = intent.seed.oklch[2]
     band = MOODS[intent.mood]
+    accent = _accent(hue, band, intent.dark)
     return Seeds(
         background=Colour.from_oklch(BACKGROUND_LIGHTNESS[intent.dark], band.tint, hue),
-        accent=_accent(hue, band, intent.dark),
-        secondary=_secondary(hue, intent.harmony, band, intent.dark),
+        accent=accent,
+        secondary=_secondary(hue, intent.harmony, band, intent.dark, accent),
         dark=intent.dark,
     )
 
