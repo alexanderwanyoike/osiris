@@ -56,7 +56,7 @@ MASK_PATHS = (
 )
 
 STYLES = ("contour", "arcs", "strata", "aurora", "dots", "cells", "bubbles",
-          "ridges", "facets")
+          "ridges", "facets", "wave")
 # What a theme naming no style falls back to, chosen by hashing its name. Fixed
 # at the original three: hashing over STYLES would move every such theme to a
 # different wallpaper whenever a style is added.
@@ -65,6 +65,9 @@ FALLBACK_STYLES = ("contour", "arcs", "strata")
 LOGO_HEIGHT = 0.36       # of the image height
 LOGO_ALPHA = 0.30        # a watermark, not a sticker
 QUIET_RADIUS = 0.70      # of the image height; pattern fades inside this
+# The wave runs beneath the mark rather than around it, and the full radius
+# would put most of its length in the faded zone; this still clears the mark.
+QUIET_REACH = {"wave": 0.40}
 
 
 # --------------------------------------------------------------------------- #
@@ -459,9 +462,44 @@ def facets(shape, rng, grid: int = 6, phase: float = 0.0,
     return _field(tone), _field(lines) * 0.35
 
 
+def wave(shape, rng, ribbons: int = 6, phase: float = 0.0,
+         drift=None):
+    """Ribbons of light rolling across the lower third, after the PS3's XMB.
+
+    Each ribbon is three sines; the phase moves them by whole turns per loop
+    (one, two and three), so a full turn of `phase` brings every ribbon back to
+    where it started. A hairline core with a soft halo carries the light, and
+    beneath each ribbon hangs a faint sheet that fades out, which is what gives
+    the band depth rather than a bundle of strings.
+    """
+    height, width = shape
+    x = np.linspace(0.0, 1.0, width, dtype=np.float32)[None, :]
+    y = (np.arange(height, dtype=np.float32) / height)[:, None]
+    t = phase / (2 * np.pi)
+    turn = 2 * np.pi
+    core = max(0.8, height * 0.0012) / height
+    halo = 0.022
+    tilt = (rng.random() - 0.5) * 0.08
+    fill = np.zeros(shape, dtype=np.float32)
+    line = np.zeros(shape, dtype=np.float32)
+    for index in range(ribbons):
+        offsets = rng.random(3) * turn
+        centre = (0.76 + tilt * (x - 0.5)
+                  + 0.060 * np.sin(turn * (0.55 * x + t) + offsets[0])
+                  + 0.030 * np.sin(turn * (1.35 * x - 2 * t) + offsets[1])
+                  + 0.012 * np.sin(turn * (2.70 * x + 3 * t) + offsets[2]))
+        d = y - centre
+        # The middle ribbons brightest, so the band has a body and soft edges.
+        strength = 0.45 + 0.55 * (1 - abs(index / (ribbons - 1) - 0.5) * 2)
+        line += (np.exp(-(d / core) ** 2)
+                 + 0.18 * np.exp(-(d / halo) ** 2)) * strength
+        fill += np.where(d > 0, np.exp(-np.maximum(d, 0) / 0.08), 0) * 0.12
+    return np.clip(fill, 0, 1), np.clip(line, 0, 1)
+
+
 RENDERERS = {"contour": contour, "arcs": arcs, "strata": strata, "aurora": aurora, "dots": dots,
              "cells": cells, "bubbles": bubbles, "ridges": ridges,
-             "facets": facets}
+             "facets": facets, "wave": wave}
 
 
 # --------------------------------------------------------------------------- #
@@ -533,7 +571,7 @@ def compose(theme: dict, size: tuple[int, int] = (WIDTH, HEIGHT),
         fill, line = RENDERERS[style](shape, rng, phase=phase,
                                       drift=_rng(theme, "drift"))
 
-    mask = quiet_mask(shape)
+    mask = quiet_mask(shape, QUIET_REACH.get(style, QUIET_RADIUS))
     fill *= mask
     line *= mask
 
