@@ -37,6 +37,11 @@ sys.argv[0] = "osiris-setup"
 runpy.run_path("{SOURCE_DIR}/provision/setup.py", run_name="__main__")
 """
 
+#: Packages that are in no official Arch repository, built from the pinned
+#: PKGBUILDs in iso/bundled/<name>/ into Osiris's own repository alongside this
+#: one, so the install can depend on them without the AUR.
+BUNDLED: tuple[str, ...] = ()
+
 # What Osiris needs on top of the system archinstall builds. The kernel, the
 # base system, the bootloader, microcode, graphics drivers, NetworkManager,
 # PipeWire, LightDM with slick-greeter, Plymouth and Bluetooth are all

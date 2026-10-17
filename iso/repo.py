@@ -8,6 +8,11 @@ Run as a normal user: makepkg refuses to run as root. The ISO build
 installs from it. What goes into the package is described in
 osiris/iso/package.py; this only stages the files and hands them to the
 standard tools - makepkg to build, repo-add to index.
+
+The repository also carries the packages `package.BUNDLED` names, built from
+their pinned PKGBUILDs in iso/bundled/. Those are compiled for real, so their
+`depends` and `makedepends` must be installed on the build machine first;
+makepkg says which are missing.
 """
 import argparse
 import os
@@ -66,8 +71,19 @@ def build(out: str) -> str:
     built = [name for name in os.listdir(repository) if ".pkg.tar" in name]
     if len(built) != 1:
         sys.exit(f"expected one package in {repository}, found {built}")
+
+    for name in package.BUNDLED:
+        recipe = os.path.join(out, "bundled", name)
+        if os.path.isdir(recipe):
+            shutil.rmtree(recipe)
+        shutil.copytree(os.path.join(HERE, "bundled", name), recipe)
+        os.chdir(recipe)
+        stream("makepkg", "--force", "--cleanbuild", "--noconfirm")
+
+    packages = sorted(name for name in os.listdir(repository)
+                      if ".pkg.tar" in name and not name.endswith(".sig"))
     run("repo-add", os.path.join(repository, f"{package.NAME}.db.tar.gz"),
-        os.path.join(repository, built[0]))
+        *(os.path.join(repository, name) for name in packages))
     return repository
 
 
