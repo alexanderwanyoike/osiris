@@ -39,6 +39,12 @@ class SignIn:
     needs_code: bool
 
 
+@dataclass(frozen=True)
+class SignInState:
+    status: Literal["pending", "complete", "failed", "expired"]
+    message: str
+
+
 @runtime_checkable
 class Accounts(Protocol):
     def providers(self) -> list[Provider]: ...
@@ -46,3 +52,5 @@ class Accounts(Protocol):
     def connect_key(self, provider: str, key: str) -> None: ...
 
     def start_sign_in(self, provider: str, method: str) -> SignIn: ...
+
+    def sign_in_state(self, provider: str, attempt: str) -> SignInState: ...
