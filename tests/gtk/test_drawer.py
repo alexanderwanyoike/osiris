@@ -31,12 +31,17 @@ class FakeApp(Adw.Application):
         self.asked.append(text)
         self.conversation.asked(text)
 
+    def undo(self, _turn: object) -> None:
+        pass
+
+    def program_card(self, name: str) -> object:
+        from gi.repository import Gtk
+
+        return Gtk.Label(label=name)
+
     def new_conversation(self) -> None:
         self.new_conversations += 1
         self.conversation = Conversation()
-
-    def header_line(self) -> str:
-        return "default model"
 
     def footer_line(self) -> str:
         return ""
@@ -164,5 +169,6 @@ def test_the_model_in_play_is_a_menu_in_the_composer() -> None:
     from tests.gtk.conftest import texts, widgets
 
     window, _ = drawer()
+    window.refresh()
     menus = [w for w in widgets(window) if isinstance(w, Gtk.MenuButton)]
     assert any("default model" in texts(m) for m in menus)
