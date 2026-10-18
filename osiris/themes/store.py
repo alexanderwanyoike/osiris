@@ -21,6 +21,8 @@ class ThemeStore(Protocol):
 
     def apply(self, name: str) -> None: ...
 
+    def delete(self, name: str) -> None: ...
+
 
 class FakeThemeStore:
     def __init__(
@@ -32,6 +34,7 @@ class FakeThemeStore:
         self.current_name = current
         self.saved: list[Mapping[str, Any]] = []
         self.applied: list[str] = []
+        self.deleted: list[str] = []
 
     def themes(self) -> list[Mapping[str, Any]]:
         return self.themes_kept
@@ -46,3 +49,7 @@ class FakeThemeStore:
     def apply(self, name: str) -> None:
         self.applied.append(name)
         self.current_name = name
+
+    def delete(self, name: str) -> None:
+        self.deleted.append(name)
+        self.themes_kept = [t for t in self.themes_kept if t["name"] != name]

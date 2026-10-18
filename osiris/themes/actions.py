@@ -82,3 +82,15 @@ def apply_theme(store: ThemeStore, name: str) -> str | None:
     previous = store.current()
     store.apply(name)
     return previous
+
+
+def delete_theme(store: ThemeStore, name: str) -> None:
+    """Delete a theme, which is how making one is undone."""
+    found = [theme for theme in store.themes() if theme["name"] == name]
+    if not found:
+        raise ThemeActionError(f"There is no theme called {name}")
+    if store.current() == name:
+        raise ThemeActionError(
+            f"{found[0]['label']} is applied; apply another theme first"
+        )
+    store.delete(name)

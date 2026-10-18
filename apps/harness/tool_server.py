@@ -37,6 +37,9 @@ class EngineStore:
     def apply(self, name: str) -> None:
         engine.apply(name)
 
+    def delete(self, name: str) -> None:
+        engine.delete(name)
+
 
 if __name__ == "__main__":
     server(EngineStore()).run()
