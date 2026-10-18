@@ -12,12 +12,14 @@ from osiris.harness.engine import ModelRef
 from tests.gtk.conftest import find, now, texts
 
 KEY = Method(id=None, kind="key", label="API key")
+CHATGPT = Method(id="chatgpt-token-sharing", kind="oauth", label="Sign in with ChatGPT")
 
 
 @dataclass
 class FakeAccounts:
     listed: list[Provider] = field(default_factory=list)
     keys: list[tuple[str, str]] = field(default_factory=list)
+    started: list[tuple[str, str]] = field(default_factory=list)
 
     def providers(self) -> list[Provider]:
         return self.listed
@@ -30,9 +32,14 @@ class FakeAccounts:
         ]
 
     def start_sign_in(self, provider: str, method: str) -> SignIn:
-        return SignIn(provider, "att", "https://example.org", "Sign in", False)
+        self.started.append((provider, method))
+        return SignIn(provider, "att", "https://auth.example.org/x", "Sign in", False)
 
     def sign_in_state(self, provider: str, attempt: str) -> SignInState:
+        self.listed = [
+            Provider(p.id, p.name, p.methods, p.connected or p.id == provider)
+            for p in self.listed
+        ]
         return SignInState("complete", "")
 
     def finish_sign_in(self, provider: str, attempt: str, code: str | None) -> None:
@@ -73,4 +80,16 @@ def test_once_a_key_is_saved_the_provider_shows_as_connected() -> None:
     page = ProvidersPage(accounts, background=now)
     find(page, Gtk.PasswordEntry).set_text("sk-test")
     find(page, Gtk.Button, "Save").emit("clicked")
+    assert "Connected" in texts(page)
+
+
+def test_signing_in_opens_the_providers_page_and_ends_connected() -> None:
+    accounts = FakeAccounts(listed=[Provider("openai", "OpenAI", (CHATGPT,), False)])
+    opened: list[str] = []
+    page = ProvidersPage(
+        accounts, background=now, open_page=opened.append, later=lambda _s, then: then()
+    )
+    find(page, Gtk.Button, "Sign in with ChatGPT").emit("clicked")
+    assert accounts.started == [("openai", "chatgpt-token-sharing")]
+    assert opened == ["https://auth.example.org/x"]
     assert "Connected" in texts(page)
