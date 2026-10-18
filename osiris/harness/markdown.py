@@ -95,14 +95,19 @@ def _quote(url: str) -> str:
     )
 
 
+#: CommonMark: a line break in the source is a space, the drawer rewrapping the
+#: paragraph to its own width; only an explicit break starts a new line.
+_BREAKS = {"softbreak": " ", "hardbreak": "\n"}
+
+
 def _inline(tokens: Sequence[Token], style: InlineStyle) -> str:
     out: list[str] = []
     linking: list[bool] = []
     for token in tokens:
         if token.type in ("text", "html_inline"):
             out.append(escape(token.content, quote=False))
-        elif token.type in ("softbreak", "hardbreak"):
-            out.append("\n")
+        elif token.type in _BREAKS:
+            out.append(_BREAKS[token.type])
         elif token.type == "code_inline":
             out.append(
                 f'<span font_family="monospace" '
