@@ -21,7 +21,7 @@ from osiris.harness.engine import (
     ToolCalled,
     ToolRequested,
 )
-from osiris.harness.harness import REFUSED, Harness
+from osiris.harness.harness import REFUSED, Allowed, Harness, Refused
 from osiris.harness.log import LOG_FILE, HarnessLog
 from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem
@@ -144,6 +144,17 @@ def test_an_action_with_a_tier_is_allowed_and_logged_with_it(tier: Tier) -> None
     assert entry["kind"] == "allowed"
     assert entry["action"] == "osiris_apply_theme"
     assert entry["tier"] == tier.value
+
+
+def test_the_decision_is_passed_on_in_place_of_the_request() -> None:
+    subject, _, _ = harness(tiers={"osiris_apply_theme": Tier.UNDOABLE})
+    subject.ask("make it calm")
+    allowed = subject.handle(
+        ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",))
+    )
+    refused = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls",)))
+    assert allowed == Allowed("ses_1", "osiris_apply_theme", Tier.UNDOABLE)
+    assert refused == Refused("ses_1", "bash", ("ls",))
 
 
 def test_a_rejection_points_the_model_at_the_tools_it_may_use() -> None:
