@@ -58,3 +58,40 @@ def test_a_provider_lists_the_ways_a_person_can_sign_in() -> None:
             connected=False,
         )
     ]
+
+
+def test_a_provider_with_a_working_credential_is_connected() -> None:
+    signed_in = {
+        **OPENAI,
+        "connections": [
+            {
+                "type": "credential",
+                "id": "cred_1",
+                "label": "ChatGPT",
+                "method": "oauth",
+            }
+        ],
+    }
+    http = FakeHttpClient(
+        replies={("GET", f"{URL}/api/integration"): {"data": [signed_in]}}
+    )
+    assert accounts(http).providers()[0].connected
+
+
+def test_a_connection_that_needs_signing_in_again_is_not_connected() -> None:
+    expired = {
+        **OPENAI,
+        "connections": [
+            {
+                "type": "credential",
+                "id": "cred_1",
+                "label": "ChatGPT",
+                "method": "oauth",
+                "status": {"status": "needs_auth", "message": "Sign in again"},
+            }
+        ],
+    }
+    http = FakeHttpClient(
+        replies={("GET", f"{URL}/api/integration"): {"data": [expired]}}
+    )
+    assert not accounts(http).providers()[0].connected
