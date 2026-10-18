@@ -45,7 +45,7 @@ from providers import ProvidersPage  # noqa: E402
 from render import TurnView  # noqa: E402
 from theme_store import EngineStore  # noqa: E402
 
-from osiris.apps.tool_server import undo  # noqa: E402
+from osiris.apps.tool_server import NAME as TOOLS, TIERS, undo  # noqa: E402
 
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
 from osiris.harness.harness import Harness  # noqa: E402
@@ -68,6 +68,9 @@ WIDTH = 440
 RECONNECT_SECONDS = 3
 #: The widest the conversation grows, in pixels, however wide the drawer.
 READABLE = 820
+
+#: Run by the Engine for every session; it acts through the theme engine.
+TOOL_SERVER = os.path.join(HERE, "tool_server.py")
 
 DRAWER_BUS = "dev.osiris.HarnessDrawer"
 DRAWER_PATH = "/dev/osiris/HarnessDrawer"
@@ -366,7 +369,7 @@ class Application(Adw.Application):
     def footer_line(self) -> str:
         if self.harness is None:
             return self.problem
-        return "allowance not reported  ·  only talks for now"
+        return "allowance not reported"
 
     def background(self, work, done) -> None:
         """Run work off the main loop and hand its result back to it."""
@@ -441,12 +444,14 @@ class Application(Adw.Application):
             try:
                 service = locate(files, me, SubprocessRunner(sink=lambda _l: None))
                 engine = OpencodeEngine(UrllibClient(), service)
+                engine.attach_tools(TOOLS, [sys.executable, TOOL_SERVER])
+                tiers = {engine.action(TOOLS, tool): tier for tool, tier in TIERS.items()}
                 # A restarted service has a new password, so the Harness is
                 # rebuilt around the new connection; the next question opens
                 # a new session.
                 self.log = HarnessLog(files, me.home / LOG_FILE)
                 self.harness = Harness(engine, self.log, self.models.default,
-                                       tiers={})
+                                       tiers=tiers)
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)
                 for event in engine.events():
