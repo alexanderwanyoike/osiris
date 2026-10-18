@@ -228,6 +228,15 @@ class Programs:
             )
         return found
 
+    def holds(self, path: Path) -> bool:
+        """Whether ``path`` is inside a Program's source: the only files the
+        Harness may read or edit."""
+        code = self._home / CODE_DIR
+        if code not in path.parents:
+            return False
+        source = code / path.relative_to(code).parts[0]
+        return self._files.exists(source / MANIFEST_FILE)
+
     # ---- what the person does ----------------------------------------------
 
     def prepare_try(self, name: str) -> tuple[list[str], Path]:
