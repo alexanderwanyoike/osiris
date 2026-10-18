@@ -216,3 +216,17 @@ def test_a_past_conversation_comes_back_with_its_answers() -> None:
     assert talk.title == "make a timer"
     assert talk.model == GPT
     assert not talk.busy
+
+
+def test_a_conversation_knows_every_program_it_has_touched() -> None:
+    talk = Conversation()
+    talk.asked("make a timer")
+    talk.changed([Change("Made Pomodoro", None, program="pomodoro")])
+    talk.asked("and a notes app")
+    talk.changed(
+        [
+            Change("Made Notes", None, program="notes"),
+            Change("Pomodoro: Add a pause button", None, program="pomodoro"),
+        ]
+    )
+    assert talk.programs == ["pomodoro", "notes"]
