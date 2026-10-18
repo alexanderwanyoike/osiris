@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -15,6 +16,7 @@ from osiris.harness.engine import (
     Text,
     ToolRequested,
 )
+from osiris.harness.log import Change
 
 
 class State(Enum):
@@ -33,6 +35,16 @@ class Turn:
     model: ModelRef | None = None
     refused: list[str] = field(default_factory=list)
     error: str = ""
+    changes: list[Change] = field(default_factory=list)
+    undone: bool = False
+
+    @property
+    def undoable(self) -> bool:
+        return not self.undone and bool(self.undo_steps())
+
+    def undo_steps(self) -> list[Mapping[str, str]]:
+        """What reverses this turn's changes, the newest first."""
+        return [change.undo for change in reversed(self.changes) if change.undo]
 
 
 class Conversation:
@@ -57,6 +69,11 @@ class Conversation:
         turn = Turn(question)
         self.turns.append(turn)
         return turn
+
+    def changed(self, changes: list[Change]) -> None:
+        """Record what the latest question led to, as the Harness log has it."""
+        if self.turns:
+            self.turns[-1].changes = changes
 
     def apply(self, event: Event) -> None:
         if not self.turns:
