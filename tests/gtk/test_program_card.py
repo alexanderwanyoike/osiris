@@ -81,13 +81,17 @@ def test_a_failed_build_is_shown_and_can_go_back_to_the_harness() -> None:
     assert clicks.fixed == [("pomodoro", "error: cannot find x")]
 
 
-def test_the_card_shows_the_programs_icon() -> None:
+def test_the_card_shows_the_programs_icon(tmp_path: Path) -> None:
+    (tmp_path / "icon.svg").write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8">'
+        '<rect width="8" height="8"/></svg>'
+    )
     with_icon = Program(
         parse(
             '{"name": "pomodoro", "label": "Pomodoro", "description": "A timer.",'
             ' "icon": "icon.svg", "run": ["python3", "main.py"]}'
         ),
-        Path("/home/tester/Code/pomodoro"),
+        tmp_path,
         "abc",
         None,
     )
@@ -95,7 +99,7 @@ def test_the_card_shows_the_programs_icon() -> None:
     files = [
         w.get_property("file") for w in widgets(widget) if isinstance(w, Gtk.Image)
     ]
-    assert "/home/tester/Code/pomodoro/icon.svg" in files
+    assert str(tmp_path / "icon.svg") in files
 
 
 def test_a_program_without_an_icon_shows_a_generic_one() -> None:
