@@ -13,6 +13,7 @@ from osiris.harness.engine import (
     Event,
     Failed,
     ModelRef,
+    Past,
     PastTurn,
     Stopped,
     ToolCalled,
@@ -84,6 +85,13 @@ class Harness:
             self._engine.rename(self._session, title_of(text))
         self._log.write("sent", session=self._session, text=text)
         self._engine.send(self._session, text)
+
+    @property
+    def session(self) -> str | None:
+        return self._session
+
+    def conversations(self) -> list[Past]:
+        return self._engine.conversations()
 
     def resume(self, session: str) -> list[PastTurn]:
         """Continue a past Conversation; returns what was said in it."""
