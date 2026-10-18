@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import posixpath
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 from osiris.harness.engine import (
     Answered,
@@ -40,6 +42,14 @@ class Refused:
     resources: tuple[str, ...]
 
 
+#: The Engine's own file tools, allowed only on files inside a Program: reading
+#: is a look, and editing is undoable because a Program's changes are commits.
+FILE_TIERS = {
+    "read": Tier.LOOK,
+    "external_directory": Tier.LOOK,
+    "edit": Tier.UNDOABLE,
+}
+
 #: What the Harness decided about a ``ToolRequested``, passed on in its place.
 Decision = Allowed | Refused
 
@@ -52,17 +62,23 @@ class Harness:
         model: ModelRef | None = None,
         *,
         tiers: Mapping[str, Tier],
+        directory: Path,
+        may_touch: Callable[[Path], bool],
     ) -> None:
-        """``tiers`` names every action the Harness may take; it rejects the rest."""
+        """``tiers`` names every action the Harness may take; it rejects the rest.
+        File actions are allowed only on paths ``may_touch`` accepts, read from
+        ``directory``, where the Harness's session runs."""
         self._engine = engine
         self._log = log
         self._model = model
         self._tiers = tiers
+        self._directory = directory
+        self._may_touch = may_touch
         self._session: str | None = None
 
     def ask(self, text: str) -> None:
         if self._session is None:
-            self._session = self._engine.start(self._model)
+            self._session = self._engine.start(self._model, self._directory)
         self._log.write("sent", session=self._session, text=text)
         self._engine.send(self._session, text)
 
@@ -75,6 +91,20 @@ class Harness:
     def stop(self) -> None:
         if self._session is not None:
             self._engine.stop(self._session)
+
+    def _tier(self, action: str, resources: tuple[str, ...]) -> Tier | None:
+        if action in self._tiers:
+            return self._tiers[action]
+        if action in FILE_TIERS and resources and all(map(self._inside, resources)):
+            return FILE_TIERS[action]
+        return None
+
+    def _inside(self, resource: str) -> bool:
+        """Whether a path the Engine names, relative to the session's folder or
+        absolute, and perhaps a folder pattern ending in ``*``, is one the
+        Harness may touch. ``..`` is resolved first, so it cannot climb out."""
+        path = posixpath.join(str(self._directory), resource.removesuffix("*"))
+        return self._may_touch(Path(posixpath.normpath(path)))
 
     def handle(self, event: Event) -> Event | Decision | None:
         """Log what the Engine reports and apply policy; the event is passed on.
@@ -101,15 +131,18 @@ class Harness:
                     input=arguments,
                     executed=executed,
                 )
-            case ToolRequested(session, request, action, _) if action in self._tiers:
+            case ToolRequested(session, request, action, resources) if (
+                tier := self._tier(action, resources)
+            ):
                 self._engine.reply(session, request, allow=True, message="")
                 self._log.write(
                     "allowed",
                     session=session,
                     action=action,
-                    tier=self._tiers[action].value,
+                    tier=tier.value,
+                    resources=list(resources),
                 )
-                return Allowed(session, action, self._tiers[action])
+                return Allowed(session, action, tier)
             case ToolRequested(session, request, action, resources):
                 self._engine.reply(session, request, allow=False, message=REFUSED)
                 self._log.write(

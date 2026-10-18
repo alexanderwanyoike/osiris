@@ -455,7 +455,8 @@ class Application(Adw.Application):
                 # a new session.
                 self.log = HarnessLog(files, me.home / LOG_FILE)
                 self.harness = Harness(engine, self.log, self.models.default,
-                                       tiers=tiers)
+                                       tiers=tiers, directory=me.home,
+                                       may_touch=lambda _path: False)
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)
                 for event in engine.events():
