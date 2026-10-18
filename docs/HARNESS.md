@@ -42,9 +42,14 @@ request.
 
 ```
 apps/harness/main.py          the drawer: GTK only, draws the conversation
+apps/harness/render.py        a widget per block of an answer, one view per turn
+apps/harness/look.py          the Theme's colours and the chosen Skin, kept current
+apps/harness/skins/           Bubbles and Transcript
 apps/harness/harness-drawer@osiris   Cinnamon extension: right edge, full height, slide
 apps/harness/harness@osiris   Cinnamon applet: the panel button
 osiris/harness/conversation   what the drawer shows, from the Engine's events
+osiris/harness/markdown       answers as blocks, inline text as escaped Pango markup
+osiris/harness/style          colour variables and code scheme from a Theme; Skin choice
 osiris/harness/harness        one conversation: the log and the talk-only policy
 osiris/harness/log            the Harness log
 osiris/harness/engine         the Engine port and its events
@@ -56,6 +61,37 @@ provision/harness.py          installs the drawer, extension, applet, D-Bus acti
 The drawer is resident, like the theme switcher: started at login, or by D-Bus
 on first use. Super+A and the panel button both run
 `gapplication action dev.osiris.Harness show`, which toggles it.
+
+### How answers are drawn
+
+Answers are Markdown. `osiris/harness/markdown.py` parses them with
+markdown-it-py (CommonMark with tables and strikethrough, raw HTML off) into
+blocks: headings, paragraphs, lists, quotes, tables, rules and fenced code.
+Inline text becomes Pango markup with everything from the model escaped, so
+markup or HTML in an answer is shown, never interpreted, and only web and mail
+links are clickable. Each block is drawn by its own widget (`render.py`):
+labels and grids for text and tables, GtkSourceView for code, with its
+language and a Copy button. While an answer streams only the block still
+growing is redrawn.
+
+### Theme and Skin
+
+The drawer follows the split CONTEXT.md draws: the **Theme** is colour, the
+**Skin** is shape.
+
+- From the current Theme, `osiris/harness/style.py` produces the colour
+  variables a Skin may use (`@harness_bg`, `@harness_accent` and the rest) and
+  a GtkSourceView scheme, `osiris`, with syntax in the palette's terminal
+  colours so code looks as it will in ghostty. It is written to
+  `~/.local/share/gtksourceview-5/styles/osiris.xml`.
+- A Skin is a stylesheet in `apps/harness/skins/` that refers only to those
+  variables. Two ship: **Bubbles** (the question in a tinted bubble, code in
+  cards) and **Transcript** (a flat document). `tests/test_skins.py` fails any
+  Skin that names a colour of its own or leaves part of the drawer unstyled.
+- The Skin is chosen by name in `~/.config/osiris/harness/skin`; anything else
+  means Bubbles. Choosing Skins in Appearance comes with Skin sets (P3.4).
+- The drawer watches the theme engine's current-theme file and the Skin file,
+  so switching either retints or reshapes it while it is open.
 
 ### Where conversations are kept
 
