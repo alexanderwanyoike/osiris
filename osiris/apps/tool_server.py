@@ -32,19 +32,21 @@ TIERS = {
     "apply_theme": Tier.UNDOABLE,
 }
 
-LOOK = ToolAnnotations(readOnlyHint=True)
-CHANGE = ToolAnnotations(readOnlyHint=False, destructiveHint=False)
+ANNOTATIONS = {
+    Tier.LOOK: ToolAnnotations(readOnlyHint=True),
+    Tier.UNDOABLE: ToolAnnotations(readOnlyHint=False, destructiveHint=False),
+}
 
 
 def server(store: ThemeStore) -> FastMCP:
     tools = FastMCP(NAME, instructions=INSTRUCTIONS, log_level="WARNING")
 
-    @tools.tool(annotations=LOOK)
+    @tools.tool(annotations=ANNOTATIONS[TIERS["list_themes"]])
     def list_themes() -> list[dict[str, object]]:
         """The themes on this desktop, light or dark, and which is applied."""
         return actions.list_themes(store)
 
-    @tools.tool(annotations=CHANGE)
+    @tools.tool(annotations=ANNOTATIONS[TIERS["create_theme"]])
     def create_theme(
         label: str, seed: str, harmony: Harmony, mood: Mood, dark: bool
     ) -> str:
@@ -70,7 +72,7 @@ def server(store: ThemeStore) -> FastMCP:
         )
         return f"Made {label}, named {name}."
 
-    @tools.tool(annotations=CHANGE)
+    @tools.tool(annotations=ANNOTATIONS[TIERS["apply_theme"]])
     def apply_theme(name: str) -> str:
         """Apply a theme to the whole desktop, by its name from list_themes."""
         previous = actions.apply_theme(store, name)
