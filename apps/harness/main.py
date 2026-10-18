@@ -82,11 +82,18 @@ class Drawer(Gtk.ApplicationWindow):
         providers_button = Gtk.Button(child=self.meta, tooltip_text="Providers and models")
         providers_button.add_css_class("flat")
         providers_button.connect("clicked", lambda _b: self.show_providers())
+        # Deep agentic work wants the whole screen; the drawer comes back after.
+        self.expanded = False
+        self.expand_button = Gtk.Button(icon_name="view-fullscreen-symbolic",
+                                        tooltip_text="Expand")
+        self.expand_button.add_css_class("flat")
+        self.expand_button.connect("clicked", self._toggle_expanded)
         header = Gtk.Box(spacing=8)
         header.add_css_class("harness-header")
         header.append(Gtk.Image(icon_name="osiris-symbolic"))
         header.append(title)
         header.append(providers_button)
+        header.append(self.expand_button)
 
         self.turns = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
                              valign=Gtk.Align.END, vexpand=True,
@@ -135,6 +142,17 @@ class Drawer(Gtk.ApplicationWindow):
         keys.connect("key-pressed", self._key)
         self.add_controller(keys)
         self.connect("close-request", self._close_request)
+
+    def _toggle_expanded(self, _button) -> None:
+        self.expanded = not self.expanded
+        if self.expanded:
+            self.maximize()
+        else:
+            self.unmaximize()
+        self.expand_button.set_icon_name(
+            "view-restore-symbolic" if self.expanded else "view-fullscreen-symbolic")
+        self.expand_button.set_tooltip_text("Back to the drawer" if self.expanded
+                                            else "Expand")
 
     def _realize(self, _window) -> None:
         # Kept out of the dock and the window switcher: it is reached from
