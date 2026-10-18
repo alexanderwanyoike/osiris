@@ -24,6 +24,7 @@ class Change:
 
     summary: str
     undo: Mapping[str, str] | None
+    program: str | None = None
 
 
 def _now() -> datetime:
@@ -55,5 +56,7 @@ class HarnessLog:
             if entry["kind"] == "sent":
                 changes = []
             elif entry["kind"] == "changed":
-                changes.append(Change(entry["summary"], entry["undo"]))
+                changes.append(
+                    Change(entry["summary"], entry["undo"], entry.get("program"))
+                )
         return changes
