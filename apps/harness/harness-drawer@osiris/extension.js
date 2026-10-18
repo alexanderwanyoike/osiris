@@ -1,9 +1,6 @@
 // Keeps the Harness at the right edge of the screen, full height, above other
-// windows, and slides it in and out. A width the person drags to is kept.
-// Expanded, it fills the screen above the dock: Plank reserves no space in
-// intelligent-hide mode, so a drawer covering it would hide it. Plank's window
-// spans the whole width with zoom headroom above the visible bar, so this
-// only applies when expanded; the narrow drawer at the edge keeps its height. GTK4 on X11 gives an application no way
+// windows, and slides it in and out. A width the person drags to is kept;
+// expanded, it fills the work area, which the dock already keeps clear of. GTK4 on X11 gives an application no way
 // to place its own window; where the Harness sits will become the Skin's
 // choice (CONTEXT.md).
 //
@@ -81,31 +78,14 @@ class Drawer {
         this._widths.set(window, window.get_frame_rect().width);
     }
 
-    // The top of the highest dock overlapping [left, right), or the bottom of
-    // the work area when none does.
-    _floor(area, left, right) {
-        let floor = area.y + area.height;
-        for (let actor of global.get_window_actors()) {
-            let other = actor.meta_window;
-            if (other.get_window_type() !== Meta.WindowType.DOCK)
-                continue;
-            let rect = other.get_frame_rect();
-            if (rect.x < right && rect.x + rect.width > left && rect.y > area.y)
-                floor = Math.min(floor, rect.y);
-        }
-        return floor;
-    }
-
     _place(window) {
         if (window.get_maximized())
             return;
         let area = window.get_work_area_for_monitor(window.get_monitor());
         let width = this._expanded.has(window)
             ? area.width : (this._widths.get(window) || WIDTH);
-        let left = area.x + area.width - width;
-        let floor = this._expanded.has(window)
-            ? this._floor(area, left, left + width) : area.y + area.height;
-        window.move_resize_frame(true, left, area.y, width, floor - area.y);
+        window.move_resize_frame(
+            true, area.x + area.width - width, area.y, width, area.height);
     }
 
     ExpandAsync(params, invocation) {
