@@ -35,6 +35,9 @@ CLASSES = (
     "harness-provider",
     "harness-key-form",
     "harness-code-form",
+    "harness-provider-card",
+    "harness-monogram",
+    "harness-connected",
 )
 
 
