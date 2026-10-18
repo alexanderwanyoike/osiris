@@ -8,7 +8,8 @@ from typing import Any
 import pytest
 from mcp.server.fastmcp.exceptions import ToolError
 
-from osiris.apps.tool_server import server
+from osiris.apps.tool_server import TIERS, server
+from osiris.harness.tiers import Tier
 from osiris.themes.store import FakeThemeStore
 
 
@@ -25,6 +26,14 @@ def test_the_server_offers_the_theme_actions_and_nothing_else() -> None:
         "list_themes",
         "create_theme",
         "apply_theme",
+    }
+
+
+def test_listing_is_a_look_and_making_or_applying_an_undoable_change() -> None:
+    assert TIERS == {
+        "list_themes": Tier.LOOK,
+        "create_theme": Tier.UNDOABLE,
+        "apply_theme": Tier.UNDOABLE,
     }
 
 
