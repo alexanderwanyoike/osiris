@@ -54,6 +54,15 @@ def test_libadwaita_follows_light_and_dark() -> None:
     )
 
 
+def test_the_xapp_portal_follows_light_and_dark() -> None:
+    """libadwaita asks xdg-desktop-portal for the colour scheme, and on Cinnamon
+    the XApp backend answers from its own key. Left at 'default' it reports no
+    preference, and every libadwaita app comes up light under a dark theme."""
+    assert parsed(NORD)["org/x/apps/portal"]["color-scheme"] == "'prefer-dark'"
+    light = Switch(**{**NORD.__dict__, "dark": False})
+    assert parsed(light)["org/x/apps/portal"]["color-scheme"] == "'prefer-light'"
+
+
 def test_the_wallpaper_is_a_file_uri() -> None:
     background = parsed(NORD)["org/cinnamon/desktop/background"]
     assert background["picture-uri"] == f"'file://{NORD.wallpaper}'"
