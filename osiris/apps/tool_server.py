@@ -11,6 +11,7 @@ from __future__ import annotations
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
+from osiris.harness.tiers import Tier
 from osiris.themes import actions
 from osiris.themes.intent import Harmony, Mood
 from osiris.themes.store import ThemeStore
@@ -23,6 +24,13 @@ one and apply it. You never choose a theme's colours: describe what the person
 asked for as a seed colour, a harmony, a mood and light or dark, and Osiris
 derives a harmonious, legible palette from that. Applying a theme repaints the
 whole desktop at once, and the person can undo it."""
+
+#: How far each tool reaches, which decides how the Harness answers its requests.
+TIERS = {
+    "list_themes": Tier.LOOK,
+    "create_theme": Tier.UNDOABLE,
+    "apply_theme": Tier.UNDOABLE,
+}
 
 LOOK = ToolAnnotations(readOnlyHint=True)
 CHANGE = ToolAnnotations(readOnlyHint=False, destructiveHint=False)
