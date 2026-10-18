@@ -146,6 +146,11 @@ def test_an_action_with_a_tier_is_allowed_and_logged_with_it(tier: Tier) -> None
     assert entry["tier"] == tier.value
 
 
+def test_a_rejection_points_the_model_at_the_tools_it_may_use() -> None:
+    assert "Osiris tools" in TALK_ONLY
+    assert "only talk" not in TALK_ONLY
+
+
 def test_an_action_without_a_tier_is_still_rejected() -> None:
     subject, engine, _ = harness(tiers={"osiris_apply_theme": Tier.UNDOABLE})
     subject.ask("hello")
