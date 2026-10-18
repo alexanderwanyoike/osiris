@@ -175,6 +175,6 @@ def test_other_providers_appear_only_when_searched_for() -> None:
     page = ProvidersPage(accounts, background=now)
     assert "OpenAI" in shown(page)
     assert "302.AI" not in shown(page)
-    find(page, Gtk.SearchEntry).set_text("gro")
+    find(page, Gtk.SearchEntry, "Search other providers").set_text("gro")
     assert "Groq" in shown(page)
     assert "302.AI" not in shown(page)

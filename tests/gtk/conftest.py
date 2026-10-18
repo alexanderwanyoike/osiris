@@ -43,11 +43,19 @@ def now(work: Callable[[], object], done: Callable[[object], None]) -> None:
 
 
 def find(root: Gtk.Widget, kind: type, text: str | None = None) -> Gtk.Widget:
-    """The first widget of a kind, with a label if one is given."""
+    """The first widget of a kind whose label or placeholder is text, if given.
+
+    Matching the placeholder matters for entries: composite widgets carry
+    entries of their own (a DropDown has a search entry inside its popover).
+    """
     for widget in widgets(root):
         if not isinstance(widget, kind):
             continue
-        if text is None or text in (getattr(widget, "get_label", lambda: None)(),):
+        names = (
+            getattr(widget, "get_label", lambda: None)(),
+            getattr(widget, "get_placeholder_text", lambda: None)(),
+        )
+        if text is None or text in names:
             return widget
     raise LookupError(f"no {kind.__name__} {text or ''} under {root}")
 
