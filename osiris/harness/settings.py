@@ -30,7 +30,5 @@ def read_models(text: str) -> Models:
 
 
 def _model(text: str | None) -> ModelRef | None:
-    if text is None:
-        return None
-    provider, _, model = text.partition("/")
-    return ModelRef(provider, model)
+    provider, _, model = (text or "").partition("/")
+    return ModelRef(provider, model) if provider and model else None
