@@ -423,7 +423,7 @@ class Application(Adw.Application):
                 # rebuilt around the new connection; the next question opens
                 # a new session.
                 self.harness = Harness(engine, HarnessLog(files, me.home / LOG_FILE),
-                                       self.models.default)
+                                       self.models.default, tiers={})
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)
                 for event in engine.events():

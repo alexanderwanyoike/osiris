@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import asdict
 
 from osiris.harness.engine import (
@@ -15,6 +16,7 @@ from osiris.harness.engine import (
     ToolRequested,
 )
 from osiris.harness.log import HarnessLog
+from osiris.harness.tiers import Tier
 
 #: Passed to the model with every rejected tool, so it answers in words instead.
 TALK_ONLY = (
@@ -25,11 +27,18 @@ TALK_ONLY = (
 
 class Harness:
     def __init__(
-        self, engine: Engine, log: HarnessLog, model: ModelRef | None = None
+        self,
+        engine: Engine,
+        log: HarnessLog,
+        model: ModelRef | None = None,
+        *,
+        tiers: Mapping[str, Tier],
     ) -> None:
+        """``tiers`` names every action the Harness may take; it rejects the rest."""
         self._engine = engine
         self._log = log
         self._model = model
+        self._tiers = tiers
         self._session: str | None = None
 
     def ask(self, text: str) -> None:
@@ -72,6 +81,14 @@ class Harness:
                     call=call,
                     input=arguments,
                     executed=executed,
+                )
+            case ToolRequested(session, request, action, _) if action in self._tiers:
+                self._engine.reply(session, request, allow=True, message="")
+                self._log.write(
+                    "allowed",
+                    session=session,
+                    action=action,
+                    tier=self._tiers[action].value,
                 )
             case ToolRequested(session, request, action, resources):
                 self._engine.reply(session, request, allow=False, message=TALK_ONLY)
