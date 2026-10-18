@@ -5,6 +5,7 @@ osiris/harness/markdown.py, where it is tested. Every widget here only carries
 CSS classes; how they look is the Skin's, in which colour the Theme's.
 """
 import re
+from collections.abc import Callable
 from datetime import datetime
 
 import gi
@@ -173,9 +174,10 @@ def block_widget(block, scheme: GtkSource.StyleScheme | None) -> Gtk.Widget:
 class TurnView(Gtk.Box):
     """One question and its answer, redrawn only where the answer changed."""
 
-    def __init__(self, turn: Turn):
+    def __init__(self, turn: Turn, on_undo: Callable[[Turn], None]):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-turn")
+        self._on_undo = on_undo
         question = Gtk.Label(label=turn.question, xalign=0, wrap=True,
                              wrap_mode=Pango.WrapMode.WORD_CHAR, selectable=True,
                              halign=Gtk.Align.END)
@@ -210,6 +212,22 @@ class TurnView(Gtk.Box):
         self._blocks = []
         self.update(turn, style, scheme)
 
+    def _changes(self, turn: Turn) -> Gtk.Widget:
+        chip = Gtk.Box(spacing=6, halign=Gtk.Align.START)
+        chip.add_css_class("harness-chip")
+        chip.append(Gtk.Image(icon_name="object-select-symbolic"))
+        chip.append(Gtk.Label(label="  ·  ".join(c.summary for c in turn.changes),
+                              ellipsize=Pango.EllipsizeMode.END,
+                              max_width_chars=48))
+        if turn.undone:
+            chip.append(Gtk.Label(label="Undone"))
+        elif turn.undoable:
+            undo = Gtk.Button(label="Undo")
+            undo.add_css_class("flat")
+            undo.connect("clicked", lambda _b: self._on_undo(turn))
+            chip.append(undo)
+        return chip
+
     def _extras(self, turn: Turn) -> None:
         child = self.extras.get_first_child()
         while child is not None:
@@ -228,6 +246,8 @@ class TurnView(Gtk.Box):
                                   ellipsize=Pango.EllipsizeMode.END,
                                   max_width_chars=48))
             self.extras.append(chip)
+        if turn.changes:
+            self.extras.append(self._changes(turn))
         if turn.state is State.FAILED:
             error = Gtk.Label(label=turn.error or "The answer failed.", xalign=0,
                               wrap=True, selectable=True)

@@ -79,3 +79,20 @@ forbidden_modules =
     http
 ignore_imports =
     osiris.platform.http -> urllib
+
+[importlinter:contract:mcp-is-confined]
+name = Only the tool server speaks MCP
+type = forbidden
+source_modules =
+    osiris.model
+    osiris.platform
+    osiris.resources
+    osiris.themes
+    osiris.harness
+    osiris.provision
+    osiris.iso
+    osiris.apps
+forbidden_modules =
+    mcp
+ignore_imports =
+    osiris.apps.tool_server -> mcp

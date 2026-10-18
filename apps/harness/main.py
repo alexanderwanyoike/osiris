@@ -43,11 +43,14 @@ sys.path.insert(0, HERE)
 from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
 from render import TurnView  # noqa: E402
+from theme_store import EngineStore  # noqa: E402
 
-from osiris.harness.conversation import Conversation, State  # noqa: E402
+from osiris.apps.tool_server import NAME as TOOLS, TIERS, undo  # noqa: E402
+
+from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
 from osiris.harness.harness import Harness  # noqa: E402
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
-from osiris.harness.engine import ModelRef  # noqa: E402
+from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.platform import (  # noqa: E402
@@ -65,6 +68,9 @@ WIDTH = 440
 RECONNECT_SECONDS = 3
 #: The widest the conversation grows, in pixels, however wide the drawer.
 READABLE = 820
+
+#: Run by the Engine for every session; it acts through the theme engine.
+TOOL_SERVER = os.path.join(HERE, "tool_server.py")
 
 DRAWER_BUS = "dev.osiris.HarnessDrawer"
 DRAWER_PATH = "/dev/osiris/HarnessDrawer"
@@ -247,7 +253,8 @@ class Drawer(Gtk.ApplicationWindow):
         conversation, look = self.app.conversation, self.app.look
         fresh = len(self.views)
         while len(self.views) < len(conversation.turns):
-            view = TurnView(conversation.turns[len(self.views)])
+            view = TurnView(conversation.turns[len(self.views)],
+                            on_undo=self.app.undo)
             self.views.append(view)
             self.turns.append(view)
         newest = len(self.views) - 1
@@ -281,6 +288,7 @@ class Application(Adw.Application):
         self.drawer: Drawer | None = None
         self.conversation = Conversation()
         self.harness: Harness | None = None
+        self.log: HarnessLog | None = None
         self.look: Look | None = None
         self.accounts: OpencodeAccounts | None = None
         self.files = RealFileSystem()
@@ -361,7 +369,7 @@ class Application(Adw.Application):
     def footer_line(self) -> str:
         if self.harness is None:
             return self.problem
-        return "allowance not reported  ·  only talks for now"
+        return "allowance not reported"
 
     def background(self, work, done) -> None:
         """Run work off the main loop and hand its result back to it."""
@@ -383,6 +391,23 @@ class Application(Adw.Application):
         save_models(self.files, self.home, self.models)
         if self.harness is not None:
             self.background(lambda: self.harness.use_model(model), lambda _r: None)
+
+    def undo(self, turn: Turn) -> None:
+        """Reverse what a turn changed, newest first, without the model."""
+        steps = turn.undo_steps()
+
+        def reverse() -> None:
+            store = EngineStore()
+            for step in steps:
+                undo(store, step)
+
+        def undone(_result) -> None:
+            turn.undone = True
+            if self.log is not None:
+                self.log.write("undone", changes=[c.summary for c in turn.changes])
+            self.drawer.refresh()
+
+        self.background(reverse, undone)
 
     def ask(self, text: str) -> None:
         if self.harness is None:
@@ -419,11 +444,14 @@ class Application(Adw.Application):
             try:
                 service = locate(files, me, SubprocessRunner(sink=lambda _l: None))
                 engine = OpencodeEngine(UrllibClient(), service)
+                engine.attach_tools(TOOLS, [sys.executable, TOOL_SERVER])
+                tiers = {engine.action(TOOLS, tool): tier for tool, tier in TIERS.items()}
                 # A restarted service has a new password, so the Harness is
                 # rebuilt around the new connection; the next question opens
                 # a new session.
-                self.harness = Harness(engine, HarnessLog(files, me.home / LOG_FILE),
-                                       self.models.default)
+                self.log = HarnessLog(files, me.home / LOG_FILE)
+                self.harness = Harness(engine, self.log, self.models.default,
+                                       tiers=tiers)
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)
                 for event in engine.events():
@@ -437,6 +465,8 @@ class Application(Adw.Application):
 
     def _apply(self, event) -> bool:
         self.conversation.apply(event)
+        if isinstance(event, Finished | Stopped | Failed) and self.log is not None:
+            self.conversation.changed(self.log.last_changes())
         self.drawer.refresh()
         return False
 

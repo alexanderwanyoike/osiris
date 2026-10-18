@@ -14,6 +14,9 @@ from osiris.harness.engine import (
     ToolCalled,
     ToolRequested,
 )
+from osiris.harness.harness import Allowed, Refused
+from osiris.harness.log import Change
+from osiris.harness.tiers import Tier
 
 S = "ses_1"
 GPT = ModelRef("openai", "gpt-5.5")
@@ -74,8 +77,16 @@ def test_a_refused_action_is_shown_on_its_turn() -> None:
     talk = Conversation()
     talk.asked("list /etc")
     talk.apply(ToolCalled(S, "call_1", {"command": "ls /etc"}, executed=False))
-    talk.apply(ToolRequested(S, "per_1", "shell", ("ls /etc",)))
+    talk.apply(Refused(S, "shell", ("ls /etc",)))
     assert talk.turns[-1].refused == ["shell: ls /etc"]
+
+
+def test_an_allowed_action_is_not_shown_as_refused() -> None:
+    talk = Conversation()
+    talk.asked("make it calm")
+    talk.apply(ToolRequested(S, "per_1", "osiris_apply_theme", ("*",)))
+    talk.apply(Allowed(S, "osiris_apply_theme", Tier.UNDOABLE))
+    assert talk.turns[-1].refused == []
 
 
 def test_a_failure_keeps_the_engines_reason() -> None:
@@ -119,3 +130,44 @@ def test_once_a_model_answers_the_header_names_that_one() -> None:
         talk.model_label(default=ModelRef("openai", "gpt-6.1-sol"))
         == "openai / gpt-5.5"
     )
+
+
+MADE = Change("Made Harbour", {"action": "delete_theme", "name": "harbour"})
+APPLIED = Change("Applied Harbour", {"action": "apply_theme", "name": "nord"})
+
+
+def test_a_turn_keeps_the_changes_it_led_to() -> None:
+    talk = Conversation()
+    talk.asked("make it calm")
+    talk.changed([MADE, APPLIED])
+    assert talk.turns[-1].changes == [MADE, APPLIED]
+    assert talk.turns[-1].undoable
+
+
+def test_undoing_a_turn_reverses_its_changes_newest_first() -> None:
+    talk = Conversation()
+    talk.asked("make it calm")
+    talk.changed([MADE, APPLIED])
+    assert talk.turns[-1].undo_steps() == [APPLIED.undo, MADE.undo]
+
+
+def test_a_change_with_nothing_to_return_to_is_skipped_by_undo() -> None:
+    talk = Conversation()
+    talk.asked("make it calm")
+    talk.changed([MADE, Change("Applied Harbour", None)])
+    assert talk.turns[-1].undo_steps() == [MADE.undo]
+
+
+def test_an_undone_turn_cannot_be_undone_again() -> None:
+    talk = Conversation()
+    talk.asked("make it calm")
+    talk.changed([MADE])
+    talk.turns[-1].undone = True
+    assert not talk.turns[-1].undoable
+
+
+def test_a_turn_that_changed_nothing_offers_no_undo() -> None:
+    talk = Conversation()
+    talk.asked("hello")
+    talk.changed([])
+    assert not talk.turns[-1].undoable

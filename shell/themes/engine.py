@@ -30,7 +30,6 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import shutil
 import signal
 import subprocess
@@ -274,17 +273,6 @@ def all_themes() -> list[dict]:
         except (OSError, json.JSONDecodeError, ValueError):
             continue
     return sorted(themes, key=lambda t: (not t.get("dark", True), t["label"]))
-
-
-def slug(label: str) -> str:
-    """A theme name from a human label.
-
-    Names index the theme files, the generated GTK theme directory and the
-    asset manifest, so they have to survive being a filename and a GTK theme
-    name on every filesystem we care about.
-    """
-    out = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")
-    return out or "untitled"
 
 
 def exists(name: str) -> bool:

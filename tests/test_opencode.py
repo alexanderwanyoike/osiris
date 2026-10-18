@@ -186,6 +186,30 @@ class TestSessions:
             ("POST", path, {"model": {"providerID": "openai", "id": "gpt-5.5"}})
         ]
 
+    def test_a_tool_server_is_attached_as_a_local_mcp_server(self) -> None:
+        path = f"{URL}/api/experimental/mcp/osiris"
+        http = FakeHttpClient(replies={("PUT", path): None})
+        engine(http).attach_tools("osiris", ["python3", "/srv/tool_server.py"])
+        assert http.requests == [
+            (
+                "PUT",
+                path,
+                {
+                    "config": {
+                        "type": "local",
+                        "command": ["python3", "/srv/tool_server.py"],
+                    }
+                },
+            )
+        ]
+
+    def test_a_tool_servers_requests_name_the_server_and_tool(self) -> None:
+        """As opencode 2.0.32 does: ``tools.osiris.apply_theme`` in its code
+        mode asks for ``osiris_apply_theme``."""
+        assert engine(FakeHttpClient()).action("osiris", "apply_theme") == (
+            "osiris_apply_theme"
+        )
+
     @pytest.mark.parametrize(("allow", "decision"), [(True, "once"), (False, "reject")])
     def test_a_tool_request_is_answered_once_or_rejected(
         self, allow: bool, decision: str

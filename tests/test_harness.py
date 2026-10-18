@@ -1,4 +1,4 @@
-"""The Harness: one session, a log of everything, and talking only."""
+"""The Harness: one session, a log of everything, and actions by tier."""
 
 from __future__ import annotations
 
@@ -7,6 +7,8 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+
+import pytest
 
 from osiris.harness.engine import (
     Answered,
@@ -19,8 +21,9 @@ from osiris.harness.engine import (
     ToolCalled,
     ToolRequested,
 )
-from osiris.harness.harness import TALK_ONLY, Harness
+from osiris.harness.harness import REFUSED, Allowed, Harness, Refused
 from osiris.harness.log import LOG_FILE, HarnessLog
+from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem
 
 HOME = Path("/home/tester")
@@ -58,11 +61,11 @@ class FakeEngine:
 
 
 def harness(
-    model: ModelRef | None = GPT,
+    model: ModelRef | None = GPT, tiers: dict[str, Tier] | None = None
 ) -> tuple[Harness, FakeEngine, FakeFileSystem]:
     engine, files = FakeEngine(), FakeFileSystem()
     log = HarnessLog(files, HOME / LOG_FILE, clock=lambda: NOON)
-    return Harness(engine, log, model), engine, files
+    return Harness(engine, log, model, tiers=tiers or {}), engine, files
 
 
 def entries(files: FakeFileSystem) -> list[dict[str, object]]:
@@ -120,15 +123,43 @@ def test_an_answer_is_logged_with_the_model_that_gave_it() -> None:
     }
 
 
-def test_every_tool_request_is_rejected_because_the_harness_only_talks() -> None:
+def test_an_action_without_a_tier_is_rejected_and_logged() -> None:
     subject, engine, files = harness()
     subject.ask("hello")
     subject.handle(ToolRequested("ses_1", "per_1", "shell", ("ls /etc",)))
-    assert engine.replies == [("ses_1", "per_1", False, TALK_ONLY)]
+    assert engine.replies == [("ses_1", "per_1", False, REFUSED)]
     entry = entries(files)[-1]
     assert entry["kind"] == "rejected"
     assert entry["action"] == "shell"
     assert entry["resources"] == ["ls /etc"]
+
+
+@pytest.mark.parametrize("tier", [Tier.LOOK, Tier.UNDOABLE])
+def test_an_action_with_a_tier_is_allowed_and_logged_with_it(tier: Tier) -> None:
+    subject, engine, files = harness(tiers={"osiris_apply_theme": tier})
+    subject.ask("make it calm")
+    subject.handle(ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",)))
+    assert engine.replies == [("ses_1", "per_1", True, "")]
+    entry = entries(files)[-1]
+    assert entry["kind"] == "allowed"
+    assert entry["action"] == "osiris_apply_theme"
+    assert entry["tier"] == tier.value
+
+
+def test_the_decision_is_passed_on_in_place_of_the_request() -> None:
+    subject, _, _ = harness(tiers={"osiris_apply_theme": Tier.UNDOABLE})
+    subject.ask("make it calm")
+    allowed = subject.handle(
+        ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",))
+    )
+    refused = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls",)))
+    assert allowed == Allowed("ses_1", "osiris_apply_theme", Tier.UNDOABLE)
+    assert refused == Refused("ses_1", "bash", ("ls",))
+
+
+def test_a_rejection_points_the_model_at_the_tools_it_may_use() -> None:
+    assert "Osiris tools" in REFUSED
+    assert "only talk" not in REFUSED
 
 
 def test_every_tool_call_is_logged_even_one_that_never_asked() -> None:

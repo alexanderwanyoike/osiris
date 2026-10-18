@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -13,8 +14,9 @@ from osiris.harness.engine import (
     ModelRef,
     Stopped,
     Text,
-    ToolRequested,
 )
+from osiris.harness.harness import Decision, Refused
+from osiris.harness.log import Change
 
 
 class State(Enum):
@@ -33,6 +35,16 @@ class Turn:
     model: ModelRef | None = None
     refused: list[str] = field(default_factory=list)
     error: str = ""
+    changes: list[Change] = field(default_factory=list)
+    undone: bool = False
+
+    @property
+    def undoable(self) -> bool:
+        return not self.undone and bool(self.undo_steps())
+
+    def undo_steps(self) -> list[Mapping[str, str]]:
+        """What reverses this turn's changes, the newest first."""
+        return [change.undo for change in reversed(self.changes) if change.undo]
 
 
 class Conversation:
@@ -58,7 +70,12 @@ class Conversation:
         self.turns.append(turn)
         return turn
 
-    def apply(self, event: Event) -> None:
+    def changed(self, changes: list[Change]) -> None:
+        """Record what the latest question led to, as the Harness log has it."""
+        if self.turns:
+            self.turns[-1].changes = changes
+
+    def apply(self, event: Event | Decision) -> None:
         if not self.turns:
             return
         turn = self.turns[-1]
@@ -69,7 +86,7 @@ class Conversation:
             case Answered(_, model, tokens, _):
                 turn.model = self.model = model
                 self.tokens_spent += tokens.input + tokens.output + tokens.reasoning
-            case ToolRequested(_, _, action, resources):
+            case Refused(_, action, resources):
                 turn.refused.append(f"{action}: {', '.join(resources)}")
             case Finished():
                 turn.state = State.DONE
