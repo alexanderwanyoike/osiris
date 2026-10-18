@@ -249,4 +249,5 @@ def _provider(entry: dict[str, Any]) -> Provider:
 
 
 def _works(connection: dict[str, Any]) -> bool:
-    return connection.get("status", {}).get("status") != "needs_auth"
+    status: str | None = connection.get("status", {}).get("status")
+    return status != "needs_auth"
