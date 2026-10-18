@@ -16,8 +16,20 @@ MADE = Change("Made Harbour", {"action": "delete_theme", "name": "harbour"})
 APPLIED = Change("Applied Harbour", {"action": "apply_theme", "name": "nord"})
 
 
-def drawn(turn: Turn, undone: list[Turn] | None = None) -> TurnView:
-    view = TurnView(turn, on_undo=(undone if undone is not None else []).append)
+def drawn(
+    turn: Turn,
+    undone: list[Turn] | None = None,
+    cards: list[str] | None = None,
+) -> TurnView:
+    def card(name: str) -> Gtk.Widget:
+        (cards if cards is not None else []).append(name)
+        return Gtk.Label(label=f"card for {name}")
+
+    view = TurnView(
+        turn,
+        on_undo=(undone if undone is not None else []).append,
+        program_card=card,
+    )
     view.update(turn, STYLE, None)
     return view
 
@@ -48,3 +60,14 @@ def test_an_undone_turn_says_so_and_offers_no_undo() -> None:
 def test_a_turn_that_changed_nothing_shows_no_changes() -> None:
     view = drawn(finished())
     assert not any("Undo" in text for text in texts(view))
+
+
+def test_a_turn_that_changed_programs_shows_a_card_for_each() -> None:
+    cards: list[str] = []
+    turn = finished(
+        Change("Made Pomodoro", None, program="pomodoro"),
+        Change("Made Notes", None, program="notes"),
+    )
+    view = drawn(turn, cards=cards)
+    assert cards == ["pomodoro", "notes"]
+    assert "card for pomodoro" in texts(view)
