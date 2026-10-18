@@ -153,3 +153,8 @@ def test_undo_runs_the_step_a_change_recorded() -> None:
 def test_an_unknown_undo_step_is_refused() -> None:
     with pytest.raises(ThemeActionError, match="cannot undo"):
         undo(FakeThemeStore(), {"action": "format_disk", "name": "sda"})
+
+
+def test_a_model_is_told_a_seed_is_a_hex_colour_before_it_tries() -> None:
+    seed = tools(FakeThemeStore())["create_theme"].inputSchema["properties"]["seed"]
+    assert seed["pattern"] == "^#[0-9a-fA-F]{6}$"
