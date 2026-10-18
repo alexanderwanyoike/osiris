@@ -54,3 +54,30 @@ def test_the_left_edge_is_a_handle_for_resizing_the_drawer() -> None:
     assert handle.get_cursor() is not None
     assert handle.get_cursor().get_name() == "ew-resize"
     assert window.get_child().get_first_child() is handle
+
+
+class FakeGesture:
+    def get_current_event_device(self) -> None:
+        return None
+
+    def get_current_button(self) -> int:
+        return 1
+
+    def get_current_event_time(self) -> int:
+        return 42
+
+
+def test_pressing_the_handle_asks_the_window_manager_to_resize_from_the_west() -> None:
+    from gi.repository import Gdk
+
+    window, _ = drawer()
+    window.present()
+    calls: list[tuple[object, ...]] = []
+    surface = window.get_surface()
+    surface.begin_resize = lambda *args: calls.append(args)  # type: ignore[method-assign]
+    window._begin_resize(FakeGesture(), 1, 4.0, 100.0)
+    assert len(calls) == 1
+    edge, _device, button, x, y, time = calls[0]
+    assert edge == Gdk.SurfaceEdge.WEST
+    assert (button, time) == (1, 42)
+    assert (x, y) == (4.0, 100.0)
