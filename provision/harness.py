@@ -9,6 +9,7 @@ Lays down:
     /etc/xdg/autostart/osiris-harness.desktop
     /usr/share/cinnamon/extensions/harness-drawer@osiris   placement and slide
     /usr/share/cinnamon/applets/harness@osiris             the panel button
+    /usr/share/icons/hicolor/scalable/apps/osiris-provider-*  Provider logos
 
 The bar imports the osiris package that provision/themes.py installs into
 /usr/share/osiris/lib, so it runs after that. The Engine, opencode, is a
@@ -17,6 +18,7 @@ package dependency (osiris/iso/package.py), not installed here.
 import argparse
 import os
 import shutil
+import subprocess
 
 HARNESS_DIR = "/usr/share/osiris/harness"
 LAUNCHER_PATH = "/usr/bin/osiris-harness"
@@ -81,6 +83,16 @@ def main() -> None:
         shutil.rmtree(target, ignore_errors=True)
         shutil.copytree(os.path.join(args.repo, "apps", "harness", name), target)
         print(f"  {target}")
+    icons = "/usr/share/icons/hicolor/scalable/apps"
+    os.makedirs(icons, exist_ok=True)
+    logos = os.path.join(source, "logos")
+    for name in sorted(os.listdir(logos)):
+        if name.endswith(".svg"):
+            shutil.copy(os.path.join(logos, name), os.path.join(icons, name))
+    shutil.copy(os.path.join(logos, "NOTICE"), os.path.join(HARNESS_DIR, "LOGOS-NOTICE"))
+    run_quietly = ["gtk-update-icon-cache", "-q", "-f", "-t", "/usr/share/icons/hicolor"]
+    subprocess.run(run_quietly, check=False)
+    print(f"  logos -> {icons}")
     print("HARNESS_INSTALLED")
 
 
