@@ -643,7 +643,7 @@ class Application(Adw.Application):
         def gather():
             pasts = harness.conversations()
             # Conversations from before the Harness moved them itself.
-            moves = misplaced(pasts, log.programs_made() if log else [], home,
+            moves = misplaced(pasts, log.programs_worked_on() if log else [], home,
                               Path.exists)
             for session, folder in moves:
                 harness.move(session, folder)
@@ -750,11 +750,10 @@ class Application(Adw.Application):
         if isinstance(event, Finished | Stopped | Failed) and self.log is not None:
             changes = self.log.last_changes()
             self.conversation.changed(changes)
-            made = [c.program for c in changes
-                    if c.program and (c.undo or {}).get("action") == "trash_program"]
-            if made and self.harness is not None:
-                harness, folder = self.harness, self.home / CODE_DIR / made[0]
-                self.background(lambda: harness.program_made(folder),
+            worked_on = [c.program for c in changes if c.program]
+            if worked_on and self.harness is not None:
+                harness, folder = self.harness, self.home / CODE_DIR / worked_on[0]
+                self.background(lambda: harness.worked_on(folder),
                                 lambda _r: self.load_history())
             self.load_history()
             self.update_canvas()
