@@ -76,6 +76,8 @@ class Harness:
         self._model = model
         self._tiers = tiers
         self._directory = directory
+        #: Where a Conversation with no Project runs.
+        self._home = directory
         self._may_touch = may_touch
         self._session: str | None = None
 
@@ -101,6 +103,18 @@ class Harness:
     def new_conversation(self) -> None:
         """The next question opens a new session; the old one is left as it is."""
         self._session = None
+        self._directory = self._home
+
+    def program_made(self, folder: Path) -> None:
+        """A Conversation with no Project takes the Project of a Program it
+        makes; one already in a Project stays there (CONTEXT.md)."""
+        if self._session is None or self._directory != self._home:
+            return
+        self._engine.move(self._session, folder)
+        self._directory = folder
+
+    def move(self, session: str, folder: Path) -> None:
+        self._engine.move(session, folder)
 
     def use_model(self, model: ModelRef) -> None:
         """Answer with this model from now on, in this conversation too."""

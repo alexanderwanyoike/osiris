@@ -3,10 +3,14 @@ Conversation belongs to at most one Project, the folder it was started in)."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from osiris.harness.engine import Past
+
+#: Where Programs, and so their Projects, live in a home (ADR 0017).
+CODE_DIR = "Code"
 
 
 @dataclass
@@ -33,3 +37,22 @@ def group(pasts: list[Past], home: Path) -> tuple[list[Project], list[Past]]:
         )
         project.conversations.append(past)
     return list(projects.values()), loose
+
+
+def misplaced(
+    pasts: list[Past],
+    made: list[tuple[str, str]],
+    home: Path,
+    exists: Callable[[Path], bool],
+) -> list[tuple[str, Path]]:
+    """Conversations still in no Project although they made a Program whose
+    folder is there, and the Project each belongs in: those from before the
+    Harness moved them itself."""
+    homeless = {past.session for past in pasts if past.directory == home}
+    found = []
+    for session, program in made:
+        folder = home / CODE_DIR / program
+        if session in homeless and exists(folder):
+            found.append((session, folder))
+            homeless.discard(session)
+    return found
