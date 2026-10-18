@@ -1,6 +1,8 @@
 // Keeps the Harness at the right edge of the screen, full height, above other
-// windows, and slides it in and out. A width the person drags to is kept;
-// a maximised drawer is left to the window manager. GTK4 on X11 gives an application no way
+// windows, and slides it in and out. A width the person drags to is kept.
+// Expanded, it fills the screen. Either way it stops above a dock it would
+// overlap: Plank reserves no space in intelligent-hide mode, so a drawer
+// reaching over it would hide it. GTK4 on X11 gives an application no way
 // to place its own window; where the Harness sits will become the Skin's
 // choice (CONTEXT.md).
 //
@@ -24,6 +26,9 @@ const INTERFACE = `
 <node>
   <interface name="${BUS_NAME}">
     <method name="Close"/>
+    <method name="Expand">
+      <arg type="b" name="expanded" direction="in"/>
+    </method>
   </interface>
 </node>`;
 
@@ -33,6 +38,7 @@ class Drawer {
     constructor() {
         this._windows = new Map();
         this._widths = new Map();
+        this._expanded = new Set();
         this._created = global.display.connect(
             'window-created', (_display, window) => this._adopt(window));
         for (let actor of global.get_window_actors())
@@ -56,6 +62,7 @@ class Drawer {
             window.connect('unmanaged', () => {
                 this._windows.delete(window);
                 this._widths.delete(window);
+                this._expanded.delete(window);
             }),
         ]);
         window.make_above();
@@ -68,18 +75,47 @@ class Drawer {
     }
 
     _remember(window) {
-        if (window.get_maximized() || window.minimized)
+        if (window.get_maximized() || window.minimized || this._expanded.has(window))
             return;
         this._widths.set(window, window.get_frame_rect().width);
+    }
+
+    // The top of the highest dock overlapping [left, right), or the bottom of
+    // the work area when none does.
+    _floor(area, left, right) {
+        let floor = area.y + area.height;
+        for (let actor of global.get_window_actors()) {
+            let other = actor.meta_window;
+            if (other.get_window_type() !== Meta.WindowType.DOCK)
+                continue;
+            let rect = other.get_frame_rect();
+            if (rect.x < right && rect.x + rect.width > left && rect.y > area.y)
+                floor = Math.min(floor, rect.y);
+        }
+        return floor;
     }
 
     _place(window) {
         if (window.get_maximized())
             return;
-        let width = this._widths.get(window) || WIDTH;
         let area = window.get_work_area_for_monitor(window.get_monitor());
-        window.move_resize_frame(
-            true, area.x + area.width - width, area.y, width, area.height);
+        let width = this._expanded.has(window)
+            ? area.width : (this._widths.get(window) || WIDTH);
+        let left = area.x + area.width - width;
+        let floor = this._floor(area, left, left + width);
+        window.move_resize_frame(true, left, area.y, width, floor - area.y);
+    }
+
+    ExpandAsync(params, invocation) {
+        let [expanded] = params;
+        for (let window of this._windows.keys()) {
+            if (expanded)
+                this._expanded.add(window);
+            else
+                this._expanded.delete(window);
+            this._place(window);
+        }
+        invocation.return_value(null);
     }
 
     _slideIn(window) {
