@@ -653,7 +653,10 @@ class Application(Adw.Application):
             *group(pasts, home)))
 
     def update_canvas(self) -> None:
-        names = self.conversation.programs
+        # What this run changed, and what the Conversation changed before, as
+        # the log has it: a reopened Conversation brings its Canvas back.
+        earlier = self.log.programs_of(self.session) if self.log and self.session else []
+        names = list(dict.fromkeys([*earlier, *self.conversation.programs]))
         programs = self.programs()
 
         def gather():
