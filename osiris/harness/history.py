@@ -41,16 +41,16 @@ def group(pasts: list[Past], home: Path) -> tuple[list[Project], list[Past]]:
 
 def misplaced(
     pasts: list[Past],
-    made: list[tuple[str, str]],
+    worked_on: list[tuple[str, str]],
     home: Path,
     exists: Callable[[Path], bool],
 ) -> list[tuple[str, Path]]:
-    """Conversations still in no Project although they made a Program whose
-    folder is there, and the Project each belongs in: those from before the
-    Harness moved them itself."""
+    """Conversations still in no Project although they worked on a Program
+    whose folder is there, and the Project each belongs in: those from before
+    the Harness moved them itself."""
     homeless = {past.session for past in pasts if past.directory == home}
     found = []
-    for session, program in made:
+    for session, program in worked_on:
         folder = home / CODE_DIR / program
         if session in homeless and exists(folder):
             found.append((session, folder))

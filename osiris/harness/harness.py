@@ -97,9 +97,9 @@ class Harness:
         self._session = None
         self._directory = self._home
 
-    def program_made(self, folder: Path) -> None:
-        """A Conversation with no Project takes the Project of a Program it
-        makes; one already in a Project stays there (CONTEXT.md)."""
+    def worked_on(self, folder: Path) -> None:
+        """A Conversation with no Project takes the Project of the first Program
+        it works on; one already in a Project stays there (CONTEXT.md)."""
         if self._session is None or self._directory != self._home:
             return
         self._engine.move(self._session, folder)

@@ -167,7 +167,8 @@ class OpencodeEngine:
                     session["id"],
                     session.get("title", ""),
                     Path(session["location"]["directory"]),
-                    session["time"]["updated"] / 1000,
+                    # Renaming and moving touch "updated"; "idle" is the last work.
+                    session["time"].get("idle", session["time"]["updated"]) / 1000,
                 )
             )
         return sorted(found, key=lambda past: past.updated, reverse=True)

@@ -348,9 +348,7 @@ def test_a_past_conversation_is_resumed_in_its_own_session() -> None:
     assert subject.handle(Text("ses_9", "Done")) == Text("ses_9", "Done")
 
 
-def test_a_conversation_with_no_project_takes_the_project_of_a_program_it_works_on() -> (
-    None
-):
+def test_a_conversation_with_no_project_takes_its_programs_project() -> None:
     subject, engine, _ = harness()
     subject.ask("build me a timer")
     subject.worked_on(POMODORO)
