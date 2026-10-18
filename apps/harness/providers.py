@@ -19,9 +19,17 @@ class ProvidersPage(Gtk.Box):
         self._background = background
         self._list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.append(self._list)
-        background(accounts.providers, self._show)
+        self.reload()
+
+    def reload(self) -> None:
+        self._background(self._accounts.providers, self._show)
 
     def _show(self, providers) -> None:
+        child = self._list.get_first_child()
+        while child is not None:
+            following = child.get_next_sibling()
+            self._list.remove(child)
+            child = following
         for provider in providers:
             row = Gtk.Box(spacing=8)
             row.add_css_class("harness-provider")
@@ -40,7 +48,7 @@ class ProvidersPage(Gtk.Box):
         save = Gtk.Button(label="Save")
         save.connect("clicked", lambda _b: self._background(
             lambda: self._accounts.connect_key(provider, entry.get_text().strip()),
-            lambda _result: None))
+            lambda _result: self.reload()))
         form = Gtk.Box(spacing=6)
         form.add_css_class("harness-key-form")
         form.append(entry)
