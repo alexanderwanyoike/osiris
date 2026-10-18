@@ -8,6 +8,8 @@ dependencies = [
     "pillow>=10.0",
     # Parses the Harness's answers; Arch packages it as python-markdown-it-py.
     "markdown-it-py>=4.0",
+    # The Osiris tool server; Arch packages it as python-mcp.
+    "mcp>=1.29",
 ]
 
 [project.optional-dependencies]
