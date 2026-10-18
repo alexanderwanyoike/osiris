@@ -22,11 +22,20 @@ class Opened:
     def __init__(self) -> None:
         self.sessions: list[str] = []
         self.new = 0
+        self.new_in: list[Path] = []
+        self.archived: list[str] = []
+        self.deleted: list[tuple[str, str]] = []
 
 
 def sidebar(current: str | None = None) -> tuple[Sidebar, Opened]:
     opened = Opened()
-    widget = Sidebar(on_open=opened.sessions.append, on_new=lambda: _new(opened))
+    widget = Sidebar(
+        on_open=opened.sessions.append,
+        on_new=lambda: _new(opened),
+        on_new_in=opened.new_in.append,
+        on_archive=opened.archived.append,
+        on_delete=lambda session, title: opened.deleted.append((session, title)),
+    )
     widget.show_history([PROJECT], [THEME], current)
     return widget, opened
 
@@ -75,3 +84,39 @@ def test_new_conversation_starts_one() -> None:
 def test_the_conversation_on_screen_is_marked() -> None:
     widget, _ = sidebar(current="ses_timer")
     assert widget.list.get_selected_row() is row_with(widget, "Build a pomodoro timer")
+
+
+def button(root: Gtk.Widget, tooltip: str) -> Gtk.Button:
+    return next(
+        w
+        for w in widgets(root)
+        if isinstance(w, Gtk.Button) and w.get_tooltip_text() == tooltip
+    )
+
+
+def test_a_conversation_can_be_started_in_a_project() -> None:
+    widget, opened = sidebar()
+    button(row_with(widget, "pomodoro"), "New conversation in pomodoro").emit("clicked")
+    assert opened.new_in == [HOME / "Code" / "pomodoro"]
+
+
+def test_a_conversation_can_be_archived() -> None:
+    widget, opened = sidebar()
+    row = row_with(widget, "Make me a calm theme")
+    next(
+        w
+        for w in widgets(row)
+        if isinstance(w, Gtk.Button) and w.get_label() == "Archive"
+    ).emit("clicked")
+    assert opened.archived == ["ses_theme"]
+
+
+def test_a_conversation_can_be_deleted() -> None:
+    widget, opened = sidebar()
+    row = row_with(widget, "Make me a calm theme")
+    next(
+        w
+        for w in widgets(row)
+        if isinstance(w, Gtk.Button) and w.get_label() == "Delete…"
+    ).emit("clicked")
+    assert opened.deleted == [("ses_theme", "Make me a calm theme")]
