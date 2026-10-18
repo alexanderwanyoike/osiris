@@ -68,6 +68,14 @@ def test_the_harness_engine_comes_from_arch() -> None:
     assert "opencode" not in package.BUNDLED
 
 
+def test_the_harness_can_render_answers() -> None:
+    """Markdown is parsed by markdown-it-py and code drawn by GtkSourceView 5,
+    both in Arch's extra repository."""
+    names = package.depends()
+    assert "python-markdown-it-py" in names
+    assert "gtksourceview5" in names
+
+
 def test_every_bundled_package_is_built_and_depended_on() -> None:
     assert package.BUNDLED
     for name in package.BUNDLED:

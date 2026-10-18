@@ -36,8 +36,13 @@ for candidate in ("/usr/share/osiris/lib", REPO):
     if os.path.isdir(os.path.join(candidate, "osiris")):
         sys.path.insert(0, candidate)
         break
+# render.py and look.py sit beside this file.
+sys.path.insert(0, HERE)
 
-from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
+from look import Look  # noqa: E402
+from render import TurnView  # noqa: E402
+
+from osiris.harness.conversation import Conversation, State  # noqa: E402
 from osiris.harness.harness import Harness  # noqa: E402
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.opencode import OpencodeEngine, locate  # noqa: E402
@@ -58,54 +63,52 @@ RECONNECT_SECONDS = 3
 DRAWER_BUS = "dev.osiris.HarnessDrawer"
 DRAWER_PATH = "/dev/osiris/HarnessDrawer"
 
-CSS = b"""
-.harness-question {
-    background: alpha(@accent_bg_color, 0.18);
-    border-radius: 10px;
-    padding: 6px 10px;
-}
-.harness-small { font-size: smaller; }
-"""
-
-
 class Drawer(Gtk.ApplicationWindow):
     def __init__(self, app: "Application"):
         super().__init__(application=app, title="Harness", decorated=False)
         self.app = app
+        self.add_css_class("harness-drawer")
         self.set_default_size(WIDTH, 800)
         self.connect("realize", self._realize)
 
-        self.header = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END)
-        self.header.add_css_class("dim-label")
-        self.header.add_css_class("harness-small")
+        title = Gtk.Label(label="Harness", xalign=0, hexpand=True)
+        title.add_css_class("harness-title")
+        self.meta = Gtk.Label(xalign=1, ellipsize=Pango.EllipsizeMode.START)
+        self.meta.add_css_class("harness-meta")
+        header = Gtk.Box(spacing=8)
+        header.add_css_class("harness-header")
+        header.append(Gtk.Image(icon_name="osiris-symbolic"))
+        header.append(title)
+        header.append(self.meta)
 
-        self.turns = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14,
-                             valign=Gtk.Align.END, vexpand=True)
+        self.turns = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
+                             valign=Gtk.Align.END, vexpand=True,
+                             margin_top=12, margin_bottom=12)
+        self.views: list[TurnView] = []
         self.scroller = Gtk.ScrolledWindow(
             child=self.turns, vexpand=True,
             hscrollbar_policy=Gtk.PolicyType.NEVER)
 
         self.entry = Gtk.Entry(placeholder_text="Ask Osiris", hexpand=True)
+        self.entry.add_css_class("harness-input")
         self.entry.connect("activate", self._ask)
-        self.stop_button = Gtk.Button(icon_name="media-playback-stop-symbolic",
-                                      tooltip_text="Stop", visible=False)
-        self.stop_button.add_css_class("flat")
-        self.stop_button.connect("clicked", lambda _b: app.stop())
-        line = Gtk.Box(spacing=8)
-        line.append(self.entry)
-        line.append(self.stop_button)
+        self.send = Gtk.Button(icon_name="go-up-symbolic", tooltip_text="Ask",
+                               valign=Gtk.Align.CENTER)
+        self.send.add_css_class("harness-send")
+        self.send.connect("clicked", self._send_or_stop)
+        composer = Gtk.Box(spacing=6)
+        composer.add_css_class("harness-composer")
+        composer.append(self.entry)
+        composer.append(self.send)
 
         self.footer = Gtk.Label(xalign=0, wrap=True)
-        self.footer.add_css_class("dim-label")
-        self.footer.add_css_class("harness-small")
+        self.footer.add_css_class("harness-meta")
+        self.footer.add_css_class("harness-footer")
 
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
-                      margin_top=12, margin_bottom=12,
-                      margin_start=14, margin_end=14)
-        box.append(self.header)
-        box.append(Gtk.Separator())
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(header)
         box.append(self.scroller)
-        box.append(line)
+        box.append(composer)
         box.append(self.footer)
         self.set_child(box)
 
@@ -139,56 +142,46 @@ class Drawer(Gtk.ApplicationWindow):
             self.entry.set_text("")
             self.app.ask(text)
 
+    def _send_or_stop(self, _button) -> None:
+        if self.app.conversation.busy:
+            self.app.stop()
+        else:
+            self._ask(self.entry)
+
     def summon(self) -> None:
         self.present()
         self.entry.grab_focus()
 
-    def refresh(self) -> None:
-        conversation = self.app.conversation
-        child = self.turns.get_first_child()
-        while child is not None:
-            following = child.get_next_sibling()
-            self.turns.remove(child)
-            child = following
-        for turn in conversation.turns:
-            self.turns.append(self._turn(turn))
-        self.stop_button.set_visible(conversation.busy)
-        self.entry.set_sensitive(not conversation.busy)
-        self.header.set_text(self.app.header_line())
+    def refresh(self, restyle: bool = False) -> None:
+        conversation, look = self.app.conversation, self.app.look
+        fresh = len(self.views)
+        while len(self.views) < len(conversation.turns):
+            view = TurnView(conversation.turns[len(self.views)])
+            self.views.append(view)
+            self.turns.append(view)
+        newest = len(self.views) - 1
+        for index, (view, turn) in enumerate(zip(self.views, conversation.turns)):
+            if restyle:
+                view.restyle(turn, look.style, look.scheme)
+            elif index >= min(fresh, newest):
+                # Turns added just now are drawn once; after that only the
+                # newest can still be changing.
+                view.update(turn, look.style, look.scheme)
+        busy = conversation.busy
+        self.send.set_icon_name("media-playback-stop-symbolic" if busy
+                                else "go-up-symbolic")
+        self.send.set_tooltip_text("Stop" if busy else "Ask")
+        self.meta.set_text(self.app.header_line())
         self.footer.set_text(self.app.footer_line())
-        # Follow the answer as it streams.
-        adjustment = self.scroller.get_vadjustment()
-        GLib.idle_add(lambda: adjustment.set_value(adjustment.get_upper()))
-        if not conversation.busy:
-            self.entry.grab_focus()
+        self._follow()
 
-    @staticmethod
-    def _turn(turn: Turn) -> Gtk.Widget:
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        question = Gtk.Label(label=turn.question, xalign=0, wrap=True,
-                             selectable=True, halign=Gtk.Align.END)
-        question.add_css_class("harness-question")
-        box.append(question)
-        answer = turn.answer or ("..." if turn.state is State.WAITING else "")
-        if answer:
-            box.append(Gtk.Label(label=answer, xalign=0, wrap=True,
-                                 selectable=True))
-        for refused in turn.refused:
-            note = Gtk.Label(label=f"Not allowed yet: {refused}", xalign=0,
-                             wrap=True)
-            note.add_css_class("dim-label")
-            note.add_css_class("harness-small")
-            box.append(note)
-        if turn.state is State.FAILED:
-            error = Gtk.Label(label=turn.error or "The answer failed.",
-                              xalign=0, wrap=True, selectable=True)
-            error.add_css_class("error")
-            box.append(error)
-        if turn.state is State.STOPPED:
-            stopped = Gtk.Label(label="Stopped.", xalign=0)
-            stopped.add_css_class("dim-label")
-            box.append(stopped)
-        return box
+    def _follow(self) -> None:
+        """Keep the newest text in view, unless the reader has scrolled up."""
+        adjustment = self.scroller.get_vadjustment()
+        near_bottom = (adjustment.get_upper() - adjustment.get_page_size()
+                       - adjustment.get_value()) < 80
+        if near_bottom:
+            GLib.idle_add(lambda: adjustment.set_value(adjustment.get_upper()))
 
 
 class Application(Adw.Application):
@@ -197,6 +190,7 @@ class Application(Adw.Application):
         self.drawer: Drawer | None = None
         self.conversation = Conversation()
         self.harness: Harness | None = None
+        self.look: Look | None = None
         self.problem = "Starting the Engine..."
         self.open = False
         show = Gio.SimpleAction.new("show", None)
@@ -207,12 +201,7 @@ class Application(Adw.Application):
         Adw.Application.do_startup(self)
         # Resident: closing keeps the conversation and the Engine connection.
         self.hold()
-        display = Gdk.Display.get_default()
-        if display is not None:
-            provider = Gtk.CssProvider()
-            provider.load_from_data(CSS)
-            Gtk.StyleContext.add_provider_for_display(
-                display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self.look = Look(SystemIdentity().home, self._restyle)
         self.drawer = Drawer(self)
         self.drawer.refresh()
         threading.Thread(target=self._listen, daemon=True).start()
@@ -313,6 +302,10 @@ class Application(Adw.Application):
     def _refresh(self) -> bool:
         self.drawer.refresh()
         return False
+
+    def _restyle(self) -> None:
+        if self.drawer is not None:
+            self.drawer.refresh(restyle=True)
 
 
 if __name__ == "__main__":
