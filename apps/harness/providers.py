@@ -105,7 +105,13 @@ class ProvidersPage(Gtk.Box):
             if method.kind == "oauth":
                 section.append(self._sign_in_button(provider.id, method))
         if any(m.kind == "key" for m in provider.methods):
-            section.append(self._key_form(provider.id))
+            form = self._key_form(provider.id)
+            form.set_visible(False)
+            add = Gtk.Button(label="Add key", halign=Gtk.Align.START)
+            add.add_css_class("flat")
+            add.connect("clicked", lambda _b: (form.set_visible(True), add.set_visible(False)))
+            section.append(add)
+            section.append(form)
         return section
 
     def _filter(self, *_args) -> None:
