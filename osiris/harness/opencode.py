@@ -93,6 +93,12 @@ class OpencodeEngine:
     def stop(self, session: str) -> None:
         self._post(f"/api/session/{session}/interrupt")
 
+    def switch_model(self, session: str, model: ModelRef) -> None:
+        self._post(
+            f"/api/session/{session}/model",
+            {"model": {"providerID": model.provider, "id": model.model}},
+        )
+
     def events(self) -> Iterator[Event]:
         reader = _Reader()
         lines = self._http.lines(
