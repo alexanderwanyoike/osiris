@@ -201,27 +201,45 @@ class Programs:
         self._git(name, "revert", "--no-edit", commit, harness=True)
 
     def check(self, name: str) -> list[str]:
-        """Problems found without running anything: Python that does not compile."""
-        self.manifest(name)
+        """Problems found without running anything: Python that does not compile,
+        and a window that never carries the Program's application id."""
+        manifest = self.manifest(name)
         source = self._source(name)
         problems = []
-        for path in self._python(source):
+        texts = dict(self._texts(source))
+        for path, text in texts.items():
+            if path.suffix != ".py":
+                continue
             try:
-                compile(self._files.read(path), str(path), "exec")
+                compile(text, str(path), "exec")
             except SyntaxError as error:
                 where = path.relative_to(source)
                 problems.append(f"{where}:{error.lineno}: {error.msg}")
+        if not manifest.terminal and not any(
+            manifest.app_id in text for text in texts.values()
+        ):
+            problems.append(
+                f"Its window never carries its application id, {manifest.app_id}: "
+                f'call GLib.set_prgname("{manifest.app_id}") before opening a '
+                "window, or your language's equivalent, and use it as the "
+                "application id, so the dock can keep it."
+            )
         return problems
 
-    def _python(self, folder: Path) -> list[Path]:
+    def _texts(self, folder: Path) -> list[tuple[Path, str]]:
+        """Every readable text file of a Program's source, with its text."""
         found = []
         for child in self._files.list_directory(folder):
-            if child.name in _NOT_SOURCE:
+            if child.name in _NOT_SOURCE or child.name == MANIFEST_FILE:
                 continue
-            if child.suffix == ".py":
-                found.append(child)
-            elif not child.suffix:
-                found.extend(self._python(child))
+            inside = self._files.list_directory(child)
+            if inside:
+                found.extend(self._texts(child))
+                continue
+            try:
+                found.append((child, self._files.read(child)))
+            except OSError, UnicodeDecodeError:
+                continue
         return found
 
     def programs(self) -> list[Program]:

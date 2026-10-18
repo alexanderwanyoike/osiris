@@ -141,6 +141,7 @@ def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
                 "label": program.manifest.label,
                 "description": program.manifest.description,
                 "folder": str(program.source),
+                "app_id": program.manifest.app_id,
                 "installed": program.installed is not None,
                 "up_to_date": program.installed == program.head,
             }
