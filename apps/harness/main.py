@@ -327,8 +327,7 @@ class Application(Adw.Application):
             self.drawer.minimize()
 
     def header_line(self) -> str:
-        model = self.conversation.model
-        named = f"{model.provider} / {model.model}" if model else "default model"
+        named = self.conversation.model_label(self.models.default)
         return f"{named}  ·  {self.conversation.tokens_spent:,} tokens"
 
     def footer_line(self) -> str:
