@@ -136,7 +136,4 @@ def test_a_program_has_an_application_id_made_from_its_name() -> None:
 
 
 def test_the_menu_entry_names_the_window_class_the_dock_matches() -> None:
-    """GTK takes a window's class from the program name, so a Program that sets
-    it to its application id is matched to this entry and can be kept in the
-    dock."""
     assert entry(manifest())["StartupWMClass"] == "dev.osiris.programs.pomodoro"

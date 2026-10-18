@@ -17,6 +17,7 @@ from osiris.model.names import slug
 from osiris.platform import CommandRunner, FileSystem
 from osiris.platform.process import CommandError
 from osiris.programs.manifest import (
+    APP_ID_PREFIX,
     MANIFEST_FILE,
     Manifest,
     ManifestError,
@@ -101,7 +102,7 @@ class Programs:
         return self._home / INSTALL_DIR / name
 
     def _entry(self, name: str) -> Path:
-        return self._home / APPLICATIONS_DIR / f"osiris-program-{name}.desktop"
+        return self._home / APPLICATIONS_DIR / f"{APP_ID_PREFIX}{name}.desktop"
 
     def manifest(self, name: str) -> Manifest:
         path = self._source(name) / MANIFEST_FILE

@@ -16,6 +16,11 @@ from osiris.model.names import slug
 
 MANIFEST_FILE = "osiris-program.json"
 
+#: A Program's application id is this followed by its name. A Program with a
+#: window sets its program name to it, which GTK makes the window's class, so
+#: the dock can match the window to the menu entry and keep it.
+APP_ID_PREFIX = "dev.osiris.programs."
+
 #: Shown when a Program brings no icon of its own.
 GENERIC_ICON = "application-x-executable"
 
@@ -36,6 +41,10 @@ class Manifest:
     build: tuple[str, ...] | None
     run: tuple[str, ...]
     terminal: bool = False
+
+    @property
+    def app_id(self) -> str:
+        return APP_ID_PREFIX + self.name
 
 
 def _text(fields: dict[str, Any], key: str) -> str:
@@ -132,6 +141,7 @@ def desktop_entry(manifest: Manifest, installed: PurePath) -> str:
         "Icon": icon,
         "Terminal": "true" if manifest.terminal else "false",
         "Categories": "Utility;",
+        "StartupWMClass": manifest.app_id,
         "X-Osiris-Program": manifest.name,
     }
     return "[Desktop Entry]\n" + "".join(f"{k}={v}\n" for k, v in fields.items())
