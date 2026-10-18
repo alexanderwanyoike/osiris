@@ -72,11 +72,6 @@ class TestCreating:
         assert "atomic commit" in agents
         assert MANIFEST_FILE in agents
 
-    def test_its_agents_file_names_the_id_a_window_must_carry(self) -> None:
-        subject, files, _ = programs()
-        subject.create("Pomodoro", "A focus timer.", run=["python3", "main.py"])
-        assert "dev.osiris.programs.pomodoro" in files.read(SOURCE / "AGENTS.md")
-
     def test_a_folder_that_exists_is_never_taken_over(self) -> None:
         files = FakeFileSystem()
         files.make_directory(SOURCE)
@@ -124,7 +119,7 @@ class TestCommitting:
 
 class TestChecking:
     def test_python_that_does_not_compile_is_reported_with_its_line(self) -> None:
-        files = made(terminal=True)
+        files = made()
         files.write(SOURCE / "main.py", "print('ok')\ndef broken(:\n")
         subject, _, runner = programs(files)
         (problem,) = subject.check("pomodoro")
@@ -132,36 +127,13 @@ class TestChecking:
         assert runner.calls == []
 
     def test_python_that_compiles_has_no_problems(self) -> None:
-        files = made(terminal=True)
+        files = made()
         files.write(SOURCE / "app" / "main.py", "print('ok')\n")
         subject, _, _ = programs(files)
         assert subject.check("pomodoro") == []
 
-    def test_a_window_that_never_names_its_application_id_is_reported(
-        self,
-    ) -> None:
-        files = made()
-        files.write(SOURCE / "main.py", 'GLib.set_prgname("dev.osiris.Pomodoro")\n')
-        subject, _, _ = programs(files)
-        (problem,) = subject.check("pomodoro")
-        assert "dev.osiris.programs.pomodoro" in problem
-
-    def test_a_window_that_names_its_application_id_is_fine(self) -> None:
-        files = made()
-        files.write(
-            SOURCE / "main.py", 'GLib.set_prgname("dev.osiris.programs.pomodoro")\n'
-        )
-        subject, _, _ = programs(files)
-        assert subject.check("pomodoro") == []
-
-    def test_a_terminal_program_needs_no_application_id(self) -> None:
-        files = made(terminal=True)
-        files.write(SOURCE / "main.py", "print('tick')\n")
-        subject, _, _ = programs(files)
-        assert subject.check("pomodoro") == []
-
     def test_what_git_and_builds_keep_is_not_checked(self) -> None:
-        files = made(terminal=True)
+        files = made()
         files.write(SOURCE / ".git" / "hooks" / "x.py", "def (:\n")
         files.write(SOURCE / ".venv" / "lib" / "y.py", "def (:\n")
         subject, _, _ = programs(files)

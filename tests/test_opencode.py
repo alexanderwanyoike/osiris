@@ -195,11 +195,12 @@ class TestSessions:
             ("POST", path, {"model": {"providerID": "openai", "id": "gpt-5.5"}})
         ]
 
-    def test_a_tool_server_is_attached_as_a_local_mcp_server(self) -> None:
+    def test_a_tool_server_is_attached_afresh_as_a_local_mcp_server(self) -> None:
         path = f"{URL}/api/experimental/mcp/osiris"
-        http = FakeHttpClient(replies={("PUT", path): None})
+        http = FakeHttpClient(replies={("DELETE", path): None, ("PUT", path): None})
         engine(http).attach_tools("osiris", ["python3", "/srv/tool_server.py"])
         assert http.requests == [
+            ("DELETE", path, None),
             (
                 "PUT",
                 path,
@@ -209,8 +210,14 @@ class TestSessions:
                         "command": ["python3", "/srv/tool_server.py"],
                     }
                 },
-            )
+            ),
         ]
+
+    def test_attaching_a_tool_server_never_registered_before_works(self) -> None:
+        path = f"{URL}/api/experimental/mcp/osiris"
+        http = FakeHttpClient(replies={("PUT", path): None})
+        engine(http).attach_tools("osiris", ["python3", "/srv/tool_server.py"])
+        assert http.requests[-1][0] == "PUT"
 
     def test_a_tool_servers_requests_name_the_server_and_tool(self) -> None:
         """As opencode 2.0.32 does: ``tools.osiris.apply_theme`` in its code

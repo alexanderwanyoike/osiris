@@ -37,8 +37,7 @@ its code there with your file tools; nothing outside that folder is yours to
 touch, and you cannot run commands. Write in Python, C or C++, Rust, Go or
 JavaScript unless the person asks for another language; give anything with a
 window GTK 4 and libadwaita (GJS for JavaScript) so it looks like the rest of
-Osiris, with its application id (create_program and list_programs give it)
-set as the program name too (GLib.set_prgname) so the dock can keep it. Keep its osiris-program.json true: build and run are lists of words run
+Osiris. Keep its osiris-program.json true: build and run are lists of words run
 in its folder. Commit every change with commit_program, one atomic change per
 commit with a message saying what it does. check_program finds Python that does
 not compile. The person tries and installs a Program themselves, from the card
@@ -141,7 +140,6 @@ def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
                 "label": program.manifest.label,
                 "description": program.manifest.description,
                 "folder": str(program.source),
-                "app_id": program.manifest.app_id,
                 "installed": program.installed is not None,
                 "up_to_date": program.installed == program.head,
             }
@@ -176,8 +174,7 @@ def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
             program=manifest.name,
         )
         return (
-            f"Made {label} in ~/Code/{manifest.name}, named {manifest.name}; "
-            f"its application id is {manifest.app_id}. "
+            f"Made {label} in ~/Code/{manifest.name}, named {manifest.name}. "
             "Write its code there, then commit it."
         )
 
@@ -199,9 +196,8 @@ def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["check_program"]])
     def check_program(name: str) -> str:
-        """Find Python in a Program that does not compile, and a window that
-        never carries its application id, without running anything. Other
-        languages are checked by their build when the person tries them."""
+        """Find Python in a Program that does not compile, without running it.
+        Other languages are checked by their build when the person tries them."""
         problems = programs.check(name)
         return "\n".join(problems) if problems else "No problems found."
 

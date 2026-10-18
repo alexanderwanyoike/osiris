@@ -60,9 +60,6 @@ agent can carry it on.
 - Every change is one atomic commit: it does exactly one thing, and a refactor
   never shares a commit with a change in behaviour.
 - Windows use GTK 4 and libadwaita, so the Program follows the Osiris Theme.
-  Its application id is `{app_id}`, and it sets its program name to the same
-  before opening a window (`GLib.set_prgname("{app_id}")` or your language's
-  equivalent), so the dock knows the window and can keep it.
 """
 
 
@@ -175,12 +172,7 @@ class Programs:
         self._files.write(source / "README.md", f"# {label}\n\n{description}\n")
         self._files.write(
             source / "AGENTS.md",
-            AGENTS.format(
-                label=label,
-                description=description,
-                manifest=MANIFEST_FILE,
-                app_id=manifest.app_id,
-            ),
+            AGENTS.format(label=label, description=description, manifest=MANIFEST_FILE),
         )
         self._git(name, "init", "-q")
         self._git(name, "add", "-A")
@@ -201,45 +193,27 @@ class Programs:
         self._git(name, "revert", "--no-edit", commit, harness=True)
 
     def check(self, name: str) -> list[str]:
-        """Problems found without running anything: Python that does not compile,
-        and a window that never carries the Program's application id."""
-        manifest = self.manifest(name)
+        """Problems found without running anything: Python that does not compile."""
+        self.manifest(name)
         source = self._source(name)
         problems = []
-        texts = dict(self._texts(source))
-        for path, text in texts.items():
-            if path.suffix != ".py":
-                continue
+        for path in self._python(source):
             try:
-                compile(text, str(path), "exec")
+                compile(self._files.read(path), str(path), "exec")
             except SyntaxError as error:
                 where = path.relative_to(source)
                 problems.append(f"{where}:{error.lineno}: {error.msg}")
-        if not manifest.terminal and not any(
-            manifest.app_id in text for text in texts.values()
-        ):
-            problems.append(
-                f"Its window never carries its application id, {manifest.app_id}: "
-                f'call GLib.set_prgname("{manifest.app_id}") before opening a '
-                "window, or your language's equivalent, and use it as the "
-                "application id, so the dock can keep it."
-            )
         return problems
 
-    def _texts(self, folder: Path) -> list[tuple[Path, str]]:
-        """Every readable text file of a Program's source, with its text."""
+    def _python(self, folder: Path) -> list[Path]:
         found = []
         for child in self._files.list_directory(folder):
-            if child.name in _NOT_SOURCE or child.name == MANIFEST_FILE:
+            if child.name in _NOT_SOURCE:
                 continue
-            inside = self._files.list_directory(child)
-            if inside:
-                found.extend(self._texts(child))
-                continue
-            try:
-                found.append((child, self._files.read(child)))
-            except OSError, UnicodeDecodeError:
-                continue
+            if child.suffix == ".py":
+                found.append(child)
+            elif not child.suffix:
+                found.extend(self._python(child))
         return found
 
     def programs(self) -> list[Program]:
@@ -318,7 +292,8 @@ class Programs:
             self._files.remove_tree(installed)
             raise
         self._files.write(installed / COMMIT_FILE, commit + "\n")
-        self._files.write(self._entry(name), desktop_entry(manifest, installed))
+        entry = self._entry(name)
+        self._files.write(entry, desktop_entry(manifest, installed, entry))
         return commit
 
     def uninstall(self, name: str) -> None:

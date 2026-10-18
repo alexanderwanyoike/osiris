@@ -11,6 +11,10 @@ import pytest
 from osiris.programs.manifest import Manifest, ManifestError, desktop_entry, dump, parse
 
 INSTALLED = Path("/home/tester/.local/share/osiris/programs/pomodoro")
+ENTRY = Path(
+    "/home/tester/.local/share/applications/dev.osiris.programs.pomodoro.desktop"
+)
+HINT = f"env BAMF_DESKTOP_FILE_HINT={ENTRY}"
 
 POMODORO = {
     "name": "pomodoro",
@@ -92,7 +96,7 @@ def test_text_that_is_not_json_is_refused() -> None:
 
 
 def entry(m: Manifest) -> dict[str, str]:
-    lines = desktop_entry(m, INSTALLED).splitlines()
+    lines = desktop_entry(m, INSTALLED, ENTRY).splitlines()
     assert lines[0] == "[Desktop Entry]"
     return dict(line.split("=", 1) for line in lines[1:] if line)
 
@@ -107,7 +111,7 @@ def test_the_menu_entry_names_and_describes_the_program() -> None:
 
 def test_the_menu_entry_runs_the_installed_copy_from_its_folder() -> None:
     fields = entry(manifest())
-    assert fields["Exec"] == f"{INSTALLED}/target/release/pomodoro"
+    assert fields["Exec"] == f"{HINT} {INSTALLED}/target/release/pomodoro"
     assert fields["Path"] == str(INSTALLED)
     assert fields["Icon"] == f"{INSTALLED}/icon.svg"
     assert fields["Terminal"] == "false"
@@ -115,7 +119,7 @@ def test_the_menu_entry_runs_the_installed_copy_from_its_folder() -> None:
 
 def test_a_command_on_the_path_is_run_by_name() -> None:
     fields = entry(manifest(run=["python3", "main.py"]))
-    assert fields["Exec"] == "python3 main.py"
+    assert fields["Exec"] == f"{HINT} python3 main.py"
 
 
 def test_a_program_without_an_icon_gets_a_generic_one() -> None:
@@ -128,12 +132,12 @@ def test_a_script_opens_in_a_terminal() -> None:
 
 def test_words_with_spaces_or_percent_signs_are_quoted_for_the_menu() -> None:
     fields = entry(manifest(run=["python3", "my timer.py", "--at", "50%"]))
-    assert fields["Exec"] == 'python3 "my timer.py" --at 50%%'
+    assert fields["Exec"] == f'{HINT} python3 "my timer.py" --at 50%%'
 
 
 def test_a_program_has_an_application_id_made_from_its_name() -> None:
     assert manifest().app_id == "dev.osiris.programs.pomodoro"
 
 
-def test_the_menu_entry_names_the_window_class_the_dock_matches() -> None:
-    assert entry(manifest())["StartupWMClass"] == "dev.osiris.programs.pomodoro"
+def test_the_dock_knows_a_programs_windows_by_the_entry_that_started_them() -> None:
+    assert entry(manifest())["Exec"].startswith(HINT + " ")
