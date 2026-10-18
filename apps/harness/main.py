@@ -220,7 +220,9 @@ class Drawer(Gtk.ApplicationWindow):
         old = self.pages.get_child_by_name("providers")
         if old is not None:
             self.pages.remove(old)
-        back = Gtk.Button(icon_name="go-previous-symbolic", label="Back",
+        # A button takes an icon or a label, not both; ButtonContent holds both.
+        back = Gtk.Button(child=Adw.ButtonContent(icon_name="go-previous-symbolic",
+                                                  label="Back"),
                           halign=Gtk.Align.START)
         back.add_css_class("flat")
         back.connect("clicked", lambda _b: self.pages.set_visible_child_name("chat"))
