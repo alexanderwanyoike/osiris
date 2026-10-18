@@ -88,15 +88,31 @@ _Avoid_: quota, credits
 
 **Entry point**:
 A place in Osiris that opens the **Harness** with what the person is looking at
-already attached: a key, the panel, a file, selected text, the terminal, a
-setting.
+already attached: a key, the panel button, a file, selected text, the terminal,
+a setting.
 _Avoid_: trigger, integration
+
+**Compact** / **Expanded**:
+The **Harness**'s one surface when narrow, showing the **Conversation** alone, and when wide enough to show its **Conversations** and the **Canvas** beside it.
+_Avoid_: bar, drawer, panel (for the Harness)
+
+**Canvas**:
+The part of **Expanded** where the **Harness** shows whatever a **Conversation** is making or looking at: a document, an image, code, a change, a running **Program**, a **Theme**, anything.
+_Avoid_: artifact, preview pane
 
 **Action tier**:
 How far an action of the **Harness** reaches, which decides whether it asks
 first: a look, an undoable change, or a change that cannot be undone or is not
 the person's own.
 _Avoid_: permission level
+
+**Conversation**:
+A run of questions and answers with the **Harness**, held by the **Engine** as one of its sessions; it continues until the person starts a new one.
+_Avoid_: session, thread, chat
+
+**Project**:
+A folder the person works in, or the root of the git repository it sits in, as the **Engine** defines it; its instructions to the **Harness** are its AGENTS.md.
+_Avoid_: workspace, group, folder (for this)
 
 **Harness log**:
 The kept record of everything the **Harness** sent to a model and every action
@@ -140,9 +156,34 @@ _Avoid_: metadata
   **Harness** and never the **Engine** (ADR 0015).
 - There is one **Harness**; every **Entry point** opens it, with one history and
   one set of permissions. No application has a **Harness** of its own.
-- The **Harness** is one surface: it opens as a bar and grows into a panel when a
-  task needs room, keeping the conversation. Where it sits and how it grows
-  belong to the **Skin**; its colours to the **Theme**.
+- The **Harness** never splits a **Conversation** on its own; a new one starts only
+  when the person asks. Branching a **Conversation** makes a new one that
+  remembers where it came from.
+- A **Conversation** belongs to at most one **Project**: the one it was started in.
+  Osiris defines no project format of its own; a **Project** is what the
+  **Engine** and the shared AGENTS.md convention already make it.
+- A **Conversation** takes its **Project** from the **Entry point** that opened it
+  (the terminal's folder, a file's folder), or from the person's choice before
+  the first message; with neither, it has none. It never changes afterwards.
+- The **Harness** is one surface, **Compact** or **Expanded**, showing the same
+  **Conversation**, history and permissions in both. Which it is follows its
+  width, as the person drags it; expanding takes it to the widest and back.
+  Where it sits and how it expands belong to the **Skin**; its colours to the
+  **Theme**.
+- Only the person resizes the **Harness**. Something that wants room appears as a
+  card in **Compact**, and opening it expands the surface to the **Canvas**.
+- What a **Conversation** shows in the **Canvas** belongs to that **Conversation**
+  and is there again when it is reopened. The **Canvas** is not limited to any
+  kind of content.
+- The **Canvas** shows a **Project**'s code for reading: the whole tree, to browse,
+  in the **Theme**'s colours. Editing happens in the code editor Osiris ships,
+  opened from the **Canvas**; the **Harness** contains no editor (ADR 0016).
+- Archiving a **Conversation** keeps it, out of the way; deleting one erases it
+  from the **Engine** and from the **Harness log**, and asks first because it
+  cannot be undone. Deleting erases the talk, not what it did: a **Theme**
+  applied or a **Program** installed stays.
+- The **Harness** follows the desktop's rules like any window: **Expanded**, it
+  covers the dock, which hides until the pointer reaches it.
 - The **Harness** acts only when asked. It is reachable everywhere and watches
   nothing.
 - Nothing reaches a model that the person cannot see first; further reading
@@ -183,9 +224,14 @@ _Avoid_: metadata
 > **Dev:** "Nord ships with FiraCode and Papirus - are those part of the **Theme**?"
 > **Domain expert:** "No. Fonts and icons are **Skin**. Nord is only its colours; switch to Rose Pine and your font stays."
 > **Dev:** "So when someone asks the **Harness** for 'a moody theme from my car photo', does the model pick the colours?"
-> **Domain expert:** "No. The model only turns the sentence into a **Theme intent** - the photo, a **Harmony**, dark, moody. Osiris's own rules make the colours. And the photo is attached in the bar before anything is sent."
+> **Domain expert:** "No. The model only turns the sentence into a **Theme intent** - the photo, a **Harmony**, dark, moody. Osiris's own rules make the colours. And the photo is attached in the **Harness** before anything is sent."
 > **Dev:** "And if ChatGPT's limit runs out halfway?"
-> **Domain expert:** "It moves to the **Fallback model**, says so, and the panel shows the new **Provider** and its **Usage**. Nothing switches silently."
+> **Domain expert:** "It moves to the **Fallback model**, says so, and the **Harness** shows the new **Provider** and its **Usage**. Nothing switches silently."
+
+> **Dev:** "I'm in ghostty in my repo and open the **Harness**. Which **Project** is it in?"
+> **Domain expert:** "That folder's, so it reads the repo's AGENTS.md. From the panel button it would have none, unless you picked a folder before your first message."
+> **Dev:** "It just made me a **Theme**. Does it open on the right?"
+> **Domain expert:** "Not by itself. In **Compact** it's a card; open it and the surface goes **Expanded**, with the **Theme** in the **Canvas** beside the **Conversation**. The **Canvas** shows whatever the **Conversation** is working on, its code included, which you edit in Code."
 
 ## Flagged ambiguities
 
@@ -193,3 +239,9 @@ _Avoid_: metadata
   `ui.cursor` and `ui.font` beside its colours: what is called a theme there
   bundles a **Theme** with parts of several **Skins**. Resolved: those fields
   belong to **Skins**.
+- "session" and "thread" were used for one exchange with the **Harness**:
+  resolved, it is a **Conversation**; "session" stays the **Engine**'s word.
+- "artifact" was used for what the expanded **Harness** shows: resolved, the
+  place is the **Canvas** and it holds anything, a **Program** being one case.
+- "bar", "drawer" and "panel" were used for the **Harness**'s surface: resolved,
+  it is **Compact** or **Expanded**; "panel" is Cinnamon's.
