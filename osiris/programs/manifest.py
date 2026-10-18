@@ -16,9 +16,7 @@ from osiris.model.names import slug
 
 MANIFEST_FILE = "osiris-program.json"
 
-#: A Program's application id is this followed by its name. A Program with a
-#: window sets its program name to it, which GTK makes the window's class, so
-#: the dock can match the window to the menu entry and keep it.
+#: A Program's application id, which names its menu entry, is this and its name.
 APP_ID_PREFIX = "dev.osiris.programs."
 
 #: Plank matches windows to menu entries through BAMF, which reads this from a
@@ -149,7 +147,6 @@ def desktop_entry(manifest: Manifest, installed: PurePath, entry: PurePath) -> s
         "Icon": icon,
         "Terminal": "true" if manifest.terminal else "false",
         "Categories": "Utility;",
-        "StartupWMClass": manifest.app_id,
         "X-Osiris-Program": manifest.name,
     }
     return "[Desktop Entry]\n" + "".join(f"{k}={v}\n" for k, v in fields.items())

@@ -139,9 +139,5 @@ def test_a_program_has_an_application_id_made_from_its_name() -> None:
     assert manifest().app_id == "dev.osiris.programs.pomodoro"
 
 
-def test_the_menu_entry_names_the_window_class_the_dock_matches() -> None:
-    assert entry(manifest())["StartupWMClass"] == "dev.osiris.programs.pomodoro"
-
-
 def test_the_dock_knows_a_programs_windows_by_the_entry_that_started_them() -> None:
     assert entry(manifest())["Exec"].startswith(HINT + " ")
