@@ -45,6 +45,15 @@ class TestInline:
     def test_html_in_an_answer_is_shown_not_interpreted(self) -> None:
         assert only("<b>loud</b>") == Paragraph("&lt;b&gt;loud&lt;/b&gt;")
 
+    def test_a_line_break_inside_a_paragraph_is_a_space(self) -> None:
+        assert only("one line\nand the next") == Paragraph("one line and the next")
+
+    @pytest.mark.parametrize("ending", ["  \n", "\\\n"])
+    def test_a_hard_break_stays_a_new_line(self, ending: str) -> None:
+        assert only(f"one line{ending}and the next") == Paragraph(
+            "one line\nand the next"
+        )
+
     def test_code_is_escaped_too(self) -> None:
         assert only("`a<b>`") == Paragraph(f"{CODE}{PAD}a&lt;b&gt;{PAD}</span>")
 
@@ -66,9 +75,6 @@ class TestInline:
         assert only('[x](https://a.org/"onclick)') == Paragraph(
             '<a href="https://a.org/%22onclick">x</a>'
         )
-
-    def test_a_line_break_inside_a_paragraph_is_kept(self) -> None:
-        assert only("first\nsecond") == Paragraph("first\nsecond")
 
 
 class TestBlocks:
