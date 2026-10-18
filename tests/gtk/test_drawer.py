@@ -1,4 +1,5 @@
-"""The drawer window: expanding for deep work, and back."""
+"""The drawer window: its top bar and composer, expanding for deep work, and
+back."""
 
 from __future__ import annotations
 
@@ -23,6 +24,16 @@ class FakeApp(Adw.Application):
             scheme = None
 
         self.look = Look()
+        self.asked: list[str] = []
+        self.new_conversations = 0
+
+    def ask(self, text: str) -> None:
+        self.asked.append(text)
+        self.conversation.asked(text)
+
+    def new_conversation(self) -> None:
+        self.new_conversations += 1
+        self.conversation = Conversation()
 
     def header_line(self) -> str:
         return "default model"
@@ -111,3 +122,47 @@ def test_the_providers_page_opens_with_a_back_button_carrying_an_arrow() -> None
     assert [(b.get_label(), b.get_icon_name()) for b in backs] == [
         ("Back", "go-previous-symbolic")
     ]
+
+
+def test_the_top_bar_starts_a_new_conversation() -> None:
+    from gi.repository import Gtk
+
+    from tests.gtk.conftest import widgets
+
+    window, _ = drawer()
+    (new,) = [
+        w
+        for w in widgets(window)
+        if isinstance(w, Gtk.Button) and w.get_tooltip_text() == "New conversation"
+    ]
+    new.emit("clicked")
+    assert window.app.new_conversations == 1
+
+
+def test_the_top_bar_names_the_conversation() -> None:
+    window, _ = drawer()
+    assert window.title.get_text() == "New conversation"
+    window.app.conversation.asked("Make me a calm theme")
+    window.refresh()
+    assert window.title.get_text() == "Make me a calm theme"
+
+
+def test_the_composer_takes_more_than_one_line_and_sends_it() -> None:
+    from gi.repository import Gtk
+
+    window, _ = drawer()
+    assert isinstance(window.entry, Gtk.TextView)
+    window.entry.get_buffer().set_text("first line\nsecond line")
+    window.send.emit("clicked")
+    assert window.app.asked == ["first line\nsecond line"]
+    assert window.entry.get_buffer().get_char_count() == 0
+
+
+def test_the_model_in_play_is_a_menu_in_the_composer() -> None:
+    from gi.repository import Gtk
+
+    from tests.gtk.conftest import texts, widgets
+
+    window, _ = drawer()
+    menus = [w for w in widgets(window) if isinstance(w, Gtk.MenuButton)]
+    assert any("default model" in texts(m) for m in menus)
