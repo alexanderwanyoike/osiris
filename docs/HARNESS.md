@@ -129,10 +129,9 @@ is minimised; without the extension the drawer minimises directly. Where the
 Harness sits will become the **Skin**'s choice.
 
 The drawer can be dragged wider from its left edge, and the Expand button in
-its header fills the screen. Either way it stays within the work area, which
-the dock keeps clear: Plank is set never to hide, the one mode in which it
-reserves its bar's height, so every maximised window, the expanded Harness
-included, sits above it.
+its header fills the work area. Expanded, it follows the desktop's rules like
+any maximised window: it covers the dock, which hides until the pointer
+reaches it (CONTEXT.md).
 
 ### The opencode Engine
 
