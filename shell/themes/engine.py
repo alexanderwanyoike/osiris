@@ -41,6 +41,7 @@ import plank  # noqa: E402
 from paths import home, use_osiris_package  # noqa: E402
 
 use_osiris_package()
+from osiris.themes.adwaita import adwaita_css  # noqa: E402
 from osiris.themes.switch import Switch, keyfile  # noqa: E402
 
 
@@ -751,10 +752,11 @@ def apply(name: str) -> list[str]:
     _reload_terminals()
 
     # Superseded by the generated theme; left in place it would override it.
-    for version in ("gtk-3.0", "gtk-4.0"):
-        stale = os.path.join(HOME, ".config", version, "gtk.css")
-        if os.path.exists(stale):
-            os.remove(stale)
+    stale = os.path.join(HOME, ".config", "gtk-3.0", "gtk.css")
+    if os.path.exists(stale):
+        os.remove(stale)
+    # libadwaita ignores the generated theme and reads only this.
+    _write(os.path.join(HOME, ".config", "gtk-4.0", "gtk.css"), adwaita_css(theme))
 
     _write(STATE, name + "\n")
     _drift(theme)
