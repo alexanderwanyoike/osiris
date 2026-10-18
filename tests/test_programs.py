@@ -14,7 +14,10 @@ from osiris.programs.manifest import MANIFEST_FILE, Manifest, parse
 from osiris.programs.programs import HARNESS, Program, ProgramError, Programs, State
 
 HOME = Path("/home/tester")
-ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><circle cx="64" cy="64" r="56" fill="#e5484d"/></svg>'
+ICON = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">'
+    '<circle cx="64" cy="64" r="56" fill="#e5484d"/></svg>'
+)
 
 SOURCE = HOME / "Code" / "pomodoro"
 INSTALLED = HOME / ".local/share/osiris/programs/pomodoro"

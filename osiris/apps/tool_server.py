@@ -151,6 +151,7 @@ def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
         label: str,
         description: str,
         run: list[str],
+        icon_svg: str,
         build: list[str] | None = None,
         terminal: bool = False,
     ) -> str:
@@ -163,9 +164,17 @@ def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
         build: the words that build it, if it needs building:
         ["cargo", "build", "--release"].
         terminal: true for a script or command that should open in a terminal.
+        icon_svg: an icon that shows what it is at a glance, as a whole SVG
+        document with a 128 by 128 viewBox, flat and simple like the Papirus
+        icons around it on the desktop.
         """
         manifest = programs.create(
-            label, description, run=run, build=build, terminal=terminal
+            label,
+            description,
+            run=run,
+            build=build,
+            terminal=terminal,
+            icon_svg=icon_svg,
         )
         log.write(
             "changed",
