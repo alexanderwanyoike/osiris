@@ -186,6 +186,23 @@ class TestSessions:
             ("POST", path, {"model": {"providerID": "openai", "id": "gpt-5.5"}})
         ]
 
+    def test_a_tool_server_is_attached_as_a_local_mcp_server(self) -> None:
+        path = f"{URL}/api/experimental/mcp/osiris"
+        http = FakeHttpClient(replies={("PUT", path): None})
+        engine(http).attach_tools("osiris", ["python3", "/srv/tool_server.py"])
+        assert http.requests == [
+            (
+                "PUT",
+                path,
+                {
+                    "config": {
+                        "type": "local",
+                        "command": ["python3", "/srv/tool_server.py"],
+                    }
+                },
+            )
+        ]
+
     @pytest.mark.parametrize(("allow", "decision"), [(True, "once"), (False, "reject")])
     def test_a_tool_request_is_answered_once_or_rejected(
         self, allow: bool, decision: str
