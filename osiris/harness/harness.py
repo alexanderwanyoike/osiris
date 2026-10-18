@@ -20,8 +20,9 @@ from osiris.harness.tiers import Tier
 
 #: Passed to the model with every rejected tool, so it answers in words instead.
 TALK_ONLY = (
-    "The Osiris Harness can only talk for now: it cannot run commands, read "
-    "files or change anything on this machine. Answer in words."
+    "The Osiris Harness cannot do that: it cannot run commands or read files, "
+    "and changes this machine only through the Osiris tools. Answer in words, "
+    "or with those tools."
 )
 
 
