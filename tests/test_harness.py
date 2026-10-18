@@ -312,7 +312,7 @@ def test_a_new_conversation_opens_a_new_session_on_its_first_question() -> None:
 
 
 def test_after_a_new_conversation_the_old_sessions_events_are_left_alone() -> None:
-    subject, engine, _ = harness()
+    subject, _, _ = harness()
     subject.ask("hello")
     subject.new_conversation()
     assert subject.handle(Text("ses_1", "late text")) is None

@@ -53,11 +53,25 @@ class Turn:
         return [change.undo for change in reversed(self.changes) if change.undo]
 
 
+#: How much of the first question a title keeps.
+TITLE_LENGTH = 48
+
+
 class Conversation:
     def __init__(self) -> None:
         self.turns: list[Turn] = []
         self.model: ModelRef | None = None
         self.tokens_spent = 0
+
+    @property
+    def title(self) -> str | None:
+        """The first question's first line, shortened to fit a title bar."""
+        if not self.turns:
+            return None
+        line = self.turns[0].question.strip().splitlines()[0]
+        if len(line) <= TITLE_LENGTH:
+            return line
+        return line[:TITLE_LENGTH].rsplit(" ", 1)[0] + "…"
 
     @property
     def busy(self) -> bool:
