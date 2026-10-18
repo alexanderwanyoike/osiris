@@ -9,7 +9,7 @@ from providers import ProvidersPage
 
 from osiris.harness.accounts import Method, ModelInfo, Provider, SignIn, SignInState
 from osiris.harness.engine import ModelRef
-from tests.gtk.conftest import find, now, shown, texts
+from tests.gtk.conftest import find, now, shown, texts, widgets
 
 KEY = Method(id=None, kind="key", label="API key")
 CHATGPT = Method(id="chatgpt-token-sharing", kind="oauth", label="Sign in with ChatGPT")
@@ -189,3 +189,21 @@ def test_the_key_field_opens_only_when_the_person_asks_to_add_a_key() -> None:
     assert not entry.get_parent().get_visible()
     find(page, Gtk.Button, "Add key").emit("clicked")
     assert entry.get_parent().get_visible()
+
+
+def test_a_provider_osiris_has_a_logo_for_shows_it_and_others_get_a_monogram() -> None:
+    accounts = FakeAccounts(
+        listed=[
+            Provider("openai", "OpenAI", (CHATGPT,), False),
+            Provider("groq", "Groq", (KEY,), False),
+        ]
+    )
+    page = ProvidersPage(accounts, background=now)
+    icons = [w.get_icon_name() for w in widgets(page) if isinstance(w, Gtk.Image)]
+    assert "osiris-provider-openai-symbolic" in icons
+    monograms = [
+        w.get_text()
+        for w in widgets(page)
+        if isinstance(w, Gtk.Label) and w.has_css_class("harness-monogram")
+    ]
+    assert monograms == ["G"]
