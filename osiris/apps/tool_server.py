@@ -37,8 +37,7 @@ its code there with your file tools; nothing outside that folder is yours to
 touch, and you cannot run commands. Write in Python, C or C++, Rust, Go or
 JavaScript unless the person asks for another language; give anything with a
 window GTK 4 and libadwaita (GJS for JavaScript) so it looks like the rest of
-Osiris, with the application id create_program gives it, set as the program
-name too (GLib.set_prgname) so the dock can keep it. Keep its osiris-program.json true: build and run are lists of words run
+Osiris. Keep its osiris-program.json true: build and run are lists of words run
 in its folder. Commit every change with commit_program, one atomic change per
 commit with a message saying what it does. check_program finds Python that does
 not compile. The person tries and installs a Program themselves, from the card
@@ -175,8 +174,7 @@ def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
             program=manifest.name,
         )
         return (
-            f"Made {label} in ~/Code/{manifest.name}, named {manifest.name}; "
-            f"its application id is {manifest.app_id}. "
+            f"Made {label} in ~/Code/{manifest.name}, named {manifest.name}. "
             "Write its code there, then commit it."
         )
 

@@ -60,9 +60,6 @@ agent can carry it on.
 - Every change is one atomic commit: it does exactly one thing, and a refactor
   never shares a commit with a change in behaviour.
 - Windows use GTK 4 and libadwaita, so the Program follows the Osiris Theme.
-  Its application id is `{app_id}`, and it sets its program name to the same
-  before opening a window (`GLib.set_prgname("{app_id}")` or your language's
-  equivalent), so the dock knows the window and can keep it.
 """
 
 
@@ -175,12 +172,7 @@ class Programs:
         self._files.write(source / "README.md", f"# {label}\n\n{description}\n")
         self._files.write(
             source / "AGENTS.md",
-            AGENTS.format(
-                label=label,
-                description=description,
-                manifest=MANIFEST_FILE,
-                app_id=manifest.app_id,
-            ),
+            AGENTS.format(label=label, description=description, manifest=MANIFEST_FILE),
         )
         self._git(name, "init", "-q")
         self._git(name, "add", "-A")
