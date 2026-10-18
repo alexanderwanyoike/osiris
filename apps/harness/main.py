@@ -63,6 +63,8 @@ APP_ID = "dev.osiris.Harness"
 # monitor's full height.
 WIDTH = 440
 RECONNECT_SECONDS = 3
+#: The widest the conversation grows, in pixels, however wide the drawer.
+READABLE = 820
 
 DRAWER_BUS = "dev.osiris.HarnessDrawer"
 DRAWER_PATH = "/dev/osiris/HarnessDrawer"
@@ -100,8 +102,9 @@ class Drawer(Gtk.ApplicationWindow):
                              valign=Gtk.Align.END, vexpand=True,
                              margin_top=12, margin_bottom=12)
         self.views: list[TurnView] = []
+        # Expanded to the whole screen, lines stay a readable length.
         self.scroller = Gtk.ScrolledWindow(
-            child=self.turns, vexpand=True,
+            child=Adw.Clamp(maximum_size=READABLE, child=self.turns), vexpand=True,
             hscrollbar_policy=Gtk.PolicyType.NEVER)
 
         self.entry = Gtk.Entry(placeholder_text="Ask Osiris", hexpand=True)
@@ -120,10 +123,12 @@ class Drawer(Gtk.ApplicationWindow):
         self.footer.add_css_class("harness-meta")
         self.footer.add_css_class("harness-footer")
 
+        bottom = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        bottom.append(composer)
+        bottom.append(self.footer)
         chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         chat.append(self.scroller)
-        chat.append(composer)
-        chat.append(self.footer)
+        chat.append(Adw.Clamp(maximum_size=READABLE, child=bottom))
         self.pages = Gtk.Stack(vexpand=True,
                                transition_type=Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
         self.pages.add_named(chat, "chat")
