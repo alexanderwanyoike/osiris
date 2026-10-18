@@ -177,6 +177,14 @@ class OpencodeAccounts:
         )
         return [_provider(entry) for entry in reply["data"]]
 
+    def connect_key(self, provider: str, key: str) -> None:
+        self._http.request(
+            "POST",
+            f"{self._service.url}/api/integration/{provider}/connect/key",
+            body={"key": key},
+            headers=self._service.headers(),
+        )
+
 
 def _provider(entry: dict[str, Any]) -> Provider:
     # An environment variable is not something a person can set from a
