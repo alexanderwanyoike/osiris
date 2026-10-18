@@ -13,6 +13,8 @@ from osiris.harness.engine import (
     Failed,
     Finished,
     ModelRef,
+    Past,
+    PastTurn,
     Stopped,
     Text,
     Tokens,
@@ -281,3 +283,86 @@ class TestEvents:
             "data": {"sessionID": SESSION},
         }
         assert self.events(interrupted) == [Stopped(SESSION)]
+
+
+class TestHistory:
+    def test_the_harnesss_sessions_are_marked_as_its_own(self) -> None:
+        http = FakeHttpClient(
+            replies={("POST", f"{URL}/api/session"): {"data": {"id": SESSION}}}
+        )
+        engine(http).start()
+        _, _, body = http.requests[0]
+        assert isinstance(body, dict)
+        assert body["metadata"] == {"osiris": "harness"}
+
+    def test_a_session_is_renamed(self) -> None:
+        path = f"{URL}/api/session/{SESSION}"
+        http = FakeHttpClient(replies={("PATCH", path): {"data": {}}})
+        engine(http).rename(SESSION, "Make me a calm theme")
+        assert http.requests == [("PATCH", path, {"title": "Make me a calm theme"})]
+
+    def test_past_conversations_are_the_harnesss_sessions_newest_first(self) -> None:
+        def session(sid: str, title: str, folder: str, updated: int, mine: bool):
+            return {
+                "id": sid,
+                "title": title,
+                "location": {"directory": folder},
+                "time": {"created": updated - 10, "updated": updated},
+                **({"metadata": {"osiris": "harness"}} if mine else {}),
+            }
+
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{URL}/api/session?limit=200"): {
+                    "data": [
+                        session("ses_a", "Calm theme", "/home/tester", 1000, True),
+                        session("ses_tui", "refactor", "/home/tester/x", 3000, False),
+                        session(
+                            "ses_b",
+                            "Pomodoro",
+                            "/home/tester/Code/pomodoro",
+                            2000,
+                            True,
+                        ),
+                    ]
+                }
+            }
+        )
+        assert engine(http).conversations() == [
+            Past("ses_b", "Pomodoro", Path("/home/tester/Code/pomodoro"), 2.0),
+            Past("ses_a", "Calm theme", Path("/home/tester"), 1.0),
+        ]
+
+    def test_a_past_conversation_is_rebuilt_from_its_messages(self) -> None:
+        model = {"id": "gpt-6.1-sol", "providerID": "openai"}
+        http = FakeHttpClient(
+            replies={
+                (
+                    "GET",
+                    f"{URL}/api/session/{SESSION}/message?limit=500&order=asc",
+                ): {
+                    "data": [
+                        {"id": "m1", "type": "user", "text": "make a timer"},
+                        {
+                            "id": "m2",
+                            "type": "assistant",
+                            "model": model,
+                            "content": [{"type": "tool", "name": "read"}],
+                        },
+                        {"id": "m3", "text": "Instructions from: AGENTS.md"},
+                        {
+                            "id": "m4",
+                            "type": "assistant",
+                            "model": model,
+                            "content": [{"type": "text", "text": "Made it."}],
+                        },
+                        {"id": "m5", "type": "idle"},
+                        {"id": "m6", "type": "user", "text": "thanks"},
+                    ]
+                }
+            }
+        )
+        assert engine(http).history(SESSION) == [
+            PastTurn("make a timer", "Made it.", ModelRef("openai", "gpt-6.1-sol")),
+            PastTurn("thanks", "", None),
+        ]
