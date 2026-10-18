@@ -61,6 +61,8 @@ agent can carry it on.
 - Every change is one atomic commit: it does exactly one thing, and a refactor
   never shares a commit with a change in behaviour.
 - Windows use GTK 4 and libadwaita, so the Program follows the Osiris Theme.
+  Never write colours: style only with libadwaita's named colours
+  (`@accent_bg_color`, `@window_bg_color`, `@card_bg_color` and the rest).
 """
 
 
