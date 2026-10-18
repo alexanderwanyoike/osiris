@@ -15,6 +15,7 @@ from osiris.harness.engine import (
     Event,
     Failed,
     ModelRef,
+    Past,
     PastTurn,
     Stopped,
     Text,
@@ -71,6 +72,9 @@ class FakeEngine:
 
     def history(self, session: str) -> list[PastTurn]:
         return self.past
+
+    def conversations(self) -> list[Past]:
+        return [Past("ses_1", "hello", HOME, 1.0)]
 
 
 POMODORO = HOME / "Code" / "pomodoro"
@@ -342,3 +346,15 @@ def test_a_past_conversation_is_resumed_in_its_own_session() -> None:
     assert engine.started == []
     assert engine.sent == [("ses_9", "add a pause button")]
     assert subject.handle(Text("ses_9", "Done")) == Text("ses_9", "Done")
+
+
+def test_the_harness_names_its_past_conversations() -> None:
+    subject, _, _ = harness()
+    assert subject.conversations() == [Past("ses_1", "hello", HOME, 1.0)]
+
+
+def test_the_session_on_screen_is_known_once_something_is_asked() -> None:
+    subject, _, _ = harness()
+    assert subject.session is None
+    subject.ask("hello")
+    assert subject.session == "ses_1"
