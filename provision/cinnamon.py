@@ -74,6 +74,12 @@ gtk-theme='adw-gtk3-dark'
 icon-theme='Papirus-Dark'
 color-scheme='prefer-dark'
 
+# libadwaita asks xdg-desktop-portal, and on Cinnamon the XApp backend answers
+# from this key, not the GNOME one above; left at 'default' it reports no
+# preference and libadwaita apps come up light.
+[org/x/apps/portal]
+color-scheme='prefer-dark'
+
 [org/cinnamon/desktop/keybindings]
 custom-list=['custom0', 'custom1']
 
@@ -181,6 +187,9 @@ name='adw-gtk3-dark'
 [org.gnome.desktop.interface]
 gtk-theme='adw-gtk3-dark'
 icon-theme='Papirus-Dark'
+color-scheme='prefer-dark'
+
+[org.x.apps.portal]
 color-scheme='prefer-dark'
 """
 
