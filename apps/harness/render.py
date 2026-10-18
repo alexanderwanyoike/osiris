@@ -174,10 +174,12 @@ def block_widget(block, scheme: GtkSource.StyleScheme | None) -> Gtk.Widget:
 class TurnView(Gtk.Box):
     """One question and its answer, redrawn only where the answer changed."""
 
-    def __init__(self, turn: Turn, on_undo: Callable[[Turn], None]):
+    def __init__(self, turn: Turn, on_undo: Callable[[Turn], None],
+                 program_card: Callable[[str], Gtk.Widget]):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-turn")
         self._on_undo = on_undo
+        self._program_card = program_card
         question = Gtk.Label(label=turn.question, xalign=0, wrap=True,
                              wrap_mode=Pango.WrapMode.WORD_CHAR, selectable=True,
                              halign=Gtk.Align.END)
@@ -248,6 +250,8 @@ class TurnView(Gtk.Box):
             self.extras.append(chip)
         if turn.changes:
             self.extras.append(self._changes(turn))
+        for name in turn.programs:
+            self.extras.append(self._program_card(name))
         if turn.state is State.FAILED:
             error = Gtk.Label(label=turn.error or "The answer failed.", xalign=0,
                               wrap=True, selectable=True)

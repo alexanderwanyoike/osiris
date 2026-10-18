@@ -42,6 +42,7 @@ sys.path.insert(0, HERE)
 
 from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
+from program_card import ProgramCard  # noqa: E402
 from render import TurnView  # noqa: E402
 from theme_store import EngineStore  # noqa: E402
 
@@ -255,7 +256,8 @@ class Drawer(Gtk.ApplicationWindow):
         fresh = len(self.views)
         while len(self.views) < len(conversation.turns):
             view = TurnView(conversation.turns[len(self.views)],
-                            on_undo=self.app.undo)
+                            on_undo=self.app.undo,
+                            program_card=self.app.program_card)
             self.views.append(view)
             self.turns.append(view)
         newest = len(self.views) - 1
@@ -296,6 +298,9 @@ class Application(Adw.Application):
         self.home = SystemIdentity().home
         self.models: Models = load_models(self.files, self.home)
         self.problem = "Starting the Engine..."
+        #: What each Program's card is waiting on, or what went wrong, by name.
+        self.program_busy: dict[str, str] = {}
+        self.program_problem: dict[str, str] = {}
         self.open = False
         show = Gio.SimpleAction.new("show", None)
         show.connect("activate", lambda *_: self.toggle())
@@ -395,6 +400,83 @@ class Application(Adw.Application):
 
     def programs(self) -> Programs:
         return Programs(self.files, SubprocessRunner(sink=lambda _line: None), self.home)
+
+    def program_card(self, name: str) -> Gtk.Widget:
+        found = [p for p in self.programs().programs() if p.manifest.name == name]
+        if not found:
+            gone = Gtk.Label(label=f"{name} is no longer in ~/Code", xalign=0)
+            gone.add_css_class("harness-meta")
+            return gone
+        return ProgramCard(found[0], on_try=self.try_program,
+                           on_install=self.install_program, on_fix=self.fix_program,
+                           busy=self.program_busy.get(name),
+                           problem=self.program_problem.get(name))
+
+    def _program_work(self, name: str, waiting: str, work, done) -> None:
+        """Run a Program's build or install off the main loop, showing it on
+        its card and keeping what went wrong there."""
+        self.program_busy[name] = waiting
+        self.program_problem.pop(name, None)
+        self.drawer.refresh(restyle=True)
+
+        def run():
+            try:
+                result = work()
+            except Exception as error:  # noqa: BLE001 - shown on the card
+                GLib.idle_add(finish, None, str(error))
+                return
+            GLib.idle_add(finish, result, None)
+
+        def finish(result, problem):
+            self.program_busy.pop(name, None)
+            if problem is not None:
+                self.program_problem[name] = problem
+            else:
+                done(result)
+            self.drawer.refresh(restyle=True)
+            return False
+
+        threading.Thread(target=run, daemon=True).start()
+
+    def try_program(self, name: str) -> None:
+        def launch(prepared) -> None:
+            argv, folder = prepared
+            launcher = Gio.SubprocessLauncher.new(Gio.SubprocessFlags.NONE)
+            launcher.set_cwd(str(folder))
+            try:
+                launcher.spawnv(argv)
+            except GLib.Error as error:
+                self.program_problem[name] = error.message
+
+        self._program_work(name, "Building…",
+                           lambda: self.programs().prepare_try(name), launch)
+
+    def install_program(self, name: str) -> None:
+        label = self.programs().manifest(name).label
+        dialog = Adw.AlertDialog(
+            heading=f"Install {label}?",
+            body=(f"{label} will be in the applications menu and the launcher, "
+                  "and can be kept in the dock.\n\nPrograms are not confined yet: "
+                  "it runs as you, with everything you can reach."))
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("install", "Install")
+        dialog.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
+        dialog.set_close_response("cancel")
+
+        def chosen(_dialog, response: str) -> None:
+            if response == "install":
+                self._program_work(name, "Installing…",
+                                   lambda: self.programs().install(name),
+                                   lambda _commit: None)
+
+        dialog.connect("response", chosen)
+        dialog.present(self.drawer)
+
+    def fix_program(self, name: str, problem: str) -> None:
+        self.program_problem.pop(name, None)
+        label = self.programs().manifest(name).label
+        self.ask(f"{label} failed to build or start:\n\n```\n{problem}\n```\n\n"
+                 "Please fix it.")
 
     def undo(self, turn: Turn) -> None:
         """Reverse what a turn changed, newest first, without the model."""
