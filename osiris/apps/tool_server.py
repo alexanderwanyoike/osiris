@@ -171,6 +171,7 @@ def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
             "changed",
             summary=f"Made {label}",
             undo={"action": "trash_program", "name": manifest.name},
+            program=manifest.name,
         )
         return (
             f"Made {label} in ~/Code/{manifest.name}, named {manifest.name}. "
@@ -189,6 +190,7 @@ def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
             "changed",
             summary=f"{label}: {message}",
             undo={"action": "revert_commit", "name": name, "commit": commit},
+            program=name,
         )
         return f"Committed {message} as {commit[:7]}."
 
