@@ -100,3 +100,22 @@ def test_events_before_any_question_change_nothing() -> None:
     talk = Conversation()
     talk.apply(Text(S, "stray"))
     assert talk.turns == []
+
+
+def test_before_any_answer_the_header_names_the_chosen_default() -> None:
+    talk = Conversation()
+    assert (
+        talk.model_label(default=ModelRef("openai", "gpt-6.1-sol"))
+        == "openai / gpt-6.1-sol"
+    )
+    assert talk.model_label(default=None) == "default model"
+
+
+def test_once_a_model_answers_the_header_names_that_one() -> None:
+    talk = Conversation()
+    talk.asked("hello")
+    talk.apply(Answered(S, GPT, tokens(1, 1), cost=0.0))
+    assert (
+        talk.model_label(default=ModelRef("openai", "gpt-6.1-sol"))
+        == "openai / gpt-5.5"
+    )
