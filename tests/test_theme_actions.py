@@ -11,6 +11,7 @@ from osiris.themes.actions import (
     ThemeActionError,
     apply_theme,
     create_theme,
+    delete_theme,
     list_themes,
 )
 from osiris.themes.derive import build
@@ -123,3 +124,23 @@ def test_applying_an_unknown_theme_is_refused() -> None:
     with pytest.raises(ThemeActionError, match="no theme called harbour"):
         apply_theme(store, "harbour")
     assert store.applied == []
+
+
+def test_deleting_a_theme_removes_it() -> None:
+    store = FakeThemeStore(
+        themes=[stored("nord", "Nord"), stored("harbour", "Harbour")], current="nord"
+    )
+    delete_theme(store, "harbour")
+    assert store.deleted == ["harbour"]
+
+
+def test_the_applied_theme_is_never_deleted() -> None:
+    store = FakeThemeStore(themes=[stored("harbour", "Harbour")], current="harbour")
+    with pytest.raises(ThemeActionError, match="Harbour is applied"):
+        delete_theme(store, "harbour")
+    assert store.deleted == []
+
+
+def test_deleting_an_unknown_theme_is_refused() -> None:
+    with pytest.raises(ThemeActionError, match="no theme called harbour"):
+        delete_theme(FakeThemeStore(), "harbour")
