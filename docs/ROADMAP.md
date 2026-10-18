@@ -102,9 +102,30 @@ P3.7 needs nothing else, and comes after the first slice of P3.5.
 | P3.2 | The colour model: Theme and Skin separated in the data, OKLCH harmony rules, Themes derived from a Wallpaper, more Generated wallpaper styles, partner colours suggested in the creator | A Theme is colours only; a seed colour or a picture plus a Harmony gives a legible, harmonious palette; existing themes migrate | mostly done: OKLCH harmony, Themes from a Wallpaper, partner colours and Generated wallpaper styles (drawn live on a GPU) are in; Theme and Skin are not yet separated in the data |
 | P3.3 | Boot screens follow the System theme: GRUB, Plymouth and the greeter recoloured, changed with administrator approval | Choosing a System theme recolours all three Boot screens; the Osiris mark stays; the live medium keeps Osiris Obsidian | |
 | P3.4 | Skins and Skin sets: shape layers on adw-gtk3 and Breeze (ADR 0013), panel layouts, dock geometry, launcher layouts, Harness placement; Appearance shows Skin sets and lets any surface be swapped | At least three Skin sets, each coherent under every shipped Theme; switching set replaces every Skin and a modified set can be chosen again | |
-| P3.5 | Harness foundation: Engine port with an opencode adapter (ADR 0015), Settings for Providers with Default and Fallback models, a Usage indicator in the panel, the bar-and-panel surface, the Harness log, Action tiers, editable instructions, memory and permissions, Entry points | A person connects ChatGPT or OpenCode Go without a terminal, summons the Harness from a key, a file, selected text or the terminal, and can see the Provider, model and Usage in play and everything sent and done | |
-| P3.6 | Harness capabilities: Theme intent from a sentence, then Programs with manifests, a sandbox, installation and single-file sharing | "A moody theme from this photo" produces applicable Themes; a Program the Harness writes installs only after its manifest is shown and follows the Theme and Skin | |
+| P3.5 | Harness foundation: Engine port with an opencode adapter (ADR 0015), Settings for Providers with Default and Fallback models, a Usage indicator in the panel, the bar-and-panel surface, the Harness log, Action tiers, editable instructions, memory and permissions, Entry points | A person connects ChatGPT or OpenCode Go without a terminal, summons the Harness from a key, a file, selected text or the terminal, and can see the Provider, model and Usage in play and everything sent and done | started: the Engine port, the opencode 2.0 adapter, the Harness log, the drawer on Super+A and the panel, and answers drawn as Markdown in two Skins that follow the Theme are in; Action tiers exist for looks and undoable changes |
+| P3.6 | Harness capabilities: Theme intent from a sentence, then Programs with manifests, a sandbox, installation and single-file sharing | "A moody theme from this photo" produces applicable Themes; a Program the Harness writes installs only after its manifest is shown and follows the Theme and Skin | started: Themes from a sentence, through the Osiris tools with an Undo; Themes from a photo and Programs to come |
 | P3.7 | Sudo delegation: a program with no terminal that runs `sudo` (an agent's shell, the Harness) gets an Osiris dialog asking a person for the administrator password; the program never sees it | `sudo` from Claude Code, opencode or the Harness opens a dialog naming the asking program and the exact command; the password goes from the dialog to sudo only; Deny fails the command; a person in a real terminal still gets the normal prompt; `pacman -S`/`-R` show the packages and size from pacman's own plan (`--print`); `rm` lists the files and marks the deletion as permanent; a shell string (`sh -c`, a script) is shown in full and labelled, never summarised | planned, after P3.5's first slice. Mechanism: sudo already runs the askpass helper named in `/etc/sudo.conf` (`Path askpass`) when it has no terminal, so nothing has to be wrapped. An approval lasts as long as sudo's own cache does without a terminal, which is per parent process: one agent shell, usually one command. To check first: agent tools that give sudo a pseudo-terminal would get the terminal prompt instead, and the dialog has to be hard to imitate |
+
+---
+
+## Phase 5: Updates and hardening (P4)
+
+An installed Osiris keeps up with Arch and with Osiris itself without being
+reinstalled, and starts from a safe baseline. Everything here uses tools Arch
+maintains (ADR 0012); Osiris supplies configuration and the screens.
+
+**Phase DoD**: a machine installed from one release takes the next through
+ordinary updates, keeps the person's Theme, Skins and Harness settings, can be
+rolled back if an update goes wrong, and listens on nothing it does not need.
+
+| ID | Task | DoD | State |
+|---|---|---|---|
+| P4.1 | A hosted, signed package repository | `osiris` and what it bundles (Plank Reloaded) are published at a stable URL, signed with a project key shipped as a keyring package; installed systems keep this repository in pacman.conf in place of the install medium's | |
+| P4.2 | Upgrades re-apply Osiris safely | Upgrading the `osiris` package runs `osiris-setup` from a pacman hook; running it twice changes nothing the second time, and it never overwrites a choice the person made (Theme, Skin, keybindings, dock) | |
+| P4.3 | Migrations for what Osiris keeps per user | Each per-user format (themes, the Harness's files) carries a version; a newer Osiris migrates older files on login, tested from every released version | |
+| P4.4 | Update notice | The panel shows when updates are waiting and installs them on request, with progress, through pacman; never automatically | |
+| P4.5 | Roll back a bad update | On btrfs, snapper with snap-pac snapshots before every pacman transaction and grub-btrfs offers them in the boot menu; on ext4 the installer says rollback needs btrfs | |
+| P4.6 | Hardening baseline | A firewall on by default allowing nothing in, no services listening that the desktop does not need, checked on a fresh install | |
 
 ---
 
@@ -118,6 +139,6 @@ P3.7 needs nothing else, and comes after the first slice of P3.5.
 - No reproducible-build infrastructure (Nix-style). archiso is enough.
 - No manual partitioning in the installer. Encrypting beside a shared EFI
   system partition waits on archinstall supporting an encrypted /boot.
-- No hosted package repository yet. The medium carries Osiris's own: the
-  `osiris` package and what it bundles because no official repository has it
-  (Plank Reloaded). Nothing depends on the AUR.
+- No hosted package repository until P4.1. The medium carries Osiris's own:
+  the `osiris` package and what it bundles because no official repository has
+  it (Plank Reloaded). Nothing depends on the AUR.

@@ -79,12 +79,16 @@ APPLICATIONS = (
 # checks a wallpaper package's shader before the desktop compiles it, and
 # mesa-utils' glxinfo says whether a GPU is there to draw it at all. grub
 # supplies grub-mkfont and grub-mkconfig for the boot menu theme, and os-prober
-# lets that menu list the other systems on a dual-boot machine.
+# lets that menu list the other systems on a dual-boot machine. opencode is
+# the Harness's Engine (ADR 0015); markdown-it-py parses its answers and
+# GtkSourceView draws the code in them; the Osiris tool server speaks MCP with
+# the official SDK.
 RUNTIME = (
     "python", "python-gobject", "gtk4", "libadwaita",
     "python-pillow", "python-numpy", "python-cairo", "glslang", "mesa-utils",
     "dconf", "glib2",
     "grub", "os-prober", "plymouth", "mkinitcpio",
+    "opencode", "python-markdown-it-py", "gtksourceview5", "python-mcp",
 )  # fmt: skip
 
 

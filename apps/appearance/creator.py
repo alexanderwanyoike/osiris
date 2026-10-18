@@ -37,6 +37,7 @@ from PIL import Image  # noqa: E402
 from osiris.model.colour import Colour  # noqa: E402
 from osiris.themes import derive as rules  # noqa: E402
 from osiris.themes.from_wallpaper import intent_from  # noqa: E402
+from osiris.themes.library import slug  # noqa: E402
 from osiris.themes.intent import (  # noqa: E402
     SUGGESTIONS, Harmony, Mood, ThemeIntent, harmonise, partners, seeds,
     suggestions)
@@ -541,7 +542,7 @@ class Creator(Adw.Dialog):
         )
 
     def _from_intent(self, label: str, intent: ThemeIntent) -> dict:
-        theme = rules.build(engine.slug(label), label, seeds(intent),
+        theme = rules.build(slug(label), label, seeds(intent),
                             wallpaper_style=self.styles[
                                 self.style.get_selected()])
         theme["intent"] = {"seed": intent.seed.hex,
@@ -558,7 +559,7 @@ class Creator(Adw.Dialog):
         if intent is not None:
             return self._from_intent(label, intent)
         theme = derive.build(
-            engine.slug(label), label,
+            slug(label), label,
             self.rows["background"].value, self.rows["accent"].value,
             dark=self.variant.get_active(),
             secondary=(self.rows["secondary"].value
@@ -603,7 +604,7 @@ class Creator(Adw.Dialog):
         """Enable Save only when the name is usable and not already taken, and
         a picture theme has its picture."""
         label = self.name_row.get_text().strip()
-        name = engine.slug(label)
+        name = slug(label)
         taken = engine.exists(name) and name != self.original
         problem = ("" if label and not taken else
                    "Enter a name" if not label else

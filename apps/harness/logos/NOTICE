@@ -1,0 +1,12 @@
+Provider logos, redrawn as single-colour symbolic icons so they follow the
+Theme. They identify the Provider a person signs in to, and remain the
+trademarks of their owners.
+
+osiris-provider-openai-symbolic.svg
+    From lobe-icons (https://github.com/lobehub/lobe-icons),
+    packages/static-svg/icons/openai.svg, MIT License.
+
+osiris-provider-opencode-symbolic.svg
+    From opencode (https://github.com/anomalyco/opencode),
+    packages/console/app/src/asset/brand/opencode-logo-light-square.svg,
+    MIT License.

@@ -36,6 +36,8 @@ class FileSystem(Protocol):
         mode: int | None = None,
     ) -> None: ...
 
+    def append(self, path: Path, text: str) -> None: ...
+
     def make_directory(self, path: Path, *, owner: Identity | None = None) -> None: ...
 
     def copy(
@@ -67,6 +69,11 @@ class RealFileSystem:
         if mode is not None:
             path.chmod(mode)
         self._give(path, owner)
+
+    def append(self, path: Path, text: str) -> None:
+        self.make_directory(path.parent)
+        with path.open("a") as handle:
+            handle.write(text)
 
     def make_directory(self, path: Path, *, owner: Identity | None = None) -> None:
         """`mkdir -p`, giving every component this call creates to `owner`.
@@ -151,6 +158,10 @@ class FakeFileSystem:
             self.modes[path] = mode
         if owner is not None:
             self.owners[path] = owner.uid
+
+    def append(self, path: Path, text: str) -> None:
+        self.make_directory(path.parent)
+        self.files[path] = self.files.get(path, "") + text
 
     def make_directory(self, path: Path, *, owner: Identity | None = None) -> None:
         for parent in (path, *path.parents):

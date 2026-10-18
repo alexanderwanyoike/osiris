@@ -25,6 +25,7 @@ that supersedes it and say so in both.
 | [0013](0013-gtk-skins-are-shape-layers-on-recolourable-bases.md) | GTK skins are shape layers on recolourable bases | Accepted |
 | [0014](0014-cinnamon-extension-for-theme-transitions.md) | A Cinnamon extension for theme transitions | Accepted |
 | [0015](0015-harness-owns-tools-rents-engine.md) | The harness owns its tools and surfaces and rents its engine | Accepted |
+| [0016](0016-the-canvas-shows-code-and-code-oss-edits-it.md) | The Canvas shows code; the code editor edits it | Accepted |
 
 ## Format
 

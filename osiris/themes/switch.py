@@ -37,6 +37,7 @@ def keyfile(switch: Switch, dock_path: str) -> str:
 
     ``dock_path`` is the relocatable path of Plank's dock settings.
     """
+    scheme = "prefer-dark" if switch.dark else "prefer-light"
     sections: dict[str, dict[str, str]] = {
         "org/cinnamon/desktop/interface": {
             "gtk-theme": switch.theme,
@@ -49,8 +50,10 @@ def keyfile(switch: Switch, dock_path: str) -> str:
         "org/gnome/desktop/interface": {
             "gtk-theme": switch.theme,
             "icon-theme": switch.icons,
-            "color-scheme": "prefer-dark" if switch.dark else "prefer-light",
+            "color-scheme": scheme,
         },
+        # What xdg-desktop-portal-xapp reports, which is where libadwaita looks.
+        "org/x/apps/portal": {"color-scheme": scheme},
     }
     if switch.wallpaper is not None:
         sections["org/cinnamon/desktop/background"] = {

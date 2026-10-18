@@ -6,6 +6,12 @@ requires-python = ">=3.14"
 dependencies = [
     "numpy>=1.26",
     "pillow>=10.0",
+    # Parses the Harness's answers; Arch packages it as python-markdown-it-py.
+    "markdown-it-py>=4.0",
+    # The Osiris tool server. Pinned to the python-mcp Arch ships: the SDK's
+    # next major moved FastMCP and renamed its annotations, so an unpinned
+    # install tests against an API the machine does not have.
+    "mcp==1.29.0",
 ]
 
 [project.optional-dependencies]
