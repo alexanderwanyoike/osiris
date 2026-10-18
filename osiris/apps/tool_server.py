@@ -9,9 +9,11 @@ tools are looks.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import Annotated
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from pydantic import Field
 
 from osiris.harness.log import HarnessLog
 from osiris.harness.tiers import Tier
@@ -34,6 +36,9 @@ TIERS = {
     "create_theme": Tier.UNDOABLE,
     "apply_theme": Tier.UNDOABLE,
 }
+
+#: A seed as the model must give it; words like "dusk blue" are refused.
+Seed = Annotated[str, Field(pattern="^#[0-9a-fA-F]{6}$")]
 
 ANNOTATIONS = {
     Tier.LOOK: ToolAnnotations(readOnlyHint=True),
@@ -64,7 +69,7 @@ def server(store: ThemeStore, log: HarnessLog) -> FastMCP:
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["create_theme"]])
     def create_theme(
-        label: str, seed: str, harmony: Harmony, mood: Mood, dark: bool
+        label: str, seed: Seed, harmony: Harmony, mood: Mood, dark: bool
     ) -> str:
         """Make a theme and keep it with the person's own themes.
 
