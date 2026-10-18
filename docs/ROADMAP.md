@@ -106,6 +106,27 @@ each other. Then P3.3, P3.4 and P3.6, each of which needs one of those two.
 
 ---
 
+## Phase 5: Updates and hardening (P4)
+
+An installed Osiris keeps up with Arch and with Osiris itself without being
+reinstalled, and starts from a safe baseline. Everything here uses tools Arch
+maintains (ADR 0012); Osiris supplies configuration and the screens.
+
+**Phase DoD**: a machine installed from one release takes the next through
+ordinary updates, keeps the person's Theme, Skins and Harness settings, can be
+rolled back if an update goes wrong, and listens on nothing it does not need.
+
+| ID | Task | DoD | State |
+|---|---|---|---|
+| P4.1 | A hosted, signed package repository | `osiris` and what it bundles (Plank Reloaded) are published at a stable URL, signed with a project key shipped as a keyring package; installed systems keep this repository in pacman.conf in place of the install medium's | |
+| P4.2 | Upgrades re-apply Osiris safely | Upgrading the `osiris` package runs `osiris-setup` from a pacman hook; running it twice changes nothing the second time, and it never overwrites a choice the person made (Theme, Skin, keybindings, dock) | |
+| P4.3 | Migrations for what Osiris keeps per user | Each per-user format (themes, the Harness's files) carries a version; a newer Osiris migrates older files on login, tested from every released version | |
+| P4.4 | Update notice | The panel shows when updates are waiting and installs them on request, with progress, through pacman; never automatically | |
+| P4.5 | Roll back a bad update | On btrfs, snapper with snap-pac snapshots before every pacman transaction and grub-btrfs offers them in the boot menu; on ext4 the installer says rollback needs btrfs | |
+| P4.6 | Hardening baseline | A firewall on by default allowing nothing in, no services listening that the desktop does not need, checked on a fresh install | |
+
+---
+
 ## What NOT to do (yet)
 
 - No mobile or tablet form factor.
@@ -116,6 +137,6 @@ each other. Then P3.3, P3.4 and P3.6, each of which needs one of those two.
 - No reproducible-build infrastructure (Nix-style). archiso is enough.
 - No manual partitioning in the installer. Encrypting beside a shared EFI
   system partition waits on archinstall supporting an encrypted /boot.
-- No hosted package repository yet. The medium carries Osiris's own: the
-  `osiris` package and what it bundles because no official repository has it
-  (Plank Reloaded). Nothing depends on the AUR.
+- No hosted package repository until P4.1. The medium carries Osiris's own:
+  the `osiris` package and what it bundles because no official repository has
+  it (Plank Reloaded). Nothing depends on the AUR.
