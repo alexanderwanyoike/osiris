@@ -37,7 +37,9 @@ its code there with your file tools; nothing outside that folder is yours to
 touch, and you cannot run commands. Write in Python, C or C++, Rust, Go or
 JavaScript unless the person asks for another language; give anything with a
 window GTK 4 and libadwaita (GJS for JavaScript) so it looks like the rest of
-Osiris. Keep its osiris-program.json true: build and run are lists of words run
+Osiris. Every Program has an icon that shows what it is: icon.svg in its
+folder, named as "icon" in its osiris-program.json; give one to any Program
+that lacks it. Keep its osiris-program.json true: build and run are lists of words run
 in its folder. Commit every change with commit_program, one atomic change per
 commit with a message saying what it does. check_program finds Python that does
 not compile. The person tries and installs a Program themselves, from the card
@@ -151,6 +153,7 @@ def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
         label: str,
         description: str,
         run: list[str],
+        icon_svg: str,
         build: list[str] | None = None,
         terminal: bool = False,
     ) -> str:
@@ -163,9 +166,17 @@ def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
         build: the words that build it, if it needs building:
         ["cargo", "build", "--release"].
         terminal: true for a script or command that should open in a terminal.
+        icon_svg: an icon that shows what it is at a glance, as a whole SVG
+        document with a 128 by 128 viewBox, flat and simple like the Papirus
+        icons around it on the desktop.
         """
         manifest = programs.create(
-            label, description, run=run, build=build, terminal=terminal
+            label,
+            description,
+            run=run,
+            build=build,
+            terminal=terminal,
+            icon_svg=icon_svg,
         )
         log.write(
             "changed",

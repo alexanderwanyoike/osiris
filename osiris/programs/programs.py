@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from xml.etree import ElementTree
 
 from osiris.model.names import slug
 from osiris.platform import CommandRunner, FileSystem
@@ -65,6 +66,23 @@ agent can carry it on.
 
 class ProgramError(RuntimeError):
     pass
+
+
+#: Every Program is made with an icon the Harness draws for it.
+ICON_FILE = "icon.svg"
+#: An icon is a drawing, not a document; anything larger is not an icon.
+ICON_LIMIT = 64 * 1024
+
+
+def _check_icon(svg: str) -> None:
+    if len(svg.encode()) > ICON_LIMIT:
+        raise ProgramError(f"The icon must be a small SVG, under {ICON_LIMIT} bytes")
+    try:
+        root = ElementTree.fromstring(svg)
+    except ElementTree.ParseError as error:
+        raise ProgramError(f"The icon is not an SVG: {error}") from error
+    if root.tag.rsplit("}", 1)[-1] != "svg":
+        raise ProgramError("The icon must be an SVG drawing, with <svg> at its root")
 
 
 class State(Enum):
@@ -142,6 +160,7 @@ class Programs:
         run: list[str],
         build: list[str] | None = None,
         terminal: bool = False,
+        icon_svg: str,
     ) -> Manifest:
         """Start a Program: its folder, manifest, README and AGENTS.md, and a
         first commit."""
@@ -159,7 +178,7 @@ class Programs:
                         name=name,
                         label=label,
                         description=description,
-                        icon=None,
+                        icon=ICON_FILE,
                         build=tuple(build) if build else None,
                         run=tuple(run),
                         terminal=terminal,
@@ -168,7 +187,9 @@ class Programs:
             )
         except ManifestError as error:
             raise ProgramError(str(error)) from error
+        _check_icon(icon_svg)
         self._files.write(source / MANIFEST_FILE, dump(manifest))
+        self._files.write(source / ICON_FILE, icon_svg)
         self._files.write(source / "README.md", f"# {label}\n\n{description}\n")
         self._files.write(
             source / "AGENTS.md",

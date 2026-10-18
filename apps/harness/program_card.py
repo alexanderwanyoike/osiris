@@ -11,6 +11,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Pango  # noqa: E402
 
+from osiris.programs.manifest import GENERIC_ICON  # noqa: E402
 from osiris.programs.programs import Program, State  # noqa: E402
 
 
@@ -23,9 +24,17 @@ class ProgramCard(Gtk.Box):
                          halign=Gtk.Align.START)
         self.add_css_class("harness-program")
         name = program.manifest.name
+        heading = Gtk.Box(spacing=10)
+        if program.manifest.icon:
+            icon = Gtk.Image(file=str(program.source / program.manifest.icon))
+        else:
+            icon = Gtk.Image(icon_name=GENERIC_ICON)
+        icon.set_pixel_size(32)
+        heading.append(icon)
         title = Gtk.Label(label=program.manifest.label, xalign=0)
         title.add_css_class("heading")
-        self.append(title)
+        heading.append(title)
+        self.append(heading)
         about = Gtk.Label(label=program.manifest.description, xalign=0, wrap=True,
                           wrap_mode=Pango.WrapMode.WORD_CHAR)
         about.add_css_class("harness-meta")
