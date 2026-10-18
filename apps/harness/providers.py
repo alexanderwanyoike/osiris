@@ -110,6 +110,7 @@ class ProvidersPage(Gtk.Box):
 
     def _section(self, provider) -> Gtk.Widget:
         section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        section.add_css_class("harness-provider-card")
         row = Gtk.Box(spacing=10)
         row.add_css_class("harness-provider")
         row.append(_badge(provider))

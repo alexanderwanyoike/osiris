@@ -84,3 +84,28 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 
 .harness-provider { padding: 8px 0; border-bottom: 1px solid @harness_border; }
 .harness-key-form, .harness-code-form { padding: 4px 0 10px; }
+
+.harness-provider-card {
+    background-color: alpha(@harness_raised, 0.6);
+    border: 1px solid alpha(@harness_fg, 0.06);
+    border-radius: 14px;
+    padding: 10px 12px;
+}
+.harness-provider-card .harness-provider { padding: 2px 0 6px; border-bottom: none; }
+.harness-monogram {
+    min-width: 22px;
+    min-height: 22px;
+    border-radius: 7px;
+    background-color: alpha(@harness_accent, 0.22);
+    color: @harness_accent;
+    font-weight: 700;
+    font-size: 0.85em;
+}
+.harness-connected {
+    border-radius: 999px;
+    padding: 2px 10px;
+    background-color: alpha(@harness_success, 0.16);
+    color: @harness_success;
+    font-size: 0.85em;
+}
+.harness-sign-in { border-radius: 10px; background-color: @harness_accent; color: @harness_on_accent; }
