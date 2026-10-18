@@ -174,10 +174,7 @@ class Drawer(Gtk.ApplicationWindow):
 
     def _toggle_expanded(self, _button) -> None:
         self.expanded = not self.expanded
-        if self.expanded:
-            self.maximize()
-        else:
-            self.unmaximize()
+        self.app.expand(self.expanded)
         self.expand_button.set_icon_name(
             "view-restore-symbolic" if self.expanded else "view-fullscreen-symbolic")
         self.expand_button.set_tooltip_text("Back to the drawer" if self.expanded
@@ -326,6 +323,30 @@ class Application(Adw.Application):
         connection.call(
             DRAWER_BUS, DRAWER_PATH, DRAWER_BUS, "Close", None, None,
             Gio.DBusCallFlags.NONE, 1000, None, self._closed)
+
+    def expand(self, expanded: bool) -> None:
+        """Ask the extension to fill the screen above the dock, or to restore
+        the drawer; maximise instead if it is not there."""
+        connection = self.get_dbus_connection()
+        if connection is None:
+            self._maximise(expanded)
+            return
+        connection.call(
+            DRAWER_BUS, DRAWER_PATH, DRAWER_BUS, "Expand",
+            GLib.Variant("(b)", (expanded,)), None, Gio.DBusCallFlags.NONE, 1000,
+            None, lambda c, r: self._expanded(c, r, expanded))
+
+    def _expanded(self, connection, result, expanded: bool) -> None:
+        try:
+            connection.call_finish(result)
+        except GLib.Error:
+            self._maximise(expanded)
+
+    def _maximise(self, expanded: bool) -> None:
+        if expanded:
+            self.drawer.maximize()
+        else:
+            self.drawer.unmaximize()
 
     def _closed(self, connection, result) -> None:
         try:
