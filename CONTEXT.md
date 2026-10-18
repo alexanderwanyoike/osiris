@@ -170,8 +170,8 @@ _Avoid_: metadata
 - A **Conversation** takes its **Project** from the **Entry point** that opened it
   (the terminal's folder, a file's folder), or from the person's choice before
   the first message; with neither, it has none. It never changes afterwards,
-  with one exception: a **Conversation** with none that creates a **Program**
-  takes that **Program**'s **Project**.
+  with one exception: a **Conversation** with none takes the **Project** of the
+  first **Program** it creates or changes.
 - The **Harness** is one surface, **Compact** or **Expanded**, showing the same
   **Conversation**, history and permissions in both. Which it is follows its
   width, as the person drags it; expanding takes it to the widest and back.
