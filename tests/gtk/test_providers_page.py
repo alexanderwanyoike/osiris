@@ -93,3 +93,19 @@ def test_signing_in_opens_the_providers_page_and_ends_connected() -> None:
     assert accounts.started == [("openai", "chatgpt-token-sharing")]
     assert opened == ["https://auth.example.org/x"]
     assert "Connected" in texts(page)
+
+
+def test_a_failed_sign_in_says_why() -> None:
+    class Refusing(FakeAccounts):
+        def sign_in_state(self, provider: str, attempt: str) -> SignInState:
+            return SignInState("failed", "Access was denied")
+
+    accounts = Refusing(listed=[Provider("openai", "OpenAI", (CHATGPT,), False)])
+    page = ProvidersPage(
+        accounts,
+        background=now,
+        open_page=lambda _u: None,
+        later=lambda _s, then: then(),
+    )
+    find(page, Gtk.Button, "Sign in with ChatGPT").emit("clicked")
+    assert "Access was denied" in texts(page)
