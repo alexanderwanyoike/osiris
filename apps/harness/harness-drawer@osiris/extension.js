@@ -1,8 +1,9 @@
 // Keeps the Harness at the right edge of the screen, full height, above other
 // windows, and slides it in and out. A width the person drags to is kept.
-// Expanded, it fills the screen. Either way it stops above a dock it would
-// overlap: Plank reserves no space in intelligent-hide mode, so a drawer
-// reaching over it would hide it. GTK4 on X11 gives an application no way
+// Expanded, it fills the screen above the dock: Plank reserves no space in
+// intelligent-hide mode, so a drawer covering it would hide it. Plank's window
+// spans the whole width with zoom headroom above the visible bar, so this
+// only applies when expanded; the narrow drawer at the edge keeps its height. GTK4 on X11 gives an application no way
 // to place its own window; where the Harness sits will become the Skin's
 // choice (CONTEXT.md).
 //
@@ -102,7 +103,8 @@ class Drawer {
         let width = this._expanded.has(window)
             ? area.width : (this._widths.get(window) || WIDTH);
         let left = area.x + area.width - width;
-        let floor = this._floor(area, left, left + width);
+        let floor = this._expanded.has(window)
+            ? this._floor(area, left, left + width) : area.y + area.height;
         window.move_resize_frame(true, left, area.y, width, floor - area.y);
     }
 
