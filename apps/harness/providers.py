@@ -18,6 +18,24 @@ from gi.repository import Gtk  # noqa: E402
 FEATURED = ("openai", "opencode-go")
 
 
+#: Logos Osiris ships (apps/harness/logos), as icon names.
+LOGOS = {
+    "openai": "osiris-provider-openai-symbolic",
+    "opencode": "osiris-provider-opencode-symbolic",
+    "opencode-go": "osiris-provider-opencode-symbolic",
+}
+
+
+def _badge(provider) -> Gtk.Widget:
+    if provider.id in LOGOS:
+        logo = Gtk.Image(icon_name=LOGOS[provider.id], pixel_size=20)
+        logo.add_css_class("harness-logo")
+        return logo
+    monogram = Gtk.Label(label=provider.name[:1].upper())
+    monogram.add_css_class("harness-monogram")
+    return monogram
+
+
 def _featured_first(providers):
     rank = {name: index for index, name in enumerate(FEATURED)}
     return sorted(providers, key=lambda p: rank.get(p.id, len(FEATURED)))
@@ -92,8 +110,9 @@ class ProvidersPage(Gtk.Box):
 
     def _section(self, provider) -> Gtk.Widget:
         section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        row = Gtk.Box(spacing=8)
+        row = Gtk.Box(spacing=10)
         row.add_css_class("harness-provider")
+        row.append(_badge(provider))
         row.append(Gtk.Label(label=provider.name, xalign=0, hexpand=True))
         section.append(row)
         if provider.connected:
