@@ -70,3 +70,7 @@ def test_a_refused_action_reaches_the_model_with_its_reason() -> None:
     store = FakeThemeStore(themes=[{"name": "nord", "label": "Nord", "dark": True}])
     with pytest.raises(ToolError, match="no theme called harbour"):
         call(store, "apply_theme", {"name": "harbour"})
+
+
+def test_the_server_logs_only_warnings_into_the_engines_output() -> None:
+    assert server(FakeThemeStore()).settings.log_level == "WARNING"
