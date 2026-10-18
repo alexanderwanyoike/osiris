@@ -26,7 +26,7 @@ from osiris.harness.engine import (
     ToolCalled,
     ToolRequested,
 )
-from osiris.platform import CommandRunner, FileSystem, HttpClient, Identity
+from osiris.platform import CommandRunner, FileSystem, HttpClient, HttpError, Identity
 
 #: Where the service records its URL and password, relative to the home.
 SERVICE_FILE = ".local/state/opencode/service.json"
@@ -105,9 +105,17 @@ class OpencodeEngine:
         )
 
     def attach_tools(self, name: str, command: list[str]) -> None:
+        url = f"{self._service.url}/api/experimental/mcp/{name}"
+        # opencode keeps a running server whose registration is unchanged, which
+        # would keep serving the code from before an update.
+        try:
+            self._http.request("DELETE", url, headers=self._service.headers())
+        except HttpError as error:
+            if error.status != 404:
+                raise
         self._http.request(
             "PUT",
-            f"{self._service.url}/api/experimental/mcp/{name}",
+            url,
             body={"config": {"type": "local", "command": command}},
             headers=self._service.headers(),
         )

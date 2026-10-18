@@ -196,8 +196,6 @@ class TestSessions:
         ]
 
     def test_a_tool_server_is_attached_afresh_as_a_local_mcp_server(self) -> None:
-        """opencode keeps a running server whose registration is unchanged, so
-        the old one is removed first and the current code is always started."""
         path = f"{URL}/api/experimental/mcp/osiris"
         http = FakeHttpClient(replies={("DELETE", path): None, ("PUT", path): None})
         engine(http).attach_tools("osiris", ["python3", "/srv/tool_server.py"])
