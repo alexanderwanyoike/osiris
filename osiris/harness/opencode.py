@@ -28,6 +28,7 @@ from osiris.harness.engine import (
     ToolCalled,
     ToolRequested,
 )
+from osiris.harness.titles import title_of
 from osiris.platform import CommandRunner, FileSystem, HttpClient, HttpError, Identity
 
 #: Where the service records its URL and password, relative to the home.
@@ -39,6 +40,8 @@ MINE = {"osiris": "harness"}
 #: How many sessions and messages a history reads; more is older than anyone
 #: scrolls to.
 HISTORY_LIMIT = 200
+#: What the Harness called every session before it marked and named them.
+UNMARKED_TITLE = "Osiris Harness"
 MESSAGE_LIMIT = 500
 
 #: Every action stops at a tool request, so the Harness's policy decides.
@@ -146,20 +149,39 @@ class OpencodeEngine:
 
     def conversations(self) -> list[Past]:
         sessions = self._get(f"/api/session?limit={HISTORY_LIMIT}")["data"]
-        mine = [s for s in sessions if s.get("metadata") == MINE]
-        return sorted(
-            (
+        found = []
+        for session in sessions:
+            if session.get("metadata") != MINE:
+                if session.get("title") != UNMARKED_TITLE:
+                    continue
+                adopted = self._adopt(session["id"])
+                if adopted is None:
+                    continue
+                session = {**session, "title": adopted}
+            found.append(
                 Past(
-                    s["id"],
-                    s.get("title", ""),
-                    Path(s["location"]["directory"]),
-                    s["time"]["updated"] / 1000,
+                    session["id"],
+                    session.get("title", ""),
+                    Path(session["location"]["directory"]),
+                    session["time"]["updated"] / 1000,
                 )
-                for s in mine
-            ),
-            key=lambda past: past.updated,
-            reverse=True,
+            )
+        return sorted(found, key=lambda past: past.updated, reverse=True)
+
+    def _adopt(self, session: str) -> str | None:
+        """Name and mark one of the Harness's sessions from before it marked
+        its own; None for one in which nothing was asked."""
+        turns = self.history(session)
+        if not turns:
+            return None
+        title = title_of(turns[0].question)
+        self._http.request(
+            "PATCH",
+            f"{self._service.url}/api/session/{session}",
+            body={"title": title, "metadata": MINE},
+            headers=self._service.headers(),
         )
+        return title
 
     def history(self, session: str) -> list[PastTurn]:
         path = f"/api/session/{session}/message?limit={MESSAGE_LIMIT}&order=asc"
