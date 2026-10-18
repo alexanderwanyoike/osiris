@@ -48,3 +48,30 @@ run headless.
   terminal application.
 - The engine port is shaped by what opencode exposes: sessions, tool calls,
   permission requests and streamed events. Another engine has to fit that shape.
+
+## Note: opencode 2.0
+
+Arch ships opencode 2.0 (`extra/opencode` 2.0.32 on 2026-10-17), which differs
+from the 1.x interface this record was written against. Verified against the
+running program rather than its documentation:
+
+- It runs as a background service per user. A client finds it in
+  `~/.local/state/opencode/service.json` (URL and password, mode 0600) and
+  authenticates with HTTP basic auth as `opencode`. Its API lives under `/api`
+  and is described by `GET /openapi.json`.
+- Connecting an account needs no terminal: `integration.connect.key` takes an
+  API key (OpenCode Go), and `integration.oauth.connect` starts "Sign in with
+  ChatGPT".
+- Answers stream as server-sent events from `/api/event`. Each finished step
+  names the model that answered and its tokens. No Provider's allowance or reset
+  time is reported, so **Usage** shows tokens spent and the allowance as not
+  reported.
+- Sessions take a permission ruleset. With every action set to `ask`, a tool
+  that touches the machine stops at a `permission.asked` event until the client
+  replies, which is where the Harness applies its own policy. opencode's
+  internal tool-catalogue search runs without asking; it reads nothing on the
+  machine, and every tool call is still reported as an event and logged.
+- A ruleset that denies everything strips the tools from the request, and
+  opencode's free tier then refuses it ("can only be used from within
+  OpenCode"). Osiris does not route around that: the free tier is not a
+  **Provider** the Harness depends on, and answering needs a connected account.

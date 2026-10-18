@@ -37,6 +37,13 @@ class TestFileSystem:
         filesystem.write(root / "deep" / "nested" / "file", "x")
         assert filesystem.exists(root / "deep" / "nested")
 
+    def test_appending_adds_to_the_end_and_creates_the_file(
+        self, filesystem: FileSystem, root: Path
+    ) -> None:
+        filesystem.append(root / "logs" / "a.log", "one\n")
+        filesystem.append(root / "logs" / "a.log", "two\n")
+        assert filesystem.read(root / "logs" / "a.log") == "one\ntwo\n"
+
     def test_missing_files_raise(self, filesystem: FileSystem, root: Path) -> None:
         with pytest.raises(FileNotFoundError):
             filesystem.read(root / "absent")
