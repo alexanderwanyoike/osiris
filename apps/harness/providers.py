@@ -47,9 +47,13 @@ class ProvidersPage(Gtk.Box):
         model_line = Gtk.Box(spacing=8)
         model_line.append(Gtk.Label(label="Default model", xalign=0, hexpand=True))
         model_line.append(self._picker)
+        self._search = Gtk.SearchEntry(placeholder_text="Search other providers")
+        self._search.connect("changed", self._filter)
         self.append(model_line)
         self.append(self._list)
+        self.append(self._search)
         self.append(self._problem)
+        self._others = []
         self.reload()
 
     def reload(self) -> None:
@@ -78,22 +82,37 @@ class ProvidersPage(Gtk.Box):
             following = child.get_next_sibling()
             self._list.remove(child)
             child = following
+        self._others = []
         for provider in _featured_first(providers):
-            row = Gtk.Box(spacing=8)
-            row.add_css_class("harness-provider")
-            row.append(Gtk.Label(label=provider.name, xalign=0, hexpand=True))
-            if provider.connected:
-                status = Gtk.Label(label="Connected")
-                status.add_css_class("harness-meta")
-                row.append(status)
-            self._list.append(row)
-            if provider.connected:
-                continue
-            for method in provider.methods:
-                if method.kind == "oauth":
-                    self._list.append(self._sign_in_button(provider.id, method))
-            if any(m.kind == "key" for m in provider.methods):
-                self._list.append(self._key_form(provider.id))
+            section = self._section(provider)
+            self._list.append(section)
+            if provider.id not in FEATURED:
+                self._others.append((provider.name.lower(), section))
+        self._filter()
+
+    def _section(self, provider) -> Gtk.Widget:
+        section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        row = Gtk.Box(spacing=8)
+        row.add_css_class("harness-provider")
+        row.append(Gtk.Label(label=provider.name, xalign=0, hexpand=True))
+        section.append(row)
+        if provider.connected:
+            status = Gtk.Label(label="Connected")
+            status.add_css_class("harness-meta")
+            row.append(status)
+            return section
+        for method in provider.methods:
+            if method.kind == "oauth":
+                section.append(self._sign_in_button(provider.id, method))
+        if any(m.kind == "key" for m in provider.methods):
+            section.append(self._key_form(provider.id))
+        return section
+
+    def _filter(self, *_args) -> None:
+        """Other Providers stay out of the way until a search names them."""
+        query = self._search.get_text().strip().lower()
+        for name, section in self._others:
+            section.set_visible(bool(query) and query in name)
 
     def _sign_in_button(self, provider: str, method) -> Gtk.Widget:
         button = Gtk.Button(label=method.label, halign=Gtk.Align.START)
