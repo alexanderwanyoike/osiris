@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import homes  # noqa: E402
 import services  # noqa: E402
 from run import run  # noqa: E402
+from harness import DRAWER_EXTENSION, PANEL_BUTTON  # noqa: E402
 from themes import DRIFT_EXTENSION, TRANSITION  # noqa: E402
 
 WALLPAPER = "/usr/share/backgrounds/osiris/osiris-obsidian.png"
@@ -34,6 +35,7 @@ APPLETS = [
     "panel1:right:3:sound@cinnamon.org:4",
     "panel1:right:4:power@cinnamon.org:5",
     "panel1:right:5:calendar@cinnamon.org:6",
+    f"panel1:right:6:{PANEL_BUTTON}:7",
 ]
 
 DCONF_PROFILE = "user-db:user\nsystem-db:local\n"
@@ -52,7 +54,7 @@ panels-autohide=['1:false']
 enabled-applets=[{applets}]
 desktop-effects=true
 startup-animation=false
-enabled-extensions=['{TRANSITION}', '{DRIFT_EXTENSION}']
+enabled-extensions=['{TRANSITION}', '{DRIFT_EXTENSION}', '{DRAWER_EXTENSION}']
 alttab-switcher-style='coverflow'
 
 [org/cinnamon/desktop/background]
