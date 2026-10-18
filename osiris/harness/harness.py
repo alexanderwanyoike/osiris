@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 
 from osiris.harness.engine import (
     Answered,
@@ -24,6 +24,24 @@ REFUSED = (
     "and changes this machine only through the Osiris tools. Answer in words, "
     "or with those tools."
 )
+
+
+@dataclass(frozen=True)
+class Allowed:
+    session: str
+    action: str
+    tier: Tier
+
+
+@dataclass(frozen=True)
+class Refused:
+    session: str
+    action: str
+    resources: tuple[str, ...]
+
+
+#: What the Harness decided about a ``ToolRequested``, passed on in its place.
+Decision = Allowed | Refused
 
 
 class Harness:
@@ -58,7 +76,7 @@ class Harness:
         if self._session is not None:
             self._engine.stop(self._session)
 
-    def handle(self, event: Event) -> Event | None:
+    def handle(self, event: Event) -> Event | Decision | None:
         """Log what the Engine reports and apply policy; the event is passed on.
 
         None for another program's session: the Engine's stream carries them all.
@@ -91,6 +109,7 @@ class Harness:
                     action=action,
                     tier=self._tiers[action].value,
                 )
+                return Allowed(session, action, self._tiers[action])
             case ToolRequested(session, request, action, resources):
                 self._engine.reply(session, request, allow=False, message=REFUSED)
                 self._log.write(
@@ -99,6 +118,7 @@ class Harness:
                     action=action,
                     resources=list(resources),
                 )
+                return Refused(session, action, resources)
             case Failed(session, message):
                 self._log.write("failed", session=session, message=message)
             case Stopped(session):
