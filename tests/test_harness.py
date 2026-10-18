@@ -35,13 +35,17 @@ TOKENS = Tokens(input=10, output=4, reasoning=2, cache_read=0, cache_write=0)
 @dataclass
 class FakeEngine:
     started: list[ModelRef | None] = field(default_factory=list)
+    directories: list[Path | None] = field(default_factory=list)
     sent: list[tuple[str, str]] = field(default_factory=list)
     replies: list[tuple[str, str, bool, str]] = field(default_factory=list)
     stopped: list[str] = field(default_factory=list)
     switched: list[tuple[str, ModelRef]] = field(default_factory=list)
 
-    def start(self, model: ModelRef | None = None) -> str:
+    def start(
+        self, model: ModelRef | None = None, directory: Path | None = None
+    ) -> str:
         self.started.append(model)
+        self.directories.append(directory)
         return f"ses_{len(self.started)}"
 
     def send(self, session: str, text: str) -> None:
@@ -60,12 +64,23 @@ class FakeEngine:
         self.switched.append((session, model))
 
 
+POMODORO = HOME / "Code" / "pomodoro"
+
+
 def harness(
     model: ModelRef | None = GPT, tiers: dict[str, Tier] | None = None
 ) -> tuple[Harness, FakeEngine, FakeFileSystem]:
     engine, files = FakeEngine(), FakeFileSystem()
     log = HarnessLog(files, HOME / LOG_FILE, clock=lambda: NOON)
-    return Harness(engine, log, model, tiers=tiers or {}), engine, files
+    subject = Harness(
+        engine,
+        log,
+        model,
+        tiers=tiers or {},
+        directory=HOME,
+        may_touch=lambda path: path == POMODORO or POMODORO in path.parents,
+    )
+    return subject, engine, files
 
 
 def entries(files: FakeFileSystem) -> list[dict[str, object]]:
@@ -85,6 +100,12 @@ def test_later_questions_continue_the_same_conversation() -> None:
     subject.ask("and again")
     assert engine.started == [GPT]
     assert engine.sent == [("ses_1", "hello"), ("ses_1", "and again")]
+
+
+def test_the_session_starts_in_the_harnesss_folder() -> None:
+    subject, engine, _ = harness()
+    subject.ask("hello")
+    assert engine.directories == [HOME]
 
 
 def test_without_a_chosen_model_the_engine_default_is_used() -> None:
@@ -236,3 +257,46 @@ def test_a_new_model_mid_conversation_switches_the_open_session() -> None:
     subject.ask("hello")
     subject.use_model(GPT)
     assert engine.switched == [("ses_1", GPT)]
+
+
+@pytest.mark.parametrize(
+    ("action", "resources", "tier"),
+    [
+        ("read", ("Code/pomodoro/main.py",), Tier.LOOK),
+        (
+            "edit",
+            ("Code/pomodoro/main.py", "Code/pomodoro/ui/window.py"),
+            Tier.UNDOABLE,
+        ),
+        ("external_directory", (f"{POMODORO}/*",), Tier.LOOK),
+        ("read", (f"{POMODORO}/README.md",), Tier.LOOK),
+    ],
+)
+def test_files_inside_a_program_may_be_read_and_edited(
+    action: str, resources: tuple[str, ...], tier: Tier
+) -> None:
+    subject, engine, _ = harness()
+    subject.ask("add a pause button")
+    decision = subject.handle(ToolRequested("ses_1", "per_1", action, resources))
+    assert decision == Allowed("ses_1", action, tier)
+    assert engine.replies == [("ses_1", "per_1", True, "")]
+
+
+@pytest.mark.parametrize(
+    ("action", "resources"),
+    [
+        ("read", (".ssh/id_ed25519",)),
+        ("read", ("Code/pomodoro/../../.ssh/id_ed25519",)),
+        ("edit", ("Code/pomodoro/main.py", ".bashrc")),
+        ("external_directory", ("/etc/*",)),
+        ("edit", ("Code/pomodoro-evil/main.py",)),
+        ("bash", ("Code/pomodoro",)),
+    ],
+)
+def test_files_anywhere_else_are_refused(
+    action: str, resources: tuple[str, ...]
+) -> None:
+    subject, engine, _ = harness()
+    subject.ask("add a pause button")
+    subject.handle(ToolRequested("ses_1", "per_1", action, resources))
+    assert engine.replies == [("ses_1", "per_1", False, REFUSED)]
