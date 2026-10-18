@@ -237,6 +237,21 @@ class Programs:
                 found.extend(self._python(child))
         return found
 
+    def files(self, name: str) -> list[Path]:
+        """A Program's source files, relative to its folder, for reading."""
+        self.manifest(name)
+        source = self._source(name)
+        return sorted(path.relative_to(source) for path in self._walk(source))
+
+    def _walk(self, folder: Path) -> list[Path]:
+        found = []
+        for child in self._files.list_directory(folder):
+            if child.name in _NOT_SOURCE:
+                continue
+            inside = self._files.list_directory(child)
+            found.extend(self._walk(child) if inside else [child])
+        return found
+
     def programs(self) -> list[Program]:
         """Every Program in ~/Code, and the commit of it that is installed."""
         code = self._home / CODE_DIR
