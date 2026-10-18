@@ -44,6 +44,10 @@ class FileSystem(Protocol):
         self, source: Path, destination: Path, *, owner: Identity | None = None
     ) -> None: ...
 
+    def remove(self, path: Path) -> None:
+        """Delete one file; a file already gone is not an error."""
+        ...
+
     def remove_tree(self, path: Path) -> None: ...
 
     def list_directory(self, path: Path) -> list[Path]: ...
@@ -98,6 +102,9 @@ class RealFileSystem:
         self.make_directory(destination.parent, owner=owner)
         shutil.copy(source, destination)
         self._give(destination, owner)
+
+    def remove(self, path: Path) -> None:
+        path.unlink(missing_ok=True)
 
     def remove_tree(self, path: Path) -> None:
         shutil.rmtree(path, ignore_errors=True)
@@ -175,6 +182,9 @@ class FakeFileSystem:
         self, source: Path, destination: Path, *, owner: Identity | None = None
     ) -> None:
         self.write(destination, self.files.get(source, ""), owner=owner)
+
+    def remove(self, path: Path) -> None:
+        self.files.pop(path, None)
 
     def remove_tree(self, path: Path) -> None:
         self.files = {p: t for p, t in self.files.items() if path not in p.parents}
