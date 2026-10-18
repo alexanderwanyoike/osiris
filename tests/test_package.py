@@ -76,6 +76,11 @@ def test_the_harness_can_render_answers() -> None:
     assert "gtksourceview5" in names
 
 
+def test_the_osiris_tool_server_speaks_mcp_with_the_sdk_arch_ships() -> None:
+    """The tool server is built on the official MCP SDK, in Arch's extra."""
+    assert "python-mcp" in package.depends()
+
+
 def test_every_bundled_package_is_built_and_depended_on() -> None:
     assert package.BUNDLED
     for name in package.BUNDLED:
