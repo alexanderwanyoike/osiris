@@ -12,6 +12,7 @@ from osiris.harness.engine import (
     Failed,
     Finished,
     ModelRef,
+    PastTurn,
     Stopped,
     Text,
 )
@@ -80,6 +81,15 @@ class Conversation:
         turn = Turn(question)
         self.turns.append(turn)
         return turn
+
+    @classmethod
+    def restored(cls, past: list[PastTurn]) -> Conversation:
+        """A past Conversation as it ended."""
+        talk = cls()
+        for turn in past:
+            talk.turns.append(Turn(turn.question, turn.answer, State.DONE, turn.model))
+            talk.model = turn.model or talk.model
+        return talk
 
     def changed(self, changes: list[Change]) -> None:
         """Record what the latest question led to, as the Harness log has it."""

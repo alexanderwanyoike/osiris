@@ -13,12 +13,14 @@ from osiris.harness.engine import (
     Event,
     Failed,
     ModelRef,
+    PastTurn,
     Stopped,
     ToolCalled,
     ToolRequested,
 )
 from osiris.harness.log import HarnessLog
 from osiris.harness.tiers import Tier
+from osiris.harness.titles import title_of
 
 #: Passed to the model with every rejected tool, so it finds another way.
 REFUSED = (
@@ -79,8 +81,14 @@ class Harness:
     def ask(self, text: str) -> None:
         if self._session is None:
             self._session = self._engine.start(self._model, self._directory)
+            self._engine.rename(self._session, title_of(text))
         self._log.write("sent", session=self._session, text=text)
         self._engine.send(self._session, text)
+
+    def resume(self, session: str) -> list[PastTurn]:
+        """Continue a past Conversation; returns what was said in it."""
+        self._session = session
+        return self._engine.history(session)
 
     def new_conversation(self) -> None:
         """The next question opens a new session; the old one is left as it is."""
