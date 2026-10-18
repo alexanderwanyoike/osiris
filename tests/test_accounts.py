@@ -156,3 +156,17 @@ def test_a_sign_in_reports_how_far_it_has_got(
     times = {"time": {"created": 1, "expires": 2}}
     http = FakeHttpClient(replies={("GET", path): {"data": {**reply, **times}}})
     assert accounts(http).sign_in_state("openai", "att_1") == state
+
+
+def test_finishing_a_sign_in_passes_the_code_the_person_pasted() -> None:
+    path = f"{URL}/api/integration/openai/connect/oauth/att_2/complete"
+    http = FakeHttpClient(replies={("POST", path): None})
+    accounts(http).finish_sign_in("openai", "att_2", "ABCD-1234")
+    assert http.requests == [("POST", path, {"code": "ABCD-1234"})]
+
+
+def test_finishing_a_sign_in_that_needs_no_code_sends_none() -> None:
+    path = f"{URL}/api/integration/openai/connect/oauth/att_1/complete"
+    http = FakeHttpClient(replies={("POST", path): None})
+    accounts(http).finish_sign_in("openai", "att_1", None)
+    assert http.requests == [("POST", path, {"code": None})]
