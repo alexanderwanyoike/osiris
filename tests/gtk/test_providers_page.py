@@ -149,3 +149,16 @@ def test_the_default_model_is_chosen_from_the_models_the_engine_can_reach() -> N
     assert picker.get_selected() == 0
     picker.set_selected(1)
     assert chosen == [ModelRef("openai", "gpt-5.5")]
+
+
+def test_chatgpt_and_opencode_go_come_first_whatever_the_engines_order() -> None:
+    accounts = FakeAccounts(
+        listed=[
+            Provider("302ai", "302.AI", (KEY,), False),
+            Provider("opencode-go", "OpenCode Go", (KEY,), False),
+            Provider("openai", "OpenAI", (CHATGPT,), False),
+        ]
+    )
+    page = ProvidersPage(accounts, background=now)
+    names = [t for t in texts(page) if t in ("302.AI", "OpenCode Go", "OpenAI")]
+    assert names[:2] == ["OpenAI", "OpenCode Go"]
