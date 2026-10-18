@@ -31,6 +31,9 @@ CLASSES = (
     "harness-chip",
     "harness-meta",
     "harness-composer",
+    "harness-provider",
+    "harness-key-form",
+    "harness-code-form",
 )
 
 
