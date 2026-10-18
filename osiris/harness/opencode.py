@@ -12,6 +12,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
+from osiris.harness.accounts import Method, Provider
 from osiris.harness.engine import (
     Answered,
     Event,
@@ -161,3 +162,37 @@ class _Reader:
             ),
             cost=float(data.get("cost", 0)),
         )
+
+
+class OpencodeAccounts:
+    def __init__(self, http: HttpClient, service: Service) -> None:
+        self._http = http
+        self._service = service
+
+    def providers(self) -> list[Provider]:
+        reply: Any = self._http.request(
+            "GET",
+            self._service.url + "/api/integration",
+            headers=self._service.headers(),
+        )
+        return [_provider(entry) for entry in reply["data"]]
+
+
+def _provider(entry: dict[str, Any]) -> Provider:
+    # An environment variable is not something a person can set from a
+    # sign-in page, so only keys and OAuth are offered.
+    methods = tuple(
+        Method(
+            id=method.get("id"),
+            kind=method["type"],
+            label=method.get("label", "API key"),
+        )
+        for method in entry["methods"]
+        if method["type"] in ("key", "oauth")
+    )
+    return Provider(
+        id=entry["id"],
+        name=entry["name"],
+        methods=methods,
+        connected=bool(entry["connections"]),
+    )
