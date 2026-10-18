@@ -17,6 +17,7 @@ from osiris.harness.engine import (
 )
 from osiris.harness.harness import Decision, Refused
 from osiris.harness.log import Change
+from osiris.harness.titles import title_of
 
 
 class State(Enum):
@@ -53,10 +54,6 @@ class Turn:
         return [change.undo for change in reversed(self.changes) if change.undo]
 
 
-#: How much of the first question a title keeps.
-TITLE_LENGTH = 48
-
-
 class Conversation:
     def __init__(self) -> None:
         self.turns: list[Turn] = []
@@ -65,13 +62,7 @@ class Conversation:
 
     @property
     def title(self) -> str | None:
-        """The first question's first line, shortened to fit a title bar."""
-        if not self.turns:
-            return None
-        line = self.turns[0].question.strip().splitlines()[0]
-        if len(line) <= TITLE_LENGTH:
-            return line
-        return line[:TITLE_LENGTH].rsplit(" ", 1)[0] + "…"
+        return title_of(self.turns[0].question) if self.turns else None
 
     @property
     def busy(self) -> bool:
