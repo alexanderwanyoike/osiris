@@ -16,7 +16,7 @@ from osiris.programs.programs import HARNESS, Program, ProgramError, Programs, S
 HOME = Path("/home/tester")
 SOURCE = HOME / "Code" / "pomodoro"
 INSTALLED = HOME / ".local/share/osiris/programs/pomodoro"
-ENTRY = HOME / ".local/share/applications/osiris-program-pomodoro.desktop"
+ENTRY = HOME / ".local/share/applications/dev.osiris.programs.pomodoro.desktop"
 GIT = ("git", "-C", str(SOURCE))
 AS_HARNESS = ("-c", f"user.name={HARNESS[0]}", "-c", f"user.email={HARNESS[1]}")
 
