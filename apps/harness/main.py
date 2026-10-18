@@ -19,6 +19,7 @@ only draws it. The Engine's events arrive on a thread and are handed to the
 main loop one at a time.
 """
 import os
+from pathlib import Path
 import sys
 import threading
 import time
@@ -52,7 +53,7 @@ from osiris.apps.tool_server import NAME as TOOLS, TIERS, undo  # noqa: E402
 
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
 from osiris.harness.harness import Harness  # noqa: E402
-from osiris.harness.history import group  # noqa: E402
+from osiris.harness.history import CODE_DIR, group, misplaced  # noqa: E402
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
@@ -637,9 +638,19 @@ class Application(Adw.Application):
     def load_history(self) -> None:
         if self.harness is None:
             return
-        harness = self.harness
-        self.background(harness.conversations, lambda pasts: self.drawer.show_history(
-            *group(pasts, self.home)))
+        harness, log, home = self.harness, self.log, self.home
+
+        def gather():
+            pasts = harness.conversations()
+            # Conversations from before the Harness moved them itself.
+            moves = misplaced(pasts, log.programs_made() if log else [], home,
+                              Path.exists)
+            for session, folder in moves:
+                harness.move(session, folder)
+            return harness.conversations() if moves else pasts
+
+        self.background(gather, lambda pasts: self.drawer.show_history(
+            *group(pasts, home)))
 
     def update_canvas(self) -> None:
         names = self.conversation.programs
@@ -737,7 +748,14 @@ class Application(Adw.Application):
     def _apply(self, event) -> bool:
         self.conversation.apply(event)
         if isinstance(event, Finished | Stopped | Failed) and self.log is not None:
-            self.conversation.changed(self.log.last_changes())
+            changes = self.log.last_changes()
+            self.conversation.changed(changes)
+            made = [c.program for c in changes
+                    if c.program and (c.undo or {}).get("action") == "trash_program"]
+            if made and self.harness is not None:
+                harness, folder = self.harness, self.home / CODE_DIR / made[0]
+                self.background(lambda: harness.program_made(folder),
+                                lambda _r: self.load_history())
             self.load_history()
             self.update_canvas()
         self.drawer.refresh()
