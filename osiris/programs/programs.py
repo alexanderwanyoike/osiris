@@ -292,7 +292,8 @@ class Programs:
             self._files.remove_tree(installed)
             raise
         self._files.write(installed / COMMIT_FILE, commit + "\n")
-        self._files.write(self._entry(name), desktop_entry(manifest, installed))
+        entry = self._entry(name)
+        self._files.write(entry, desktop_entry(manifest, installed, entry))
         return commit
 
     def uninstall(self, name: str) -> None:

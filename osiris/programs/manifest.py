@@ -21,6 +21,11 @@ MANIFEST_FILE = "osiris-program.json"
 #: the dock can match the window to the menu entry and keep it.
 APP_ID_PREFIX = "dev.osiris.programs."
 
+#: Plank matches windows to menu entries through BAMF, which reads this from a
+#: process's environment; set at launch, it ties every window a Program opens to
+#: its entry, whatever its window class.
+DESKTOP_HINT = "BAMF_DESKTOP_FILE_HINT"
+
 #: Shown when a Program brings no icon of its own.
 GENERIC_ICON = "application-x-executable"
 
@@ -127,8 +132,9 @@ def _quoted(word: str) -> str:
     return '"' + escaped.replace("\\", "\\\\") + '"'
 
 
-def desktop_entry(manifest: Manifest, installed: PurePath) -> str:
-    """The menu entry for the copy of ``manifest``'s Program at ``installed``."""
+def desktop_entry(manifest: Manifest, installed: PurePath, entry: PurePath) -> str:
+    """The menu entry, to be written at ``entry``, for the copy of ``manifest``'s
+    Program at ``installed``."""
     first, *rest = manifest.run
     program = f"{installed}/{first}" if "/" in first else first
     icon = f"{installed}/{manifest.icon}" if manifest.icon else GENERIC_ICON
@@ -136,7 +142,9 @@ def desktop_entry(manifest: Manifest, installed: PurePath) -> str:
         "Type": "Application",
         "Name": manifest.label,
         "Comment": manifest.description,
-        "Exec": " ".join(_quoted(word) for word in (program, *rest)),
+        "Exec": " ".join(
+            _quoted(word) for word in ("env", f"{DESKTOP_HINT}={entry}", program, *rest)
+        ),
         "Path": str(installed),
         "Icon": icon,
         "Terminal": "true" if manifest.terminal else "false",
