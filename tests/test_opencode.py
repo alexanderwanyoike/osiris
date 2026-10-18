@@ -422,3 +422,11 @@ class TestHistory:
         turns = engine(http).history(SESSION)
         assert len(turns) == 203
         assert turns[-1].question == "question 202"
+
+    def test_a_session_is_moved_into_a_folder(self) -> None:
+        path = f"{URL}/api/session/{SESSION}/move"
+        http = FakeHttpClient(replies={("POST", path): None})
+        engine(http).move(SESSION, Path("/home/tester/Code/pomodoro"))
+        assert http.requests == [
+            ("POST", path, {"directory": "/home/tester/Code/pomodoro"})
+        ]
