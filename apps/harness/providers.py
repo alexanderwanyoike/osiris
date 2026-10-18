@@ -67,7 +67,27 @@ class ProvidersPage(Gtk.Box):
 
     def _signing_in(self, sign_in) -> None:
         self._open_page(sign_in.url)
-        self._later(self.POLL_SECONDS, lambda: self._check(sign_in))
+        if sign_in.needs_code:
+            self._list.append(self._code_form(sign_in))
+        else:
+            self._later(self.POLL_SECONDS, lambda: self._check(sign_in))
+
+    def _code_form(self, sign_in) -> Gtk.Widget:
+        instructions = Gtk.Label(label=sign_in.instructions, xalign=0, wrap=True)
+        entry = Gtk.Entry(placeholder_text="Code", hexpand=True)
+        finish = Gtk.Button(label="Finish")
+        finish.connect("clicked", lambda _b: self._background(
+            lambda: self._accounts.finish_sign_in(
+                sign_in.provider, sign_in.attempt, entry.get_text().strip()),
+            lambda _result: self._check(sign_in)))
+        line = Gtk.Box(spacing=6)
+        line.append(entry)
+        line.append(finish)
+        form = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        form.add_css_class("harness-code-form")
+        form.append(instructions)
+        form.append(line)
+        return form
 
     def _check(self, sign_in) -> None:
         self._background(
