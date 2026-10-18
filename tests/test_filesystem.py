@@ -48,6 +48,19 @@ class TestFileSystem:
         with pytest.raises(FileNotFoundError):
             filesystem.read(root / "absent")
 
+    def test_removing_a_file_leaves_its_folder(
+        self, filesystem: FileSystem, root: Path
+    ) -> None:
+        filesystem.write(root / "apps" / "a.desktop", "x")
+        filesystem.remove(root / "apps" / "a.desktop")
+        assert not filesystem.exists(root / "apps" / "a.desktop")
+        assert filesystem.exists(root / "apps")
+
+    def test_removing_a_file_that_is_not_there_is_fine(
+        self, filesystem: FileSystem, root: Path
+    ) -> None:
+        filesystem.remove(root / "absent")
+
     def test_remove_tree_takes_the_children(
         self, filesystem: FileSystem, root: Path
     ) -> None:
