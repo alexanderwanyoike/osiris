@@ -35,6 +35,7 @@ class FakeEngine:
     sent: list[tuple[str, str]] = field(default_factory=list)
     replies: list[tuple[str, str, bool, str]] = field(default_factory=list)
     stopped: list[str] = field(default_factory=list)
+    switched: list[tuple[str, ModelRef]] = field(default_factory=list)
 
     def start(self, model: ModelRef | None = None) -> str:
         self.started.append(model)
@@ -51,6 +52,9 @@ class FakeEngine:
 
     def stop(self, session: str) -> None:
         self.stopped.append(session)
+
+    def switch_model(self, session: str, model: ModelRef) -> None:
+        self.switched.append((session, model))
 
 
 def harness(
@@ -186,3 +190,18 @@ def test_before_anything_is_asked_no_session_is_the_harnesss() -> None:
     assert subject.handle(ToolRequested("ses_tui", "per_9", "shell", ())) is None
     assert engine.replies == []
     assert not files.exists(HOME / LOG_FILE)
+
+
+def test_a_new_model_before_any_question_opens_the_session_on_it() -> None:
+    subject, engine, _ = harness(model=None)
+    subject.use_model(GPT)
+    subject.ask("hello")
+    assert engine.started == [GPT]
+    assert engine.switched == []
+
+
+def test_a_new_model_mid_conversation_switches_the_open_session() -> None:
+    subject, engine, _ = harness(model=None)
+    subject.ask("hello")
+    subject.use_model(GPT)
+    assert engine.switched == [("ses_1", GPT)]
