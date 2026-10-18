@@ -2,7 +2,16 @@
    full width, code sits in plain bands. Shape only: every colour is the
    Theme's. */
 
-.harness-drawer { background-color: @harness_bg; color: @harness_fg; }
+window.harness-drawer, window.harness-drawer.background { background-color: transparent; }
+
+/* A plain sheet: barely inset, square-ish, nearly opaque. */
+.harness-surface {
+    margin: 6px;
+    border-radius: 10px;
+    background-color: alpha(@harness_bg, 0.94);
+    color: @harness_fg;
+    border: 1px solid @harness_border;
+}
 
 .harness-header { padding: 10px 18px; border-bottom: 1px solid @harness_border; }
 .harness-header .harness-title { font-weight: 600; letter-spacing: 0.04em; }
@@ -51,3 +60,10 @@
 .harness-composer entry { background: none; border: none; box-shadow: none; outline: none; }
 .harness-send { min-width: 28px; min-height: 28px; border-radius: 6px; color: @harness_accent; }
 .harness-footer { padding: 2px 18px 10px; }
+
+.harness-provider { padding: 8px 0; border-bottom: 1px solid @harness_border; }
+.harness-key-form, .harness-code-form { padding: 4px 0 10px; }
+
+.harness-provider-card { padding: 8px 0; border-bottom: 1px solid @harness_border; }
+.harness-monogram { min-width: 20px; color: @harness_accent; font-weight: 700; }
+.harness-connected { color: @harness_success; font-size: 0.85em; }

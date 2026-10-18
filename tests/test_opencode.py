@@ -178,6 +178,14 @@ class TestSessions:
         engine(http).stop(SESSION)
         assert http.requests == [("POST", path, None)]
 
+    def test_switching_model_names_it_on_the_session(self) -> None:
+        path = f"{URL}/api/session/{SESSION}/model"
+        http = FakeHttpClient(replies={("POST", path): {"data": {}}})
+        engine(http).switch_model(SESSION, ModelRef("openai", "gpt-5.5"))
+        assert http.requests == [
+            ("POST", path, {"model": {"providerID": "openai", "id": "gpt-5.5"}})
+        ]
+
     @pytest.mark.parametrize(("allow", "decision"), [(True, "once"), (False, "reject")])
     def test_a_tool_request_is_answered_once_or_rejected(
         self, allow: bool, decision: str

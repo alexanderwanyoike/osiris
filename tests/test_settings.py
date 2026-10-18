@@ -1,0 +1,51 @@
+"""The Harness's model settings: plain text the person can read and edit."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from osiris.harness.engine import ModelRef
+from osiris.harness.settings import (
+    MODELS_FILE,
+    Models,
+    load_models,
+    read_models,
+    save_models,
+    write_models,
+)
+from osiris.platform import FakeFileSystem
+
+
+def test_the_default_model_is_read_as_provider_slash_model() -> None:
+    assert read_models("default = openai/gpt-5.5\n") == Models(
+        default=ModelRef("openai", "gpt-5.5"), fallback=None
+    )
+
+
+def test_a_fallback_model_is_read_beside_the_default() -> None:
+    models = read_models("default = openai/gpt-5.5\nfallback = opencode-go/kimi-k2\n")
+    assert models.fallback == ModelRef("opencode-go", "kimi-k2")
+
+
+def test_lines_that_are_not_settings_are_ignored() -> None:
+    text = "# my models\n\ndefault = openai/gpt-5.5\nnonsense\nfallback = bad\n"
+    assert read_models(text) == Models(
+        default=ModelRef("openai", "gpt-5.5"), fallback=None
+    )
+
+
+def test_settings_are_written_so_they_read_back() -> None:
+    models = Models(ModelRef("openai", "gpt-5.5"), ModelRef("opencode-go", "kimi-k2"))
+    assert read_models(write_models(models)) == models
+
+
+def test_without_a_settings_file_nothing_is_chosen() -> None:
+    assert load_models(FakeFileSystem(), Path("/home/tester")) == Models(None, None)
+
+
+def test_saved_settings_load_back_from_the_home() -> None:
+    files, home = FakeFileSystem(), Path("/home/tester")
+    models = Models(ModelRef("openai", "gpt-5.5"), None)
+    save_models(files, home, models)
+    assert files.exists(home / MODELS_FILE)
+    assert load_models(files, home) == models

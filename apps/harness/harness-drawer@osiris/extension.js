@@ -1,5 +1,6 @@
 // Keeps the Harness at the right edge of the screen, full height, above other
-// windows, and slides it in and out. GTK4 on X11 gives an application no way
+// windows, and slides it in and out. A width the person drags to is kept;
+// expanded, it fills the work area, which the dock already keeps clear of. GTK4 on X11 gives an application no way
 // to place its own window; where the Harness sits will become the Skin's
 // choice (CONTEXT.md).
 //
@@ -23,6 +24,9 @@ const INTERFACE = `
 <node>
   <interface name="${BUS_NAME}">
     <method name="Close"/>
+    <method name="Expand">
+      <arg type="b" name="expanded" direction="in"/>
+    </method>
   </interface>
 </node>`;
 
@@ -31,6 +35,8 @@ let drawer = null;
 class Drawer {
     constructor() {
         this._windows = new Map();
+        this._widths = new Map();
+        this._expanded = new Set();
         this._created = global.display.connect(
             'window-created', (_display, window) => this._adopt(window));
         for (let actor of global.get_window_actors())
@@ -50,7 +56,12 @@ class Drawer {
                 if (!window.minimized)
                     this._slideIn(window);
             }),
-            window.connect('unmanaged', () => this._windows.delete(window)),
+            window.connect('size-changed', () => this._remember(window)),
+            window.connect('unmanaged', () => {
+                this._windows.delete(window);
+                this._widths.delete(window);
+                this._expanded.delete(window);
+            }),
         ]);
         window.make_above();
         window.stick();
@@ -61,10 +72,32 @@ class Drawer {
         });
     }
 
+    _remember(window) {
+        if (window.get_maximized() || window.minimized || this._expanded.has(window))
+            return;
+        this._widths.set(window, window.get_frame_rect().width);
+    }
+
     _place(window) {
+        if (window.get_maximized())
+            return;
         let area = window.get_work_area_for_monitor(window.get_monitor());
+        let width = this._expanded.has(window)
+            ? area.width : (this._widths.get(window) || WIDTH);
         window.move_resize_frame(
-            true, area.x + area.width - WIDTH, area.y, WIDTH, area.height);
+            true, area.x + area.width - width, area.y, width, area.height);
+    }
+
+    ExpandAsync(params, invocation) {
+        let [expanded] = params;
+        for (let window of this._windows.keys()) {
+            if (expanded)
+                this._expanded.add(window);
+            else
+                this._expanded.delete(window);
+            this._place(window);
+        }
+        invocation.return_value(null);
     }
 
     _slideIn(window) {

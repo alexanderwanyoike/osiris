@@ -28,7 +28,8 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("GdkX11", "4.0")
-from gi.repository import Adw, Gdk, GdkX11, Gio, GLib, Gtk, Pango  # noqa: E402
+gi.require_version("Graphene", "1.0")
+from gi.repository import Adw, Gdk, GdkX11, Gio, GLib, Graphene, Gtk, Pango  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
@@ -40,12 +41,15 @@ for candidate in ("/usr/share/osiris/lib", REPO):
 sys.path.insert(0, HERE)
 
 from look import Look  # noqa: E402
+from providers import ProvidersPage  # noqa: E402
 from render import TurnView  # noqa: E402
 
 from osiris.harness.conversation import Conversation, State  # noqa: E402
 from osiris.harness.harness import Harness  # noqa: E402
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
-from osiris.harness.opencode import OpencodeEngine, locate  # noqa: E402
+from osiris.harness.engine import ModelRef  # noqa: E402
+from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
+from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.platform import (  # noqa: E402
     HttpError,
     RealFileSystem,
@@ -59,6 +63,8 @@ APP_ID = "dev.osiris.Harness"
 # monitor's full height.
 WIDTH = 440
 RECONNECT_SECONDS = 3
+#: The widest the conversation grows, in pixels, however wide the drawer.
+READABLE = 820
 
 DRAWER_BUS = "dev.osiris.HarnessDrawer"
 DRAWER_PATH = "/dev/osiris/HarnessDrawer"
@@ -75,18 +81,30 @@ class Drawer(Gtk.ApplicationWindow):
         title.add_css_class("harness-title")
         self.meta = Gtk.Label(xalign=1, ellipsize=Pango.EllipsizeMode.START)
         self.meta.add_css_class("harness-meta")
+        # The model in play doubles as the way to change it.
+        providers_button = Gtk.Button(child=self.meta, tooltip_text="Providers and models")
+        providers_button.add_css_class("flat")
+        providers_button.connect("clicked", lambda _b: self.show_providers())
+        # Deep agentic work wants the whole screen; the drawer comes back after.
+        self.expanded = False
+        self.expand_button = Gtk.Button(icon_name="view-fullscreen-symbolic",
+                                        tooltip_text="Expand")
+        self.expand_button.add_css_class("flat")
+        self.expand_button.connect("clicked", self._toggle_expanded)
         header = Gtk.Box(spacing=8)
         header.add_css_class("harness-header")
         header.append(Gtk.Image(icon_name="osiris-symbolic"))
         header.append(title)
-        header.append(self.meta)
+        header.append(providers_button)
+        header.append(self.expand_button)
 
         self.turns = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
                              valign=Gtk.Align.END, vexpand=True,
                              margin_top=12, margin_bottom=12)
         self.views: list[TurnView] = []
+        # Expanded to the whole screen, lines stay a readable length.
         self.scroller = Gtk.ScrolledWindow(
-            child=self.turns, vexpand=True,
+            child=Adw.Clamp(maximum_size=READABLE, child=self.turns), vexpand=True,
             hscrollbar_policy=Gtk.PolicyType.NEVER)
 
         self.entry = Gtk.Entry(placeholder_text="Ask Osiris", hexpand=True)
@@ -105,17 +123,62 @@ class Drawer(Gtk.ApplicationWindow):
         self.footer.add_css_class("harness-meta")
         self.footer.add_css_class("harness-footer")
 
+        bottom = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        bottom.append(composer)
+        bottom.append(self.footer)
+        chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        chat.append(self.scroller)
+        chat.append(Adw.Clamp(maximum_size=READABLE, child=bottom))
+        self.pages = Gtk.Stack(vexpand=True,
+                               transition_type=Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+        self.pages.add_named(chat, "chat")
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         box.append(header)
-        box.append(self.scroller)
-        box.append(composer)
-        box.append(self.footer)
-        self.set_child(box)
+        box.append(self.pages)
+        # The Skin shapes this surface; the window around it stays transparent,
+        # and children are clipped to the surface's rounded corners.
+        surface = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
+                          overflow=Gtk.Overflow.HIDDEN)
+        surface.add_css_class("harness-surface")
+        box.set_vexpand(True)
+        surface.append(box)
+        surface.set_hexpand(True)
+        # The drawer is anchored to the right edge, so its left edge resizes
+        # it; the window manager does the dragging.
+        self.resize_handle = Gtk.Box(width_request=8,
+                                     cursor=Gdk.Cursor.new_from_name("ew-resize"))
+        drag = Gtk.GestureClick()
+        drag.connect("pressed", self._begin_resize)
+        self.resize_handle.add_controller(drag)
+        frame = Gtk.Box()
+        frame.append(self.resize_handle)
+        frame.append(surface)
+        self.set_child(frame)
 
         keys = Gtk.EventControllerKey()
         keys.connect("key-pressed", self._key)
         self.add_controller(keys)
         self.connect("close-request", self._close_request)
+
+    def _begin_resize(self, gesture, _presses, x, y) -> None:
+        surface = self.get_surface()
+        if surface is None:
+            return
+        found, point = self.resize_handle.compute_point(
+            self, Graphene.Point().init(x, y))
+        if not found:
+            return
+        surface.begin_resize(Gdk.SurfaceEdge.WEST, gesture.get_current_event_device(),
+                             gesture.get_current_button(), point.x, point.y,
+                             gesture.get_current_event_time())
+
+    def _toggle_expanded(self, _button) -> None:
+        self.expanded = not self.expanded
+        self.app.expand(self.expanded)
+        self.expand_button.set_icon_name(
+            "view-restore-symbolic" if self.expanded else "view-fullscreen-symbolic")
+        self.expand_button.set_tooltip_text("Back to the drawer" if self.expanded
+                                            else "Expand")
 
     def _realize(self, _window) -> None:
         # Kept out of the dock and the window switcher: it is reached from
@@ -147,6 +210,34 @@ class Drawer(Gtk.ApplicationWindow):
             self.app.stop()
         else:
             self._ask(self.entry)
+
+    def show_providers(self) -> None:
+        if self.app.accounts is None:
+            return
+        old = self.pages.get_child_by_name("providers")
+        if old is not None:
+            self.pages.remove(old)
+        # A button takes an icon or a label, not both; ButtonContent holds both.
+        back = Gtk.Button(child=Adw.ButtonContent(icon_name="go-previous-symbolic",
+                                                  label="Back"),
+                          halign=Gtk.Align.START)
+        back.add_css_class("flat")
+        back.connect("clicked", lambda _b: self.pages.set_visible_child_name("chat"))
+        page = ProvidersPage(
+            self.app.accounts,
+            background=self.app.background,
+            open_page=self.app.open_page,
+            later=lambda seconds, then: GLib.timeout_add_seconds(
+                seconds, lambda: then() or False),
+            default=self.app.models.default,
+            on_model_chosen=self.app.choose_model,
+        )
+        holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
+                         margin_start=16, margin_end=16, margin_top=8)
+        holder.append(back)
+        holder.append(page)
+        self.pages.add_named(Gtk.ScrolledWindow(child=holder, vexpand=True), "providers")
+        self.pages.set_visible_child_name("providers")
 
     def summon(self) -> None:
         self.present()
@@ -191,6 +282,10 @@ class Application(Adw.Application):
         self.conversation = Conversation()
         self.harness: Harness | None = None
         self.look: Look | None = None
+        self.accounts: OpencodeAccounts | None = None
+        self.files = RealFileSystem()
+        self.home = SystemIdentity().home
+        self.models: Models = load_models(self.files, self.home)
         self.problem = "Starting the Engine..."
         self.open = False
         show = Gio.SimpleAction.new("show", None)
@@ -229,6 +324,30 @@ class Application(Adw.Application):
             DRAWER_BUS, DRAWER_PATH, DRAWER_BUS, "Close", None, None,
             Gio.DBusCallFlags.NONE, 1000, None, self._closed)
 
+    def expand(self, expanded: bool) -> None:
+        """Ask the extension to fill the screen above the dock, or to restore
+        the drawer; maximise instead if it is not there."""
+        connection = self.get_dbus_connection()
+        if connection is None:
+            self._maximise(expanded)
+            return
+        connection.call(
+            DRAWER_BUS, DRAWER_PATH, DRAWER_BUS, "Expand",
+            GLib.Variant("(b)", (expanded,)), None, Gio.DBusCallFlags.NONE, 1000,
+            None, lambda c, r: self._expanded(c, r, expanded))
+
+    def _expanded(self, connection, result, expanded: bool) -> None:
+        try:
+            connection.call_finish(result)
+        except GLib.Error:
+            self._maximise(expanded)
+
+    def _maximise(self, expanded: bool) -> None:
+        if expanded:
+            self.drawer.maximize()
+        else:
+            self.drawer.unmaximize()
+
     def _closed(self, connection, result) -> None:
         try:
             connection.call_finish(result)
@@ -236,14 +355,34 @@ class Application(Adw.Application):
             self.drawer.minimize()
 
     def header_line(self) -> str:
-        model = self.conversation.model
-        named = f"{model.provider} / {model.model}" if model else "default model"
+        named = self.conversation.model_label(self.models.default)
         return f"{named}  ·  {self.conversation.tokens_spent:,} tokens"
 
     def footer_line(self) -> str:
         if self.harness is None:
             return self.problem
         return "allowance not reported  ·  only talks for now"
+
+    def background(self, work, done) -> None:
+        """Run work off the main loop and hand its result back to it."""
+        def run():
+            try:
+                result = work()
+            except Exception as error:  # noqa: BLE001 - shown in the drawer
+                self.problem = str(error)
+                GLib.idle_add(self._refresh)
+                return
+            GLib.idle_add(lambda: done(result) or False)
+        threading.Thread(target=run, daemon=True).start()
+
+    def open_page(self, url: str) -> None:
+        Gtk.UriLauncher.new(url).launch(self.drawer, None, None, None)
+
+    def choose_model(self, model: ModelRef) -> None:
+        self.models = Models(default=model, fallback=self.models.fallback)
+        save_models(self.files, self.home, self.models)
+        if self.harness is not None:
+            self.background(lambda: self.harness.use_model(model), lambda _r: None)
 
     def ask(self, text: str) -> None:
         if self.harness is None:
@@ -283,7 +422,9 @@ class Application(Adw.Application):
                 # A restarted service has a new password, so the Harness is
                 # rebuilt around the new connection; the next question opens
                 # a new session.
-                self.harness = Harness(engine, HarnessLog(files, me.home / LOG_FILE))
+                self.harness = Harness(engine, HarnessLog(files, me.home / LOG_FILE),
+                                       self.models.default)
+                self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)
                 for event in engine.events():
                     handled = self.harness.handle(event)

@@ -31,12 +31,24 @@ The first slice of ROADMAP P3.5:
   ~/.local/share/osiris/harness/log.jsonl
   ```
 
+- **Providers.** The model named in the drawer's header opens the Providers
+  page: every Provider the Engine can reach, with "Sign in with ChatGPT" and
+  other sign-in pages opened in the browser, or a field for an API key
+  (OpenCode Go). It is also where the **Default model** is chosen, from the
+  models the connected accounts can reach. The choice is plain text the
+  person can edit:
+
+  ```
+  ~/.config/osiris/harness/models
+  default = openai/gpt-5.5
+  fallback = opencode-go/kimi-k2
+  ```
+
+  Choosing a model mid-conversation switches the conversation to it. Moving to
+  the **Fallback model** when the Default cannot answer is still to come.
+
 Next: a history of conversations in the drawer (the last one reopens after a
-restart, any earlier one can be picked up again, and a new one started), then
-connecting a ChatGPT or OpenCode Go account and choosing the **Default model**
-on a Providers page in the Harness. Until then the Engine's own
-default answers, which only works while opencode's free tier accepts the
-request.
+restart, any earlier one can be picked up again, and a new one started).
 
 ## How it fits together
 
@@ -44,6 +56,7 @@ request.
 apps/harness/main.py          the drawer: GTK only, draws the conversation
 apps/harness/render.py        a widget per block of an answer, one view per turn
 apps/harness/look.py          the Theme's colours and the chosen Skin, kept current
+apps/harness/providers.py     the Providers page
 apps/harness/skins/           Bubbles and Transcript
 apps/harness/harness-drawer@osiris   Cinnamon extension: right edge, full height, slide
 apps/harness/harness@osiris   Cinnamon applet: the panel button
@@ -53,6 +66,8 @@ osiris/harness/style          colour variables and code scheme from a Theme; Ski
 osiris/harness/harness        one conversation: the log and the talk-only policy
 osiris/harness/log            the Harness log
 osiris/harness/engine         the Engine port and its events
+osiris/harness/accounts       the Accounts port: Providers, signing in, models
+osiris/harness/settings       the Default and Fallback models, as plain text
 osiris/harness/opencode       the opencode 2.0 adapter
 osiris/platform/http          the HTTP port the adapter talks through
 provision/harness.py          installs the drawer, extension, applet, D-Bus activation, autostart
@@ -113,6 +128,11 @@ D-Bus (`dev.osiris.HarnessDrawer.Close`) so the drawer can slide out before it
 is minimised; without the extension the drawer minimises directly. Where the
 Harness sits will become the **Skin**'s choice.
 
+The drawer can be dragged wider from its left edge, and the Expand button in
+its header fills the work area. Expanded, it follows the desktop's rules like
+any maximised window: it covers the dock, which hides until the pointer
+reaches it (CONTEXT.md).
+
 ### The opencode Engine
 
 opencode 2.0 runs as a background service per user. The adapter runs
@@ -132,5 +152,12 @@ by opencode's own terminal app. The Harness acts only on its own session.
 
 The adapter and the Harness run anywhere Python 3.14 and opencode 2.0 do. The
 pieces are tested against events recorded from opencode 2.0.32
-(`tests/test_opencode.py`); the drawer itself is checked on an installed system,
-because it is GTK and a Cinnamon extension.
+(`tests/test_opencode.py`). The GTK pages have tests in `tests/gtk/`, which run
+headless under Xvfb and skip where GTK 4 is missing, as in CI today. On a
+machine with GTK 4, GtkSourceView 5 and Xvfb (an Arch install has them all):
+
+```
+xvfb-run -a python3 -m pytest tests/gtk
+```
+
+The Cinnamon extension is checked on an installed system.

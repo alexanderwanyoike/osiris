@@ -12,6 +12,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
+from osiris.harness.accounts import Method, ModelInfo, Provider, SignIn, SignInState
 from osiris.harness.engine import (
     Answered,
     Event,
@@ -92,6 +93,12 @@ class OpencodeEngine:
     def stop(self, session: str) -> None:
         self._post(f"/api/session/{session}/interrupt")
 
+    def switch_model(self, session: str, model: ModelRef) -> None:
+        self._post(
+            f"/api/session/{session}/model",
+            {"model": {"providerID": model.provider, "id": model.model}},
+        )
+
     def events(self) -> Iterator[Event]:
         reader = _Reader()
         lines = self._http.lines(
@@ -161,3 +168,94 @@ class _Reader:
             ),
             cost=float(data.get("cost", 0)),
         )
+
+
+class OpencodeAccounts:
+    def __init__(self, http: HttpClient, service: Service) -> None:
+        self._http = http
+        self._service = service
+
+    def providers(self) -> list[Provider]:
+        reply: Any = self._http.request(
+            "GET",
+            self._service.url + "/api/integration",
+            headers=self._service.headers(),
+        )
+        return [_provider(entry) for entry in reply["data"]]
+
+    def connect_key(self, provider: str, key: str) -> None:
+        self._http.request(
+            "POST",
+            f"{self._service.url}/api/integration/{provider}/connect/key",
+            body={"key": key},
+            headers=self._service.headers(),
+        )
+
+    def start_sign_in(self, provider: str, method: str) -> SignIn:
+        reply: Any = self._http.request(
+            "POST",
+            f"{self._service.url}/api/integration/{provider}/connect/oauth",
+            body={"methodID": method},
+            headers=self._service.headers(),
+        )
+        attempt = reply["data"]
+        return SignIn(
+            provider=provider,
+            attempt=attempt["attemptID"],
+            url=attempt["url"],
+            instructions=attempt["instructions"],
+            needs_code=attempt["mode"] == "code",
+        )
+
+    def sign_in_state(self, provider: str, attempt: str) -> SignInState:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/integration/{provider}/connect/oauth/{attempt}",
+            headers=self._service.headers(),
+        )
+        data = reply["data"]
+        return SignInState(data["status"], data.get("message", ""))
+
+    def finish_sign_in(self, provider: str, attempt: str, code: str | None) -> None:
+        self._http.request(
+            "POST",
+            f"{self._service.url}/api/integration/{provider}/connect/oauth/{attempt}/complete",
+            body={"code": code},
+            headers=self._service.headers(),
+        )
+
+    def models(self) -> list[ModelInfo]:
+        reply: Any = self._http.request(
+            "GET", self._service.url + "/api/model", headers=self._service.headers()
+        )
+        return [
+            ModelInfo(ModelRef(entry["providerID"], entry["id"]), entry["name"])
+            for entry in reply["data"]
+        ]
+
+
+def _provider(entry: dict[str, Any]) -> Provider:
+    # An environment variable is not something a person can set from a
+    # sign-in page, so only keys and OAuth are offered; methods opencode
+    # itself marks as legacy are left out.
+    methods = tuple(
+        Method(
+            id=method.get("id"),
+            kind=method["type"],
+            label=method.get("label", "API key"),
+        )
+        for method in entry["methods"]
+        if method["type"] in ("key", "oauth")
+        and not method.get("label", "").endswith("(legacy)")
+    )
+    return Provider(
+        id=entry["id"],
+        name=entry["name"],
+        methods=methods,
+        connected=any(_works(connection) for connection in entry["connections"]),
+    )
+
+
+def _works(connection: dict[str, Any]) -> bool:
+    status: str | None = connection.get("status", {}).get("status")
+    return status != "needs_auth"

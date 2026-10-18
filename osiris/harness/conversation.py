@@ -48,6 +48,11 @@ class Conversation:
             State.ANSWERING,
         )
 
+    def model_label(self, default: ModelRef | None) -> str:
+        """The model in play: the last that answered, else the one chosen."""
+        model = self.model or default
+        return f"{model.provider} / {model.model}" if model else "default model"
+
     def asked(self, question: str) -> Turn:
         turn = Turn(question)
         self.turns.append(turn)
