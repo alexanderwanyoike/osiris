@@ -339,7 +339,7 @@ class TestHistory:
             replies={
                 (
                     "GET",
-                    f"{URL}/api/session/{SESSION}/message?limit=500&order=asc",
+                    f"{URL}/api/session/{SESSION}/message?limit=200&order=asc",
                 ): {
                     "data": [
                         {"id": "m1", "type": "user", "text": "make a timer"},
@@ -381,10 +381,10 @@ class TestHistory:
         http = FakeHttpClient(
             replies={
                 ("GET", f"{URL}/api/session?limit=200"): {"data": [old, empty]},
-                ("GET", f"{URL}/api/session/ses_old/message?limit=500{first}"): {
+                ("GET", f"{URL}/api/session/ses_old/message?limit=200{first}"): {
                     "data": [{"id": "m1", "type": "user", "text": "Which kernel?"}]
                 },
-                ("GET", f"{URL}/api/session/ses_empty/message?limit=500{first}"): {
+                ("GET", f"{URL}/api/session/ses_empty/message?limit=200{first}"): {
                     "data": []
                 },
                 ("PATCH", f"{URL}/api/session/ses_old"): {"data": {}},
@@ -398,3 +398,27 @@ class TestHistory:
             f"{URL}/api/session/ses_old",
             {"title": "Which kernel?", "metadata": {"osiris": "harness"}},
         ) in http.requests
+
+    def test_a_long_conversation_is_read_page_by_page(self) -> None:
+        def page(start: int, count: int) -> list[dict[str, object]]:
+            return [
+                {"id": f"m{i}", "type": "user", "text": f"question {i}"}
+                for i in range(start, start + count)
+            ]
+
+        base = f"{URL}/api/session/{SESSION}/message"
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{base}?limit=200&order=asc"): {
+                    "data": page(0, 200),
+                    "cursor": {"next": "two", "previous": None},
+                },
+                ("GET", f"{base}?limit=200&cursor=two"): {
+                    "data": page(200, 3),
+                    "cursor": {"next": "three", "previous": "one"},
+                },
+            }
+        )
+        turns = engine(http).history(SESSION)
+        assert len(turns) == 203
+        assert turns[-1].question == "question 202"

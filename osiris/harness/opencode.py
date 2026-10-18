@@ -42,7 +42,8 @@ MINE = {"osiris": "harness"}
 HISTORY_LIMIT = 200
 #: What the Harness called every session before it marked and named them.
 UNMARKED_TITLE = "Osiris Harness"
-MESSAGE_LIMIT = 500
+#: opencode serves at most this many messages a page.
+MESSAGE_LIMIT = 200
 
 #: Every action stops at a tool request, so the Harness's policy decides.
 #: Denying instead strips the tools from the request, which opencode's free
@@ -183,10 +184,22 @@ class OpencodeEngine:
         )
         return title
 
+    def _messages(self, session: str) -> list[dict[str, Any]]:
+        """Every message of a session, oldest first, a page at a time; a cursor
+        carries its order, so only the first page names it."""
+        base = f"/api/session/{session}/message?limit={MESSAGE_LIMIT}"
+        page = self._get(f"{base}&order=asc")
+        messages = list(page["data"])
+        while len(page["data"]) == MESSAGE_LIMIT and (page.get("cursor") or {}).get(
+            "next"
+        ):
+            page = self._get(f"{base}&cursor={page['cursor']['next']}")
+            messages.extend(page["data"])
+        return messages
+
     def history(self, session: str) -> list[PastTurn]:
-        path = f"/api/session/{session}/message?limit={MESSAGE_LIMIT}&order=asc"
         turns: list[PastTurn] = []
-        for message in self._get(path)["data"]:
+        for message in self._messages(session):
             if message.get("type") == "user":
                 turns.append(PastTurn(message.get("text", ""), "", None))
             elif message.get("type") == "assistant" and turns:
