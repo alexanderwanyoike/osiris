@@ -200,7 +200,11 @@ def test_making_a_program_is_logged_as_a_change_undone_by_the_trash() -> None:
         log,
     )
     assert log.last_changes() == [
-        Change("Made Pomodoro", {"action": "trash_program", "name": "pomodoro"})
+        Change(
+            "Made Pomodoro",
+            {"action": "trash_program", "name": "pomodoro"},
+            program="pomodoro",
+        )
     ]
 
 
@@ -230,6 +234,7 @@ def test_a_commit_is_logged_as_a_change_undone_by_reverting_it() -> None:
         Change(
             "Pomodoro: Add a pause button",
             {"action": "revert_commit", "name": "pomodoro", "commit": "abc123"},
+            program="pomodoro",
         )
     ]
 
