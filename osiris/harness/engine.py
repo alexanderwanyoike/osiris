@@ -128,6 +128,10 @@ class Engine(Protocol):
 
     def rename(self, session: str, title: str) -> None: ...
 
+    def move(self, session: str, directory: Path) -> None:
+        """Carry on the session in another folder: its Project."""
+        ...
+
     def conversations(self) -> list[Past]:
         """The Harness's own sessions, newest first; other programs' are left out."""
         ...
