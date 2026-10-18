@@ -12,7 +12,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
-from osiris.harness.accounts import Method, Provider, SignIn, SignInState
+from osiris.harness.accounts import Method, ModelInfo, Provider, SignIn, SignInState
 from osiris.harness.engine import (
     Answered,
     Event,
@@ -217,6 +217,15 @@ class OpencodeAccounts:
             body={"code": code},
             headers=self._service.headers(),
         )
+
+    def models(self) -> list[ModelInfo]:
+        reply: Any = self._http.request(
+            "GET", self._service.url + "/api/model", headers=self._service.headers()
+        )
+        return [
+            ModelInfo(ModelRef(entry["providerID"], entry["id"]), entry["name"])
+            for entry in reply["data"]
+        ]
 
 
 def _provider(entry: dict[str, Any]) -> Provider:

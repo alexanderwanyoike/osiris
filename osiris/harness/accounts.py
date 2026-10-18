@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, Protocol, runtime_checkable
 
+from osiris.harness.engine import ModelRef
+
 
 @dataclass(frozen=True)
 class Method:
@@ -45,6 +47,12 @@ class SignInState:
     message: str
 
 
+@dataclass(frozen=True)
+class ModelInfo:
+    ref: ModelRef
+    name: str
+
+
 @runtime_checkable
 class Accounts(Protocol):
     def providers(self) -> list[Provider]: ...
@@ -56,3 +64,7 @@ class Accounts(Protocol):
     def sign_in_state(self, provider: str, attempt: str) -> SignInState: ...
 
     def finish_sign_in(self, provider: str, attempt: str, code: str | None) -> None: ...
+
+    def models(self) -> list[ModelInfo]:
+        """The models reachable with the accounts connected now."""
+        ...
