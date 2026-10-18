@@ -14,7 +14,9 @@ from osiris.harness.engine import (
     ToolCalled,
     ToolRequested,
 )
+from osiris.harness.harness import Allowed, Refused
 from osiris.harness.log import Change
+from osiris.harness.tiers import Tier
 
 S = "ses_1"
 GPT = ModelRef("openai", "gpt-5.5")
@@ -75,8 +77,16 @@ def test_a_refused_action_is_shown_on_its_turn() -> None:
     talk = Conversation()
     talk.asked("list /etc")
     talk.apply(ToolCalled(S, "call_1", {"command": "ls /etc"}, executed=False))
-    talk.apply(ToolRequested(S, "per_1", "shell", ("ls /etc",)))
+    talk.apply(Refused(S, "shell", ("ls /etc",)))
     assert talk.turns[-1].refused == ["shell: ls /etc"]
+
+
+def test_an_allowed_action_is_not_shown_as_refused() -> None:
+    talk = Conversation()
+    talk.asked("make it calm")
+    talk.apply(ToolRequested(S, "per_1", "osiris_apply_theme", ("*",)))
+    talk.apply(Allowed(S, "osiris_apply_theme", Tier.UNDOABLE))
+    assert talk.turns[-1].refused == []
 
 
 def test_a_failure_keeps_the_engines_reason() -> None:
