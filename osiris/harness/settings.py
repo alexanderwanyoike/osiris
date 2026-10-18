@@ -24,5 +24,13 @@ def read_models(text: str) -> Models:
         (key.strip(), value.strip())
         for key, _, value in (line.partition("=") for line in text.splitlines())
     )
-    provider, _, model = values["default"].partition("/")
-    return Models(default=ModelRef(provider, model), fallback=None)
+    return Models(
+        default=_model(values.get("default")), fallback=_model(values.get("fallback"))
+    )
+
+
+def _model(text: str | None) -> ModelRef | None:
+    if text is None:
+        return None
+    provider, _, model = text.partition("/")
+    return ModelRef(provider, model)
