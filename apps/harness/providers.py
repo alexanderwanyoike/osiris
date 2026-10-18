@@ -116,9 +116,11 @@ class ProvidersPage(Gtk.Box):
         row.append(Gtk.Label(label=provider.name, xalign=0, hexpand=True))
         section.append(row)
         if provider.connected:
-            status = Gtk.Label(label="Connected")
-            status.add_css_class("harness-meta")
-            row.append(status)
+            chip = Gtk.Box(spacing=4, valign=Gtk.Align.CENTER)
+            chip.add_css_class("harness-connected")
+            chip.append(Gtk.Image(icon_name="object-select-symbolic"))
+            chip.append(Gtk.Label(label="Connected"))
+            row.append(chip)
             return section
         for method in provider.methods:
             if method.kind == "oauth":
