@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from osiris.harness.accounts import Method, Provider, SignIn
+import pytest
+
+from osiris.harness.accounts import Method, Provider, SignIn, SignInState
 from osiris.harness.opencode import OpencodeAccounts, Service
 from osiris.platform import FakeHttpClient
 
@@ -136,3 +138,21 @@ def test_a_sign_in_in_code_mode_asks_the_person_to_paste_a_code_back() -> None:
     }
     http = FakeHttpClient(replies={("POST", path): {"data": attempt}})
     assert accounts(http).start_sign_in("openai", "chatgpt-headless").needs_code
+
+
+@pytest.mark.parametrize(
+    ("reply", "state"),
+    [
+        ({"status": "pending"}, SignInState("pending", "")),
+        ({"status": "complete"}, SignInState("complete", "")),
+        ({"status": "failed", "message": "Denied"}, SignInState("failed", "Denied")),
+        ({"status": "expired"}, SignInState("expired", "")),
+    ],
+)
+def test_a_sign_in_reports_how_far_it_has_got(
+    reply: dict[str, str], state: SignInState
+) -> None:
+    path = f"{URL}/api/integration/openai/connect/oauth/att_1"
+    times = {"time": {"created": 1, "expires": 2}}
+    http = FakeHttpClient(replies={("GET", path): {"data": {**reply, **times}}})
+    assert accounts(http).sign_in_state("openai", "att_1") == state
