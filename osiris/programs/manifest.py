@@ -57,6 +57,8 @@ def _words(fields: dict[str, Any], key: str) -> tuple[str, ...]:
         raise ManifestError(
             f'{key} must be a list of words, not a shell line: ["python3", "main.py"]'
         )
+    if any("\n" in w or "\r" in w for w in value):
+        raise ManifestError(f"each word of {key} must be one line")
     return tuple(value)
 
 
