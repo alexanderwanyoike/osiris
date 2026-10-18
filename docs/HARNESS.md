@@ -148,6 +148,11 @@ by opencode's own terminal app. The Harness acts only on its own session.
 The adapter and the Harness run anywhere Python 3.14 and opencode 2.0 do. The
 pieces are tested against events recorded from opencode 2.0.32
 (`tests/test_opencode.py`). The GTK pages have tests in `tests/gtk/`, which run
-headless under Xvfb and skip where GTK 4 is missing, as in CI today; run them
-in the Arch container with `python3 build/gtktest.py`. The Cinnamon extension is
-checked on an installed system.
+headless under Xvfb and skip where GTK 4 is missing, as in CI today. On a
+machine with GTK 4, GtkSourceView 5 and Xvfb (an Arch install has them all):
+
+```
+xvfb-run -a python3 -m pytest tests/gtk
+```
+
+The Cinnamon extension is checked on an installed system.
