@@ -67,3 +67,4 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-provider-card { padding: 8px 0; border-bottom: 1px solid @harness_border; }
 .harness-monogram { min-width: 20px; color: @harness_accent; font-weight: 700; }
 .harness-connected { color: @harness_success; font-size: 0.85em; }
+.harness-program { padding: 8px 0; border-top: 1px solid @harness_border; }
