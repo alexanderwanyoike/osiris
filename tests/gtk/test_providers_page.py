@@ -109,3 +109,26 @@ def test_a_failed_sign_in_says_why() -> None:
     )
     find(page, Gtk.Button, "Sign in with ChatGPT").emit("clicked")
     assert "Access was denied" in texts(page)
+
+
+def test_a_sign_in_that_returns_a_code_takes_it_from_the_person() -> None:
+    finished: list[tuple[str, str, str | None]] = []
+
+    class WithCode(FakeAccounts):
+        def start_sign_in(self, provider: str, method: str) -> SignIn:
+            return SignIn(
+                provider, "att", "https://auth.example.org/d", "Paste the code", True
+            )
+
+        def finish_sign_in(self, provider: str, attempt: str, code: str | None) -> None:
+            finished.append((provider, attempt, code))
+
+    accounts = WithCode(listed=[Provider("openai", "OpenAI", (CHATGPT,), False)])
+    page = ProvidersPage(
+        accounts, background=now, open_page=lambda _u: None, later=lambda _s, then: None
+    )
+    find(page, Gtk.Button, "Sign in with ChatGPT").emit("clicked")
+    assert "Paste the code" in texts(page)
+    find(page, Gtk.Entry).set_text(" ABCD-1234 ")
+    find(page, Gtk.Button, "Finish").emit("clicked")
+    assert finished == [("openai", "att", "ABCD-1234")]
