@@ -249,3 +249,29 @@ class TestTrashing:
         subject, _, runner = programs(made())
         subject.trash("pomodoro")
         assert calls(runner) == [("gio", "trash", str(SOURCE))]
+
+
+class TestHolding:
+    @pytest.mark.parametrize(
+        "path",
+        [SOURCE, SOURCE / "main.py", SOURCE / "ui" / "window.py"],
+    )
+    def test_a_path_inside_a_programs_source_is_held_by_it(self, path: Path) -> None:
+        subject, _, _ = programs(made())
+        assert subject.holds(path)
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            HOME / ".ssh" / "id_ed25519",
+            HOME / "Code",
+            HOME / "Code" / "notes" / "todo.md",
+            HOME / "Code" / "pomodoro-evil" / "main.py",
+            INSTALLED / "main.py",
+        ],
+    )
+    def test_anywhere_else_is_not(self, path: Path) -> None:
+        files = made()
+        files.write(HOME / "Code" / "notes" / "todo.md", "x")
+        subject, _, _ = programs(files)
+        assert not subject.holds(path)
