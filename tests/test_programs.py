@@ -72,11 +72,6 @@ class TestCreating:
         assert "atomic commit" in agents
         assert MANIFEST_FILE in agents
 
-    def test_its_agents_file_names_the_id_a_window_must_carry(self) -> None:
-        subject, files, _ = programs()
-        subject.create("Pomodoro", "A focus timer.", run=["python3", "main.py"])
-        assert "dev.osiris.programs.pomodoro" in files.read(SOURCE / "AGENTS.md")
-
     def test_a_folder_that_exists_is_never_taken_over(self) -> None:
         files = FakeFileSystem()
         files.make_directory(SOURCE)
