@@ -28,8 +28,21 @@ class Provider:
     connected: bool
 
 
+@dataclass(frozen=True)
+class SignIn:
+    """A sign-in in progress: a page to open, and whether a code comes back."""
+
+    provider: str
+    attempt: str
+    url: str
+    instructions: str
+    needs_code: bool
+
+
 @runtime_checkable
 class Accounts(Protocol):
     def providers(self) -> list[Provider]: ...
 
     def connect_key(self, provider: str, key: str) -> None: ...
+
+    def start_sign_in(self, provider: str, method: str) -> SignIn: ...

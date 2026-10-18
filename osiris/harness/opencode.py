@@ -12,7 +12,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
-from osiris.harness.accounts import Method, Provider
+from osiris.harness.accounts import Method, Provider, SignIn
 from osiris.harness.engine import (
     Answered,
     Event,
@@ -183,6 +183,22 @@ class OpencodeAccounts:
             f"{self._service.url}/api/integration/{provider}/connect/key",
             body={"key": key},
             headers=self._service.headers(),
+        )
+
+    def start_sign_in(self, provider: str, method: str) -> SignIn:
+        reply: Any = self._http.request(
+            "POST",
+            f"{self._service.url}/api/integration/{provider}/connect/oauth",
+            body={"methodID": method},
+            headers=self._service.headers(),
+        )
+        attempt = reply["data"]
+        return SignIn(
+            provider=provider,
+            attempt=attempt["attemptID"],
+            url=attempt["url"],
+            instructions=attempt["instructions"],
+            needs_code=attempt["mode"] == "code",
         )
 
 
