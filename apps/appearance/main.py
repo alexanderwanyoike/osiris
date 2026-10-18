@@ -41,7 +41,7 @@ import engine  # noqa: E402
 from creator import Creator  # noqa: E402
 
 # creator has put the osiris package on sys.path.
-from osiris.themes.library import Filter, arrange  # noqa: E402
+from osiris.themes.library import Filter, arrange, slug  # noqa: E402
 
 FILTERS = ((Filter.ALL, "All"), (Filter.DARK, "Dark"),
            (Filter.LIGHT, "Light"), (Filter.MINE, "Mine"))
@@ -413,7 +413,7 @@ class Window(Adw.ApplicationWindow):
             return
         copy = dict(theme)
         copy["label"] = f"{theme.get('label', name)} Copy"
-        copy["name"] = engine.slug(copy["label"])
+        copy["name"] = slug(copy["label"])
         self.create(copy, editing=False)
 
     def confirm_delete(self, name: str) -> None:
