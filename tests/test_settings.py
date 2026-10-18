@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from osiris.harness.engine import ModelRef
-from osiris.harness.settings import Models, read_models, write_models
+from osiris.harness.settings import (
+    Models,
+    load_models,
+    read_models,
+    write_models,
+)
+from osiris.platform import FakeFileSystem
 
 
 def test_the_default_model_is_read_as_provider_slash_model() -> None:
@@ -27,3 +35,7 @@ def test_lines_that_are_not_settings_are_ignored() -> None:
 def test_settings_are_written_so_they_read_back() -> None:
     models = Models(ModelRef("openai", "gpt-5.5"), ModelRef("opencode-go", "kimi-k2"))
     assert read_models(write_models(models)) == models
+
+
+def test_without_a_settings_file_nothing_is_chosen() -> None:
+    assert load_models(FakeFileSystem(), Path("/home/tester")) == Models(None, None)
