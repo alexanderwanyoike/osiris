@@ -29,7 +29,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("GdkX11", "4.0")
 gi.require_version("Graphene", "1.0")
-from gi.repository import Adw, Gdk, GdkX11, Gio, GLib, Graphene, Gtk, Pango  # noqa: E402
+from gi.repository import Adw, Gdk, GdkX11, Gio, GLib, GObject, Graphene, Gtk, Pango  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
@@ -44,12 +44,14 @@ from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
 from render import TurnView  # noqa: E402
+from sidebar import Sidebar  # noqa: E402
 from theme_store import EngineStore  # noqa: E402
 
 from osiris.apps.tool_server import NAME as TOOLS, TIERS, undo  # noqa: E402
 
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
 from osiris.harness.harness import Harness  # noqa: E402
+from osiris.harness.history import group  # noqa: E402
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
@@ -70,6 +72,9 @@ WIDTH = 440
 RECONNECT_SECONDS = 3
 #: The widest the conversation grows, in pixels, however wide the drawer.
 READABLE = 820
+#: Narrower than this the drawer is Compact: the sidebar folds away behind its
+#: toggle (CONTEXT.md, docs/HARNESS-LAYOUT.md).
+COMPACT_BELOW = "max-width: 760sp"
 #: The top bar's title before the first question.
 UNTITLED = "New conversation"
 
@@ -87,6 +92,9 @@ class Drawer(Gtk.ApplicationWindow):
         self.set_default_size(WIDTH, 800)
         self.connect("realize", self._realize)
 
+        self.sidebar_toggle = Gtk.ToggleButton(icon_name="sidebar-show-symbolic",
+                                               tooltip_text="Conversations")
+        self.sidebar_toggle.add_css_class("flat")
         new = Gtk.Button(icon_name="list-add-symbolic", tooltip_text="New conversation")
         new.add_css_class("flat")
         new.connect("clicked", lambda _b: self.app.new_conversation())
@@ -105,6 +113,7 @@ class Drawer(Gtk.ApplicationWindow):
         self.expand_button.connect("clicked", self._toggle_expanded)
         header = Gtk.Box(spacing=8)
         header.add_css_class("harness-header")
+        header.append(self.sidebar_toggle)
         header.append(new)
         header.append(self.title)
         header.append(self.expand_button)
@@ -172,16 +181,30 @@ class Drawer(Gtk.ApplicationWindow):
         self.pages = Gtk.Stack(vexpand=True,
                                transition_type=Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
         self.pages.add_named(chat, "chat")
+        self.sidebar = Sidebar(on_open=lambda session: self.app.open_past(session),
+                               on_new=lambda: self.app.new_conversation())
+        self.split = Adw.OverlaySplitView(sidebar=self.sidebar, content=self.pages,
+                                          min_sidebar_width=220,
+                                          max_sidebar_width=280, vexpand=True)
+        self.sidebar_toggle.bind_property(
+            "active", self.split, "show-sidebar",
+            GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
+        self.sidebar_toggle.set_active(True)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         box.append(header)
-        box.append(self.pages)
+        box.append(self.split)
+        layout = Adw.BreakpointBin(child=box, width_request=320, height_request=360)
+        compact = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(COMPACT_BELOW))
+        compact.add_setter(self.split, "collapsed", True)
+        compact.add_setter(self.sidebar_toggle, "active", False)
+        layout.add_breakpoint(compact)
         # The Skin shapes this surface; the window around it stays transparent,
         # and children are clipped to the surface's rounded corners.
         surface = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
                           overflow=Gtk.Overflow.HIDDEN)
         surface.add_css_class("harness-surface")
-        box.set_vexpand(True)
-        surface.append(box)
+        layout.set_vexpand(True)
+        surface.append(layout)
         surface.set_hexpand(True)
         # The drawer is anchored to the right edge, so its left edge resizes
         # it; the window manager does the dragging.
@@ -320,6 +343,9 @@ class Drawer(Gtk.ApplicationWindow):
     def summon(self) -> None:
         self.present()
         self.entry.grab_focus()
+
+    def show_history(self, projects, loose) -> None:
+        self.sidebar.show_history(projects, loose, getattr(self.app, "session", None))
 
     def clear(self) -> None:
         for view in self.views:
@@ -568,6 +594,30 @@ class Application(Adw.Application):
 
         self.background(reverse, undone)
 
+    @property
+    def session(self) -> str | None:
+        return self.harness.session if self.harness is not None else None
+
+    def load_history(self) -> None:
+        if self.harness is None:
+            return
+        harness = self.harness
+        self.background(harness.conversations, lambda pasts: self.drawer.show_history(
+            *group(pasts, self.home)))
+
+    def open_past(self, session: str) -> None:
+        if self.harness is None or self.conversation.busy or session == self.session:
+            return
+        harness = self.harness
+
+        def opened(past) -> None:
+            self.conversation = Conversation.restored(past)
+            self.drawer.clear()
+            self.drawer.refresh()
+            self.load_history()
+
+        self.background(lambda: harness.resume(session), opened)
+
     def new_conversation(self) -> None:
         if self.conversation.busy:
             return
@@ -577,6 +627,7 @@ class Application(Adw.Application):
         self.drawer.clear()
         self.drawer.refresh()
         self.drawer.entry.grab_focus()
+        self.load_history()
 
     def ask(self, text: str) -> None:
         if self.harness is None:
@@ -624,6 +675,7 @@ class Application(Adw.Application):
                                        may_touch=self.programs().holds)
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)
+                GLib.idle_add(lambda: self.load_history() or False)
                 for event in engine.events():
                     handled = self.harness.handle(event)
                     if handled is not None:
@@ -637,6 +689,7 @@ class Application(Adw.Application):
         self.conversation.apply(event)
         if isinstance(event, Finished | Stopped | Failed) and self.log is not None:
             self.conversation.changed(self.log.last_changes())
+            self.load_history()
         self.drawer.refresh()
         return False
 
