@@ -17,7 +17,8 @@ class ProvidersPage(Gtk.Box):
     #: Seconds between checks on a sign-in in progress.
     POLL_SECONDS = 2
 
-    def __init__(self, accounts, background, open_page=None, later=None):
+    def __init__(self, accounts, background, open_page=None, later=None,
+                 default=None, on_model_chosen=None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-providers")
         self._accounts = accounts
@@ -27,12 +28,39 @@ class ProvidersPage(Gtk.Box):
         self._list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self._problem = Gtk.Label(xalign=0, wrap=True, visible=False)
         self._problem.add_css_class("harness-error")
+        self._default = default
+        self._on_model_chosen = on_model_chosen
+        self._models = []
+        self._picker_handler = 0
+        self._picker = Gtk.DropDown()
+        self._picker.add_css_class("harness-model-picker")
+        model_line = Gtk.Box(spacing=8)
+        model_line.append(Gtk.Label(label="Default model", xalign=0, hexpand=True))
+        model_line.append(self._picker)
+        self.append(model_line)
         self.append(self._list)
         self.append(self._problem)
         self.reload()
 
     def reload(self) -> None:
         self._background(self._accounts.providers, self._show)
+        self._background(self._accounts.models, self._show_models)
+
+    def _show_models(self, models) -> None:
+        self._models = models
+        if self._picker_handler:
+            self._picker.disconnect(self._picker_handler)
+        self._picker.set_model(Gtk.StringList.new([m.name for m in models]))
+        refs = [m.ref for m in models]
+        if self._default in refs:
+            self._picker.set_selected(refs.index(self._default))
+        self._picker_handler = self._picker.connect("notify::selected", self._picked)
+
+    def _picked(self, picker, _spec) -> None:
+        index = picker.get_selected()
+        if 0 <= index < len(self._models) and self._on_model_chosen:
+            self._default = self._models[index].ref
+            self._on_model_chosen(self._default)
 
     def _show(self, providers) -> None:
         child = self._list.get_first_child()
