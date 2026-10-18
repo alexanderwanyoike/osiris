@@ -6,9 +6,11 @@ from pathlib import Path
 
 from osiris.harness.engine import ModelRef
 from osiris.harness.settings import (
+    MODELS_FILE,
     Models,
     load_models,
     read_models,
+    save_models,
     write_models,
 )
 from osiris.platform import FakeFileSystem
@@ -39,3 +41,11 @@ def test_settings_are_written_so_they_read_back() -> None:
 
 def test_without_a_settings_file_nothing_is_chosen() -> None:
     assert load_models(FakeFileSystem(), Path("/home/tester")) == Models(None, None)
+
+
+def test_saved_settings_load_back_from_the_home() -> None:
+    files, home = FakeFileSystem(), Path("/home/tester")
+    models = Models(ModelRef("openai", "gpt-5.5"), None)
+    save_models(files, home, models)
+    assert files.exists(home / MODELS_FILE)
+    assert load_models(files, home) == models
