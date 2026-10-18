@@ -85,6 +85,24 @@ class Failed:
 Event = Text | ToolCalled | ToolRequested | Answered | Finished | Stopped | Failed
 
 
+@dataclass(frozen=True)
+class Past:
+    """A Conversation the Harness had, as the Engine keeps it."""
+
+    session: str
+    title: str
+    directory: Path
+    #: Seconds since the epoch.
+    updated: float
+
+
+@dataclass(frozen=True)
+class PastTurn:
+    question: str
+    answer: str
+    model: ModelRef | None
+
+
 @runtime_checkable
 class Engine(Protocol):
     def start(
@@ -107,6 +125,14 @@ class Engine(Protocol):
     def stop(self, session: str) -> None: ...
 
     def switch_model(self, session: str, model: ModelRef) -> None: ...
+
+    def rename(self, session: str, title: str) -> None: ...
+
+    def conversations(self) -> list[Past]:
+        """The Harness's own sessions, newest first; other programs' are left out."""
+        ...
+
+    def history(self, session: str) -> list[PastTurn]: ...
 
     def attach_tools(self, name: str, command: list[str]) -> None:
         """Run a tool server for every session; each of its tools still raises

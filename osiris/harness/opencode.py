@@ -20,6 +20,8 @@ from osiris.harness.engine import (
     Failed,
     Finished,
     ModelRef,
+    Past,
+    PastTurn,
     Stopped,
     Text,
     Tokens,
@@ -30,6 +32,14 @@ from osiris.platform import CommandRunner, FileSystem, HttpClient, HttpError, Id
 
 #: Where the service records its URL and password, relative to the home.
 SERVICE_FILE = ".local/state/opencode/service.json"
+
+#: Marks a session as the Harness's, so its history leaves out the sessions
+#: opencode's own terminal application opens on the same service.
+MINE = {"osiris": "harness"}
+#: How many sessions and messages a history reads; more is older than anyone
+#: scrolls to.
+HISTORY_LIMIT = 200
+MESSAGE_LIMIT = 500
 
 #: Every action stops at a tool request, so the Harness's policy decides.
 #: Denying instead strips the tools from the request, which opencode's free
@@ -78,6 +88,7 @@ class OpencodeEngine:
         body: dict[str, object] = {
             "title": "Osiris Harness",
             "permissions": ASK_EVERYTHING,
+            "metadata": MINE,
         }
         if directory is not None:
             body["location"] = {"directory": str(directory)}
@@ -119,6 +130,58 @@ class OpencodeEngine:
             body={"config": {"type": "local", "command": command}},
             headers=self._service.headers(),
         )
+
+    def rename(self, session: str, title: str) -> None:
+        self._http.request(
+            "PATCH",
+            f"{self._service.url}/api/session/{session}",
+            body={"title": title},
+            headers=self._service.headers(),
+        )
+
+    def _get(self, path: str) -> Any:
+        return self._http.request(
+            "GET", self._service.url + path, headers=self._service.headers()
+        )
+
+    def conversations(self) -> list[Past]:
+        sessions = self._get(f"/api/session?limit={HISTORY_LIMIT}")["data"]
+        mine = [s for s in sessions if s.get("metadata") == MINE]
+        return sorted(
+            (
+                Past(
+                    s["id"],
+                    s.get("title", ""),
+                    Path(s["location"]["directory"]),
+                    s["time"]["updated"] / 1000,
+                )
+                for s in mine
+            ),
+            key=lambda past: past.updated,
+            reverse=True,
+        )
+
+    def history(self, session: str) -> list[PastTurn]:
+        path = f"/api/session/{session}/message?limit={MESSAGE_LIMIT}&order=asc"
+        turns: list[PastTurn] = []
+        for message in self._get(path)["data"]:
+            if message.get("type") == "user":
+                turns.append(PastTurn(message.get("text", ""), "", None))
+            elif message.get("type") == "assistant" and turns:
+                said = "".join(
+                    part.get("text", "")
+                    for part in message.get("content", [])
+                    if part.get("type") == "text"
+                )
+                if said:
+                    model = message.get("model") or {}
+                    last = turns[-1]
+                    turns[-1] = PastTurn(
+                        last.question,
+                        last.answer + said,
+                        ModelRef(model["providerID"], model["id"]) if model else None,
+                    )
+        return turns
 
     def action(self, server: str, tool: str) -> str:
         return f"{server}_{tool}"
