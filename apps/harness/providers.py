@@ -16,6 +16,7 @@ class ProvidersPage(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-providers")
         self._accounts = accounts
+        self._background = background
         self._list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.append(self._list)
         background(accounts.providers, self._show)
@@ -30,3 +31,18 @@ class ProvidersPage(Gtk.Box):
                 status.add_css_class("harness-meta")
                 row.append(status)
             self._list.append(row)
+            if not provider.connected and any(m.kind == "key" for m in provider.methods):
+                self._list.append(self._key_form(provider.id))
+
+    def _key_form(self, provider: str) -> Gtk.Widget:
+        entry = Gtk.PasswordEntry(placeholder_text="API key", hexpand=True,
+                                  show_peek_icon=True)
+        save = Gtk.Button(label="Save")
+        save.connect("clicked", lambda _b: self._background(
+            lambda: self._accounts.connect_key(provider, entry.get_text().strip()),
+            lambda _result: None))
+        form = Gtk.Box(spacing=6)
+        form.add_css_class("harness-key-form")
+        form.append(entry)
+        form.append(save)
+        return form
