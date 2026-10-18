@@ -99,6 +99,14 @@ class OpencodeEngine:
             {"model": {"providerID": model.provider, "id": model.model}},
         )
 
+    def attach_tools(self, name: str, command: list[str]) -> None:
+        self._http.request(
+            "PUT",
+            f"{self._service.url}/api/experimental/mcp/{name}",
+            body={"config": {"type": "local", "command": command}},
+            headers=self._service.headers(),
+        )
+
     def events(self) -> Iterator[Event]:
         reader = _Reader()
         lines = self._http.lines(
