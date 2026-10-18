@@ -79,3 +79,26 @@ def test_a_failed_build_is_shown_and_can_go_back_to_the_harness() -> None:
     assert "error: cannot find x" in texts(widget)
     find(widget, Gtk.Button, "Fix it").emit("clicked")
     assert clicks.fixed == [("pomodoro", "error: cannot find x")]
+
+
+def test_the_card_shows_the_programs_icon() -> None:
+    with_icon = Program(
+        parse(
+            '{"name": "pomodoro", "label": "Pomodoro", "description": "A timer.",'
+            ' "icon": "icon.svg", "run": ["python3", "main.py"]}'
+        ),
+        Path("/home/tester/Code/pomodoro"),
+        "abc",
+        None,
+    )
+    widget, _ = card(with_icon)
+    files = [
+        w.get_property("file") for w in widgets(widget) if isinstance(w, Gtk.Image)
+    ]
+    assert "/home/tester/Code/pomodoro/icon.svg" in files
+
+
+def test_a_program_without_an_icon_shows_a_generic_one() -> None:
+    widget, _ = card(program())
+    names = [w.get_icon_name() for w in widgets(widget) if isinstance(w, Gtk.Image)]
+    assert "application-x-executable" in names
