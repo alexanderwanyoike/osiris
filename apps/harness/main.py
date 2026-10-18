@@ -136,12 +136,32 @@ class Drawer(Gtk.ApplicationWindow):
         surface.add_css_class("harness-surface")
         box.set_vexpand(True)
         surface.append(box)
-        self.set_child(surface)
+        surface.set_hexpand(True)
+        # The drawer is anchored to the right edge, so its left edge resizes
+        # it; the window manager does the dragging.
+        self.resize_handle = Gtk.Box(width_request=8,
+                                     cursor=Gdk.Cursor.new_from_name("ew-resize"))
+        drag = Gtk.GestureClick()
+        drag.connect("pressed", self._begin_resize)
+        self.resize_handle.add_controller(drag)
+        frame = Gtk.Box()
+        frame.append(self.resize_handle)
+        frame.append(surface)
+        self.set_child(frame)
 
         keys = Gtk.EventControllerKey()
         keys.connect("key-pressed", self._key)
         self.add_controller(keys)
         self.connect("close-request", self._close_request)
+
+    def _begin_resize(self, gesture, _presses, x, y) -> None:
+        surface = self.get_surface()
+        if surface is None:
+            return
+        _ok, wx, wy = self.resize_handle.translate_coordinates(self, x, y)
+        surface.begin_resize(Gdk.SurfaceEdge.WEST, gesture.get_current_event_device(),
+                             gesture.get_current_button(), wx, wy,
+                             gesture.get_current_event_time())
 
     def _toggle_expanded(self, _button) -> None:
         self.expanded = not self.expanded
