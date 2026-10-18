@@ -124,7 +124,7 @@ class TestCommitting:
 
 class TestChecking:
     def test_python_that_does_not_compile_is_reported_with_its_line(self) -> None:
-        files = made()
+        files = made(terminal=True)
         files.write(SOURCE / "main.py", "print('ok')\ndef broken(:\n")
         subject, _, runner = programs(files)
         (problem,) = subject.check("pomodoro")
@@ -132,13 +132,36 @@ class TestChecking:
         assert runner.calls == []
 
     def test_python_that_compiles_has_no_problems(self) -> None:
-        files = made()
+        files = made(terminal=True)
         files.write(SOURCE / "app" / "main.py", "print('ok')\n")
         subject, _, _ = programs(files)
         assert subject.check("pomodoro") == []
 
-    def test_what_git_and_builds_keep_is_not_checked(self) -> None:
+    def test_a_window_that_never_names_its_application_id_is_reported(
+        self,
+    ) -> None:
         files = made()
+        files.write(SOURCE / "main.py", 'GLib.set_prgname("dev.osiris.Pomodoro")\n')
+        subject, _, _ = programs(files)
+        (problem,) = subject.check("pomodoro")
+        assert "dev.osiris.programs.pomodoro" in problem
+
+    def test_a_window_that_names_its_application_id_is_fine(self) -> None:
+        files = made()
+        files.write(
+            SOURCE / "main.py", 'GLib.set_prgname("dev.osiris.programs.pomodoro")\n'
+        )
+        subject, _, _ = programs(files)
+        assert subject.check("pomodoro") == []
+
+    def test_a_terminal_program_needs_no_application_id(self) -> None:
+        files = made(terminal=True)
+        files.write(SOURCE / "main.py", "print('tick')\n")
+        subject, _, _ = programs(files)
+        assert subject.check("pomodoro") == []
+
+    def test_what_git_and_builds_keep_is_not_checked(self) -> None:
+        files = made(terminal=True)
         files.write(SOURCE / ".git" / "hooks" / "x.py", "def (:\n")
         files.write(SOURCE / ".venv" / "lib" / "y.py", "def (:\n")
         subject, _, _ = programs(files)

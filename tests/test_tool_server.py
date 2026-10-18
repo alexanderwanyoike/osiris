@@ -257,3 +257,16 @@ def test_undo_trashes_a_program_or_reverts_a_commit() -> None:
     argvs = [call.argv for call in runner.calls]
     assert argvs[0][-3:] == ("revert", "--no-edit", "abc123")
     assert argvs[1] == ("gio", "trash", str(POMODORO))
+
+
+def test_listing_programs_names_each_ones_application_id() -> None:
+    files = FakeFileSystem()
+    files.write(
+        POMODORO / MANIFEST_FILE,
+        '{"name": "pomodoro", "label": "Pomodoro", "description": "A timer.",'
+        ' "run": ["python3", "main.py"]}',
+    )
+    (listed,) = call(
+        FakeThemeStore(), "list_programs", {}, programs=new_programs(files)
+    )[1]["result"]
+    assert listed["app_id"] == "dev.osiris.programs.pomodoro"
