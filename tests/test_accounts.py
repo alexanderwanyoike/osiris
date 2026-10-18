@@ -52,11 +52,6 @@ def test_a_provider_lists_the_ways_a_person_can_sign_in() -> None:
                     kind="oauth",
                     label="Sign in with ChatGPT",
                 ),
-                Method(
-                    id="chatgpt-headless",
-                    kind="oauth",
-                    label="Codex device code (legacy)",
-                ),
             ),
             connected=False,
         )
@@ -185,3 +180,12 @@ def test_the_models_the_engine_can_reach_are_listed_by_name() -> None:
     assert accounts(http).models() == [
         ModelInfo(ModelRef("opencode", "big-pickle"), "Big Pickle")
     ]
+
+
+def test_sign_in_methods_opencode_marks_as_legacy_are_not_offered() -> None:
+    http = FakeHttpClient(
+        replies={("GET", f"{URL}/api/integration"): {"data": [OPENAI]}}
+    )
+    labels = [m.label for m in accounts(http).providers()[0].methods]
+    assert "Codex device code (legacy)" not in labels
+    assert "Sign in with ChatGPT" in labels
