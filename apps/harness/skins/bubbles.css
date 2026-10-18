@@ -132,3 +132,8 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-canvas .sidebar-pane { background-color: @harness_sunken; color: @harness_fg; border-right: 1px solid alpha(@harness_border, 0.6); }
 .harness-canvas .sidebar-pane label { color: @harness_fg; }
 .harness-path { padding: 6px 12px; border-bottom: 1px solid alpha(@harness_border, 0.6); }
+
+/* Row controls appear where the pointer is, keeping the sidebar quiet. */
+.harness-sidebar row button { opacity: 0; }
+.harness-sidebar row:hover button, .harness-sidebar row:selected button,
+.harness-sidebar row button:checked, .harness-sidebar row button:focus { opacity: 1; }
