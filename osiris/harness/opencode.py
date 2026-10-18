@@ -210,6 +210,14 @@ class OpencodeAccounts:
         data = reply["data"]
         return SignInState(data["status"], data.get("message", ""))
 
+    def finish_sign_in(self, provider: str, attempt: str, code: str | None) -> None:
+        self._http.request(
+            "POST",
+            f"{self._service.url}/api/integration/{provider}/connect/oauth/{attempt}/complete",
+            body={"code": code},
+            headers=self._service.headers(),
+        )
+
 
 def _provider(entry: dict[str, Any]) -> Provider:
     # An environment variable is not something a person can set from a
