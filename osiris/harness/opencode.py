@@ -10,6 +10,7 @@ import base64
 import json
 from collections.abc import Iterator
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from osiris.harness.accounts import Method, ModelInfo, Provider, SignIn, SignInState
@@ -71,11 +72,15 @@ class OpencodeEngine:
             headers=self._service.headers(),
         )
 
-    def start(self, model: ModelRef | None = None) -> str:
+    def start(
+        self, model: ModelRef | None = None, directory: Path | None = None
+    ) -> str:
         body: dict[str, object] = {
             "title": "Osiris Harness",
             "permissions": ASK_EVERYTHING,
         }
+        if directory is not None:
+            body["location"] = {"directory": str(directory)}
         if model is not None:
             body["model"] = {"providerID": model.provider, "id": model.model}
         session: str = self._post("/api/session", body)["data"]["id"]

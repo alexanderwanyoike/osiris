@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 
@@ -86,8 +87,11 @@ Event = Text | ToolCalled | ToolRequested | Answered | Finished | Stopped | Fail
 
 @runtime_checkable
 class Engine(Protocol):
-    def start(self, model: ModelRef | None = None) -> str:
-        """Open a session and return its id; None leaves the Engine's default."""
+    def start(
+        self, model: ModelRef | None = None, directory: Path | None = None
+    ) -> str:
+        """Open a session and return its id; None leaves the Engine's default
+        model, or its own folder."""
         ...
 
     def send(self, session: str, text: str) -> None: ...
