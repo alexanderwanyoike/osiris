@@ -20,6 +20,7 @@ LITERALS = re.compile(
 # Every class the drawer gives its widgets; each Skin has to say how they look.
 CLASSES = (
     "harness-drawer",
+    "harness-surface",
     "harness-header",
     "harness-question",
     "harness-answer",
@@ -63,3 +64,12 @@ def test_a_skin_styles_every_part_of_the_drawer(name: str) -> None:
     text = stylesheet(name)
     missing = [c for c in CLASSES if f".{c}" not in text]
     assert missing == []
+
+
+@pytest.mark.parametrize("name", SKINS)
+def test_the_window_itself_is_transparent_so_the_surface_can_float(name: str) -> None:
+    """The drawer's shape is its surface; the window around it must not paint, or
+    the rounded corners show a square behind them."""
+    rule = re.search(r"window\.harness-drawer[^{]*\{([^}]*)\}", stylesheet(name))
+    assert rule is not None
+    assert "transparent" in rule.group(1)
