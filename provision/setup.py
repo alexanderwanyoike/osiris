@@ -28,8 +28,10 @@ sys.path.insert(0, os.path.dirname(HERE))
 from osiris.provision.pacman_conf import without_local_repository  # noqa: E402
 
 # Order matters: themes.py composites the logo that branding.py installs into
-# the wallpapers, and grub.py needs the fonts the packages brought in.
-SCRIPTS = ("cinnamon.py", "apps.py", "branding.py", "themes.py", "grub.py")
+# the wallpapers, harness.py's bar imports the package themes.py installs, and
+# grub.py needs the fonts the packages brought in.
+SCRIPTS = ("cinnamon.py", "apps.py", "branding.py", "themes.py", "harness.py",
+           "grub.py")
 
 PACMAN_CONF = "/etc/pacman.conf"
 REPOSITORY = "osiris"

@@ -79,12 +79,14 @@ APPLICATIONS = (
 # checks a wallpaper package's shader before the desktop compiles it, and
 # mesa-utils' glxinfo says whether a GPU is there to draw it at all. grub
 # supplies grub-mkfont and grub-mkconfig for the boot menu theme, and os-prober
-# lets that menu list the other systems on a dual-boot machine.
+# lets that menu list the other systems on a dual-boot machine. opencode is
+# the Harness's Engine (ADR 0015).
 RUNTIME = (
     "python", "python-gobject", "gtk4", "libadwaita",
     "python-pillow", "python-numpy", "python-cairo", "glslang", "mesa-utils",
     "dconf", "glib2",
     "grub", "os-prober", "plymouth", "mkinitcpio",
+    "opencode",
 )  # fmt: skip
 
 
