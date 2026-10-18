@@ -128,6 +128,12 @@ D-Bus (`dev.osiris.HarnessDrawer.Close`) so the drawer can slide out before it
 is minimised; without the extension the drawer minimises directly. Where the
 Harness sits will become the **Skin**'s choice.
 
+The drawer can be dragged wider from its left edge, and the Expand button in
+its header fills the screen. Either way it stays within the work area, which
+the dock keeps clear: Plank is set never to hide, the one mode in which it
+reserves its bar's height, so every maximised window, the expanded Harness
+included, sits above it.
+
 ### The opencode Engine
 
 opencode 2.0 runs as a background service per user. The adapter runs
