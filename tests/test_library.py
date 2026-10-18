@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from osiris.themes.library import Family, Filter, arrange, family_of
+from osiris.themes.library import Family, Filter, arrange, family_of, slug
 
 
 def theme(name: str, accent: str, dark: bool = True, label: str | None = None) -> dict:
@@ -104,3 +104,18 @@ def test_within_a_section_themes_are_alphabetical() -> None:
 
 def test_nothing_matching_gives_no_sections() -> None:
     assert arrange(LIBRARY, query="no such theme") == []
+
+
+@pytest.mark.parametrize(
+    ("label", "name"),
+    [
+        ("Harbour", "harbour"),
+        ("Late  Night: Teal!", "late-night-teal"),
+        ("  Rosé  ", "ros"),
+        ("!!!", "untitled"),
+    ],
+)
+def test_a_label_becomes_a_name_safe_as_a_file_and_a_gtk_theme(
+    label: str, name: str
+) -> None:
+    assert slug(label) == name
