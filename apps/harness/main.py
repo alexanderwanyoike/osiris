@@ -42,6 +42,7 @@ sys.path.insert(0, HERE)
 
 from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
+from canvas import Canvas, open_in_code  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
 from render import TurnView  # noqa: E402
 from sidebar import Sidebar  # noqa: E402
@@ -75,6 +76,9 @@ READABLE = 820
 #: Narrower than this the drawer is Compact: the sidebar folds away behind its
 #: toggle (CONTEXT.md, docs/HARNESS-LAYOUT.md).
 COMPACT_BELOW = "max-width: 760sp"
+#: Narrower than this there is no room for the Canvas; the cards under each
+#: answer carry the same things.
+NO_CANVAS_BELOW = "max-width: 1100sp"
 #: The top bar's title before the first question.
 UNTITLED = "New conversation"
 
@@ -116,6 +120,11 @@ class Drawer(Gtk.ApplicationWindow):
         header.append(self.sidebar_toggle)
         header.append(new)
         header.append(self.title)
+        self.canvas_toggle = Gtk.ToggleButton(icon_name="sidebar-show-right-symbolic",
+                                              tooltip_text="Canvas", sensitive=False)
+        self.canvas_toggle.add_css_class("flat")
+        self.canvas_toggle.connect("toggled", self._canvas_toggled)
+        header.append(self.canvas_toggle)
         header.append(self.expand_button)
         header.append(providers_button)
 
@@ -175,12 +184,18 @@ class Drawer(Gtk.ApplicationWindow):
         bottom = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         bottom.append(composer)
         bottom.append(self.footer)
-        chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         chat.append(self.scroller)
         chat.append(Adw.Clamp(maximum_size=READABLE, child=bottom))
+        self.canvas = Canvas(read=lambda path: path.read_text(errors="replace"),
+                             open_in_code=open_in_code)
+        self.canvas.set_visible(False)
+        body = Gtk.Paned(start_child=chat, end_child=self.canvas,
+                         shrink_start_child=False, resize_end_child=True,
+                         wide_handle=False, position=480)
         self.pages = Gtk.Stack(vexpand=True,
                                transition_type=Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
-        self.pages.add_named(chat, "chat")
+        self.pages.add_named(body, "chat")
         self.sidebar = Sidebar(on_open=lambda session: self.app.open_past(session),
                                on_new=lambda: self.app.new_conversation())
         self.split = Adw.OverlaySplitView(sidebar=self.sidebar, content=self.pages,
@@ -198,6 +213,10 @@ class Drawer(Gtk.ApplicationWindow):
         compact.add_setter(self.split, "collapsed", True)
         compact.add_setter(self.sidebar_toggle, "active", False)
         layout.add_breakpoint(compact)
+        no_canvas = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(NO_CANVAS_BELOW))
+        no_canvas.add_setter(self.canvas_toggle, "visible", False)
+        no_canvas.add_setter(self.canvas, "visible", False)
+        layout.add_breakpoint(no_canvas)
         # The Skin shapes this surface; the window around it stays transparent,
         # and children are clipped to the surface's rounded corners.
         surface = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
@@ -343,6 +362,23 @@ class Drawer(Gtk.ApplicationWindow):
     def summon(self) -> None:
         self.present()
         self.entry.grab_focus()
+
+    def show_canvas(self, programs) -> None:
+        """What the Conversation made; the Canvas opens the first time there is
+        something to show."""
+        had = self.canvas_toggle.get_sensitive()
+        self.canvas.show(programs)
+        self.canvas_toggle.set_sensitive(bool(programs))
+        if programs and not had:
+            self.canvas_toggle.set_active(True)
+        elif not programs:
+            self.canvas_toggle.set_active(False)
+
+    def _canvas_toggled(self, toggle) -> None:
+        # As in the prototype: the Canvas takes the sidebar's room.
+        shown = toggle.get_active()
+        self.canvas.set_visible(shown)
+        self.sidebar_toggle.set_active(not shown)
 
     def show_history(self, projects, loose) -> None:
         self.sidebar.show_history(projects, loose, getattr(self.app, "session", None))
@@ -605,6 +641,17 @@ class Application(Adw.Application):
         self.background(harness.conversations, lambda pasts: self.drawer.show_history(
             *group(pasts, self.home)))
 
+    def update_canvas(self) -> None:
+        names = self.conversation.programs
+        programs = self.programs()
+
+        def gather():
+            known = {p.manifest.name: p for p in programs.programs()}
+            return [(known[name], programs.files(name))
+                    for name in names if name in known]
+
+        self.background(gather, self.drawer.show_canvas)
+
     def open_past(self, session: str) -> None:
         if self.harness is None or self.conversation.busy or session == self.session:
             return
@@ -615,6 +662,7 @@ class Application(Adw.Application):
             self.drawer.clear()
             self.drawer.refresh()
             self.load_history()
+            self.update_canvas()
 
         self.background(lambda: harness.resume(session), opened)
 
@@ -628,6 +676,7 @@ class Application(Adw.Application):
         self.drawer.refresh()
         self.drawer.entry.grab_focus()
         self.load_history()
+        self.update_canvas()
 
     def ask(self, text: str) -> None:
         if self.harness is None:
@@ -690,6 +739,7 @@ class Application(Adw.Application):
         if isinstance(event, Finished | Stopped | Failed) and self.log is not None:
             self.conversation.changed(self.log.last_changes())
             self.load_history()
+            self.update_canvas()
         self.drawer.refresh()
         return False
 
@@ -700,6 +750,7 @@ class Application(Adw.Application):
     def _restyle(self) -> None:
         if self.drawer is not None:
             self.drawer.refresh(restyle=True)
+            self.drawer.canvas.restyle(self.look.scheme)
 
 
 if __name__ == "__main__":
