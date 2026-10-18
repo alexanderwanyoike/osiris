@@ -94,6 +94,12 @@ def button(root: Gtk.Widget, tooltip: str) -> Gtk.Button:
     )
 
 
+def labelled(root: Gtk.Widget, label: str) -> Gtk.Button:
+    return next(
+        w for w in widgets(root) if isinstance(w, Gtk.Button) and w.get_label() == label
+    )
+
+
 def test_a_conversation_can_be_started_in_a_project() -> None:
     widget, opened = sidebar()
     button(row_with(widget, "pomodoro"), "New conversation in pomodoro").emit("clicked")
