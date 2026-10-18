@@ -3,7 +3,7 @@
     python3 provision/harness.py [--repo PATH]
 
 Lays down:
-    /usr/share/osiris/harness/              the bar (Super+A)
+    /usr/share/osiris/harness/              the drawer (Super+A) and its Skins
     /usr/bin/osiris-harness                 launcher
     /usr/share/dbus-1/services/             D-Bus activation
     /etc/xdg/autostart/osiris-harness.desktop
@@ -64,9 +64,15 @@ def main() -> None:
     args = parser.parse_args()
 
     print("installing the Harness bar")
+    source = os.path.join(args.repo, "apps", "harness")
     os.makedirs(HARNESS_DIR, exist_ok=True)
-    shutil.copy(os.path.join(args.repo, "apps", "harness", "main.py"),
-                os.path.join(HARNESS_DIR, "main.py"))
+    for name in sorted(os.listdir(source)):
+        if name.endswith(".py"):
+            shutil.copy(os.path.join(source, name), os.path.join(HARNESS_DIR, name))
+    skins = os.path.join(HARNESS_DIR, "skins")
+    shutil.rmtree(skins, ignore_errors=True)
+    shutil.copytree(os.path.join(source, "skins"), skins)
+    print(f"  {skins}")
     write(LAUNCHER_PATH, LAUNCHER, 0o755)
     write("/usr/share/dbus-1/services/dev.osiris.Harness.service", SERVICE)
     write("/etc/xdg/autostart/osiris-harness.desktop", AUTOSTART)
