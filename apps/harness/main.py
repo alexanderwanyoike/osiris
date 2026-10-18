@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Osiris Harness bar - Super+A, type, Enter asks.
+"""Osiris Harness - a drawer on the right edge, opened with Super+A.
 
-One line to type into; the answer streams in below it and the window grows to
-fit, up to a limit, then scrolls. The Provider, the model and the tokens spent
-are always on show. Escape hides the bar and keeps the conversation; Super+A
-brings it back.
+The conversation fills the drawer with the newest at the bottom, and the line
+to ask in sits below it, as in any chat. The model in play and the tokens
+spent are always on show. Escape, Super+A or the panel button close it and
+keep the conversation.
+
+Placement and the slide belong to the harness-drawer@osiris Cinnamon
+extension: GTK4 on X11 gives an application no way to place its own window.
+Without the extension the drawer still works, wherever Muffin puts it.
 
 The app stays resident, like the theme switcher: started at login or by D-Bus
 with --gapplication-service, and Super+A runs
@@ -23,7 +27,8 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
+gi.require_version("GdkX11", "4.0")
+from gi.repository import Adw, Gdk, GdkX11, Gio, GLib, Gtk, Pango  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
@@ -45,26 +50,40 @@ from osiris.platform import (  # noqa: E402
 )
 
 APP_ID = "dev.osiris.Harness"
-WIDTH = 760
-# The answer area grows with the answer up to this, then scrolls.
-MAX_ANSWER_HEIGHT = 520
+# Matches WIDTH in harness-drawer@osiris, which sizes the window to the
+# monitor's full height.
+WIDTH = 440
 RECONNECT_SECONDS = 3
 
+DRAWER_BUS = "dev.osiris.HarnessDrawer"
+DRAWER_PATH = "/dev/osiris/HarnessDrawer"
+
 CSS = b"""
-window.harness { border-radius: 14px; }
-.harness-question { font-weight: bold; }
-.harness-refused { font-size: smaller; }
-.harness-status { font-size: smaller; }
+.harness-question {
+    background: alpha(@accent_bg_color, 0.18);
+    border-radius: 10px;
+    padding: 6px 10px;
+}
+.harness-small { font-size: smaller; }
 """
 
 
-class Bar(Gtk.ApplicationWindow):
+class Drawer(Gtk.ApplicationWindow):
     def __init__(self, app: "Application"):
-        super().__init__(application=app, title="Harness", decorated=False,
-                         resizable=False)
+        super().__init__(application=app, title="Harness", decorated=False)
         self.app = app
-        self.add_css_class("harness")
-        self.set_default_size(WIDTH, -1)
+        self.set_default_size(WIDTH, 800)
+        self.connect("realize", self._realize)
+
+        self.header = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END)
+        self.header.add_css_class("dim-label")
+        self.header.add_css_class("harness-small")
+
+        self.turns = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14,
+                             valign=Gtk.Align.END, vexpand=True)
+        self.scroller = Gtk.ScrolledWindow(
+            child=self.turns, vexpand=True,
+            hscrollbar_policy=Gtk.PolicyType.NEVER)
 
         self.entry = Gtk.Entry(placeholder_text="Ask Osiris", hexpand=True)
         self.entry.connect("activate", self._ask)
@@ -76,22 +95,18 @@ class Bar(Gtk.ApplicationWindow):
         line.append(self.entry)
         line.append(self.stop_button)
 
-        self.turns = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
-        self.scroller = Gtk.ScrolledWindow(
-            child=self.turns, propagate_natural_height=True,
-            max_content_height=MAX_ANSWER_HEIGHT, visible=False,
-            hscrollbar_policy=Gtk.PolicyType.NEVER)
-
-        self.status = Gtk.Label(xalign=0, wrap=True)
-        self.status.add_css_class("dim-label")
-        self.status.add_css_class("harness-status")
+        self.footer = Gtk.Label(xalign=0, wrap=True)
+        self.footer.add_css_class("dim-label")
+        self.footer.add_css_class("harness-small")
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
-                      margin_top=14, margin_bottom=12,
-                      margin_start=16, margin_end=16)
-        box.append(line)
+                      margin_top=12, margin_bottom=12,
+                      margin_start=14, margin_end=14)
+        box.append(self.header)
+        box.append(Gtk.Separator())
         box.append(self.scroller)
-        box.append(self.status)
+        box.append(line)
+        box.append(self.footer)
         self.set_child(box)
 
         keys = Gtk.EventControllerKey()
@@ -99,14 +114,23 @@ class Bar(Gtk.ApplicationWindow):
         self.add_controller(keys)
         self.connect("close-request", self._close_request)
 
+    def _realize(self, _window) -> None:
+        # Kept out of the dock and the window switcher: it is reached from
+        # Super+A and the panel button, and an entry for it in Plank would
+        # read as a second, separate application.
+        surface = self.get_surface()
+        if isinstance(surface, GdkX11.X11Surface):
+            surface.set_skip_taskbar_hint(True)
+            surface.set_skip_pager_hint(True)
+
     def _key(self, _controller, keyval, _code, _state) -> bool:
         if keyval == Gdk.KEY_Escape:
-            self.set_visible(False)
+            self.app.close_drawer()
             return True
         return False
 
     def _close_request(self, _window) -> bool:
-        self.set_visible(False)
+        self.app.close_drawer()
         return True
 
     def _ask(self, _entry) -> None:
@@ -128,14 +152,13 @@ class Bar(Gtk.ApplicationWindow):
             child = following
         for turn in conversation.turns:
             self.turns.append(self._turn(turn))
-        self.scroller.set_visible(bool(conversation.turns))
         self.stop_button.set_visible(conversation.busy)
         self.entry.set_sensitive(not conversation.busy)
-        self.status.set_text(self.app.status_line())
-        if conversation.turns:
-            # Follow the answer as it streams.
-            adjustment = self.scroller.get_vadjustment()
-            GLib.idle_add(lambda: adjustment.set_value(adjustment.get_upper()))
+        self.header.set_text(self.app.header_line())
+        self.footer.set_text(self.app.footer_line())
+        # Follow the answer as it streams.
+        adjustment = self.scroller.get_vadjustment()
+        GLib.idle_add(lambda: adjustment.set_value(adjustment.get_upper()))
         if not conversation.busy:
             self.entry.grab_focus()
 
@@ -143,7 +166,7 @@ class Bar(Gtk.ApplicationWindow):
     def _turn(turn: Turn) -> Gtk.Widget:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         question = Gtk.Label(label=turn.question, xalign=0, wrap=True,
-                             selectable=True)
+                             selectable=True, halign=Gtk.Align.END)
         question.add_css_class("harness-question")
         box.append(question)
         answer = turn.answer or ("..." if turn.state is State.WAITING else "")
@@ -154,7 +177,7 @@ class Bar(Gtk.ApplicationWindow):
             note = Gtk.Label(label=f"Not allowed yet: {refused}", xalign=0,
                              wrap=True)
             note.add_css_class("dim-label")
-            note.add_css_class("harness-refused")
+            note.add_css_class("harness-small")
             box.append(note)
         if turn.state is State.FAILED:
             error = Gtk.Label(label=turn.error or "The answer failed.",
@@ -171,17 +194,18 @@ class Bar(Gtk.ApplicationWindow):
 class Application(Adw.Application):
     def __init__(self):
         super().__init__(application_id=APP_ID)
-        self.bar: Bar | None = None
+        self.drawer: Drawer | None = None
         self.conversation = Conversation()
         self.harness: Harness | None = None
         self.problem = "Starting the Engine..."
+        self.open = False
         show = Gio.SimpleAction.new("show", None)
         show.connect("activate", lambda *_: self.toggle())
         self.add_action(show)
 
     def do_startup(self):
         Adw.Application.do_startup(self)
-        # Resident: hiding keeps the conversation and the Engine connection.
+        # Resident: closing keeps the conversation and the Engine connection.
         self.hold()
         display = Gdk.Display.get_default()
         if display is not None:
@@ -189,34 +213,50 @@ class Application(Adw.Application):
             provider.load_from_data(CSS)
             Gtk.StyleContext.add_provider_for_display(
                 display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-        self.bar = Bar(self)
-        self.bar.refresh()
+        self.drawer = Drawer(self)
+        self.drawer.refresh()
         threading.Thread(target=self._listen, daemon=True).start()
 
     def do_activate(self):
         self.toggle()
 
     def toggle(self) -> None:
-        if self.bar is None:
+        if self.drawer is None:
             return
-        if self.bar.get_visible() and self.bar.is_active():
-            self.bar.set_visible(False)
+        if self.open:
+            self.close_drawer()
         else:
-            self.bar.summon()
+            self.open = True
+            self.drawer.summon()
 
-    def status_line(self) -> str:
-        if self.harness is None:
-            return self.problem
+    def close_drawer(self) -> None:
+        """Ask the extension to slide the drawer away; minimise if it cannot."""
+        self.open = False
+        Gio.DBus.session.call(
+            DRAWER_BUS, DRAWER_PATH, DRAWER_BUS, "Close", None, None,
+            Gio.DBusCallFlags.NONE, 1000, None, self._closed)
+
+    def _closed(self, connection, result) -> None:
+        try:
+            connection.call_finish(result)
+        except GLib.Error:
+            self.drawer.minimize()
+
+    def header_line(self) -> str:
         model = self.conversation.model
         named = f"{model.provider} / {model.model}" if model else "default model"
-        return (f"{named}  ·  {self.conversation.tokens_spent:,} tokens spent  ·  "
-                "allowance not reported  ·  only talks for now")
+        return f"{named}  ·  {self.conversation.tokens_spent:,} tokens"
+
+    def footer_line(self) -> str:
+        if self.harness is None:
+            return self.problem
+        return "allowance not reported  ·  only talks for now"
 
     def ask(self, text: str) -> None:
         if self.harness is None:
             return
         self.conversation.asked(text)
-        self.bar.refresh()
+        self.drawer.refresh()
         threading.Thread(target=self._send, args=(text,), daemon=True).start()
 
     def stop(self) -> None:
@@ -233,7 +273,7 @@ class Application(Adw.Application):
         if self.conversation.turns:
             turn = self.conversation.turns[-1]
             turn.state, turn.error = State.FAILED, message
-        self.bar.refresh()
+        self.drawer.refresh()
         return False
 
     def _listen(self) -> None:
@@ -251,7 +291,7 @@ class Application(Adw.Application):
                 # rebuilt around the new connection; the next question opens
                 # a new session.
                 self.harness = Harness(engine, HarnessLog(files, me.home / LOG_FILE))
-                GLib.idle_add(self._connected)
+                GLib.idle_add(self._refresh)
                 for event in engine.events():
                     handled = self.harness.handle(event)
                     if handled is not None:
@@ -261,17 +301,13 @@ class Application(Adw.Application):
                 GLib.idle_add(self._refresh)
             time.sleep(RECONNECT_SECONDS)
 
-    def _connected(self) -> bool:
-        self.bar.refresh()
-        return False
-
     def _apply(self, event) -> bool:
         self.conversation.apply(event)
-        self.bar.refresh()
+        self.drawer.refresh()
         return False
 
     def _refresh(self) -> bool:
-        self.bar.refresh()
+        self.drawer.refresh()
         return False
 
 
