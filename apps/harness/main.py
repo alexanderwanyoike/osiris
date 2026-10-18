@@ -40,12 +40,15 @@ for candidate in ("/usr/share/osiris/lib", REPO):
 sys.path.insert(0, HERE)
 
 from look import Look  # noqa: E402
+from providers import ProvidersPage  # noqa: E402
 from render import TurnView  # noqa: E402
 
 from osiris.harness.conversation import Conversation, State  # noqa: E402
 from osiris.harness.harness import Harness  # noqa: E402
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
-from osiris.harness.opencode import OpencodeEngine, locate  # noqa: E402
+from osiris.harness.engine import ModelRef  # noqa: E402
+from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
+from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.platform import (  # noqa: E402
     HttpError,
     RealFileSystem,
@@ -75,11 +78,15 @@ class Drawer(Gtk.ApplicationWindow):
         title.add_css_class("harness-title")
         self.meta = Gtk.Label(xalign=1, ellipsize=Pango.EllipsizeMode.START)
         self.meta.add_css_class("harness-meta")
+        # The model in play doubles as the way to change it.
+        providers_button = Gtk.Button(child=self.meta, tooltip_text="Providers and models")
+        providers_button.add_css_class("flat")
+        providers_button.connect("clicked", lambda _b: self.show_providers())
         header = Gtk.Box(spacing=8)
         header.add_css_class("harness-header")
         header.append(Gtk.Image(icon_name="osiris-symbolic"))
         header.append(title)
-        header.append(self.meta)
+        header.append(providers_button)
 
         self.turns = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
                              valign=Gtk.Align.END, vexpand=True,
@@ -105,11 +112,16 @@ class Drawer(Gtk.ApplicationWindow):
         self.footer.add_css_class("harness-meta")
         self.footer.add_css_class("harness-footer")
 
+        chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        chat.append(self.scroller)
+        chat.append(composer)
+        chat.append(self.footer)
+        self.pages = Gtk.Stack(vexpand=True,
+                               transition_type=Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+        self.pages.add_named(chat, "chat")
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         box.append(header)
-        box.append(self.scroller)
-        box.append(composer)
-        box.append(self.footer)
+        box.append(self.pages)
         self.set_child(box)
 
         keys = Gtk.EventControllerKey()
@@ -147,6 +159,32 @@ class Drawer(Gtk.ApplicationWindow):
             self.app.stop()
         else:
             self._ask(self.entry)
+
+    def show_providers(self) -> None:
+        if self.app.accounts is None:
+            return
+        old = self.pages.get_child_by_name("providers")
+        if old is not None:
+            self.pages.remove(old)
+        back = Gtk.Button(icon_name="go-previous-symbolic", label="Back",
+                          halign=Gtk.Align.START)
+        back.add_css_class("flat")
+        back.connect("clicked", lambda _b: self.pages.set_visible_child_name("chat"))
+        page = ProvidersPage(
+            self.app.accounts,
+            background=self.app.background,
+            open_page=self.app.open_page,
+            later=lambda seconds, then: GLib.timeout_add_seconds(
+                seconds, lambda: then() or False),
+            default=self.app.models.default,
+            on_model_chosen=self.app.choose_model,
+        )
+        holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
+                         margin_start=16, margin_end=16, margin_top=8)
+        holder.append(back)
+        holder.append(page)
+        self.pages.add_named(Gtk.ScrolledWindow(child=holder, vexpand=True), "providers")
+        self.pages.set_visible_child_name("providers")
 
     def summon(self) -> None:
         self.present()
@@ -191,6 +229,10 @@ class Application(Adw.Application):
         self.conversation = Conversation()
         self.harness: Harness | None = None
         self.look: Look | None = None
+        self.accounts: OpencodeAccounts | None = None
+        self.files = RealFileSystem()
+        self.home = SystemIdentity().home
+        self.models: Models = load_models(self.files, self.home)
         self.problem = "Starting the Engine..."
         self.open = False
         show = Gio.SimpleAction.new("show", None)
@@ -245,6 +287,27 @@ class Application(Adw.Application):
             return self.problem
         return "allowance not reported  ·  only talks for now"
 
+    def background(self, work, done) -> None:
+        """Run work off the main loop and hand its result back to it."""
+        def run():
+            try:
+                result = work()
+            except Exception as error:  # noqa: BLE001 - shown in the drawer
+                self.problem = str(error)
+                GLib.idle_add(self._refresh)
+                return
+            GLib.idle_add(lambda: done(result) or False)
+        threading.Thread(target=run, daemon=True).start()
+
+    def open_page(self, url: str) -> None:
+        Gtk.UriLauncher.new(url).launch(self.drawer, None, None, None)
+
+    def choose_model(self, model: ModelRef) -> None:
+        self.models = Models(default=model, fallback=self.models.fallback)
+        save_models(self.files, self.home, self.models)
+        if self.harness is not None:
+            self.background(lambda: self.harness.use_model(model), lambda _r: None)
+
     def ask(self, text: str) -> None:
         if self.harness is None:
             return
@@ -283,7 +346,9 @@ class Application(Adw.Application):
                 # A restarted service has a new password, so the Harness is
                 # rebuilt around the new connection; the next question opens
                 # a new session.
-                self.harness = Harness(engine, HarnessLog(files, me.home / LOG_FILE))
+                self.harness = Harness(engine, HarnessLog(files, me.home / LOG_FILE),
+                                       self.models.default)
+                self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)
                 for event in engine.events():
                     handled = self.harness.handle(event)
