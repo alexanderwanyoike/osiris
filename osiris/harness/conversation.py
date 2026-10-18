@@ -14,8 +14,8 @@ from osiris.harness.engine import (
     ModelRef,
     Stopped,
     Text,
-    ToolRequested,
 )
+from osiris.harness.harness import Decision, Refused
 from osiris.harness.log import Change
 
 
@@ -75,7 +75,7 @@ class Conversation:
         if self.turns:
             self.turns[-1].changes = changes
 
-    def apply(self, event: Event) -> None:
+    def apply(self, event: Event | Decision) -> None:
         if not self.turns:
             return
         turn = self.turns[-1]
@@ -86,7 +86,7 @@ class Conversation:
             case Answered(_, model, tokens, _):
                 turn.model = self.model = model
                 self.tokens_spent += tokens.input + tokens.output + tokens.reasoning
-            case ToolRequested(_, _, action, resources):
+            case Refused(_, action, resources):
                 turn.refused.append(f"{action}: {', '.join(resources)}")
             case Finished():
                 turn.state = State.DONE
