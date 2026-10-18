@@ -166,6 +166,15 @@ class TestSessions:
         assert isinstance(body, dict)
         assert body["model"] == {"providerID": "openai", "id": "gpt-5.5"}
 
+    def test_a_session_can_start_in_a_folder(self) -> None:
+        http = FakeHttpClient(
+            replies={("POST", f"{URL}/api/session"): {"data": {"id": SESSION}}}
+        )
+        engine(http).start(directory=Path("/home/tester"))
+        _, _, body = http.requests[0]
+        assert isinstance(body, dict)
+        assert body["location"] == {"directory": "/home/tester"}
+
     def test_sending_posts_the_text_as_a_prompt(self) -> None:
         path = f"{URL}/api/session/{SESSION}/prompt"
         http = FakeHttpClient(replies={("POST", path): {"data": {}}})
