@@ -41,7 +41,8 @@ import engine  # noqa: E402
 from creator import Creator  # noqa: E402
 
 # creator has put the osiris package on sys.path.
-from osiris.themes.library import Filter, arrange, slug  # noqa: E402
+from osiris.model.names import slug  # noqa: E402
+from osiris.themes.library import Filter, arrange  # noqa: E402
 
 FILTERS = ((Filter.ALL, "All"), (Filter.DARK, "Dark"),
            (Filter.LIGHT, "Light"), (Filter.MINE, "Mine"))

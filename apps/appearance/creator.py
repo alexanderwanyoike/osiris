@@ -37,7 +37,7 @@ from PIL import Image  # noqa: E402
 from osiris.model.colour import Colour  # noqa: E402
 from osiris.themes import derive as rules  # noqa: E402
 from osiris.themes.from_wallpaper import intent_from  # noqa: E402
-from osiris.themes.library import slug  # noqa: E402
+from osiris.model.names import slug  # noqa: E402
 from osiris.themes.intent import (  # noqa: E402
     SUGGESTIONS, Harmony, Mood, ThemeIntent, harmonise, partners, seeds,
     suggestions)
