@@ -41,11 +41,15 @@ def drawer():
     return window, calls
 
 
-def test_the_expand_button_fills_the_screen_and_brings_the_drawer_back() -> None:
-    window, calls = drawer()
+def test_the_expand_button_asks_to_fill_the_screen_and_to_come_back() -> None:
+    """Expanding goes through the extension, which stops above the dock; the
+    window manager's maximise would cover Plank."""
+    window, _ = drawer()
+    asked: list[bool] = []
+    window.app.expand = asked.append
     window.expand_button.emit("clicked")
     window.expand_button.emit("clicked")
-    assert calls == ["maximize", "unmaximize"]
+    assert asked == [True, False]
 
 
 def test_the_left_edge_is_a_handle_for_resizing_the_drawer() -> None:
