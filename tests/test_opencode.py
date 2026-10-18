@@ -366,3 +366,35 @@ class TestHistory:
             PastTurn("make a timer", "Made it.", ModelRef("openai", "gpt-6.1-sol")),
             PastTurn("thanks", "", None),
         ]
+
+    def test_sessions_from_before_the_harness_marked_its_own_are_adopted(
+        self,
+    ) -> None:
+        old = {
+            "id": "ses_old",
+            "title": "Osiris Harness",
+            "location": {"directory": "/home/tester"},
+            "time": {"created": 1, "updated": 5000},
+        }
+        empty = {**old, "id": "ses_empty", "time": {"created": 1, "updated": 4000}}
+        first = "&order=asc"
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{URL}/api/session?limit=200"): {"data": [old, empty]},
+                ("GET", f"{URL}/api/session/ses_old/message?limit=500{first}"): {
+                    "data": [{"id": "m1", "type": "user", "text": "Which kernel?"}]
+                },
+                ("GET", f"{URL}/api/session/ses_empty/message?limit=500{first}"): {
+                    "data": []
+                },
+                ("PATCH", f"{URL}/api/session/ses_old"): {"data": {}},
+            }
+        )
+        assert engine(http).conversations() == [
+            Past("ses_old", "Which kernel?", Path("/home/tester"), 5.0)
+        ]
+        assert (
+            "PATCH",
+            f"{URL}/api/session/ses_old",
+            {"title": "Which kernel?", "metadata": {"osiris": "harness"}},
+        ) in http.requests
