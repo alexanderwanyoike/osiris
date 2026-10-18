@@ -138,8 +138,11 @@ class Drawer(Gtk.ApplicationWindow):
         self.models = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
         self.models.add_css_class("navigation-sidebar")
         self.models.connect("row-activated", self._model_chosen)
+        model_face = Gtk.Box(spacing=4)
+        model_face.append(Gtk.Image(icon_name="pan-down-symbolic"))
+        model_face.append(self.model_label)
         self.model_menu = Gtk.MenuButton(
-            child=self.model_label, tooltip_text="Model",
+            child=model_face, tooltip_text="Model",
             popover=Gtk.Popover(child=self.models))
         self.model_menu.add_css_class("flat")
         self.model_menu.connect("notify::active", self._models_shown)
