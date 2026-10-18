@@ -22,6 +22,8 @@ for candidate in (os.path.join(REPO, "shell", "themes"), "/usr/share/osiris/them
 import engine  # noqa: E402
 
 from osiris.apps.tool_server import server  # noqa: E402
+from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
+from osiris.platform import RealFileSystem, SystemIdentity  # noqa: E402
 
 
 class EngineStore:
@@ -42,4 +44,5 @@ class EngineStore:
 
 
 if __name__ == "__main__":
-    server(EngineStore()).run()
+    log = HarnessLog(RealFileSystem(), SystemIdentity().home / LOG_FILE)
+    server(EngineStore(), log).run()

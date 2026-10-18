@@ -8,9 +8,12 @@ tools are looks.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
+from osiris.harness.log import HarnessLog
 from osiris.harness.tiers import Tier
 from osiris.themes import actions
 from osiris.themes.intent import Harmony, Mood
@@ -38,7 +41,20 @@ ANNOTATIONS = {
 }
 
 
-def server(store: ThemeStore) -> FastMCP:
+def undo(store: ThemeStore, step: Mapping[str, str]) -> None:
+    """Run the step a logged change recorded to reverse itself."""
+    match step["action"]:
+        case "apply_theme":
+            actions.apply_theme(store, step["name"])
+        case "delete_theme":
+            actions.delete_theme(store, step["name"])
+        case other:
+            raise actions.ThemeActionError(f"Osiris cannot undo {other}")
+
+
+def server(store: ThemeStore, log: HarnessLog) -> FastMCP:
+    """The tools, acting on ``store``; every change they make is written to
+    ``log`` with the step that undoes it."""
     tools = FastMCP(NAME, instructions=INSTRUCTIONS, log_level="WARNING")
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["list_themes"]])
@@ -70,12 +86,22 @@ def server(store: ThemeStore) -> FastMCP:
             mood=mood.value,
             dark=dark,
         )
+        log.write(
+            "changed",
+            summary=f"Made {label}",
+            undo={"action": "delete_theme", "name": name},
+        )
         return f"Made {label}, named {name}."
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["apply_theme"]])
     def apply_theme(name: str) -> str:
         """Apply a theme to the whole desktop, by its name from list_themes."""
         previous = actions.apply_theme(store, name)
+        log.write(
+            "changed",
+            summary=f"Applied {actions.find(store, name)['label']}",
+            undo={"action": "apply_theme", "name": previous} if previous else None,
+        )
         return f"Applied {name}" + (f" in place of {previous}." if previous else ".")
 
     return tools

@@ -77,7 +77,7 @@ def create_theme(
     return name
 
 
-def _find(store: ThemeStore, name: str) -> Mapping[str, Any]:
+def find(store: ThemeStore, name: str) -> Mapping[str, Any]:
     for theme in store.themes():
         if theme["name"] == name:
             return theme
@@ -86,7 +86,7 @@ def _find(store: ThemeStore, name: str) -> Mapping[str, Any]:
 
 def apply_theme(store: ThemeStore, name: str) -> str | None:
     """Apply a Theme. Returns the one it replaced, which is what Undo applies."""
-    _find(store, name)
+    find(store, name)
     previous = store.current()
     store.apply(name)
     return previous
@@ -94,7 +94,7 @@ def apply_theme(store: ThemeStore, name: str) -> str | None:
 
 def delete_theme(store: ThemeStore, name: str) -> None:
     """Delete a theme, which is how making one is undone."""
-    theme = _find(store, name)
+    theme = find(store, name)
     if store.current() == name:
         raise ThemeActionError(
             f"{theme['label']} is applied; apply another theme first"
