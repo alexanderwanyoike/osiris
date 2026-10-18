@@ -10,6 +10,7 @@ directory of its own.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 
 from osiris.model.names import slug
@@ -65,12 +66,24 @@ class ProgramError(RuntimeError):
     pass
 
 
+class State(Enum):
+    NOT_INSTALLED = "not installed"
+    OUT_OF_DATE = "out of date"
+    UP_TO_DATE = "up to date"
+
+
 @dataclass(frozen=True)
 class Program:
     manifest: Manifest
     source: Path
     head: str
     installed: str | None
+
+    @property
+    def state(self) -> State:
+        if self.installed is None:
+            return State.NOT_INSTALLED
+        return State.UP_TO_DATE if self.installed == self.head else State.OUT_OF_DATE
 
 
 class Programs:
