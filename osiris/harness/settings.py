@@ -9,8 +9,13 @@ The Default and Fallback models are settings, never code (CONTEXT.md).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from osiris.harness.engine import ModelRef
+from osiris.platform import FileSystem
+
+#: Relative to the home.
+MODELS_FILE = ".config/osiris/harness/models"
 
 
 @dataclass(frozen=True)
@@ -39,3 +44,8 @@ def write_models(models: Models) -> str:
         if ref is not None
     ]
     return "\n".join(lines) + "\n"
+
+
+def load_models(files: FileSystem, home: Path) -> Models:
+    path = home / MODELS_FILE
+    return read_models(files.read(path)) if files.exists(path) else Models(None, None)
