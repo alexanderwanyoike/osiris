@@ -187,3 +187,42 @@ class TestDescription:
             root_partition=contents.partitions[2],
         )
         assert "@home" in " ".join(layout.describe())
+
+
+class TestEncryption:
+    """An encrypted root needs the kernels on a boot partition of Osiris's own."""
+
+    def test_erasing_the_disk_can_be_encrypted(self) -> None:
+        layout = Layout(windows_and_free_space(), encrypted=True)
+        assert layout.problems == []
+        assert any("LUKS" in line for line in layout.describe())
+
+    def test_free_space_on_a_disk_with_no_esp_can_be_encrypted(self) -> None:
+        contents = DiskContents(
+            disk=DISK,
+            partitions=(Partition("/dev/sda1", 1, 400 * GB, "ext4", "data"),),
+            free=(FreeRegion(start=401 * GB, size=500 * GB),),
+        )
+        layout = Layout(contents, InstallMode.FREE_SPACE, encrypted=True)
+        assert not layout.reuses_esp
+        assert layout.problems == []
+
+    def test_a_shared_esp_cannot_be_encrypted(self) -> None:
+        layout = Layout(
+            windows_and_free_space(), InstallMode.FREE_SPACE, encrypted=True
+        )
+        assert any("boot partition" in problem for problem in layout.problems)
+
+    def test_an_existing_partition_cannot_be_encrypted(self) -> None:
+        contents = a_spare_partition()
+        layout = Layout(
+            contents,
+            InstallMode.EXISTING_PARTITION,
+            root_partition=contents.partitions[2],
+            encrypted=True,
+        )
+        assert any("boot partition" in problem for problem in layout.problems)
+
+    def test_the_same_layouts_unencrypted_are_fine(self) -> None:
+        layout = Layout(windows_and_free_space(), InstallMode.FREE_SPACE)
+        assert layout.problems == []

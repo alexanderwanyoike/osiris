@@ -46,8 +46,10 @@ from archinstall.lib.models.device import (
     BDevice,
     BtrfsMountOption,
     DeviceModification,
+    DiskEncryption,
     DiskLayoutConfiguration,
     DiskLayoutType,
+    EncryptionType,
     FilesystemType,
     ModificationStatus,
     PartitionFlag,
@@ -228,6 +230,38 @@ def disk_layout(target: Target, filesystem: Filesystem) -> DiskLayoutConfigurati
     return alongside_layout(target.device, layout)
 
 
+def encryption(config: DiskLayoutConfiguration, passphrase: str) -> DiskEncryption:
+    """LUKS on the root partition, and on nothing else.
+
+    archinstall does all of it: luksFormat, the `encrypt` initramfs hook (with
+    Plymouth ahead of it, so the splash asks for the passphrase), and the
+    `cryptdevice=` kernel parameter GRUB boots with. This only says which
+    partition, and what unlocks it.
+
+    The boot partition stays plain, because GRUB reads the kernels from it and
+    archinstall does not set GRUB up to unlock anything. That is also why the
+    kernels must be on it: a layout that leaves /boot inside the root is
+    refused here, the last line of defence behind Layout.problems.
+
+    The passphrase is serialised by archinstall into the credentials file, not
+    config.json; see `write`.
+    """
+    (modification,) = config.device_modifications
+    root = modification.get_root_partition()
+    if root is None:
+        raise ValueError("no root partition to encrypt")
+    boot = modification.get_boot_partition()
+    if boot is None or boot.mountpoint != Path("/boot"):
+        raise ValueError(
+            "an encrypted root needs the kernels on a boot partition of its own"
+        )
+    return DiskEncryption(
+        encryption_type=EncryptionType.LUKS,
+        encryption_password=Password(plaintext=passphrase),
+        partitions=[root],
+    )
+
+
 def graphics_driver(gpus: Sequence[Gpu]) -> GfxDriver:
     """Which of archinstall's driver sets this machine wants.
 
@@ -252,6 +286,9 @@ def build(request: InstallRequest, target: Target) -> ArchConfig:
     """The archinstall configuration for one install."""
     language, _, encoding = request.locale.partition(".")
     xorg = profile_handler.get_profile_by_name("Xorg")
+    disk_config = disk_layout(target, request.filesystem)
+    if request.encrypt:
+        disk_config.disk_encryption = encryption(disk_config, request.passphrase)
 
     return ArchConfig(
         script="guided",
@@ -262,7 +299,7 @@ def build(request: InstallRequest, target: Target) -> ArchConfig:
             sys_lang=language,
             sys_enc=encoding or "UTF-8",
         ),
-        disk_config=disk_layout(target, request.filesystem),
+        disk_config=disk_config,
         bootloader_config=BootloaderConfiguration(
             bootloader=Bootloader.Grub,
             # Also install to /EFI/BOOT/BOOTX64.EFI, so the disk boots on a
@@ -319,7 +356,9 @@ def write(config: ArchConfig, directory: Path) -> tuple[Path, Path]:
     """Write the configuration and the credentials, as archinstall would.
 
     Credentials go in their own file, readable only by root: they carry the
-    password hash.
+    password hash and, on an encrypted install, the disk passphrase in plain
+    text, which cryptsetup needs. The installer deletes the file as soon as
+    archinstall exits.
     """
     directory.mkdir(parents=True, exist_ok=True)
     settings = directory / "config.json"

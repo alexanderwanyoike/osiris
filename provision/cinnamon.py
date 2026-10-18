@@ -5,7 +5,7 @@
 Layout: one 30px panel at the TOP carrying a menu, indicators and a clock, and
 nothing else. No window list in the panel - Plank at the bottom owns running and
 pinned applications. rofi on Super+Space is the launcher, Super+Enter opens
-the terminal and Super+T the theme switcher.
+the terminal, Super+T the theme switcher and Super+A the Harness.
 
 Everything is written as system-wide dconf defaults under /etc/dconf/db/local.d,
 not poked into a live session. That means it applies to every user, survives a
@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import homes  # noqa: E402
 import services  # noqa: E402
 from run import run  # noqa: E402
+from harness import DRAWER_EXTENSION, PANEL_BUTTON  # noqa: E402
 from themes import DRIFT_EXTENSION, TRANSITION  # noqa: E402
 
 WALLPAPER = "/usr/share/backgrounds/osiris/osiris-obsidian.png"
@@ -34,6 +35,7 @@ APPLETS = [
     "panel1:right:3:sound@cinnamon.org:4",
     "panel1:right:4:power@cinnamon.org:5",
     "panel1:right:5:calendar@cinnamon.org:6",
+    f"panel1:right:6:{PANEL_BUTTON}:7",
 ]
 
 DCONF_PROFILE = "user-db:user\nsystem-db:local\n"
@@ -52,7 +54,7 @@ panels-autohide=['1:false']
 enabled-applets=[{applets}]
 desktop-effects=true
 startup-animation=false
-enabled-extensions=['{TRANSITION}', '{DRIFT_EXTENSION}']
+enabled-extensions=['{TRANSITION}', '{DRIFT_EXTENSION}', '{DRAWER_EXTENSION}']
 alttab-switcher-style='coverflow'
 
 [org/cinnamon/desktop/background]
@@ -74,8 +76,14 @@ gtk-theme='adw-gtk3-dark'
 icon-theme='Papirus-Dark'
 color-scheme='prefer-dark'
 
+# libadwaita asks xdg-desktop-portal, and on Cinnamon the XApp backend answers
+# from this key, not the GNOME one above; left at 'default' it reports no
+# preference and libadwaita apps come up light.
+[org/x/apps/portal]
+color-scheme='prefer-dark'
+
 [org/cinnamon/desktop/keybindings]
-custom-list=['custom0', 'custom1']
+custom-list=['custom0', 'custom1', 'custom2']
 
 [org/cinnamon/desktop/keybindings/custom-keybindings/custom0]
 name='Launcher'
@@ -86,6 +94,11 @@ binding=['<Super>space']
 name='Theme switcher'
 command='gapplication action dev.osiris.Switcher show'
 binding=['<Super>t']
+
+[org/cinnamon/desktop/keybindings/custom-keybindings/custom2]
+name='Harness'
+command='gapplication action dev.osiris.Harness show'
+binding=['<Super>a']
 
 # Cinnamon gives Super+Space to switching keyboard layouts as well, and that
 # binding wins: the launcher never opens. Layouts keep their dedicated key.
@@ -181,6 +194,9 @@ name='adw-gtk3-dark'
 [org.gnome.desktop.interface]
 gtk-theme='adw-gtk3-dark'
 icon-theme='Papirus-Dark'
+color-scheme='prefer-dark'
+
+[org.x.apps.portal]
 color-scheme='prefer-dark'
 """
 

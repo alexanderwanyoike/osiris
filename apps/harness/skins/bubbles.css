@@ -1,0 +1,111 @@
+/* Bubbles: the question in a tinted bubble on the right, the answer as open
+   text beneath it, code in cards. Shape only: every colour is the Theme's. */
+
+window.harness-drawer, window.harness-drawer.background { background-color: transparent; }
+
+/* A floating card: inset from the screen edge, rounded, a little glassy. */
+.harness-surface {
+    margin: 10px;
+    border-radius: 18px;
+    background-color: alpha(@harness_bg, 0.84);
+    color: @harness_fg;
+    border: 1px solid alpha(@harness_fg, 0.10);
+    box-shadow: 0 10px 30px alpha(@harness_sunken, 0.55);
+}
+
+.harness-header { padding: 12px 16px 10px; border-bottom: 1px solid @harness_border; }
+.harness-header .harness-title { font-weight: 700; }
+.harness-meta { color: @harness_muted; font-size: 0.85em; }
+
+.harness-turn { margin: 4px 16px; }
+.harness-question {
+    background-color: alpha(@harness_accent, 0.18);
+    border-radius: 16px 16px 4px 16px;
+    padding: 8px 12px;
+}
+.harness-answer { margin-top: 2px; }
+.harness-paragraph { line-height: 1.45; }
+
+.harness-heading { font-weight: 700; margin-top: 6px; }
+.harness-heading.level-1 { font-size: 1.3em; }
+.harness-heading.level-2 { font-size: 1.15em; }
+.harness-heading.level-3 { font-size: 1.02em; }
+
+.harness-code {
+    background-color: @harness_sunken;
+    border: 1px solid @harness_border;
+    border-radius: 10px;
+}
+.harness-code-header {
+    background-color: @harness_raised;
+    border-radius: 10px 10px 0 0;
+    padding: 3px 4px 3px 12px;
+}
+.harness-code-view { font-size: 0.92em; }
+.harness-copy { min-height: 22px; padding: 0 8px; border-radius: 6px; font-size: 0.85em; }
+
+.harness-list-marker { color: @harness_muted; }
+.harness-quote {
+    border-left: 3px solid @harness_accent;
+    padding: 2px 0 2px 10px;
+    color: @harness_muted;
+}
+.harness-table { border: 1px solid @harness_border; border-radius: 8px; }
+.harness-table-header { font-weight: 700; background-color: @harness_raised; padding: 6px 10px; }
+.harness-table-cell { padding: 6px 10px; border-top: 1px solid @harness_border; }
+.harness-rule { background-color: @harness_border; min-height: 1px; margin: 6px 0; }
+
+.harness-chip {
+    border: 1px solid @harness_border;
+    border-radius: 999px;
+    padding: 2px 10px;
+    color: @harness_muted;
+    font-size: 0.85em;
+}
+.harness-error { color: @harness_danger; }
+.harness-caret { color: @harness_accent; }
+
+.harness-composer {
+    margin: 8px 12px 0;
+    padding: 4px 4px 4px 10px;
+    background-color: @harness_raised;
+    border: 1px solid @harness_border;
+    border-radius: 14px;
+}
+.harness-composer entry { background: none; border: none; box-shadow: none; outline: none; }
+.harness-send {
+    min-width: 30px;
+    min-height: 30px;
+    border-radius: 10px;
+    background-color: @harness_accent;
+    color: @harness_on_accent;
+}
+.harness-footer { padding: 4px 16px 12px; }
+
+.harness-provider { padding: 8px 0; border-bottom: 1px solid @harness_border; }
+.harness-key-form, .harness-code-form { padding: 4px 0 10px; }
+
+.harness-provider-card {
+    background-color: alpha(@harness_raised, 0.6);
+    border: 1px solid alpha(@harness_fg, 0.06);
+    border-radius: 14px;
+    padding: 10px 12px;
+}
+.harness-provider-card .harness-provider { padding: 2px 0 6px; border-bottom: none; }
+.harness-monogram {
+    min-width: 22px;
+    min-height: 22px;
+    border-radius: 7px;
+    background-color: alpha(@harness_accent, 0.22);
+    color: @harness_accent;
+    font-weight: 700;
+    font-size: 0.85em;
+}
+.harness-connected {
+    border-radius: 999px;
+    padding: 2px 10px;
+    background-color: alpha(@harness_success, 0.16);
+    color: @harness_success;
+    font-size: 0.85em;
+}
+.harness-sign-in { border-radius: 10px; background-color: @harness_accent; color: @harness_on_accent; }

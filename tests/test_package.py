@@ -62,6 +62,25 @@ def test_the_dock_is_plank_reloaded() -> None:
     assert "plank" not in names
 
 
+def test_the_harness_engine_comes_from_arch() -> None:
+    """The Harness rents opencode (ADR 0015), which Arch packages in extra."""
+    assert "opencode" in package.depends()
+    assert "opencode" not in package.BUNDLED
+
+
+def test_the_harness_can_render_answers() -> None:
+    """Markdown is parsed by markdown-it-py and code drawn by GtkSourceView 5,
+    both in Arch's extra repository."""
+    names = package.depends()
+    assert "python-markdown-it-py" in names
+    assert "gtksourceview5" in names
+
+
+def test_the_osiris_tool_server_speaks_mcp_with_the_sdk_arch_ships() -> None:
+    """The tool server is built on the official MCP SDK, in Arch's extra."""
+    assert "python-mcp" in package.depends()
+
+
 def test_every_bundled_package_is_built_and_depended_on() -> None:
     assert package.BUNDLED
     for name in package.BUNDLED:
