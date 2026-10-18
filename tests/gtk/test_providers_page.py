@@ -9,7 +9,7 @@ from providers import ProvidersPage
 
 from osiris.harness.accounts import Method, ModelInfo, Provider, SignIn, SignInState
 from osiris.harness.engine import ModelRef
-from tests.gtk.conftest import find, now, texts
+from tests.gtk.conftest import find, now, shown, texts
 
 KEY = Method(id=None, kind="key", label="API key")
 CHATGPT = Method(id="chatgpt-token-sharing", kind="oauth", label="Sign in with ChatGPT")
@@ -162,3 +162,19 @@ def test_chatgpt_and_opencode_go_come_first_whatever_the_engines_order() -> None
     page = ProvidersPage(accounts, background=now)
     names = [t for t in texts(page) if t in ("302.AI", "OpenCode Go", "OpenAI")]
     assert names[:2] == ["OpenAI", "OpenCode Go"]
+
+
+def test_other_providers_appear_only_when_searched_for() -> None:
+    accounts = FakeAccounts(
+        listed=[
+            Provider("openai", "OpenAI", (CHATGPT,), False),
+            Provider("302ai", "302.AI", (KEY,), False),
+            Provider("groq", "Groq", (KEY,), False),
+        ]
+    )
+    page = ProvidersPage(accounts, background=now)
+    assert "OpenAI" in shown(page)
+    assert "302.AI" not in shown(page)
+    find(page, Gtk.SearchEntry).set_text("gro")
+    assert "Groq" in shown(page)
+    assert "302.AI" not in shown(page)

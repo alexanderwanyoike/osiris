@@ -50,3 +50,15 @@ def find(root: Gtk.Widget, kind: type, text: str | None = None) -> Gtk.Widget:
         if text is None or text in (getattr(widget, "get_label", lambda: None)(),):
             return widget
     raise LookupError(f"no {kind.__name__} {text or ''} under {root}")
+
+
+def shown(root: Gtk.Widget) -> list[str]:
+    """Label texts a person can see: hidden widgets and everything in them skipped."""
+    if not root.get_visible():
+        return []
+    found = [root.get_text()] if isinstance(root, Gtk.Label) else []
+    child = root.get_first_child()
+    while child is not None:
+        found += shown(child)
+        child = child.get_next_sibling()
+    return found
