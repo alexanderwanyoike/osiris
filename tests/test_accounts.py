@@ -95,3 +95,10 @@ def test_a_connection_that_needs_signing_in_again_is_not_connected() -> None:
         replies={("GET", f"{URL}/api/integration"): {"data": [expired]}}
     )
     assert not accounts(http).providers()[0].connected
+
+
+def test_an_api_key_is_given_to_the_engine_for_that_provider() -> None:
+    path = f"{URL}/api/integration/opencode-go/connect/key"
+    http = FakeHttpClient(replies={("POST", path): None})
+    accounts(http).connect_key("opencode-go", "sk-test")
+    assert http.requests == [("POST", path, {"key": "sk-test"})]
