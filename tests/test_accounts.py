@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from osiris.harness.accounts import Method, Provider, SignIn, SignInState
+from osiris.harness.accounts import Method, ModelInfo, Provider, SignIn, SignInState
+from osiris.harness.engine import ModelRef
 from osiris.harness.opencode import OpencodeAccounts, Service
 from osiris.platform import FakeHttpClient
 
@@ -170,3 +171,17 @@ def test_finishing_a_sign_in_that_needs_no_code_sends_none() -> None:
     http = FakeHttpClient(replies={("POST", path): None})
     accounts(http).finish_sign_in("openai", "att_1", None)
     assert http.requests == [("POST", path, {"code": None})]
+
+
+def test_the_models_the_engine_can_reach_are_listed_by_name() -> None:
+    pickle = {
+        "id": "big-pickle",
+        "modelID": "big-pickle",
+        "providerID": "opencode",
+        "name": "Big Pickle",
+        "enabled": True,
+    }
+    http = FakeHttpClient(replies={("GET", f"{URL}/api/model"): {"data": [pickle]}})
+    assert accounts(http).models() == [
+        ModelInfo(ModelRef("opencode", "big-pickle"), "Big Pickle")
+    ]
