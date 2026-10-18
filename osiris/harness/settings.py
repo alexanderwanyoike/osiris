@@ -49,3 +49,7 @@ def write_models(models: Models) -> str:
 def load_models(files: FileSystem, home: Path) -> Models:
     path = home / MODELS_FILE
     return read_models(files.read(path)) if files.exists(path) else Models(None, None)
+
+
+def save_models(files: FileSystem, home: Path, models: Models) -> None:
+    files.write(home / MODELS_FILE, write_models(models))
