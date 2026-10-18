@@ -71,3 +71,6 @@
     color: @harness_on_accent;
 }
 .harness-footer { padding: 4px 16px 12px; }
+
+.harness-provider { padding: 8px 0; border-bottom: 1px solid @harness_border; }
+.harness-key-form, .harness-code-form { padding: 4px 0 10px; }
