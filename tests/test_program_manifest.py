@@ -75,6 +75,7 @@ def test_a_manifest_survives_being_written_and_read_again() -> None:
         ({"terminal": "yes"}, "true or false"),
         ({"label": "Timer\nExec=rm -rf ~"}, "one line"),
         ({"description": "Ticks\nTerminal=true"}, "one line"),
+        ({"run": ["python3", "main.py\nTerminal=true"]}, "one line"),
     ],
 )
 def test_a_bad_manifest_says_what_to_fix(
