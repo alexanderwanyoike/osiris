@@ -24,6 +24,10 @@ class FakeAccounts:
 
     def connect_key(self, provider: str, key: str) -> None:
         self.keys.append((provider, key))
+        self.listed = [
+            Provider(p.id, p.name, p.methods, p.connected or p.id == provider)
+            for p in self.listed
+        ]
 
     def start_sign_in(self, provider: str, method: str) -> SignIn:
         return SignIn(provider, "att", "https://example.org", "Sign in", False)
@@ -60,3 +64,13 @@ def test_a_key_typed_for_a_provider_is_given_to_the_engine() -> None:
     find(page, Gtk.PasswordEntry).set_text("sk-test")
     find(page, Gtk.Button, "Save").emit("clicked")
     assert accounts.keys == [("opencode-go", "sk-test")]
+
+
+def test_once_a_key_is_saved_the_provider_shows_as_connected() -> None:
+    accounts = FakeAccounts(
+        listed=[Provider("opencode-go", "OpenCode Go", (KEY,), False)]
+    )
+    page = ProvidersPage(accounts, background=now)
+    find(page, Gtk.PasswordEntry).set_text("sk-test")
+    find(page, Gtk.Button, "Save").emit("clicked")
+    assert "Connected" in texts(page)
