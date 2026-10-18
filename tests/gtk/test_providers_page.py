@@ -46,7 +46,10 @@ class FakeAccounts:
         pass
 
     def models(self) -> list[ModelInfo]:
-        return [ModelInfo(ModelRef("opencode", "big-pickle"), "Big Pickle")]
+        return [
+            ModelInfo(ModelRef("opencode", "big-pickle"), "Big Pickle"),
+            ModelInfo(ModelRef("openai", "gpt-5.5"), "GPT-5.5"),
+        ]
 
 
 def test_each_provider_shows_whether_it_is_connected() -> None:
@@ -132,3 +135,17 @@ def test_a_sign_in_that_returns_a_code_takes_it_from_the_person() -> None:
     find(page, Gtk.Entry).set_text(" ABCD-1234 ")
     find(page, Gtk.Button, "Finish").emit("clicked")
     assert finished == [("openai", "att", "ABCD-1234")]
+
+
+def test_the_default_model_is_chosen_from_the_models_the_engine_can_reach() -> None:
+    chosen: list[ModelRef] = []
+    page = ProvidersPage(
+        FakeAccounts(),
+        background=now,
+        default=ModelRef("opencode", "big-pickle"),
+        on_model_chosen=chosen.append,
+    )
+    picker = find(page, Gtk.DropDown)
+    assert picker.get_selected() == 0
+    picker.set_selected(1)
+    assert chosen == [ModelRef("openai", "gpt-5.5")]
