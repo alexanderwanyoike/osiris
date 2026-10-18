@@ -6,6 +6,8 @@ requires-python = ">=3.14"
 dependencies = [
     "numpy>=1.26",
     "pillow>=10.0",
+    # Parses the Harness's answers; Arch packages it as python-markdown-it-py.
+    "markdown-it-py>=4.0",
 ]
 
 [project.optional-dependencies]
