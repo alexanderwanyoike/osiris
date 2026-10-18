@@ -1,4 +1,5 @@
-"""The Osiris tool server: the Theme actions as MCP tools a model can call."""
+"""The Osiris tool server: the Theme and Program actions as MCP tools a model
+can call."""
 
 from __future__ import annotations
 
@@ -12,7 +13,10 @@ from mcp.server.fastmcp.exceptions import ToolError
 from osiris.apps.tool_server import TIERS, server, undo
 from osiris.harness.log import LOG_FILE, Change, HarnessLog
 from osiris.harness.tiers import Tier
-from osiris.platform import FakeFileSystem
+from osiris.platform import FakeFileSystem, FakeRunner
+from osiris.platform.process import Result
+from osiris.programs.manifest import MANIFEST_FILE
+from osiris.programs.programs import Programs
 from osiris.themes.actions import ThemeActionError
 from osiris.themes.store import FakeThemeStore
 
@@ -25,12 +29,22 @@ HARBOUR = {
 }
 
 
+HOME = Path("/home/tester")
+POMODORO = HOME / "Code" / "pomodoro"
+
+
 def new_log() -> HarnessLog:
-    return HarnessLog(FakeFileSystem(), Path("/home/tester") / LOG_FILE)
+    return HarnessLog(FakeFileSystem(), HOME / LOG_FILE)
+
+
+def new_programs(
+    files: FakeFileSystem | None = None, runner: FakeRunner | None = None
+) -> Programs:
+    return Programs(files or FakeFileSystem(), runner or FakeRunner(), HOME)
 
 
 def tools(store: FakeThemeStore) -> dict[str, Any]:
-    tool_list = asyncio.run(server(store, new_log()).list_tools())
+    tool_list = asyncio.run(server(store, new_programs(), new_log()).list_tools())
     return {tool.name: tool for tool in tool_list}
 
 
@@ -39,30 +53,42 @@ def call(
     name: str,
     arguments: dict[str, Any],
     log: HarnessLog | None = None,
+    programs: Programs | None = None,
 ) -> Any:
-    return asyncio.run(server(store, log or new_log()).call_tool(name, arguments))
+    subject = server(store, programs or new_programs(), log or new_log())
+    return asyncio.run(subject.call_tool(name, arguments))
 
 
-def test_the_server_offers_the_theme_actions_and_nothing_else() -> None:
+def test_the_server_offers_the_theme_and_program_actions_and_nothing_else() -> None:
     assert set(tools(FakeThemeStore())) == {
         "list_themes",
         "create_theme",
         "apply_theme",
+        "list_programs",
+        "create_program",
+        "commit_program",
+        "check_program",
     }
 
 
-def test_listing_is_a_look_and_making_or_applying_an_undoable_change() -> None:
+def test_listing_and_checking_are_looks_and_the_rest_undoable_changes() -> None:
     assert TIERS == {
         "list_themes": Tier.LOOK,
         "create_theme": Tier.UNDOABLE,
         "apply_theme": Tier.UNDOABLE,
+        "list_programs": Tier.LOOK,
+        "create_program": Tier.UNDOABLE,
+        "commit_program": Tier.UNDOABLE,
+        "check_program": Tier.LOOK,
     }
 
 
 def test_only_listing_is_marked_as_a_look() -> None:
     offered = tools(FakeThemeStore())
     assert offered["list_themes"].annotations.readOnlyHint is True
-    for change in ("create_theme", "apply_theme"):
+    assert offered["list_programs"].annotations.readOnlyHint is True
+    assert offered["check_program"].annotations.readOnlyHint is True
+    for change in ("create_theme", "apply_theme", "create_program", "commit_program"):
         assert offered[change].annotations.readOnlyHint is False
 
 
@@ -94,7 +120,8 @@ def test_a_refused_action_reaches_the_model_with_its_reason() -> None:
 
 
 def test_the_server_logs_only_warnings_into_the_engines_output() -> None:
-    assert server(FakeThemeStore(), new_log()).settings.log_level == "WARNING"
+    subject = server(FakeThemeStore(), new_programs(), new_log())
+    assert subject.settings.log_level == "WARNING"
 
 
 def test_making_a_theme_is_logged_as_a_change_undone_by_deleting_it() -> None:
@@ -144,17 +171,84 @@ def test_undo_runs_the_step_a_change_recorded() -> None:
         ],
         current="harbour",
     )
-    undo(store, {"action": "apply_theme", "name": "nord"})
-    undo(store, {"action": "delete_theme", "name": "harbour"})
+    undo(store, {"action": "apply_theme", "name": "nord"}, new_programs())
+    undo(store, {"action": "delete_theme", "name": "harbour"}, new_programs())
     assert store.applied == ["nord"]
     assert store.deleted == ["harbour"]
 
 
 def test_an_unknown_undo_step_is_refused() -> None:
     with pytest.raises(ThemeActionError, match="cannot undo"):
-        undo(FakeThemeStore(), {"action": "format_disk", "name": "sda"})
+        undo(FakeThemeStore(), {"action": "format_disk", "name": "sda"}, new_programs())
 
 
 def test_a_model_is_told_a_seed_is_a_hex_colour_before_it_tries() -> None:
     seed = tools(FakeThemeStore())["create_theme"].inputSchema["properties"]["seed"]
     assert seed["pattern"] == "^#[0-9a-fA-F]{6}$"
+
+
+def test_making_a_program_is_logged_as_a_change_undone_by_the_trash() -> None:
+    log = new_log()
+    call(
+        FakeThemeStore(),
+        "create_program",
+        {
+            "label": "Pomodoro",
+            "description": "A focus timer.",
+            "run": ["python3", "main.py"],
+        },
+        log,
+    )
+    assert log.last_changes() == [
+        Change("Made Pomodoro", {"action": "trash_program", "name": "pomodoro"})
+    ]
+
+
+def test_a_commit_is_logged_as_a_change_undone_by_reverting_it() -> None:
+    files = FakeFileSystem()
+    files.write(
+        POMODORO / MANIFEST_FILE,
+        '{"name": "pomodoro", "label": "Pomodoro", "description": "A timer.",'
+        ' "run": ["python3", "main.py"]}',
+    )
+    git = f"git -C {POMODORO}"
+    runner = FakeRunner(
+        results={
+            f"{git} status --porcelain": Result((), 0, " M main.py\n"),
+            f"{git} rev-parse HEAD": Result((), 0, "abc123\n"),
+        }
+    )
+    log = new_log()
+    call(
+        FakeThemeStore(),
+        "commit_program",
+        {"name": "pomodoro", "message": "Add a pause button"},
+        log,
+        new_programs(files, runner),
+    )
+    assert log.last_changes() == [
+        Change(
+            "Pomodoro: Add a pause button",
+            {"action": "revert_commit", "name": "pomodoro", "commit": "abc123"},
+        )
+    ]
+
+
+def test_undo_trashes_a_program_or_reverts_a_commit() -> None:
+    files = FakeFileSystem()
+    files.write(
+        POMODORO / MANIFEST_FILE,
+        '{"name": "pomodoro", "label": "Pomodoro", "description": "A timer.",'
+        ' "run": ["python3", "main.py"]}',
+    )
+    runner = FakeRunner()
+    subject = new_programs(files, runner)
+    undo(
+        FakeThemeStore(),
+        {"action": "revert_commit", "name": "pomodoro", "commit": "abc123"},
+        subject,
+    )
+    undo(FakeThemeStore(), {"action": "trash_program", "name": "pomodoro"}, subject)
+    argvs = [call.argv for call in runner.calls]
+    assert argvs[0][-3:] == ("revert", "--no-edit", "abc123")
+    assert argvs[1] == ("gio", "trash", str(POMODORO))
