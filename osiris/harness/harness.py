@@ -18,8 +18,8 @@ from osiris.harness.engine import (
 from osiris.harness.log import HarnessLog
 from osiris.harness.tiers import Tier
 
-#: Passed to the model with every rejected tool, so it answers in words instead.
-TALK_ONLY = (
+#: Passed to the model with every rejected tool, so it finds another way.
+REFUSED = (
     "The Osiris Harness cannot do that: it cannot run commands or read files, "
     "and changes this machine only through the Osiris tools. Answer in words, "
     "or with those tools."
@@ -92,7 +92,7 @@ class Harness:
                     tier=self._tiers[action].value,
                 )
             case ToolRequested(session, request, action, resources):
-                self._engine.reply(session, request, allow=False, message=TALK_ONLY)
+                self._engine.reply(session, request, allow=False, message=REFUSED)
                 self._log.write(
                     "rejected",
                     session=session,

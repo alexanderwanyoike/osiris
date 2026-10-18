@@ -1,4 +1,4 @@
-"""The Harness: one session, a log of everything, and talking only."""
+"""The Harness: one session, a log of everything, and actions by tier."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from osiris.harness.engine import (
     ToolCalled,
     ToolRequested,
 )
-from osiris.harness.harness import TALK_ONLY, Harness
+from osiris.harness.harness import REFUSED, Harness
 from osiris.harness.log import LOG_FILE, HarnessLog
 from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem
@@ -123,11 +123,11 @@ def test_an_answer_is_logged_with_the_model_that_gave_it() -> None:
     }
 
 
-def test_every_tool_request_is_rejected_because_the_harness_only_talks() -> None:
+def test_an_action_without_a_tier_is_rejected_and_logged() -> None:
     subject, engine, files = harness()
     subject.ask("hello")
     subject.handle(ToolRequested("ses_1", "per_1", "shell", ("ls /etc",)))
-    assert engine.replies == [("ses_1", "per_1", False, TALK_ONLY)]
+    assert engine.replies == [("ses_1", "per_1", False, REFUSED)]
     entry = entries(files)[-1]
     assert entry["kind"] == "rejected"
     assert entry["action"] == "shell"
@@ -147,15 +147,8 @@ def test_an_action_with_a_tier_is_allowed_and_logged_with_it(tier: Tier) -> None
 
 
 def test_a_rejection_points_the_model_at_the_tools_it_may_use() -> None:
-    assert "Osiris tools" in TALK_ONLY
-    assert "only talk" not in TALK_ONLY
-
-
-def test_an_action_without_a_tier_is_still_rejected() -> None:
-    subject, engine, _ = harness(tiers={"osiris_apply_theme": Tier.UNDOABLE})
-    subject.ask("hello")
-    subject.handle(ToolRequested("ses_1", "per_1", "bash", ("rm -rf ~",)))
-    assert engine.replies == [("ses_1", "per_1", False, TALK_ONLY)]
+    assert "Osiris tools" in REFUSED
+    assert "only talk" not in REFUSED
 
 
 def test_every_tool_call_is_logged_even_one_that_never_asked() -> None:
