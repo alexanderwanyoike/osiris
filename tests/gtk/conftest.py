@@ -40,3 +40,13 @@ def texts(root: Gtk.Widget) -> list[str]:
 def now(work: Callable[[], object], done: Callable[[object], None]) -> None:
     """Background work run on the spot, so tests need no main loop."""
     done(work())
+
+
+def find(root: Gtk.Widget, kind: type, text: str | None = None) -> Gtk.Widget:
+    """The first widget of a kind, with a label if one is given."""
+    for widget in widgets(root):
+        if not isinstance(widget, kind):
+            continue
+        if text is None or text in (getattr(widget, "get_label", lambda: None)(),):
+            return widget
+    raise LookupError(f"no {kind.__name__} {text or ''} under {root}")

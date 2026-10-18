@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from gi.repository import Gtk
 from providers import ProvidersPage
 
 from osiris.harness.accounts import Method, ModelInfo, Provider, SignIn, SignInState
 from osiris.harness.engine import ModelRef
-from tests.gtk.conftest import now, texts
+from tests.gtk.conftest import find, now, texts
 
 KEY = Method(id=None, kind="key", label="API key")
 
@@ -49,3 +50,13 @@ def test_each_provider_shows_whether_it_is_connected() -> None:
     assert "OpenAI" in shown
     assert "OpenCode Go" in shown
     assert shown.count("Connected") == 1
+
+
+def test_a_key_typed_for_a_provider_is_given_to_the_engine() -> None:
+    accounts = FakeAccounts(
+        listed=[Provider("opencode-go", "OpenCode Go", (KEY,), False)]
+    )
+    page = ProvidersPage(accounts, background=now)
+    find(page, Gtk.PasswordEntry).set_text("sk-test")
+    find(page, Gtk.Button, "Save").emit("clicked")
+    assert accounts.keys == [("opencode-go", "sk-test")]
