@@ -53,6 +53,7 @@ from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
+from osiris.programs.programs import Programs  # noqa: E402
 from osiris.platform import (  # noqa: E402
     HttpError,
     RealFileSystem,
@@ -392,14 +393,17 @@ class Application(Adw.Application):
         if self.harness is not None:
             self.background(lambda: self.harness.use_model(model), lambda _r: None)
 
+    def programs(self) -> Programs:
+        return Programs(self.files, SubprocessRunner(sink=lambda _line: None), self.home)
+
     def undo(self, turn: Turn) -> None:
         """Reverse what a turn changed, newest first, without the model."""
         steps = turn.undo_steps()
 
         def reverse() -> None:
-            store = EngineStore()
+            store, programs = EngineStore(), self.programs()
             for step in steps:
-                undo(store, step)
+                undo(store, step, programs)
 
         def undone(_result) -> None:
             turn.undone = True
