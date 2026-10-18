@@ -236,7 +236,8 @@ class OpencodeAccounts:
 
 def _provider(entry: dict[str, Any]) -> Provider:
     # An environment variable is not something a person can set from a
-    # sign-in page, so only keys and OAuth are offered.
+    # sign-in page, so only keys and OAuth are offered; methods opencode
+    # itself marks as legacy are left out.
     methods = tuple(
         Method(
             id=method.get("id"),
@@ -245,6 +246,7 @@ def _provider(entry: dict[str, Any]) -> Provider:
         )
         for method in entry["methods"]
         if method["type"] in ("key", "oauth")
+        and not method.get("label", "").endswith("(legacy)")
     )
     return Provider(
         id=entry["id"],
