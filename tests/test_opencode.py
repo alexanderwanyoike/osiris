@@ -452,3 +452,28 @@ class TestHistory:
             "Recent work",
             "Old work",
         ]
+
+    def test_archiving_marks_a_session_and_hides_it_from_the_history(self) -> None:
+        path = f"{URL}/api/session/{SESSION}"
+        http = FakeHttpClient(replies={("PATCH", path): {"data": {}}})
+        engine(http).archive(SESSION)
+        assert http.requests == [
+            ("PATCH", path, {"metadata": {"osiris": "harness", "archived": True}})
+        ]
+        archived = {
+            "id": "ses_x",
+            "title": "Old",
+            "location": {"directory": "/home/tester"},
+            "time": {"created": 1, "updated": 2},
+            "metadata": {"osiris": "harness", "archived": True},
+        }
+        http = FakeHttpClient(
+            replies={("GET", f"{URL}/api/session?limit=200"): {"data": [archived]}}
+        )
+        assert engine(http).conversations() == []
+
+    def test_deleting_a_session(self) -> None:
+        path = f"{URL}/api/session/{SESSION}"
+        http = FakeHttpClient(replies={("DELETE", path): None})
+        engine(http).delete(SESSION)
+        assert http.requests == [("DELETE", path, None)]
