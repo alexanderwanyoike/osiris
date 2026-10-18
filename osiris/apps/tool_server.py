@@ -29,7 +29,7 @@ CHANGE = ToolAnnotations(readOnlyHint=False, destructiveHint=False)
 
 
 def server(store: ThemeStore) -> FastMCP:
-    tools = FastMCP(NAME, instructions=INSTRUCTIONS)
+    tools = FastMCP(NAME, instructions=INSTRUCTIONS, log_level="WARNING")
 
     @tools.tool(annotations=LOOK)
     def list_themes() -> list[dict[str, object]]:
