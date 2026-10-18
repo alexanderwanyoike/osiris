@@ -90,3 +90,20 @@ def test_the_conversation_keeps_a_readable_width_when_the_drawer_is_expanded() -
     clamps = [w for w in widgets(window) if isinstance(w, Adw.Clamp)]
     assert clamps, "the conversation and composer sit in a clamp"
     assert all(600 <= c.get_maximum_size() <= 900 for c in clamps)
+
+
+def test_the_providers_page_opens_with_a_back_button_carrying_an_arrow() -> None:
+    from tests.gtk.conftest import now, widgets
+    from tests.gtk.test_providers_page import FakeAccounts
+
+    window, _ = drawer()
+    app = window.app
+    app.accounts = FakeAccounts()
+    app.background = now
+    app.open_page = lambda _url: None
+    app.choose_model = lambda _model: None
+    window.show_providers()
+    backs = [w for w in widgets(window) if isinstance(w, Adw.ButtonContent)]
+    assert [(b.get_label(), b.get_icon_name()) for b in backs] == [
+        ("Back", "go-previous-symbolic")
+    ]
