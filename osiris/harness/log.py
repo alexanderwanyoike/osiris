@@ -57,6 +57,20 @@ class HarnessLog:
                 first.setdefault(session, entry["program"])
         return list(first.items())
 
+    def programs_of(self, session: str) -> list[str]:
+        """The Programs a session changed, each once, in the order it first did."""
+        changed: dict[str, None] = {}
+        current = ""
+        for entry in self._entries():
+            current = entry.get("session", current)
+            if (
+                current == session
+                and entry["kind"] == "changed"
+                and entry.get("program")
+            ):
+                changed.setdefault(entry["program"])
+        return list(changed)
+
     def _entries(self) -> list[dict[str, Any]]:
         if not self._files.exists(self._path):
             return []
