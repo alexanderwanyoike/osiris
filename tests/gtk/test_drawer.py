@@ -46,3 +46,11 @@ def test_the_expand_button_fills_the_screen_and_brings_the_drawer_back() -> None
     window.expand_button.emit("clicked")
     window.expand_button.emit("clicked")
     assert calls == ["maximize", "unmaximize"]
+
+
+def test_the_left_edge_is_a_handle_for_resizing_the_drawer() -> None:
+    window, _ = drawer()
+    handle = window.resize_handle
+    assert handle.get_cursor() is not None
+    assert handle.get_cursor().get_name() == "ew-resize"
+    assert window.get_child().get_first_child() is handle
