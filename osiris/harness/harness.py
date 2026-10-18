@@ -100,10 +100,22 @@ class Harness:
         self._session = session
         return self._engine.history(session)
 
-    def new_conversation(self) -> None:
-        """The next question opens a new session; the old one is left as it is."""
+    def new_conversation(self, folder: Path | None = None) -> None:
+        """The next question opens a new session, in ``folder``'s Project or in
+        none; the old one is left as it is."""
         self._session = None
-        self._directory = self._home
+        self._directory = folder or self._home
+
+    def archive(self, session: str) -> None:
+        self._engine.archive(session)
+
+    def delete(self, session: str) -> None:
+        """Erase a Conversation from the Engine and the Harness log; what it did
+        stays done (CONTEXT.md)."""
+        self._engine.delete(session)
+        self._log.forget(session)
+        if session == self._session:
+            self.new_conversation()
 
     def worked_on(self, folder: Path) -> None:
         """A Conversation with no Project takes the Project of the first Program
