@@ -207,3 +207,12 @@ def test_a_provider_osiris_has_a_logo_for_shows_it_and_others_get_a_monogram() -
         if isinstance(w, Gtk.Label) and w.has_css_class("harness-monogram")
     ]
     assert monograms == ["G"]
+
+
+def test_a_connected_provider_wears_a_connected_chip_with_a_check() -> None:
+    accounts = FakeAccounts(listed=[Provider("openai", "OpenAI", (CHATGPT,), True)])
+    page = ProvidersPage(accounts, background=now)
+    chips = [w for w in widgets(page) if w.has_css_class("harness-connected")]
+    assert len(chips) == 1
+    icons = [w.get_icon_name() for w in widgets(chips[0]) if isinstance(w, Gtk.Image)]
+    assert icons == ["object-select-symbolic"]
