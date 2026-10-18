@@ -2,7 +2,16 @@
    full width, code sits in plain bands. Shape only: every colour is the
    Theme's. */
 
-.harness-drawer { background-color: @harness_bg; color: @harness_fg; }
+window.harness-drawer, window.harness-drawer.background { background-color: transparent; }
+
+/* A plain sheet: barely inset, square-ish, nearly opaque. */
+.harness-surface {
+    margin: 6px;
+    border-radius: 10px;
+    background-color: alpha(@harness_bg, 0.94);
+    color: @harness_fg;
+    border: 1px solid @harness_border;
+}
 
 .harness-header { padding: 10px 18px; border-bottom: 1px solid @harness_border; }
 .harness-header .harness-title { font-weight: 600; letter-spacing: 0.04em; }

@@ -122,7 +122,14 @@ class Drawer(Gtk.ApplicationWindow):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         box.append(header)
         box.append(self.pages)
-        self.set_child(box)
+        # The Skin shapes this surface; the window around it stays transparent,
+        # and children are clipped to the surface's rounded corners.
+        surface = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
+                          overflow=Gtk.Overflow.HIDDEN)
+        surface.add_css_class("harness-surface")
+        box.set_vexpand(True)
+        surface.append(box)
+        self.set_child(surface)
 
         keys = Gtk.EventControllerKey()
         keys.connect("key-pressed", self._key)
