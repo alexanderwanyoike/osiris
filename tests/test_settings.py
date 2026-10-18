@@ -19,7 +19,9 @@ def test_a_fallback_model_is_read_beside_the_default() -> None:
 
 def test_lines_that_are_not_settings_are_ignored() -> None:
     text = "# my models\n\ndefault = openai/gpt-5.5\nnonsense\nfallback = bad\n"
-    assert read_models(text) == Models(default=ModelRef("openai", "gpt-5.5"), fallback=None)
+    assert read_models(text) == Models(
+        default=ModelRef("openai", "gpt-5.5"), fallback=None
+    )
 
 
 def test_settings_are_written_so_they_read_back() -> None:

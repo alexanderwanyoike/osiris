@@ -20,10 +20,8 @@ class Models:
 
 
 def read_models(text: str) -> Models:
-    values = dict(
-        (key.strip(), value.strip())
-        for key, _, value in (line.partition("=") for line in text.splitlines())
-    )
+    pairs = (line.partition("=") for line in text.splitlines())
+    values = {key.strip(): value.strip() for key, _, value in pairs}
     return Models(
         default=_model(values.get("default")), fallback=_model(values.get("fallback"))
     )
