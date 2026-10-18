@@ -41,6 +41,7 @@ CLASSES = (
     "harness-program",
     "harness-canvas",
     "harness-path",
+    "harness-sidebar",
 )
 
 
