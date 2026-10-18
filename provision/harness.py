@@ -7,6 +7,8 @@ Lays down:
     /usr/bin/osiris-harness                 launcher
     /usr/share/dbus-1/services/             D-Bus activation
     /etc/xdg/autostart/osiris-harness.desktop
+    /usr/share/cinnamon/extensions/harness-drawer@osiris   placement and slide
+    /usr/share/cinnamon/applets/harness@osiris             the panel button
 
 The bar imports the osiris package that provision/themes.py installs into
 /usr/share/osiris/lib, so it runs after that. The Engine, opencode, is a
@@ -18,6 +20,9 @@ import shutil
 
 HARNESS_DIR = "/usr/share/osiris/harness"
 LAUNCHER_PATH = "/usr/bin/osiris-harness"
+# Enabled in provision/cinnamon.py.
+DRAWER_EXTENSION = "harness-drawer@osiris"
+PANEL_BUTTON = "harness@osiris"
 
 LAUNCHER = """#!/usr/bin/env python3
 import runpy
@@ -65,6 +70,11 @@ def main() -> None:
     write(LAUNCHER_PATH, LAUNCHER, 0o755)
     write("/usr/share/dbus-1/services/dev.osiris.Harness.service", SERVICE)
     write("/etc/xdg/autostart/osiris-harness.desktop", AUTOSTART)
+    for name, kind in ((DRAWER_EXTENSION, "extensions"), (PANEL_BUTTON, "applets")):
+        target = f"/usr/share/cinnamon/{kind}/{name}"
+        shutil.rmtree(target, ignore_errors=True)
+        shutil.copytree(os.path.join(args.repo, "apps", "harness", name), target)
+        print(f"  {target}")
     print("HARNESS_INSTALLED")
 
 
