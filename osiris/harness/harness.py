@@ -38,6 +38,12 @@ class Harness:
         self._log.write("sent", session=self._session, text=text)
         self._engine.send(self._session, text)
 
+    def use_model(self, model: ModelRef) -> None:
+        """Answer with this model from now on, in this conversation too."""
+        self._model = model
+        if self._session is not None:
+            self._engine.switch_model(self._session, model)
+
     def stop(self) -> None:
         if self._session is not None:
             self._engine.stop(self._session)
