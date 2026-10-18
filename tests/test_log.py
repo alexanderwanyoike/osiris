@@ -90,3 +90,15 @@ def test_the_log_says_which_program_each_session_worked_on_first() -> None:
         ("ses_1", "pomodoro"),
         ("ses_3", "pomodoro"),
     ]
+
+
+def test_the_log_says_which_programs_a_session_changed() -> None:
+    subject = log()
+    subject.write("sent", session="ses_1", text="build a timer")
+    subject.write("changed", summary="Made Pomodoro", undo=None, program="pomodoro")
+    subject.write("sent", session="ses_2", text="build notes")
+    subject.write("changed", summary="Made Notes", undo=None, program="notes")
+    subject.write("sent", session="ses_1", text="add a pause")
+    subject.write("changed", summary="Pomodoro: pause", undo=None, program="pomodoro")
+    subject.write("changed", summary="Made Clock", undo=None, program="clock")
+    assert subject.programs_of("ses_1") == ["pomodoro", "clock"]
