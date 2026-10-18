@@ -94,6 +94,7 @@ showing everything it sends and does.
 
 **Order.** P3.1 first. Then P3.2 and P3.5 in parallel: they do not depend on
 each other. Then P3.3, P3.4 and P3.6, each of which needs one of those two.
+P3.7 needs nothing else, and comes after the first slice of P3.5.
 
 | ID | Task | DoD | State |
 |---|---|---|---|
@@ -103,6 +104,7 @@ each other. Then P3.3, P3.4 and P3.6, each of which needs one of those two.
 | P3.4 | Skins and Skin sets: shape layers on adw-gtk3 and Breeze (ADR 0013), panel layouts, dock geometry, launcher layouts, Harness placement; Appearance shows Skin sets and lets any surface be swapped | At least three Skin sets, each coherent under every shipped Theme; switching set replaces every Skin and a modified set can be chosen again | |
 | P3.5 | Harness foundation: Engine port with an opencode adapter (ADR 0015), Settings for Providers with Default and Fallback models, a Usage indicator in the panel, the bar-and-panel surface, the Harness log, Action tiers, editable instructions, memory and permissions, Entry points | A person connects ChatGPT or OpenCode Go without a terminal, summons the Harness from a key, a file, selected text or the terminal, and can see the Provider, model and Usage in play and everything sent and done | |
 | P3.6 | Harness capabilities: Theme intent from a sentence, then Programs with manifests, a sandbox, installation and single-file sharing | "A moody theme from this photo" produces applicable Themes; a Program the Harness writes installs only after its manifest is shown and follows the Theme and Skin | |
+| P3.7 | Sudo delegation: a program with no terminal that runs `sudo` (an agent's shell, the Harness) gets an Osiris dialog asking a person for the administrator password; the program never sees it | `sudo` from Claude Code, opencode or the Harness opens a dialog naming the asking program and the exact command; the password goes from the dialog to sudo only; Deny fails the command; a person in a real terminal still gets the normal prompt | planned, after P3.5's first slice. Mechanism: sudo already runs the askpass helper named in `/etc/sudo.conf` (`Path askpass`) when it has no terminal, so nothing has to be wrapped. An approval lasts as long as sudo's own cache does without a terminal, which is per parent process: one agent shell, usually one command. To check first: agent tools that give sudo a pseudo-terminal would get the terminal prompt instead, and the dialog has to be hard to imitate |
 
 ---
 
