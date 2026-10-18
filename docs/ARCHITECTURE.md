@@ -68,8 +68,9 @@ colours. See [THEMING.md](THEMING.md).
 
 `apps/harness/` - a resident GTK4 drawer on the right edge, opened with `Super+A` or
 a panel button and placed by a Cinnamon extension, over `osiris/harness`, which
-rents its Engine from opencode's per-user service, keeps the Harness log and,
-for now, only talks. See [HARNESS.md](HARNESS.md).
+rents its Engine from opencode's per-user service, keeps the Harness log and
+acts only through the Osiris tools, by Action tier and with an Undo. See
+[HARNESS.md](HARNESS.md).
 
 ### The installer
 

@@ -18,13 +18,20 @@ The first slice of ROADMAP P3.5:
   conversation, and the **Provider**'s allowance as "not reported": opencode
   reports tokens and cost per answer but no allowance or reset time, and
   **Usage** is never estimated.
-- **It only talks.** Every action the model reaches for (running a command,
-  reading a file outside its working directory, editing anything) is rejected,
-  and the model is told to answer in words. The drawer shows what was refused.
-  Allowing actions waits for **Action tiers**.
+- **It makes and applies Themes.** Asked for "a calm theme for working late",
+  the model describes a **Theme intent** (a seed colour, a **Harmony**, a mood,
+  light or dark) through the Osiris tools, Osiris's own rules derive the
+  palette, and the theme is kept with the person's own and applied. The answer
+  ends with what changed and an **Undo**, which reverses it without the model:
+  the previous theme comes back and the new one is deleted. See
+  [The Osiris tools](#the-osiris-tools).
+- **Everything else is refused.** Any other action the model reaches for
+  (running a command, reading a file, editing anything) is rejected, and the
+  model is told what it may use instead. The drawer shows what was refused.
 - **The Harness log** keeps everything: each question before it is sent, each
   answer with the model that gave it and its tokens, every tool call whether or
-  not it asked, every rejection and every failure. It is append-only JSON lines,
+  not it asked, every action allowed and its **Action tier**, every change with
+  the step that undoes it, every Undo, every rejection and every failure. It is append-only JSON lines,
   readable with any tool:
 
   ```
@@ -63,19 +70,49 @@ apps/harness/harness@osiris   Cinnamon applet: the panel button
 osiris/harness/conversation   what the drawer shows, from the Engine's events
 osiris/harness/markdown       answers as blocks, inline text as escaped Pango markup
 osiris/harness/style          colour variables and code scheme from a Theme; Skin choice
-osiris/harness/harness        one conversation: the log and the talk-only policy
+osiris/harness/harness        one conversation: the log, and actions allowed by tier
+osiris/harness/tiers          Action tiers: a look, an undoable change
 osiris/harness/log            the Harness log
 osiris/harness/engine         the Engine port and its events
 osiris/harness/accounts       the Accounts port: Providers, signing in, models
 osiris/harness/settings       the Default and Fallback models, as plain text
 osiris/harness/opencode       the opencode 2.0 adapter
 osiris/platform/http          the HTTP port the adapter talks through
+osiris/apps/tool_server       the Osiris tools as an MCP server, each with its tier
+osiris/themes/actions         what the tools do with Themes, behind osiris/themes/store
+apps/harness/tool_server.py   runs the tool server on stdio over the theme engine
+apps/harness/theme_store.py   the theme engine as a ThemeStore, for acting and undoing
 provision/harness.py          installs the drawer, extension, applet, D-Bus activation, autostart
 ```
 
 The drawer is resident, like the theme switcher: started at login, or by D-Bus
 on first use. Super+A and the panel button both run
 `gapplication action dev.osiris.Harness show`, which toggles it.
+
+### The Osiris tools
+
+What the model may do on this machine is offered by Osiris as an MCP server
+(`osiris`), built on the official SDK (Arch's `python-mcp`). The drawer attaches
+it to the Engine when it connects, with opencode's runtime MCP API, so nothing
+is written into the person's own opencode configuration.
+
+| Tool | Action tier | What it does | Undo |
+|---|---|---|---|
+| `list_themes` | a look | the themes, light or dark, and which is applied | |
+| `create_theme` | an undoable change | a User theme from a Theme intent; never replaces one | deletes it |
+| `apply_theme` | an undoable change | applies a theme to the whole desktop | applies the one it replaced |
+
+opencode runs MCP tools from its code mode (`tools.osiris.apply_theme(...)`),
+and every call still raises a permission request named `osiris_<tool>`. The
+Harness answers it by the tool's tier: a look or an undoable change is allowed
+and logged; anything without a tier is rejected. The model never writes a
+colour: the seed is a hex colour whose hue alone counts, and harmony and mood
+are fixed choices.
+
+Each change the tool server makes is written to the Harness log with the step
+that reverses it. When an answer finishes, the drawer reads the changes logged
+since the question and shows them with one Undo, which runs those steps newest
+first; the theme that is applied is never deleted.
 
 ### How answers are drawn
 
