@@ -178,3 +178,14 @@ def test_other_providers_appear_only_when_searched_for() -> None:
     find(page, Gtk.SearchEntry, "Search other providers").set_text("gro")
     assert "Groq" in shown(page)
     assert "302.AI" not in shown(page)
+
+
+def test_the_key_field_opens_only_when_the_person_asks_to_add_a_key() -> None:
+    accounts = FakeAccounts(
+        listed=[Provider("opencode-go", "OpenCode Go", (KEY,), False)]
+    )
+    page = ProvidersPage(accounts, background=now)
+    entry = find(page, Gtk.PasswordEntry)
+    assert not entry.get_parent().get_visible()
+    find(page, Gtk.Button, "Add key").emit("clicked")
+    assert entry.get_parent().get_visible()
