@@ -196,6 +196,7 @@ def test_making_a_program_is_logged_as_a_change_undone_by_the_trash() -> None:
             "label": "Pomodoro",
             "description": "A focus timer.",
             "run": ["python3", "main.py"],
+            "icon_svg": '<svg xmlns="http://www.w3.org/2000/svg"/>',
         },
         log,
     )
@@ -257,3 +258,8 @@ def test_undo_trashes_a_program_or_reverts_a_commit() -> None:
     argvs = [call.argv for call in runner.calls]
     assert argvs[0][-3:] == ("revert", "--no-edit", "abc123")
     assert argvs[1] == ("gio", "trash", str(POMODORO))
+
+
+def test_a_program_cannot_be_made_without_an_icon() -> None:
+    schema = tools(FakeThemeStore())["create_program"].inputSchema
+    assert "icon_svg" in schema["required"]

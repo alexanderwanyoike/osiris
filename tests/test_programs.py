@@ -14,6 +14,8 @@ from osiris.programs.manifest import MANIFEST_FILE, Manifest, parse
 from osiris.programs.programs import HARNESS, Program, ProgramError, Programs, State
 
 HOME = Path("/home/tester")
+ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><circle cx="64" cy="64" r="56" fill="#e5484d"/></svg>'
+
 SOURCE = HOME / "Code" / "pomodoro"
 INSTALLED = HOME / ".local/share/osiris/programs/pomodoro"
 ENTRY = HOME / ".local/share/applications/dev.osiris.programs.pomodoro.desktop"
@@ -54,7 +56,7 @@ class TestCreating:
     def test_a_program_starts_as_a_git_project_in_code(self) -> None:
         subject, files, runner = programs()
         manifest = subject.create(
-            "Pomodoro", "A focus timer.", run=["python3", "main.py"]
+            "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
         )
         assert manifest.name == "pomodoro"
         assert parse(files.read(SOURCE / MANIFEST_FILE)) == manifest
@@ -67,17 +69,42 @@ class TestCreating:
 
     def test_its_agents_file_tells_any_agent_how_to_carry_on(self) -> None:
         subject, files, _ = programs()
-        subject.create("Pomodoro", "A focus timer.", run=["python3", "main.py"])
+        subject.create(
+            "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+        )
         agents = files.read(SOURCE / "AGENTS.md")
         assert "atomic commit" in agents
         assert MANIFEST_FILE in agents
+
+    def test_every_program_starts_with_the_icon_drawn_for_it(self) -> None:
+        subject, files, _ = programs()
+        manifest = subject.create(
+            "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+        )
+        assert manifest.icon == "icon.svg"
+        assert files.read(SOURCE / "icon.svg") == ICON
+
+    @pytest.mark.parametrize(
+        "icon",
+        ["a red tomato", "<html><body/></html>", "<svg>" + "x" * 70000 + "</svg>"],
+    )
+    def test_an_icon_that_is_not_a_small_svg_is_refused(self, icon: str) -> None:
+        subject, files, runner = programs()
+        with pytest.raises(ProgramError, match="icon"):
+            subject.create(
+                "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=icon
+            )
+        assert runner.calls == []
+        assert not files.exists(SOURCE)
 
     def test_a_folder_that_exists_is_never_taken_over(self) -> None:
         files = FakeFileSystem()
         files.make_directory(SOURCE)
         subject, _, runner = programs(files)
         with pytest.raises(ProgramError, match="already a folder"):
-            subject.create("Pomodoro", "A focus timer.", run=["python3", "main.py"])
+            subject.create(
+                "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+            )
         assert runner.calls == []
 
 
