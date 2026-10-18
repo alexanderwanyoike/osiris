@@ -81,3 +81,12 @@ def test_pressing_the_handle_asks_the_window_manager_to_resize_from_the_west() -
     assert edge == Gdk.SurfaceEdge.WEST
     assert (button, time) == (1, 42)
     assert (x, y) == (4.0, 100.0)
+
+
+def test_the_conversation_keeps_a_readable_width_when_the_drawer_is_expanded() -> None:
+    from tests.gtk.conftest import widgets
+
+    window, _ = drawer()
+    clamps = [w for w in widgets(window) if isinstance(w, Adw.Clamp)]
+    assert clamps, "the conversation and composer sit in a clamp"
+    assert all(600 <= c.get_maximum_size() <= 900 for c in clamps)
