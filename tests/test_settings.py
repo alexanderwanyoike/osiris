@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from osiris.harness.engine import ModelRef
-from osiris.harness.settings import Models, read_models
+from osiris.harness.settings import Models, read_models, write_models
 
 
 def test_the_default_model_is_read_as_provider_slash_model() -> None:
@@ -20,3 +20,8 @@ def test_a_fallback_model_is_read_beside_the_default() -> None:
 def test_lines_that_are_not_settings_are_ignored() -> None:
     text = "# my models\n\ndefault = openai/gpt-5.5\nnonsense\nfallback = bad\n"
     assert read_models(text) == Models(default=ModelRef("openai", "gpt-5.5"), fallback=None)
+
+
+def test_settings_are_written_so_they_read_back() -> None:
+    models = Models(ModelRef("openai", "gpt-5.5"), ModelRef("opencode-go", "kimi-k2"))
+    assert read_models(write_models(models)) == models
