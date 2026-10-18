@@ -29,10 +29,13 @@ Conversation for the Harness to fix.
 
 ## Languages and look
 
-Python, C and C++, Rust and Go are first-class: Osiris ships their toolchains,
-and the Harness writes in one of them unless the person asks for another
-language. A Program with a window uses GTK 4 and libadwaita in whichever of
-those languages, so it follows the Theme and the light or dark choice like
+Python, C and C++, Rust, Go and JavaScript are first-class: Osiris ships their
+toolchains, and the Harness writes in one of them unless the person asks for
+another language. JavaScript runs on Node.js's Active LTS line, packaged by Arch
+as `nodejs-lts-<codename>` (Krypton, Node 24, in October 2026), and Osiris
+moves to each new LTS line as Arch packages it. A Program with a window uses
+GTK 4 and libadwaita in whichever of those languages, through GJS for
+JavaScript, so it follows the Theme and the light or dark choice like
 every other application; Osiris adds nothing to make that so. It looks like
 Osiris unless the person asks otherwise.
 
@@ -40,7 +43,7 @@ Osiris unless the person asks otherwise.
 
 An ordinary project that any editor or coding agent can carry on: the
 language's standard build files (`pyproject.toml`, `meson.build` or
-`CMakeLists.txt`, `Cargo.toml`, `go.mod`), a README, and an AGENTS.md saying
+`CMakeLists.txt`, `Cargo.toml`, `go.mod`, `package.json`), a README, and an AGENTS.md saying
 what the Program is and how it is built and changed, atomic commits included.
 Someone who started a Program in the Harness can open it in Code - OSS, Claude
 Code, opencode or Codex and keep going.

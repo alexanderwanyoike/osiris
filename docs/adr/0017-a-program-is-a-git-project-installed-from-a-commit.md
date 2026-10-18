@@ -43,8 +43,9 @@ and keeps the source.
   the source, Install and Update move the installed copy between commits.
 - The Harness knows its Programs by looking in `~/Code`; there is no registry
   to drift out of step with the folders.
-- Python, C and C++, Rust and Go are first-class, so Osiris ships their
-  toolchains: about 870 MB with gcc, rust, go, meson and cmake.
+- Python, C and C++, Rust, Go and JavaScript are first-class, so Osiris ships
+  their toolchains: about 940 MB with gcc, rust, go, meson, cmake, Node.js's
+  Active LTS with npm, and GJS.
 - Building runs code (build scripts, fetched dependencies). Until Programs are
   confined, builds happen when the person tries or installs, never on the
   Harness's own initiative.

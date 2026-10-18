@@ -205,8 +205,8 @@ _Avoid_: metadata
 - A **Program**'s source is a **Project** of its own, in `~/Code`, kept in git.
   Every change to it, by the **Harness** or the person, is one atomic commit;
   undoing what an answer changed reverts its commits.
-- **Programs** are written in Python, C or C++, Rust or Go, whose toolchains
-  Osiris ships, unless the person asks for another language. They look like the
+- **Programs** are written in Python, C or C++, Rust, Go or JavaScript, whose
+  toolchains Osiris ships, unless the person asks for another language. They look like the
   rest of Osiris unless the person asks otherwise.
 - A **Program**'s source is an ordinary project that any editor or coding agent
   can carry on: standard build files and an AGENTS.md. Only its **Program
