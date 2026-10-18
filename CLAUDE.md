@@ -75,6 +75,55 @@ branding. It does not own anything that can leave a machine unbootable or a
 disk erased. If a feature seems to need us to write that kind of code, stop and
 find the maintained tool first. See docs/adr/0012.
 
+## Engineering discipline
+
+Osiris is built in short cycles, by people and agents. These rules keep it
+maintainable, extensible and testable, in that order of stress. They bind
+subagents as much as the main session.
+
+### Strict red, green, refactor
+
+- One behaviour per cycle. Write the smallest test that fails for the right
+  reason, watch it fail, write the least code that passes, then refactor with
+  the tests green. Not a test file per module and then the module.
+- No production code without a failing test first. That includes the GTK
+  layer: drive widgets headless under Xvfb and assert on what they render. That
+  setup is not in CI yet; until it is, say in the PR what was checked by hand.
+  A bug found by hand gets a failing test before its fix.
+- A test that turns out to be wrong is fixed in its own commit, saying why;
+  never quietly loosened in the commit that makes it pass.
+- Untestable by construction (a Cinnamon extension, a provisioning script) means
+  thin: logic moves into `osiris/`, where it is tested, and the remainder is
+  verified on a VM and says so in the PR.
+
+### Atomic commits
+
+Every commit does one thing and leaves the tree green, except the deliberate
+red commit of a cycle. A failing test, the code that passes it, a refactor, a
+rename and a formatting change are separate commits. Commit messages say why.
+
+### Design
+
+- **SOLID.** One reason to change per module and class. Extend through new
+  adapters and new Skins, not by editing working code. Depend on Protocols
+  (ports), not implementations; keep ports small and specific.
+- **GRASP.** Behaviour lives with the data it needs (Information Expert). Keep
+  coupling low and cohesion high: a GTK file draws, a domain module decides.
+  Put a seam where things will vary (Protected Variations): the Engine, the
+  platform, Skins. Use a Pure Fabrication rather than bloating a domain object.
+- **KISS, and YAGNI with it.** The simplest design that passes today's tests.
+  An abstraction earns its place with a second use or a known variation point,
+  not a guess. Prefer a function to a class and data to code (ADR 0004).
+- **Ports and adapters** (ADR 0003) are the house pattern: everything outside
+  the process sits behind a Protocol in `osiris.platform`, dependencies are
+  passed in constructors, and composition happens only at entry points.
+
+### Checks that enforce it
+
+`ruff` (complexity 10), `mypy --strict`, `lint-imports` (layer and port
+contracts), `vulture` and `pytest` all pass before a PR, run as CI does. A
+change that needs an exception to any of them says why in the PR.
+
 ## Development workflow
 
 See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). In short: work against the
