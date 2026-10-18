@@ -13,6 +13,16 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk  # noqa: E402
 
 
+#: Offered first: the accounts Osiris is built around (ADR 0015). Every other
+#: Provider the Engine reaches is still listed after them.
+FEATURED = ("openai", "opencode-go")
+
+
+def _featured_first(providers):
+    rank = {name: index for index, name in enumerate(FEATURED)}
+    return sorted(providers, key=lambda p: rank.get(p.id, len(FEATURED)))
+
+
 class ProvidersPage(Gtk.Box):
     #: Seconds between checks on a sign-in in progress.
     POLL_SECONDS = 2
@@ -68,7 +78,7 @@ class ProvidersPage(Gtk.Box):
             following = child.get_next_sibling()
             self._list.remove(child)
             child = following
-        for provider in providers:
+        for provider in _featured_first(providers):
             row = Gtk.Box(spacing=8)
             row.add_css_class("harness-provider")
             row.append(Gtk.Label(label=provider.name, xalign=0, hexpand=True))
