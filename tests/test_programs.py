@@ -11,7 +11,7 @@ import pytest
 from osiris.platform import FakeFileSystem, FakeRunner
 from osiris.platform.process import CommandError, Result
 from osiris.programs.manifest import MANIFEST_FILE, Manifest, parse
-from osiris.programs.programs import HARNESS, Program, ProgramError, Programs
+from osiris.programs.programs import HARNESS, Program, ProgramError, Programs, State
 
 HOME = Path("/home/tester")
 SOURCE = HOME / "Code" / "pomodoro"
@@ -275,3 +275,25 @@ class TestHolding:
         files.write(HOME / "Code" / "notes" / "todo.md", "x")
         subject, _, _ = programs(files)
         assert not subject.holds(path)
+
+
+class TestState:
+    def program(self, head: str, installed: str | None) -> Program:
+        return Program(
+            manifest=parse(
+                '{"name": "pomodoro", "label": "Pomodoro", "description": "A timer.",'
+                ' "run": ["python3", "main.py"]}'
+            ),
+            source=SOURCE,
+            head=head,
+            installed=installed,
+        )
+
+    def test_a_program_never_installed_can_be_installed(self) -> None:
+        assert self.program("abc", None).state is State.NOT_INSTALLED
+
+    def test_a_program_whose_source_moved_on_can_be_updated(self) -> None:
+        assert self.program("def", "abc").state is State.OUT_OF_DATE
+
+    def test_a_program_installed_from_its_latest_commit_is_up_to_date(self) -> None:
+        assert self.program("abc", "abc").state is State.UP_TO_DATE
