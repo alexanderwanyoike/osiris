@@ -348,12 +348,12 @@ def test_a_past_conversation_is_resumed_in_its_own_session() -> None:
     assert subject.handle(Text("ses_9", "Done")) == Text("ses_9", "Done")
 
 
-def test_a_conversation_with_no_project_takes_the_project_of_a_program_it_makes() -> (
+def test_a_conversation_with_no_project_takes_the_project_of_a_program_it_works_on() -> (
     None
 ):
     subject, engine, _ = harness()
     subject.ask("build me a timer")
-    subject.program_made(POMODORO)
+    subject.worked_on(POMODORO)
     assert engine.moved == [("ses_1", POMODORO)]
     subject.handle(ToolRequested("ses_1", "per_1", "read", ("main.py",)))
     assert engine.replies[-1][2] is True
@@ -362,8 +362,8 @@ def test_a_conversation_with_no_project_takes_the_project_of_a_program_it_makes(
 def test_a_conversation_in_a_project_stays_there() -> None:
     subject, engine, _ = harness()
     subject.ask("build me a timer")
-    subject.program_made(POMODORO)
-    subject.program_made(HOME / "Code" / "notes")
+    subject.worked_on(POMODORO)
+    subject.worked_on(HOME / "Code" / "notes")
     assert engine.moved == [("ses_1", POMODORO)]
 
 

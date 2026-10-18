@@ -61,7 +61,7 @@ def test_a_change_to_anything_else_names_no_program() -> None:
     assert change.program is None
 
 
-def test_the_log_says_which_session_made_which_program() -> None:
+def test_the_log_says_which_program_each_session_worked_on_first() -> None:
     subject = log()
     subject.write("sent", session="ses_1", text="build a timer")
     subject.write("allowed", session="ses_1", action="osiris_create_program")
@@ -79,4 +79,14 @@ def test_the_log_says_which_session_made_which_program() -> None:
     )
     subject.write("sent", session="ses_2", text="make a theme")
     subject.write("changed", summary="Made Harbour", undo=None)
-    assert subject.programs_made() == [("ses_1", "pomodoro")]
+    subject.write("sent", session="ses_3", text="give pomodoro an icon")
+    subject.write(
+        "changed",
+        summary="Pomodoro: Add an icon",
+        undo={"action": "revert_commit", "name": "pomodoro", "commit": "b"},
+        program="pomodoro",
+    )
+    assert subject.programs_worked_on() == [
+        ("ses_1", "pomodoro"),
+        ("ses_3", "pomodoro"),
+    ]

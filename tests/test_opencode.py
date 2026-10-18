@@ -430,3 +430,25 @@ class TestHistory:
         assert http.requests == [
             ("POST", path, {"directory": "/home/tester/Code/pomodoro"})
         ]
+
+    def test_a_conversation_is_as_recent_as_its_last_work_not_its_last_rename(
+        self,
+    ) -> None:
+        renamed = {
+            "id": "ses_a",
+            "title": "Old work",
+            "location": {"directory": "/home/tester"},
+            "time": {"created": 1000, "updated": 9000, "idle": 2000},
+            "metadata": {"osiris": "harness"},
+        }
+        recent = {**renamed, "id": "ses_b", "title": "Recent work"}
+        recent["time"] = {"created": 3000, "updated": 4000, "idle": 4000}
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{URL}/api/session?limit=200"): {"data": [renamed, recent]}
+            }
+        )
+        assert [p.title for p in engine(http).conversations()] == [
+            "Recent work",
+            "Old work",
+        ]
