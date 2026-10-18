@@ -8,7 +8,9 @@ Appearance. Errors are worded for the model to read and correct itself.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from enum import Enum
+from typing import Any
 
 from osiris.model.colour import Colour, InvalidColour
 from osiris.themes.derive import build
@@ -75,10 +77,16 @@ def create_theme(
     return name
 
 
+def _find(store: ThemeStore, name: str) -> Mapping[str, Any]:
+    for theme in store.themes():
+        if theme["name"] == name:
+            return theme
+    raise ThemeActionError(f"There is no theme called {name}")
+
+
 def apply_theme(store: ThemeStore, name: str) -> str | None:
     """Apply a Theme. Returns the one it replaced, which is what Undo applies."""
-    if not any(theme["name"] == name for theme in store.themes()):
-        raise ThemeActionError(f"There is no theme called {name}")
+    _find(store, name)
     previous = store.current()
     store.apply(name)
     return previous
@@ -86,11 +94,9 @@ def apply_theme(store: ThemeStore, name: str) -> str | None:
 
 def delete_theme(store: ThemeStore, name: str) -> None:
     """Delete a theme, which is how making one is undone."""
-    found = [theme for theme in store.themes() if theme["name"] == name]
-    if not found:
-        raise ThemeActionError(f"There is no theme called {name}")
+    theme = _find(store, name)
     if store.current() == name:
         raise ThemeActionError(
-            f"{found[0]['label']} is applied; apply another theme first"
+            f"{theme['label']} is applied; apply another theme first"
         )
     store.delete(name)
