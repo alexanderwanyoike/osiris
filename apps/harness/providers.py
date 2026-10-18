@@ -25,7 +25,10 @@ class ProvidersPage(Gtk.Box):
         self._open_page = open_page
         self._later = later
         self._list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self._problem = Gtk.Label(xalign=0, wrap=True, visible=False)
+        self._problem.add_css_class("harness-error")
         self.append(self._list)
+        self.append(self._problem)
         self.reload()
 
     def reload(self) -> None:
@@ -74,8 +77,12 @@ class ProvidersPage(Gtk.Box):
     def _checked(self, sign_in, state) -> None:
         if state.status == "pending":
             self._later(self.POLL_SECONDS, lambda: self._check(sign_in))
-        else:
-            self.reload()
+            return
+        problems = {"failed": state.message or "Signing in failed.",
+                    "expired": "The sign-in page expired. Try again."}
+        self._problem.set_text(problems.get(state.status, ""))
+        self._problem.set_visible(state.status in problems)
+        self.reload()
 
     def _key_form(self, provider: str) -> Gtk.Widget:
         entry = Gtk.PasswordEntry(placeholder_text="API key", hexpand=True,
