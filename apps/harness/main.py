@@ -232,7 +232,11 @@ class Application(Adw.Application):
     def close_drawer(self) -> None:
         """Ask the extension to slide the drawer away; minimise if it cannot."""
         self.open = False
-        Gio.DBus.session.call(
+        connection = self.get_dbus_connection()
+        if connection is None:
+            self.drawer.minimize()
+            return
+        connection.call(
             DRAWER_BUS, DRAWER_PATH, DRAWER_BUS, "Close", None, None,
             Gio.DBusCallFlags.NONE, 1000, None, self._closed)
 
