@@ -184,9 +184,7 @@ def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
         message: what this one change does, such as "Add a pause button".
         """
         commit = programs.commit(name, message)
-        label = next(
-            p.manifest.label for p in programs.programs() if p.manifest.name == name
-        )
+        label = programs.manifest(name).label
         log.write(
             "changed",
             summary=f"{label}: {message}",

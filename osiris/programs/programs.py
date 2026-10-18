@@ -90,7 +90,7 @@ class Programs:
     def _entry(self, name: str) -> Path:
         return self._home / APPLICATIONS_DIR / f"osiris-program-{name}.desktop"
 
-    def _manifest(self, name: str) -> Manifest:
+    def manifest(self, name: str) -> Manifest:
         path = self._source(name) / MANIFEST_FILE
         if not self._files.exists(path):
             raise ProgramError(f"There is no Program called {name}")
@@ -167,7 +167,7 @@ class Programs:
 
     def commit(self, name: str, message: str) -> str:
         """Commit everything changed as one atomic change. Returns its commit."""
-        self._manifest(name)
+        self.manifest(name)
         self._git(name, "add", "-A")
         if not self._git(name, "status", "--porcelain"):
             raise ProgramError(f"Nothing has changed in {name} since its last commit")
@@ -180,7 +180,7 @@ class Programs:
 
     def check(self, name: str) -> list[str]:
         """Problems found without running anything: Python that does not compile."""
-        self._manifest(name)
+        self.manifest(name)
         source = self._source(name)
         problems = []
         for path in self._python(source):
@@ -220,7 +220,7 @@ class Programs:
             )
             found.append(
                 Program(
-                    manifest=self._manifest(name),
+                    manifest=self.manifest(name),
                     source=folder,
                     head=self._git(name, "rev-parse", "HEAD"),
                     installed=installed,
@@ -232,7 +232,7 @@ class Programs:
 
     def prepare_try(self, name: str) -> tuple[list[str], Path]:
         """Build the source if it needs it; the argv and folder to run it in."""
-        manifest = self._manifest(name)
+        manifest = self.manifest(name)
         source = self._source(name)
         self._build(source, manifest)
         first, *rest = manifest.run
@@ -242,7 +242,7 @@ class Programs:
     def install(self, name: str) -> str:
         """Copy the latest commit into place, build it, and add it to the menu.
         Returns the commit installed."""
-        manifest = self._manifest(name)
+        manifest = self.manifest(name)
         if self._git(name, "status", "--porcelain"):
             raise ProgramError(
                 f"{manifest.label} has changes that are not committed. "
@@ -279,5 +279,5 @@ class Programs:
 
     def trash(self, name: str) -> None:
         """Move a Program's source to the Trash, where it can be restored."""
-        self._manifest(name)
+        self.manifest(name)
         self._runner.run("gio", "trash", str(self._source(name)), quiet=True)
