@@ -28,7 +28,8 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("GdkX11", "4.0")
-from gi.repository import Adw, Gdk, GdkX11, Gio, GLib, Gtk, Pango  # noqa: E402
+gi.require_version("Graphene", "1.0")
+from gi.repository import Adw, Gdk, GdkX11, Gio, GLib, Graphene, Gtk, Pango  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
@@ -158,9 +159,12 @@ class Drawer(Gtk.ApplicationWindow):
         surface = self.get_surface()
         if surface is None:
             return
-        _ok, wx, wy = self.resize_handle.translate_coordinates(self, x, y)
+        found, point = self.resize_handle.compute_point(
+            self, Graphene.Point().init(x, y))
+        if not found:
+            return
         surface.begin_resize(Gdk.SurfaceEdge.WEST, gesture.get_current_event_device(),
-                             gesture.get_current_button(), wx, wy,
+                             gesture.get_current_button(), point.x, point.y,
                              gesture.get_current_event_time())
 
     def _toggle_expanded(self, _button) -> None:
