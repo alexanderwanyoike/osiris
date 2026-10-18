@@ -143,6 +143,9 @@ class OpencodeEngine:
             headers=self._service.headers(),
         )
 
+    def move(self, session: str, directory: Path) -> None:
+        self._post(f"/api/session/{session}/move", {"directory": str(directory)})
+
     def _get(self, path: str) -> Any:
         return self._http.request(
             "GET", self._service.url + path, headers=self._service.headers()
