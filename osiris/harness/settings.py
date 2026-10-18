@@ -32,3 +32,12 @@ def read_models(text: str) -> Models:
 def _model(text: str | None) -> ModelRef | None:
     provider, _, model = (text or "").partition("/")
     return ModelRef(provider, model) if provider and model else None
+
+
+def write_models(models: Models) -> str:
+    lines = [
+        f"{key} = {ref.provider}/{ref.model}"
+        for key, ref in (("default", models.default), ("fallback", models.fallback))
+        if ref is not None
+    ]
+    return "\n".join(lines) + "\n"
