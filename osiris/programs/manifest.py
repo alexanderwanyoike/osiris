@@ -42,6 +42,8 @@ def _text(fields: dict[str, Any], key: str) -> str:
     value = fields.get(key)
     if not isinstance(value, str) or not value.strip():
         raise ManifestError(f"The manifest needs {key}, as text")
+    if "\n" in value or "\r" in value:
+        raise ManifestError(f"{key} must be one line")
     return value
 
 
