@@ -106,9 +106,7 @@ position='bottom'
 alignment='center'
 theme='Transparent'
 icon-size=44
-# Never hidden: in this mode alone Plank reserves its bar's height, so every
-# maximised window, the expanded Harness included, fits above the dock.
-hide-mode='none'
+hide-mode='intelligent'
 zoom-enabled=true
 zoom-percent=125
 tooltips-enabled=true
