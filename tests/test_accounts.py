@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from osiris.harness.accounts import Method, Provider
+from osiris.harness.accounts import Method, Provider, SignIn
 from osiris.harness.opencode import OpencodeAccounts, Service
 from osiris.platform import FakeHttpClient
 
@@ -102,3 +102,37 @@ def test_an_api_key_is_given_to_the_engine_for_that_provider() -> None:
     http = FakeHttpClient(replies={("POST", path): None})
     accounts(http).connect_key("opencode-go", "sk-test")
     assert http.requests == [("POST", path, {"key": "sk-test"})]
+
+
+def test_signing_in_starts_an_attempt_with_a_page_to_open() -> None:
+    path = f"{URL}/api/integration/openai/connect/oauth"
+    attempt = {
+        "attemptID": "att_1",
+        "url": "https://auth.openai.com/authorize?x=1",
+        "instructions": "Sign in, then return here.",
+        "mode": "auto",
+        "time": {"created": 1, "expires": 2},
+    }
+    http = FakeHttpClient(replies={("POST", path): {"data": attempt}})
+    sign_in = accounts(http).start_sign_in("openai", "chatgpt-token-sharing")
+    assert http.requests == [("POST", path, {"methodID": "chatgpt-token-sharing"})]
+    assert sign_in == SignIn(
+        provider="openai",
+        attempt="att_1",
+        url="https://auth.openai.com/authorize?x=1",
+        instructions="Sign in, then return here.",
+        needs_code=False,
+    )
+
+
+def test_a_sign_in_in_code_mode_asks_the_person_to_paste_a_code_back() -> None:
+    path = f"{URL}/api/integration/openai/connect/oauth"
+    attempt = {
+        "attemptID": "att_2",
+        "url": "https://auth.openai.com/device",
+        "instructions": "Enter the code shown.",
+        "mode": "code",
+        "time": {"created": 1, "expires": 2},
+    }
+    http = FakeHttpClient(replies={("POST", path): {"data": attempt}})
+    assert accounts(http).start_sign_in("openai", "chatgpt-headless").needs_code
