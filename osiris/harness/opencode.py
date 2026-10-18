@@ -194,5 +194,9 @@ def _provider(entry: dict[str, Any]) -> Provider:
         id=entry["id"],
         name=entry["name"],
         methods=methods,
-        connected=bool(entry["connections"]),
+        connected=any(_works(connection) for connection in entry["connections"]),
     )
+
+
+def _works(connection: dict[str, Any]) -> bool:
+    return connection.get("status", {}).get("status") != "needs_auth"
