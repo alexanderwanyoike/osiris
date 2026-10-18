@@ -66,7 +66,8 @@ colours. See [THEMING.md](THEMING.md).
 
 ### The Harness
 
-`apps/harness/` - a resident GTK4 bar on `Super+A` over `osiris/harness`, which
+`apps/harness/` - a resident GTK4 drawer on the right edge, opened with `Super+A` or
+a panel button and placed by a Cinnamon extension, over `osiris/harness`, which
 rents its Engine from opencode's per-user service, keeps the Harness log and,
 for now, only talks. See [HARNESS.md](HARNESS.md).
 
