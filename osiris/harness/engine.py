@@ -108,3 +108,7 @@ class Engine(Protocol):
         """Run a tool server for every session; each of its tools still raises
         a ``ToolRequested`` before it runs."""
         ...
+
+    def action(self, server: str, tool: str) -> str:
+        """The action a ``ToolRequested`` names for one of a tool server's tools."""
+        ...

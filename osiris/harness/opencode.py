@@ -107,6 +107,9 @@ class OpencodeEngine:
             headers=self._service.headers(),
         )
 
+    def action(self, server: str, tool: str) -> str:
+        return f"{server}_{tool}"
+
     def events(self) -> Iterator[Event]:
         reader = _Reader()
         lines = self._http.lines(
