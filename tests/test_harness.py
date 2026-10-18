@@ -300,3 +300,19 @@ def test_files_anywhere_else_are_refused(
     subject.ask("add a pause button")
     subject.handle(ToolRequested("ses_1", "per_1", action, resources))
     assert engine.replies == [("ses_1", "per_1", False, REFUSED)]
+
+
+def test_a_new_conversation_opens_a_new_session_on_its_first_question() -> None:
+    subject, engine, _ = harness()
+    subject.ask("hello")
+    subject.new_conversation()
+    subject.ask("something else")
+    assert engine.started == [GPT, GPT]
+    assert engine.sent == [("ses_1", "hello"), ("ses_2", "something else")]
+
+
+def test_after_a_new_conversation_the_old_sessions_events_are_left_alone() -> None:
+    subject, engine, _ = harness()
+    subject.ask("hello")
+    subject.new_conversation()
+    assert subject.handle(Text("ses_1", "late text")) is None

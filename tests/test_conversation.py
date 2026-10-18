@@ -185,3 +185,20 @@ def test_a_turn_knows_the_programs_it_changed_once_each_in_order() -> None:
         ]
     )
     assert talk.turns[-1].programs == ["pomodoro", "notes"]
+
+
+def test_a_new_conversation_has_no_title_yet() -> None:
+    assert Conversation().title is None
+
+
+def test_a_conversation_is_titled_by_its_first_question() -> None:
+    talk = Conversation()
+    talk.asked("Make me a calm theme\nfor working late")
+    talk.asked("Now warmer")
+    assert talk.title == "Make me a calm theme"
+
+
+def test_a_long_first_question_is_shortened_for_the_title() -> None:
+    talk = Conversation()
+    talk.asked("Build me a small pomodoro timer app in Python with breaks and stats")
+    assert talk.title == "Build me a small pomodoro timer app in Python…"
