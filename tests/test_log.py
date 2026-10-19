@@ -151,3 +151,21 @@ def test_the_tokens_a_session_spent_are_added_up_from_its_answers() -> None:
     )
     assert subject.tokens_spent("ses_1") == 250
     assert subject.tokens_spent("ses_3") == 0
+
+
+def test_each_question_of_a_session_gets_back_the_changes_it_led_to() -> None:
+    subject = log()
+    made = {"action": "trash_program", "name": "pomodoro"}
+    commit = {"action": "revert_commit", "name": "pomodoro", "commit": "a"}
+    subject.write("sent", session="ses_1", text="build a timer")
+    subject.write("changed", summary="Made Pomodoro", undo=made, program="pomodoro")
+    subject.write("sent", session="ses_2", text="make a theme")
+    subject.write("changed", summary="Made Harbour", undo=None)
+    subject.write("sent", session="ses_1", text="thanks")
+    subject.write("sent", session="ses_1", text="add a pause")
+    subject.write("changed", summary="Pomodoro: pause", undo=commit, program="pomodoro")
+    assert subject.changes_by_question("ses_1") == [
+        [Change("Made Pomodoro", made, program="pomodoro")],
+        [],
+        [Change("Pomodoro: pause", commit, program="pomodoro")],
+    ]
