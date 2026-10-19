@@ -64,6 +64,8 @@ class Conversation:
         self.turns: list[Turn] = []
         self.model: ModelRef | None = None
         self.tokens_spent = 0
+        #: Each step's text is written on its own, so the next starts a paragraph.
+        self._step_ended = False
 
     @property
     def title(self) -> str | None:
@@ -113,12 +115,16 @@ class Conversation:
         turn = self.turns[-1]
         match event:
             case Text(_, delta):
+                if self._step_ended and turn.answer:
+                    turn.answer = turn.answer.rstrip("\n") + "\n\n"
+                self._step_ended = False
                 turn.answer += delta
                 turn.state = State.ANSWERING
                 turn.doing = WRITING
             case Answered(_, model, tokens, _):
                 turn.model = self.model = model
                 turn.doing = THINKING
+                self._step_ended = True
                 self.tokens_spent += tokens.input + tokens.output + tokens.reasoning
             case Allowed(_, action, _, resources):
                 turn.steps.append(Step(action, resources))
