@@ -28,3 +28,7 @@ class Upgrade:
     def happened(self) -> bool:
         """Whether setup has run again since this process started."""
         return self._read() != self._started
+
+    def restart_due(self, *, in_use: bool) -> bool:
+        """Whether a resident app should restart now: upgraded, and put away."""
+        return not in_use and self.happened()
