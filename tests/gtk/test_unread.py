@@ -72,3 +72,10 @@ def test_opening_an_unread_conversation_marks_it_read() -> None:
     stand_in = answered_off_screen()
     stand_in.open_past("ses_1")
     assert stand_in.unread.sessions() == frozenset()
+
+
+def test_opening_an_unread_conversation_takes_its_notification_away() -> None:
+    """The desktop should not go on telling them about what they now see."""
+    stand_in = answered_off_screen()
+    stand_in.open_past("ses_1")
+    assert stand_in.withdrawn == ["ses_1"]
