@@ -176,3 +176,4 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-sidebar list { background-color: transparent; }
 .harness-sidebar row:selected { background-color: alpha(@harness_glass_edge, 0.32); }
 .harness-sidebar row:hover { background-color: alpha(@harness_glass_edge, 0.18); }
+.harness-running { color: @harness_accent; }
