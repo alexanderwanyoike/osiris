@@ -204,9 +204,9 @@ class Drawer(Gtk.ApplicationWindow):
                                transition_type=Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
         self.pages.add_named(body, "chat")
         self.sidebar = Sidebar(
-            on_open=lambda session: self.app.open_past(session),
-            on_new=lambda: self.app.new_conversation(),
-            on_new_in=lambda folder: self.app.new_conversation(folder),
+            on_open=lambda session: self._chosen(self.app.open_past, session),
+            on_new=lambda: self._chosen(self.app.new_conversation),
+            on_new_in=lambda folder: self._chosen(self.app.new_conversation, folder),
             on_archive=lambda session: self.app.archive(session),
             on_delete=lambda session, title: self.app.ask_to_delete(session, title))
         self.split = Adw.OverlaySplitView(sidebar=self.sidebar, content=self.pages,
@@ -376,6 +376,12 @@ class Drawer(Gtk.ApplicationWindow):
     def summon(self) -> None:
         self.present()
         self.entry.grab_focus()
+
+    def _chosen(self, act, *args) -> None:
+        """Act on a choice in the sidebar; narrow, the list then folds away."""
+        act(*args)
+        if self.split.get_collapsed():
+            self.sidebar_toggle.set_active(False)
 
     def show_canvas(self, programs) -> None:
         """What the Conversation made; the Canvas opens the first time there is
