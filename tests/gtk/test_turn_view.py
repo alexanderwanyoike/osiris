@@ -8,6 +8,7 @@ from collections.abc import Callable
 from gi.repository import GLib, Gtk
 from render import TurnView
 
+from osiris.harness.activity import Step
 from osiris.harness.conversation import State, Turn
 from osiris.harness.log import Change
 from osiris.harness.markdown import InlineStyle
@@ -113,3 +114,23 @@ def test_once_the_answer_ends_the_working_row_goes_and_stops_counting() -> None:
     view.update(turn, STYLE, None)
     assert "Thinking" not in shown(view)
     assert not view.working.ticking
+
+
+def test_what_osiris_did_is_kept_folded_under_the_answer() -> None:
+    turn = finished()
+    turn.steps = [
+        Step("edit", ("pomodoro/main.py",)),
+        Step("bash", ("ls /etc",), allowed=False),
+    ]
+    record = find(drawn(turn), Gtk.Expander)
+    assert record.get_label() == "Used 2 tools"
+    assert not record.get_expanded()
+    assert "Edited pomodoro/main.py" in texts(record)
+    assert "Not allowed to run ls /etc" in texts(record)
+    icons = [w.get_icon_name() for w in widgets(record) if isinstance(w, Gtk.Image)]
+    assert icons == ["object-select-symbolic", "changes-prevent-symbolic"]
+
+
+def test_an_answer_that_took_no_steps_keeps_no_record() -> None:
+    view = drawn(finished())
+    assert not any(text.startswith("Used") for text in shown(view))
