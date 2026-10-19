@@ -128,3 +128,33 @@ def test_setup_runs_after_the_systems_own_hooks_and_before_the_last_snapshot() -
     assert ours_first.index(name) == 1
     for before in ("gtk-update-icon-cache.hook", "update-desktop-database.hook"):
         assert before < name
+
+
+def test_the_hosted_repository_is_served_from_osiris_downloads() -> None:
+    assert package.REPOSITORY_SERVER == (
+        "https://osiris-downloads.alphaneuron.net/repo/$arch"
+    )
+
+
+def test_pacman_trusts_the_signing_key_fully() -> None:
+    """The form pacman-key --populate reads from <keyring>-trusted."""
+    assert package.trusted() == f"{package.SIGNING_KEY}:4:\n"
+
+
+@pytest.mark.skipif(shutil.which("gpg") is None, reason="needs gpg")
+def test_the_shipped_keyring_holds_the_signing_key() -> None:
+    shown = subprocess.run(
+        [
+            "gpg",
+            "--show-keys",
+            "--with-colons",
+            str(REPOSITORY / package.KEYRING_SOURCE),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    fingerprints = [
+        line.split(":")[9] for line in shown.splitlines() if line.startswith("fpr")
+    ]
+    assert package.SIGNING_KEY in fingerprints

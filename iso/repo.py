@@ -53,6 +53,12 @@ def stage(directory: str) -> None:
     os.makedirs(os.path.dirname(hook))
     with open(hook, "w") as fh:
         fh.write(package.HOOK)
+    keyrings = os.path.join(root, package.KEYRING_DIR.lstrip("/"))
+    os.makedirs(keyrings)
+    shutil.copy(os.path.join(REPO, package.KEYRING_SOURCE),
+                os.path.join(keyrings, f"{package.NAME}.gpg"))
+    with open(os.path.join(keyrings, f"{package.NAME}-trusted"), "w") as fh:
+        fh.write(package.trusted())
     with open(os.path.join(directory, "PKGBUILD"), "w") as fh:
         fh.write(package.pkgbuild(VERSION))
 

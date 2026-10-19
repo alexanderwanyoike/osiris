@@ -1,8 +1,9 @@
 name: Release
 
 # Builds the ISO for a tag such as v0.1.0 and publishes it, with its checksum,
-# to the R2 bucket served at https://osiris-downloads.alphaneuron.net/. The
-# work is in iso/release.py; this only gives it an Arch container to run in.
+# to the R2 bucket served at https://osiris-downloads.alphaneuron.net/, along
+# with the signed package repository installed systems update from. The work
+# is in iso/release.py; this only gives it an Arch container to run in.
 on:
   push:
     tags: ["v*"]
@@ -34,13 +35,14 @@ jobs:
           RCLONE_CONFIG_R2_ACL: private
           # The token can write objects but not list or create buckets.
           RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
+          PACKAGE_SIGNING_KEY: ${{ secrets.PACKAGE_SIGNING_KEY }}
         run: >-
           docker run --detach --name build --privileged
           --volume ${{ github.workspace }}:/src:ro --volume /mnt/work:/work
           --env RCLONE_CONFIG_R2_TYPE --env RCLONE_CONFIG_R2_PROVIDER
           --env RCLONE_CONFIG_R2_ACCESS_KEY_ID --env RCLONE_CONFIG_R2_SECRET_ACCESS_KEY
           --env RCLONE_CONFIG_R2_ENDPOINT --env RCLONE_CONFIG_R2_ACL
-          --env RCLONE_CONFIG_R2_NO_CHECK_BUCKET
+          --env RCLONE_CONFIG_R2_NO_CHECK_BUCKET --env PACKAGE_SIGNING_KEY
           archlinux:latest sleep infinity
 
       - run: docker exec build pacman -Syu --noconfirm python

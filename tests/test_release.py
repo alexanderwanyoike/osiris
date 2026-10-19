@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from osiris.iso.release import ReleaseError, checksum_line, version_from_tag
+from osiris.iso.release import (
+    ReleaseError,
+    checksum_line,
+    publish_order,
+    version_from_tag,
+)
 
 
 def test_a_tag_names_the_version_it_releases() -> None:
@@ -26,3 +31,30 @@ def test_the_checksum_is_in_the_form_sha256sum_checks() -> None:
     assert checksum_line("osiris-0.1.0-x86_64.iso", "ab" * 32) == (
         f"{'ab' * 32}  osiris-0.1.0-x86_64.iso\n"
     )
+
+
+def test_packages_are_published_before_the_database_that_names_them() -> None:
+    names = [
+        "osiris.db",
+        "osiris-0.1.0-1-any.pkg.tar.zst",
+        "osiris.db.tar.gz",
+        "osiris-0.1.0-1-any.pkg.tar.zst.sig",
+        "osiris.files",
+        "osiris.files.tar.gz",
+    ]
+    packages, databases = publish_order(names)
+    assert packages == [
+        "osiris-0.1.0-1-any.pkg.tar.zst",
+        "osiris-0.1.0-1-any.pkg.tar.zst.sig",
+    ]
+    assert databases == [
+        "osiris.db",
+        "osiris.db.tar.gz",
+        "osiris.files",
+        "osiris.files.tar.gz",
+    ]
+
+
+def test_the_databases_repo_add_set_aside_are_not_published() -> None:
+    packages, databases = publish_order(["osiris.db.tar.gz", "osiris.db.tar.gz.old"])
+    assert (packages, databases) == ([], ["osiris.db.tar.gz"])
