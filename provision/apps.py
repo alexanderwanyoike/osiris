@@ -4,7 +4,7 @@
 
 Covers the parts that are configuration rather than packages:
   * oh-my-zsh installed system-wide and zsh made the default login shell
-  * ghostty: dark, translucent, FiraCode with ligatures
+  * ghostty: a config naming the theme the engine writes
   * fastfetch configured to show the Osiris logo
 
 oh-my-zsh is not packaged in any official repository, so it is cloned to
@@ -23,6 +23,7 @@ import homes  # noqa: E402
 from run import run  # noqa: E402
 
 from osiris.provision.seeding import moves_to_zsh  # noqa: E402
+from osiris.themes import terminal  # noqa: E402
 
 OMZ_REPO = "https://github.com/ohmyzsh/ohmyzsh.git"
 OMZ_DIR = "/usr/share/oh-my-zsh"
@@ -49,29 +50,6 @@ alias ls='ls --color=auto'
 alias grep='grep --color=auto'
 
 command -v fastfetch >/dev/null && fastfetch
-"""
-
-# Key names verified against `ghostty +show-config --default`.
-# font-feature calt/liga are FiraCode's ligature features; ghostty shapes
-# through harfbuzz, so they actually take effect here.
-GHOSTTY_CONF = """# Osiris terminal defaults.
-font-family = FiraCode Nerd Font
-font-size = 11
-font-feature = calt
-font-feature = liga
-
-background = #0d0d10
-foreground = #e8e8e8
-cursor-color = #7c8aeb
-selection-background = #2a2a2f
-selection-foreground = #e8e8e8
-
-background-opacity = 0.92
-window-padding-x = 10
-window-padding-y = 10
-window-decoration = auto
-scrollback-limit = 10000000
-confirm-close-surface = false
 """
 
 FASTFETCH_CONF = """{
@@ -139,11 +117,11 @@ def configure_shell() -> None:
 
 def configure_terminal() -> None:
     """Terminal config in /etc/skel and for existing users."""
-    write("/etc/skel/.config/ghostty/config", GHOSTTY_CONF)
+    skel = f"/etc/skel/{terminal.CONFIG_FILE}"
+    write(skel, terminal.CONFIG)
     for user in desktop_users():
-        homes.copy("/etc/skel/.config/ghostty/config",
-                   f"{user.pw_dir}/.config/ghostty/config", user)
-        print(f"  configured ghostty for {user.pw_name}")
+        if homes.seed(skel, f"{user.pw_dir}/{terminal.CONFIG_FILE}", user):
+            print(f"  configured ghostty for {user.pw_name}")
 
 
 def configure_apps() -> None:
