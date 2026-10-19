@@ -534,7 +534,7 @@ class Application(Adw.Application):
         self.open = True
         self.drawer.summon()
         if self.session in self.unread_sessions:
-            self._seen(self.session)
+            self._mark_read(self.session)
             self.load_history()
 
     def close_drawer(self) -> None:
@@ -759,7 +759,7 @@ class Application(Adw.Application):
         harness = self.harness
 
         def archived(_result) -> None:
-            self._seen(session)
+            self._mark_read(session)
             self.load_history()
 
         self.background(lambda: harness.archive(session), archived)
@@ -787,7 +787,7 @@ class Application(Adw.Application):
 
     def _deleted(self, session: str, *, on_screen: bool) -> None:
         self.backgrounded.pop(session, None)
-        self._seen(session)
+        self._mark_read(session)
         if on_screen:
             self.conversation = Conversation()
             self.drawer.clear()
@@ -797,7 +797,7 @@ class Application(Adw.Application):
     def open_past(self, session: str) -> None:
         if self.harness is None or session == self.session or not self._leave():
             return
-        self._seen(session)
+        self._mark_read(session)
         harness = self.harness
         # Shown at once and kept by its session until the Harness has made it
         # current, so its events reach it while resume is under way.
@@ -944,7 +944,7 @@ class Application(Adw.Application):
         self.drawer.refresh()
         return False
 
-    def _seen(self, session: str) -> None:
+    def _mark_read(self, session: str) -> None:
         self.unread.read(session)
         self.withdraw_notification(session)
 
