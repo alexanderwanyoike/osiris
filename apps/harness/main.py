@@ -740,12 +740,13 @@ class Application(Adw.Application):
                 return
             harness, on_screen = self.harness, session == self.session
             self.background(lambda: harness.delete(session),
-                            lambda _r: self._deleted(on_screen))
+                            lambda _r: self._deleted(session, on_screen=on_screen))
 
         dialog.connect("response", chosen)
         dialog.present(self.drawer)
 
-    def _deleted(self, on_screen: bool) -> None:
+    def _deleted(self, session: str, *, on_screen: bool) -> None:
+        self.backgrounded.pop(session, None)
         if on_screen:
             self.conversation = Conversation()
             self.drawer.clear()
