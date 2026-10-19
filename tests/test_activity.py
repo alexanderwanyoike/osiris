@@ -50,3 +50,22 @@ def test_a_long_path_is_shown_by_its_last_two_parts(path: str, shown: str) -> No
 def test_a_step_on_several_files_names_the_first_and_counts_the_rest() -> None:
     step = Step("edit", ("pomodoro/main.py", "pomodoro/timer.py", "README.md"))
     assert step.doing == "Editing pomodoro/main.py and 2 more"
+
+
+@pytest.mark.parametrize(
+    ("tool", "doing", "record"),
+    [
+        ("list_themes", "Looking at the themes", "Looked at the themes"),
+        ("create_theme", "Making a theme", "Made a theme"),
+        ("apply_theme", "Applying a theme", "Applied a theme"),
+        ("list_programs", "Looking at your programs", "Looked at your programs"),
+        ("create_program", "Starting a program", "Started a program"),
+        ("commit_program", "Saving a change", "Saved a change"),
+        ("check_program", "Checking the program", "Checked the program"),
+    ],
+)
+def test_an_osiris_tool_is_named_by_what_it_does(
+    tool: str, doing: str, record: str
+) -> None:
+    step = Step(f"osiris_{tool}", ("*",))
+    assert (step.doing, step.record) == (doing, record)
