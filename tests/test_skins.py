@@ -46,6 +46,8 @@ CLASSES = (
     "harness-dot",
     "harness-doing",
     "harness-elapsed",
+    "harness-activity",
+    "harness-step",
 )
 
 
