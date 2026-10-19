@@ -753,7 +753,8 @@ class Application(Adw.Application):
         harness = self.harness
 
         def opened(past) -> None:
-            self.conversation = Conversation.restored(past)
+            spent = self.log.tokens_spent(session) if self.log is not None else 0
+            self.conversation = Conversation.restored(past, tokens_spent=spent)
             self.drawer.clear()
             self.drawer.refresh()
             self.load_history()
