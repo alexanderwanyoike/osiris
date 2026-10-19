@@ -117,3 +117,9 @@ class Step:
 
 def summary(steps: Sequence[Step]) -> str:
     return f"Used {len(steps)} tool{'' if len(steps) == 1 else 's'}"
+
+
+def elapsed(seconds: float) -> str:
+    """Whole seconds only, so the count steps once a second."""
+    minutes, rest = divmod(int(seconds), 60)
+    return f"{minutes}m {rest:02d}s" if minutes else f"{rest}s"
