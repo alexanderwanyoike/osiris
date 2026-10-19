@@ -455,3 +455,20 @@ def test_a_resumed_conversation_runs_and_reads_files_in_its_own_folder() -> None
     subject.handle(ToolRequested("ses_9", "per_1", "read", ("main.py",)))
     assert engine.replies[-1][2] is True
     assert subject.directory == POMODORO
+
+
+def test_a_reply_the_engine_cannot_take_is_logged_and_the_conversation_goes_on() -> (
+    None
+):
+    from osiris.platform import HttpError
+
+    subject, engine, files = harness()
+    subject.ask("hello")
+
+    def broken(*_args: object, **_kwargs: object) -> None:
+        raise HttpError(500, "busy")
+
+    engine.reply = broken  # type: ignore[method-assign]
+    decision = subject.handle(ToolRequested("ses_1", "per_1", "bash", ("ls",)))
+    assert decision == Refused("ses_1", "bash", ("ls",))
+    assert entries(files)[-1]["kind"] == "reply-failed"
