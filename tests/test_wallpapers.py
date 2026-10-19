@@ -126,3 +126,17 @@ def test_errors_point_at_the_wallpapers_own_lines(tmp_path: Path) -> None:
 def test_without_a_validator_the_shader_is_given_the_benefit(tmp_path: Path) -> None:
     runner = FakeRunner(results={"glslangValidator": FileNotFoundError()})
     assert check(load(make(tmp_path, "glow")), PRELUDE, runner) is None
+
+
+SHIPPED = Path(__file__).resolve().parent.parent / "shell" / "themes"
+
+
+@pytest.mark.parametrize(
+    "theme", sorted(path.stem for path in SHIPPED.glob("*.json")), ids=str
+)
+def test_every_shipped_theme_has_a_moving_wallpaper(theme: str) -> None:
+    """A fresh install should move on a machine with a GPU; the still styles
+    never do."""
+    found, problems = discover([SHIPPED / "wallpapers"])
+    style = json.loads((SHIPPED / f"{theme}.json").read_text())["wallpaper_style"]
+    assert style in found, problems

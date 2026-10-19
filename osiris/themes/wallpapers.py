@@ -22,6 +22,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from osiris.model.names import slug
+from osiris.platform import FileSystem
 from osiris.platform.process import CommandRunner
 
 #: Where the shipped packages are installed; a user's own live in USER.
@@ -117,12 +119,18 @@ def source(prelude: str, shader: str) -> str:
 
 
 def check(wallpaper: Wallpaper, prelude: str, runner: CommandRunner) -> str | None:
+    """Why the package's shader would not compile, or None; see check_shader."""
+    return check_shader(wallpaper.shader.read_text(), prelude, runner, wallpaper.name)
+
+
+def check_shader(
+    shader: str, prelude: str, runner: CommandRunner, name: str
+) -> str | None:
     """Why the shader would not compile, by its own line numbers, or None.
 
     glslangValidator is the reference compiler; without it the shader is
     assumed good, and the extension's own fallback is what remains.
     """
-    shader = wallpaper.shader.read_text()
     program = source(prelude, shader)
     lines = shader.splitlines()
     first = program.splitlines().index(lines[0]) + 1 if lines else 0
@@ -146,8 +154,56 @@ def check(wallpaper: Wallpaper, prelude: str, runner: CommandRunner) -> str | No
             continue
         number, message = int(match.group(1)), match.group(2)
         if first <= number < first + count:
-            where = f"{wallpaper.name}/{wallpaper.shader.name}:{number - first + 1}"
+            where = f"{name}/shader.glsl:{number - first + 1}"
             reasons.append(f"{where}: {message}")
         else:
             reasons.append(f"line {number} of the program: {message}")
     return "\n".join(reasons) or result.stdout.strip()
+
+
+#: The still beside every wallpaper the Harness writes. It is Osiris's, not the
+#: model's: still.py runs at every login, and the model writes only GLSL. It
+#: cannot match the shader, so previews show a glow in the theme's colours.
+STILL = """\
+\"\"\"The still for a wallpaper the Harness wrote: Osiris's own glow.\"\"\"
+import wallpaper
+
+
+def still(theme, size, phase=None):
+    return wallpaper.compose(theme, size, style="aurora", logo=False, phase=phase)
+"""
+
+#: Seconds a wallpaper the Harness writes takes to come round.
+LOOP = 60
+
+
+class UserWallpapers:
+    """The person's own wallpaper packages, in ``folder``."""
+
+    def __init__(
+        self, files: FileSystem, runner: CommandRunner, folder: Path, prelude: str
+    ) -> None:
+        self._files = files
+        self._runner = runner
+        self._folder = folder
+        self._prelude = prelude
+
+    def write(self, label: str, shader: str) -> str:
+        """Keep a shader as a package, once it compiles. Returns its name."""
+        name = slug(label)
+        package = self._folder / name
+        if self._files.exists(package):
+            raise WallpaperError(
+                f"There is already a wallpaper called {label}; choose another label"
+            )
+        problem = check_shader(shader, self._prelude, self._runner, name)
+        if problem is not None:
+            raise WallpaperError(problem)
+        meta = {"name": name, "label": label, "loop": LOOP}
+        self._files.write(package / "wallpaper.json", json.dumps(meta) + "\n")
+        self._files.write(package / "shader.glsl", shader)
+        self._files.write(package / "still.py", STILL)
+        return name
+
+    def delete(self, name: str) -> None:
+        self._files.remove_tree(self._folder / name)

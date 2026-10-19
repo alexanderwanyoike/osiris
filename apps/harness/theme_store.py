@@ -13,6 +13,11 @@ for candidate in (os.path.join(REPO, "shell", "themes"), "/usr/share/osiris/them
         break
 
 import engine  # noqa: E402
+from osiris.platform import CommandRunner, FileSystem  # noqa: E402
+from osiris.themes.wallpapers import USER, UserWallpapers  # noqa: E402
+
+PRELUDE = os.path.join(os.path.dirname(os.path.abspath(engine.__file__)),
+                       "wallpapers", "prelude.glsl")
 
 
 class EngineStore:
@@ -30,3 +35,10 @@ class EngineStore:
 
     def delete(self, name: str) -> None:
         engine.delete(name)
+
+
+def user_wallpapers(files: FileSystem, runner: CommandRunner, home) -> UserWallpapers:
+    """The person's own wallpapers, checked against the prelude drift compiles."""
+    with open(PRELUDE) as fh:
+        prelude = fh.read()
+    return UserWallpapers(files, runner, home / USER, prelude)
