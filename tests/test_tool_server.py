@@ -279,3 +279,10 @@ def test_making_a_program_names_its_folder_as_a_path_a_file_tool_takes() -> None
     text = reply[0][0].text
     assert str(POMODORO) in text
     assert "~" not in text
+
+
+def test_the_model_is_told_windows_are_gtk_and_libadwaita_and_nothing_else() -> None:
+    from osiris.apps.tool_server import INSTRUCTIONS
+
+    assert "tkinter" in INSTRUCTIONS
+    assert "GTK 4 and libadwaita" in INSTRUCTIONS
