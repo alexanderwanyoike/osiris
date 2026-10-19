@@ -8,6 +8,7 @@ from osiris.harness.engine import (
     Failed,
     Finished,
     ModelRef,
+    PastTurn,
     Stopped,
     Text,
     Tokens,
@@ -202,3 +203,16 @@ def test_a_long_first_question_is_shortened_for_the_title() -> None:
     talk = Conversation()
     talk.asked("Build me a small pomodoro timer app in Python with breaks and stats")
     assert talk.title == "Build me a small pomodoro timer app in Python…"
+
+
+def test_a_past_conversation_comes_back_with_its_answers() -> None:
+    talk = Conversation.restored(
+        [PastTurn("make a timer", "Made it.", GPT), PastTurn("thanks", "", None)]
+    )
+    assert [(t.question, t.answer, t.state, t.model) for t in talk.turns] == [
+        ("make a timer", "Made it.", State.DONE, GPT),
+        ("thanks", "", State.DONE, None),
+    ]
+    assert talk.title == "make a timer"
+    assert talk.model == GPT
+    assert not talk.busy

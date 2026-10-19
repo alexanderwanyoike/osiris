@@ -13,12 +13,14 @@ from osiris.harness.engine import (
     Event,
     Failed,
     ModelRef,
+    PastTurn,
     Stopped,
     ToolCalled,
     ToolRequested,
 )
 from osiris.harness.log import HarnessLog
 from osiris.harness.tiers import Tier
+from osiris.harness.titles import title_of
 
 #: Passed to the model with every rejected tool, so it finds another way.
 REFUSED = (
@@ -64,6 +66,7 @@ class Harness:
         tiers: Mapping[str, Tier],
         directory: Path,
         may_touch: Callable[[Path], bool],
+        tools: tuple[str, list[str]] | None = None,
     ) -> None:
         """``tiers`` names every action the Harness may take; it rejects the rest.
         File actions are allowed only on paths ``may_touch`` accepts, read from
@@ -73,18 +76,55 @@ class Harness:
         self._model = model
         self._tiers = tiers
         self._directory = directory
+        #: Where a Conversation with no Project runs.
+        self._home = directory
         self._may_touch = may_touch
+        #: The tool server, which the Engine keeps per folder.
+        self._tools = tools
+        self._tools_in: set[Path] = set()
         self._session: str | None = None
 
     def ask(self, text: str) -> None:
         if self._session is None:
+            self._ready(self._directory)
             self._session = self._engine.start(self._model, self._directory)
+            self._engine.rename(self._session, title_of(text))
         self._log.write("sent", session=self._session, text=text)
         self._engine.send(self._session, text)
+
+    @property
+    def directory(self) -> Path:
+        """The folder the session runs in: its Project, or home for none."""
+        return self._directory
+
+    def _ready(self, directory: Path) -> None:
+        if self._tools is not None and directory not in self._tools_in:
+            self._engine.attach_tools(*self._tools, directory)
+            self._tools_in.add(directory)
+
+    def resume(self, session: str, directory: Path) -> list[PastTurn]:
+        """Continue a past Conversation, in its folder; returns what was said."""
+        self._session = session
+        self._directory = directory
+        self._ready(directory)
+        return self._engine.history(session)
 
     def new_conversation(self) -> None:
         """The next question opens a new session; the old one is left as it is."""
         self._session = None
+        self._directory = self._home
+
+    def worked_on(self, folder: Path) -> None:
+        """A Conversation with no Project takes the Project of the first Program
+        it works on; one already in a Project stays there (CONTEXT.md)."""
+        if self._session is None or self._directory != self._home:
+            return
+        self._engine.move(self._session, folder)
+        self._directory = folder
+        self._ready(folder)
+
+    def move(self, session: str, folder: Path) -> None:
+        self._engine.move(session, folder)
 
     def use_model(self, model: ModelRef) -> None:
         """Answer with this model from now on, in this conversation too."""

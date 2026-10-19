@@ -59,3 +59,46 @@ def test_a_change_to_anything_else_names_no_program() -> None:
     subject.write("changed", summary="Made Harbour", undo=None)
     (change,) = subject.last_changes()
     assert change.program is None
+
+
+def test_the_log_says_which_program_each_session_worked_on_first() -> None:
+    subject = log()
+    subject.write("sent", session="ses_1", text="build a timer")
+    subject.write("allowed", session="ses_1", action="osiris_create_program")
+    subject.write(
+        "changed",
+        summary="Made Pomodoro",
+        undo={"action": "trash_program", "name": "pomodoro"},
+        program="pomodoro",
+    )
+    subject.write(
+        "changed",
+        summary="Pomodoro: Add a pause",
+        undo={"action": "revert_commit", "name": "pomodoro", "commit": "a"},
+        program="pomodoro",
+    )
+    subject.write("sent", session="ses_2", text="make a theme")
+    subject.write("changed", summary="Made Harbour", undo=None)
+    subject.write("sent", session="ses_3", text="give pomodoro an icon")
+    subject.write(
+        "changed",
+        summary="Pomodoro: Add an icon",
+        undo={"action": "revert_commit", "name": "pomodoro", "commit": "b"},
+        program="pomodoro",
+    )
+    assert subject.programs_worked_on() == [
+        ("ses_1", "pomodoro"),
+        ("ses_3", "pomodoro"),
+    ]
+
+
+def test_the_log_says_which_programs_a_session_changed() -> None:
+    subject = log()
+    subject.write("sent", session="ses_1", text="build a timer")
+    subject.write("changed", summary="Made Pomodoro", undo=None, program="pomodoro")
+    subject.write("sent", session="ses_2", text="build notes")
+    subject.write("changed", summary="Made Notes", undo=None, program="notes")
+    subject.write("sent", session="ses_1", text="add a pause")
+    subject.write("changed", summary="Pomodoro: pause", undo=None, program="pomodoro")
+    subject.write("changed", summary="Made Clock", undo=None, program="clock")
+    assert subject.programs_of("ses_1") == ["pomodoro", "clock"]

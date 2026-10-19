@@ -15,6 +15,7 @@ from osiris.harness.engine import (
     Event,
     Failed,
     ModelRef,
+    PastTurn,
     Stopped,
     Text,
     Tokens,
@@ -40,6 +41,10 @@ class FakeEngine:
     replies: list[tuple[str, str, bool, str]] = field(default_factory=list)
     stopped: list[str] = field(default_factory=list)
     switched: list[tuple[str, ModelRef]] = field(default_factory=list)
+    renamed: list[tuple[str, str]] = field(default_factory=list)
+    moved: list[tuple[str, Path]] = field(default_factory=list)
+    attached: list[tuple[str, Path]] = field(default_factory=list)
+    past: list[PastTurn] = field(default_factory=list)
 
     def start(
         self, model: ModelRef | None = None, directory: Path | None = None
@@ -63,6 +68,18 @@ class FakeEngine:
     def switch_model(self, session: str, model: ModelRef) -> None:
         self.switched.append((session, model))
 
+    def rename(self, session: str, title: str) -> None:
+        self.renamed.append((session, title))
+
+    def move(self, session: str, directory: Path) -> None:
+        self.moved.append((session, directory))
+
+    def attach_tools(self, name: str, command: list[str], directory: Path) -> None:
+        self.attached.append((name, directory))
+
+    def history(self, session: str) -> list[PastTurn]:
+        return self.past
+
 
 POMODORO = HOME / "Code" / "pomodoro"
 
@@ -79,6 +96,7 @@ def harness(
         tiers=tiers or {},
         directory=HOME,
         may_touch=lambda path: path == POMODORO or POMODORO in path.parents,
+        tools=("osiris", ["python3", "tool_server.py"]),
     )
     return subject, engine, files
 
@@ -316,3 +334,60 @@ def test_after_a_new_conversation_the_old_sessions_events_are_left_alone() -> No
     subject.ask("hello")
     subject.new_conversation()
     assert subject.handle(Text("ses_1", "late text")) is None
+
+
+def test_the_first_question_names_the_session() -> None:
+    subject, engine, _ = harness()
+    subject.ask("Make me a calm theme\nfor working late")
+    subject.ask("now warmer")
+    assert engine.renamed == [("ses_1", "Make me a calm theme")]
+
+
+def test_a_past_conversation_is_resumed_in_its_own_session() -> None:
+    subject, engine, _ = harness()
+    engine.past = [PastTurn("make a timer", "Made it.", GPT)]
+    assert subject.resume("ses_9", HOME) == engine.past
+    subject.ask("add a pause button")
+    assert engine.started == []
+    assert engine.sent == [("ses_9", "add a pause button")]
+    assert subject.handle(Text("ses_9", "Done")) == Text("ses_9", "Done")
+
+
+def test_a_conversation_with_no_project_takes_its_programs_project() -> None:
+    subject, engine, _ = harness()
+    subject.ask("build me a timer")
+    subject.worked_on(POMODORO)
+    assert engine.moved == [("ses_1", POMODORO)]
+    subject.handle(ToolRequested("ses_1", "per_1", "read", ("main.py",)))
+    assert engine.replies[-1][2] is True
+
+
+def test_a_conversation_in_a_project_stays_there() -> None:
+    subject, engine, _ = harness()
+    subject.ask("build me a timer")
+    subject.worked_on(POMODORO)
+    subject.worked_on(HOME / "Code" / "notes")
+    assert engine.moved == [("ses_1", POMODORO)]
+
+
+def test_a_past_conversation_can_be_moved_into_a_project() -> None:
+    subject, engine, _ = harness()
+    subject.move("ses_old", POMODORO)
+    assert engine.moved == [("ses_old", POMODORO)]
+
+
+def test_the_tools_are_attached_where_the_session_runs_once_each() -> None:
+    subject, engine, _ = harness()
+    subject.ask("hello")
+    subject.ask("again")
+    subject.worked_on(POMODORO)
+    assert engine.attached == [("osiris", HOME), ("osiris", POMODORO)]
+
+
+def test_a_resumed_conversation_runs_and_reads_files_in_its_own_folder() -> None:
+    subject, engine, _ = harness()
+    subject.resume("ses_9", POMODORO)
+    assert engine.attached == [("osiris", POMODORO)]
+    subject.handle(ToolRequested("ses_9", "per_1", "read", ("main.py",)))
+    assert engine.replies[-1][2] is True
+    assert subject.directory == POMODORO

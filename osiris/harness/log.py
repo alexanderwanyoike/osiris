@@ -11,6 +11,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from osiris.platform import FileSystem
 
@@ -46,13 +47,39 @@ class HarnessLog:
         entry = {"time": self._clock().isoformat(), "kind": kind, **fields}
         self._files.append(self._path, json.dumps(entry, ensure_ascii=False) + "\n")
 
-    def last_changes(self) -> list[Change]:
-        """The changes logged since the last question was sent."""
+    def programs_worked_on(self) -> list[tuple[str, str]]:
+        """Each session that changed a Program, and the first Program it changed."""
+        first: dict[str, str] = {}
+        session = ""
+        for entry in self._entries():
+            session = entry.get("session", session)
+            if entry["kind"] == "changed" and entry.get("program"):
+                first.setdefault(session, entry["program"])
+        return list(first.items())
+
+    def programs_of(self, session: str) -> list[str]:
+        """The Programs a session changed, each once, in the order it first did."""
+        changed: dict[str, None] = {}
+        current = ""
+        for entry in self._entries():
+            current = entry.get("session", current)
+            if (
+                current == session
+                and entry["kind"] == "changed"
+                and entry.get("program")
+            ):
+                changed.setdefault(entry["program"])
+        return list(changed)
+
+    def _entries(self) -> list[dict[str, Any]]:
         if not self._files.exists(self._path):
             return []
+        return [json.loads(line) for line in self._files.read(self._path).splitlines()]
+
+    def last_changes(self) -> list[Change]:
+        """The changes logged since the last question was sent."""
         changes: list[Change] = []
-        for line in self._files.read(self._path).splitlines():
-            entry = json.loads(line)
+        for entry in self._entries():
             if entry["kind"] == "sent":
                 changes = []
             elif entry["kind"] == "changed":
