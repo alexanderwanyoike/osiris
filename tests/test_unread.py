@@ -35,3 +35,11 @@ def test_an_answer_that_failed_while_the_person_was_away_is_unread() -> None:
     unread = Unread(FakeFileSystem(), HOME)
     assert unread.ended(Failed("ses_1", "the provider refused"), looking=False)
     assert unread.sessions() == frozenset({"ses_1"})
+
+
+def test_opening_a_conversation_marks_it_read() -> None:
+    unread = Unread(FakeFileSystem(), HOME)
+    unread.ended(Finished("ses_1"), looking=False)
+    unread.ended(Finished("ses_2"), looking=False)
+    unread.read("ses_1")
+    assert unread.sessions() == frozenset({"ses_2"})
