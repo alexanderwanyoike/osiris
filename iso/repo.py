@@ -47,6 +47,10 @@ def stage(directory: str) -> None:
     with open(launcher, "w") as fh:
         fh.write(package.SETUP_LAUNCHER)
     os.chmod(launcher, 0o755)
+    hook = os.path.join(root, package.HOOK_PATH.lstrip("/"))
+    os.makedirs(os.path.dirname(hook))
+    with open(hook, "w") as fh:
+        fh.write(package.HOOK)
     with open(os.path.join(directory, "PKGBUILD"), "w") as fh:
         fh.write(package.pkgbuild(VERSION))
 
