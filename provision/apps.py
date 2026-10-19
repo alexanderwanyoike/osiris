@@ -126,10 +126,10 @@ def configure_terminal() -> None:
 
 def configure_apps() -> None:
     write("/etc/skel/.config/fastfetch/config.jsonc", FASTFETCH_CONF)
+    rel = ".config/fastfetch/config.jsonc"
     for user in desktop_users():
-        for rel in (".config/fastfetch/config.jsonc",):
-            homes.copy(f"/etc/skel/{rel}", f"{user.pw_dir}/{rel}", user)
-        print(f"  configured terminal and fastfetch for {user.pw_name}")
+        if homes.seed(f"/etc/skel/{rel}", f"{user.pw_dir}/{rel}", user):
+            print(f"  configured fastfetch for {user.pw_name}")
 
 
 def install_branding_assets(repo: str) -> None:
