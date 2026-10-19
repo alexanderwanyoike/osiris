@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from osiris.harness.activity import Step
 from osiris.harness.conversation import Conversation, State
 from osiris.harness.engine import (
     Answered,
@@ -88,6 +89,19 @@ def test_an_allowed_action_is_not_shown_as_refused() -> None:
     talk.apply(ToolRequested(S, "per_1", "osiris_apply_theme", ("*",)))
     talk.apply(Allowed(S, "osiris_apply_theme", Tier.UNDOABLE, ("*",)))
     assert talk.turns[-1].refused == []
+
+
+def test_every_decided_action_is_a_step_of_its_turn_in_order() -> None:
+    talk = Conversation()
+    talk.asked("add a pause button")
+    talk.apply(Allowed(S, "read", Tier.LOOK, ("main.py",)))
+    talk.apply(Refused(S, "bash", ("ls",)))
+    talk.apply(Allowed(S, "edit", Tier.UNDOABLE, ("main.py",)))
+    assert talk.turns[-1].steps == [
+        Step("read", ("main.py",)),
+        Step("bash", ("ls",), allowed=False),
+        Step("edit", ("main.py",)),
+    ]
 
 
 def test_a_failure_keeps_the_engines_reason() -> None:
