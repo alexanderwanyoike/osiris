@@ -72,15 +72,22 @@ class Step:
 
     @property
     def doing(self) -> str:
-        return f"{PHRASES[self.action].doing} {self._what}"
+        return f"{self._phrase.doing} {self._what}"
 
     @property
     def record(self) -> str:
-        return f"{PHRASES[self.action].done} {self._what}"
+        return f"{self._phrase.done} {self._what}"
+
+    @property
+    def _phrase(self) -> Phrase:
+        if self.action in PHRASES:
+            return PHRASES[self.action]
+        name = self.action.removeprefix("osiris_").replace("_", " ")
+        return Phrase("Using", "Used", name)
 
     @property
     def _what(self) -> str:
-        phrase = PHRASES[self.action]
+        phrase = self._phrase
         if phrase.what:
             return phrase.what
         first, *rest = self.resources
