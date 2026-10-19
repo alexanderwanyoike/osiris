@@ -119,3 +119,18 @@ def test_clicking_the_notification_brings_the_drawer_and_opens_its_conversation(
     assert stand_in.session == "ses_1"
     assert [turn.answer for turn in stand_in.conversation.turns] == ["Calmer now."]
     assert stand_in.unread.sessions() == frozenset()
+
+
+def test_the_notification_reaches_the_harness_as_its_open_conversation_action() -> None:
+    """The notification's default action is app.open-conversation with the
+    session; the Application must have it, taking a string."""
+    import main
+    from gi.repository import GLib
+
+    application = main.Application()
+    opened: list[str] = []
+    application.open_conversation = opened.append
+    action = application.lookup_action("open-conversation")
+    assert action.get_parameter_type().dup_string() == "s"
+    action.activate(GLib.Variant("s", "ses_1"))
+    assert opened == ["ses_1"]
