@@ -1,0 +1,9 @@
+/* Pebble: round and playful */
+button, combobox button { border-radius: 999px; padding: 8px 20px; }
+entry { border-radius: 999px; padding: 6px 16px; }
+headerbar { border-radius: 22px 22px 0 0; padding: 6px 12px; }
+headerbar button { border-radius: 999px; min-width: 14px; min-height: 14px; padding: 0; }
+notebook > header tab { border-radius: 999px; padding: 6px 18px; margin: 4px 2px; }
+list, .frame { border-radius: 20px; }
+switch, switch slider { border-radius: 999px; }
+scale trough, progressbar trough, progressbar progress { border-radius: 999px; min-height: 10px; }

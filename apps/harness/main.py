@@ -64,6 +64,7 @@ from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.programs.programs import Programs  # noqa: E402
+from osiris.provision.upgrade import Upgrade  # noqa: E402
 from osiris.platform import (  # noqa: E402
     HttpError,
     RealFileSystem,
@@ -73,6 +74,8 @@ from osiris.platform import (  # noqa: E402
 )
 
 APP_ID = "dev.osiris.Harness"
+#: Seconds between looks at whether Osiris was upgraded under the Harness.
+UPGRADE_POLL = 10
 # Matches WIDTH in harness-drawer@osiris, which sizes the window to the
 # monitor's full height.
 WIDTH = 440
@@ -462,6 +465,7 @@ class Application(Adw.Application):
         self.program_busy: dict[str, str] = {}
         self.program_problem: dict[str, str] = {}
         self.open = False
+        self.upgrade = Upgrade(self.files)
         show = Gio.SimpleAction.new("show", None)
         show.connect("activate", lambda *_: self.toggle())
         self.add_action(show)
@@ -474,6 +478,17 @@ class Application(Adw.Application):
         self.drawer = Drawer(self)
         self.drawer.refresh()
         threading.Thread(target=self._listen, daemon=True).start()
+        GLib.timeout_add_seconds(UPGRADE_POLL, self._restart_if_upgraded)
+
+    def _restart_if_upgraded(self) -> bool:
+        """Quit once Osiris is upgraded under it and nothing is under way;
+        D-Bus starts the new code on the next Super+A."""
+        in_use = (self.open or self.conversation.busy
+                  or bool(self.program_busy))
+        if not self.upgrade.restart_due(in_use=in_use):
+            return GLib.SOURCE_CONTINUE
+        self.quit()
+        return GLib.SOURCE_REMOVE
 
     def do_activate(self):
         self.toggle()

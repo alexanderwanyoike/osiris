@@ -1,0 +1,10 @@
+/* Paper: flat and quiet */
+button, entry, combobox button { border-radius: 6px; border: none; box-shadow: none; padding: 8px 16px; background-image: none; }
+button:not(.suggested-action) { background-color: alpha(@theme_fg_color, 0.06); }
+entry { background-color: alpha(@theme_fg_color, 0.05); }
+headerbar { border: none; box-shadow: none; padding: 8px 12px; }
+headerbar button { background: none; }
+notebook > header { border: none; box-shadow: none; }
+notebook > header tab { border: none; padding: 10px 16px; }
+list, .frame { border: none; }
+scale trough, progressbar trough, progressbar progress { border-radius: 2px; min-height: 2px; border: none; }

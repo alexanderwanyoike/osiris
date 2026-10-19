@@ -17,11 +17,14 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import homes  # noqa: E402
 import services  # noqa: E402
 from run import run  # noqa: E402
 from harness import DRAWER_EXTENSION, PANEL_BUTTON  # noqa: E402
 from themes import DRIFT_EXTENSION, TRANSITION  # noqa: E402
+
+from osiris.provision.seeding import pins_dock  # noqa: E402
 
 WALLPAPER = "/usr/share/backgrounds/osiris/osiris-obsidian.png"
 
@@ -214,17 +217,21 @@ def write(path: str, text: str) -> None:
 
 
 def write_plank_launchers() -> None:
-    """Pin an explicit dock, in /etc/skel and for existing users."""
+    """Pin an explicit dock, in /etc/skel and for users with none yet."""
     for home in ["/etc/skel"] + [p.pw_dir for p in homes.desktop_users()]:
         owner = None if home == "/etc/skel" else homes.owner_of(home)
         plank = os.path.join(home, ".config", "plank")
         directory = os.path.join(plank, "dock1", "launchers")
         homes.makedirs(directory, owner)
 
-        # Clear Plank's duplicate first-run items before pinning ours.
-        for stale in os.listdir(directory):
-            if stale.endswith(".dockitem"):
-                os.remove(os.path.join(directory, stale))
+        # /etc/skel is Osiris's; a home's dock is the person's once it has items.
+        if home == "/etc/skel":
+            for stale in os.listdir(directory):
+                if stale.endswith(".dockitem"):
+                    os.remove(os.path.join(directory, stale))
+        elif not pins_dock(os.listdir(directory)):
+            print(f"  kept the dock in {home}")
+            continue
         pinned = launchers()
         for name in pinned:
             item = os.path.join(directory,
