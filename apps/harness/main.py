@@ -757,7 +757,12 @@ class Application(Adw.Application):
         if self.harness is None:
             return
         harness = self.harness
-        self.background(lambda: harness.archive(session), lambda _r: self.load_history())
+
+        def archived(_result) -> None:
+            self._seen(session)
+            self.load_history()
+
+        self.background(lambda: harness.archive(session), archived)
 
     def ask_to_delete(self, session: str, title: str) -> None:
         dialog = Adw.AlertDialog(
