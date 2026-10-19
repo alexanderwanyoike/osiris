@@ -132,3 +132,18 @@ def test_a_past_conversation_can_be_opened_while_osiris_works() -> None:
     stand_in.open_past("ses_9")
     assert [turn.answer for turn in stand_in.conversation.turns] == ["Made it."]
     assert stand_in.backgrounded == {"ses_1": working}
+
+
+def test_opening_a_conversation_still_working_shows_it_as_it_goes_on() -> None:
+    """Its history at the Engine is only what was said so far; the live
+    Conversation is what is still arriving."""
+    stand_in, engine = app()
+    engine.past = [PastTurn("make it calm", "", GPT)]
+    working = asked(stand_in, "make it calm")
+    stand_in.new_conversation()
+    other = asked(stand_in, "something else")
+    stand_in.open_past("ses_1")
+    assert stand_in.conversation is working
+    assert stand_in.backgrounded == {"ses_2": other}
+    heard(stand_in, Text("ses_1", "Calmer now."))
+    assert working.turns[-1].answer == "Calmer now."
