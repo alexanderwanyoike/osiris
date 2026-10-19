@@ -85,12 +85,13 @@ class Sidebar(Gtk.Box):
                       unread: frozenset[str], *, indent: int) -> None:
         title = past.title or "Untitled"
         row = self._row(title, icon=None, action=past.session, indent=indent)
+        if past.session in unread:
+            row.get_child().get_first_child().add_css_class("harness-unread")
         if past.session in running:
             spinner = Adw.Spinner(tooltip_text="Osiris is working on this")
             spinner.add_css_class("harness-running")
             row.get_child().append(spinner)
-        if past.session in unread:
-            row.get_child().get_first_child().add_css_class("harness-unread")
+        elif past.session in unread:
             dot = Gtk.Box(valign=Gtk.Align.CENTER, tooltip_text="New answer")
             dot.add_css_class("harness-unread-dot")
             row.get_child().append(dot)
