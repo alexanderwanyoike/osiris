@@ -3,7 +3,8 @@ the desktop tells them Osiris got back to them."""
 
 from __future__ import annotations
 
-from osiris.harness.engine import Finished, Text
+from osiris.harness.engine import Finished, PastTurn, Text
+from tests.test_harness import GPT
 
 from .test_side_by_side import App, app, asked, heard
 
@@ -60,7 +61,8 @@ def test_the_sidebar_is_told_which_conversations_are_unread() -> None:
 
 def answered_off_screen() -> App:
     """Osiris finished "make it calm" (ses_1) while ses_2 was on screen."""
-    stand_in, _ = app()
+    stand_in, engine = app()
+    stand_in.engine = engine
     asked(stand_in, "make it calm")
     stand_in.new_conversation()
     asked(stand_in, "something else")
@@ -104,3 +106,16 @@ def test_bringing_the_drawer_back_to_an_unread_conversation_redraws_the_sidebar(
     histories = stand_in.histories
     stand_in.toggle()
     assert stand_in.histories == histories + 1
+
+
+def test_clicking_the_notification_brings_the_drawer_and_opens_its_conversation() -> (
+    None
+):
+    stand_in = answered_off_screen()
+    stand_in.engine.past = [PastTurn("make it calm", "Calmer now.", GPT)]
+    stand_in.open = False
+    stand_in.open_conversation("ses_1")
+    assert stand_in.open
+    assert stand_in.session == "ses_1"
+    assert [turn.answer for turn in stand_in.conversation.turns] == ["Calmer now."]
+    assert stand_in.unread.sessions() == frozenset()
