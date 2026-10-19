@@ -19,6 +19,7 @@ only draws it. The Engine's events arrive on a thread and are handed to the
 main loop one at a time.
 """
 import os
+from pathlib import Path
 import sys
 import threading
 import time
@@ -29,7 +30,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("GdkX11", "4.0")
 gi.require_version("Graphene", "1.0")
-from gi.repository import Adw, Gdk, GdkX11, Gio, GLib, Graphene, Gtk, Pango  # noqa: E402
+from gi.repository import Adw, Gdk, GdkX11, Gio, GLib, GObject, Graphene, Gtk, Pango  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
@@ -42,17 +43,27 @@ sys.path.insert(0, HERE)
 
 from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
+from canvas import Canvas, open_in_code  # noqa: E402
+from program_card import ProgramCard  # noqa: E402
 from render import TurnView  # noqa: E402
+from sidebar import Sidebar  # noqa: E402
 from theme_store import EngineStore  # noqa: E402
 
 from osiris.apps.tool_server import NAME as TOOLS, TIERS, undo  # noqa: E402
 
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
 from osiris.harness.harness import Harness  # noqa: E402
+from osiris.harness.history import (  # noqa: E402
+    CODE_DIR,
+    group,
+    misplaced,
+    project_program,
+)
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
+from osiris.programs.programs import Programs  # noqa: E402
 from osiris.platform import (  # noqa: E402
     HttpError,
     RealFileSystem,
@@ -68,6 +79,14 @@ WIDTH = 440
 RECONNECT_SECONDS = 3
 #: The widest the conversation grows, in pixels, however wide the drawer.
 READABLE = 820
+#: Narrower than this the drawer is Compact: the sidebar folds away behind its
+#: toggle (CONTEXT.md, docs/HARNESS-LAYOUT.md).
+COMPACT_BELOW = "max-width: 760sp"
+#: Narrower than this there is no room for the Canvas; the cards under each
+#: answer carry the same things.
+NO_CANVAS_BELOW = "max-width: 1100sp"
+#: The top bar's title before the first question.
+UNTITLED = "New conversation"
 
 #: Run by the Engine for every session; it acts through the theme engine.
 TOOL_SERVER = os.path.join(HERE, "tool_server.py")
@@ -83,12 +102,17 @@ class Drawer(Gtk.ApplicationWindow):
         self.set_default_size(WIDTH, 800)
         self.connect("realize", self._realize)
 
-        title = Gtk.Label(label="Harness", xalign=0, hexpand=True)
-        title.add_css_class("harness-title")
-        self.meta = Gtk.Label(xalign=1, ellipsize=Pango.EllipsizeMode.START)
-        self.meta.add_css_class("harness-meta")
-        # The model in play doubles as the way to change it.
-        providers_button = Gtk.Button(child=self.meta, tooltip_text="Providers and models")
+        self.sidebar_toggle = Gtk.ToggleButton(icon_name="sidebar-show-symbolic",
+                                               tooltip_text="Conversations")
+        self.sidebar_toggle.add_css_class("flat")
+        new = Gtk.Button(icon_name="list-add-symbolic", tooltip_text="New conversation")
+        new.add_css_class("flat")
+        new.connect("clicked", lambda _b: self.app.new_conversation())
+        self.title = Gtk.Label(label=UNTITLED, xalign=0, hexpand=True,
+                               ellipsize=Pango.EllipsizeMode.END)
+        self.title.add_css_class("harness-title")
+        providers_button = Gtk.Button(icon_name="open-menu-symbolic",
+                                      tooltip_text="Providers and accounts")
         providers_button.add_css_class("flat")
         providers_button.connect("clicked", lambda _b: self.show_providers())
         # Deep agentic work wants the whole screen; the drawer comes back after.
@@ -99,10 +123,16 @@ class Drawer(Gtk.ApplicationWindow):
         self.expand_button.connect("clicked", self._toggle_expanded)
         header = Gtk.Box(spacing=8)
         header.add_css_class("harness-header")
-        header.append(Gtk.Image(icon_name="osiris-symbolic"))
-        header.append(title)
-        header.append(providers_button)
+        header.append(self.sidebar_toggle)
+        header.append(new)
+        header.append(self.title)
+        self.canvas_toggle = Gtk.ToggleButton(icon_name="sidebar-show-right-symbolic",
+                                              tooltip_text="Canvas", sensitive=False)
+        self.canvas_toggle.add_css_class("flat")
+        self.canvas_toggle.connect("toggled", self._canvas_toggled)
+        header.append(self.canvas_toggle)
         header.append(self.expand_button)
+        header.append(providers_button)
 
         self.turns = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
                              valign=Gtk.Align.END, vexpand=True,
@@ -113,17 +143,45 @@ class Drawer(Gtk.ApplicationWindow):
             child=Adw.Clamp(maximum_size=READABLE, child=self.turns), vexpand=True,
             hscrollbar_policy=Gtk.PolicyType.NEVER)
 
-        self.entry = Gtk.Entry(placeholder_text="Ask Osiris", hexpand=True)
+        self.entry = Gtk.TextView(wrap_mode=Gtk.WrapMode.WORD_CHAR, accepts_tab=False,
+                                  hexpand=True, top_margin=6, bottom_margin=6)
         self.entry.add_css_class("harness-input")
-        self.entry.connect("activate", self._ask)
+        placeholder = Gtk.Label(label="Ask Osiris", xalign=0, valign=Gtk.Align.START,
+                                margin_top=6, can_target=False)
+        placeholder.add_css_class("harness-meta")
+        self.entry.get_buffer().connect(
+            "changed", lambda b: placeholder.set_visible(b.get_char_count() == 0))
+        enter = Gtk.EventControllerKey()
+        enter.connect("key-pressed", self._composer_key)
+        self.entry.add_controller(enter)
+        typed = Gtk.Overlay(child=self.entry)
+        typed.add_overlay(placeholder)
+
+        self.model_label = Gtk.Label(ellipsize=Pango.EllipsizeMode.START)
+        self.model_label.add_css_class("harness-meta")
+        self.models = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        self.models.add_css_class("navigation-sidebar")
+        self.models.connect("row-activated", self._model_chosen)
+        model_face = Gtk.Box(spacing=4)
+        model_face.append(Gtk.Image(icon_name="pan-down-symbolic"))
+        model_face.append(self.model_label)
+        self.model_menu = Gtk.MenuButton(
+            child=model_face, tooltip_text="Model",
+            popover=Gtk.Popover(child=self.models))
+        self.model_menu.add_css_class("flat")
+        self.model_menu.connect("notify::active", self._models_shown)
         self.send = Gtk.Button(icon_name="go-up-symbolic", tooltip_text="Ask",
                                valign=Gtk.Align.CENTER)
         self.send.add_css_class("harness-send")
         self.send.connect("clicked", self._send_or_stop)
-        composer = Gtk.Box(spacing=6)
+        controls = Gtk.Box(spacing=6)
+        controls.append(Gtk.Box(hexpand=True))
+        controls.append(self.model_menu)
+        controls.append(self.send)
+        composer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         composer.add_css_class("harness-composer")
-        composer.append(self.entry)
-        composer.append(self.send)
+        composer.append(typed)
+        composer.append(controls)
 
         self.footer = Gtk.Label(xalign=0, wrap=True)
         self.footer.add_css_class("harness-meta")
@@ -132,22 +190,54 @@ class Drawer(Gtk.ApplicationWindow):
         bottom = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         bottom.append(composer)
         bottom.append(self.footer)
-        chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         chat.append(self.scroller)
         chat.append(Adw.Clamp(maximum_size=READABLE, child=bottom))
+        self.canvas = Canvas(read=lambda path: path.read_text(errors="replace"),
+                             open_in_code=open_in_code,
+                             scheme=app.look.scheme if app.look is not None else None)
+        self.canvas.set_visible(False)
+        body = Gtk.Paned(start_child=chat, end_child=self.canvas,
+                         shrink_start_child=False, resize_end_child=True,
+                         wide_handle=False, position=480)
         self.pages = Gtk.Stack(vexpand=True,
                                transition_type=Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
-        self.pages.add_named(chat, "chat")
+        self.pages.add_named(body, "chat")
+        self.sidebar = Sidebar(
+            on_open=lambda session: self._chosen(self.app.open_past, session),
+            on_new=lambda: self._chosen(self.app.new_conversation),
+            on_new_in=lambda folder: self._chosen(self.app.new_conversation, folder),
+            on_archive=lambda session: self.app.archive(session),
+            on_delete=lambda session, title: self.app.ask_to_delete(session, title))
+        self.split = Adw.OverlaySplitView(sidebar=self.sidebar, content=self.pages,
+                                          min_sidebar_width=220,
+                                          max_sidebar_width=280, vexpand=True)
+        self.sidebar_toggle.bind_property(
+            "active", self.split, "show-sidebar",
+            GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
+        self.sidebar_toggle.set_active(True)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         box.append(header)
-        box.append(self.pages)
+        box.append(self.split)
+        layout = Adw.BreakpointBin(child=box, width_request=320, height_request=360)
+        # Of the breakpoints that match, libadwaita applies only the last added,
+        # so the narrower one comes last and repeats the wider one's setters.
+        no_canvas = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(NO_CANVAS_BELOW))
+        compact = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(COMPACT_BELOW))
+        for breakpoint in (no_canvas, compact):
+            breakpoint.add_setter(self.canvas_toggle, "visible", False)
+            breakpoint.add_setter(self.canvas, "visible", False)
+        compact.add_setter(self.split, "collapsed", True)
+        compact.add_setter(self.sidebar_toggle, "active", False)
+        layout.add_breakpoint(no_canvas)
+        layout.add_breakpoint(compact)
         # The Skin shapes this surface; the window around it stays transparent,
         # and children are clipped to the surface's rounded corners.
         surface = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
                           overflow=Gtk.Overflow.HIDDEN)
         surface.add_css_class("harness-surface")
-        box.set_vexpand(True)
-        surface.append(box)
+        layout.set_vexpand(True)
+        surface.append(layout)
         surface.set_hexpand(True)
         # The drawer is anchored to the right edge, so its left edge resizes
         # it; the window manager does the dragging.
@@ -205,17 +295,55 @@ class Drawer(Gtk.ApplicationWindow):
         self.app.close_drawer()
         return True
 
-    def _ask(self, _entry) -> None:
-        text = self.entry.get_text().strip()
-        if text and not self.app.conversation.busy:
-            self.entry.set_text("")
-            self.app.ask(text)
+    def _ask(self) -> None:
+        buffer = self.entry.get_buffer()
+        text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+        if text.strip() and not self.app.conversation.busy:
+            buffer.set_text("")
+            self.app.ask(text.strip())
+
+    def _composer_key(self, _controller, keyval, _code, state) -> bool:
+        # Enter asks; Shift+Enter starts a new line.
+        if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter) and not (
+                state & Gdk.ModifierType.SHIFT_MASK):
+            self._ask()
+            return True
+        return False
 
     def _send_or_stop(self, _button) -> None:
         if self.app.conversation.busy:
             self.app.stop()
         else:
-            self._ask(self.entry)
+            self._ask()
+
+    def _models_shown(self, button, _spec) -> None:
+        if not button.get_active():
+            return
+        while (row := self.models.get_row_at_index(0)) is not None:
+            self.models.remove(row)
+        providers = Gtk.Label(label="Providers and accounts…", xalign=0)
+        providers.model = None
+        self.models.append(providers)
+        if self.app.accounts is None:
+            return
+        accounts = self.app.accounts
+        self.app.background(accounts.models, self._models_found)
+
+    def _models_found(self, found) -> None:
+        # Above "Providers and accounts…", in the Engine's order.
+        for position, info in enumerate(found):
+            label = Gtk.Label(label=info.name, xalign=0)
+            label.model = info.ref
+            self.models.insert(label, position)
+
+    def _model_chosen(self, _list, row) -> None:
+        chosen = row.get_child().model
+        self.model_menu.popdown()
+        if chosen is None:
+            self.show_providers()
+        else:
+            self.app.choose_model(chosen)
+        self.refresh()
 
     def show_providers(self) -> None:
         if self.app.accounts is None:
@@ -249,12 +377,44 @@ class Drawer(Gtk.ApplicationWindow):
         self.present()
         self.entry.grab_focus()
 
+    def _chosen(self, act, *args) -> None:
+        """Act on a choice in the sidebar; narrow, the list then folds away."""
+        act(*args)
+        if self.split.get_collapsed():
+            self.sidebar_toggle.set_active(False)
+
+    def show_canvas(self, programs) -> None:
+        """What the Conversation made; the Canvas opens the first time there is
+        something to show."""
+        had = self.canvas_toggle.get_sensitive()
+        self.canvas.show(programs)
+        self.canvas_toggle.set_sensitive(bool(programs))
+        if programs and not had:
+            self.canvas_toggle.set_active(True)
+        elif not programs:
+            self.canvas_toggle.set_active(False)
+
+    def _canvas_toggled(self, toggle) -> None:
+        # As in the prototype: the Canvas takes the sidebar's room.
+        shown = toggle.get_active()
+        self.canvas.set_visible(shown)
+        self.sidebar_toggle.set_active(not shown)
+
+    def show_history(self, projects, loose) -> None:
+        self.sidebar.show_history(projects, loose, getattr(self.app, "session", None))
+
+    def clear(self) -> None:
+        for view in self.views:
+            self.turns.remove(view)
+        self.views = []
+
     def refresh(self, restyle: bool = False) -> None:
         conversation, look = self.app.conversation, self.app.look
         fresh = len(self.views)
         while len(self.views) < len(conversation.turns):
             view = TurnView(conversation.turns[len(self.views)],
-                            on_undo=self.app.undo)
+                            on_undo=self.app.undo,
+                            program_card=self.app.program_card)
             self.views.append(view)
             self.turns.append(view)
         newest = len(self.views) - 1
@@ -269,7 +429,8 @@ class Drawer(Gtk.ApplicationWindow):
         self.send.set_icon_name("media-playback-stop-symbolic" if busy
                                 else "go-up-symbolic")
         self.send.set_tooltip_text("Stop" if busy else "Ask")
-        self.meta.set_text(self.app.header_line())
+        self.title.set_text(conversation.title or UNTITLED)
+        self.model_label.set_text(conversation.model_label(self.app.models.default))
         self.footer.set_text(self.app.footer_line())
         self._follow()
 
@@ -289,12 +450,17 @@ class Application(Adw.Application):
         self.conversation = Conversation()
         self.harness: Harness | None = None
         self.log: HarnessLog | None = None
+        #: The past Conversations the sidebar shows, newest first.
+        self.pasts: list = []
         self.look: Look | None = None
         self.accounts: OpencodeAccounts | None = None
         self.files = RealFileSystem()
         self.home = SystemIdentity().home
         self.models: Models = load_models(self.files, self.home)
         self.problem = "Starting the Engine..."
+        #: What each Program's card is waiting on, or what went wrong, by name.
+        self.program_busy: dict[str, str] = {}
+        self.program_problem: dict[str, str] = {}
         self.open = False
         show = Gio.SimpleAction.new("show", None)
         show.connect("activate", lambda *_: self.toggle())
@@ -362,14 +528,11 @@ class Application(Adw.Application):
         except GLib.Error:
             self.drawer.minimize()
 
-    def header_line(self) -> str:
-        named = self.conversation.model_label(self.models.default)
-        return f"{named}  ·  {self.conversation.tokens_spent:,} tokens"
-
     def footer_line(self) -> str:
         if self.harness is None:
             return self.problem
-        return "allowance not reported"
+        spent = self.conversation.tokens_spent
+        return f"{spent:,} tokens  ·  allowance not reported"
 
     def background(self, work, done) -> None:
         """Run work off the main loop and hand its result back to it."""
@@ -392,14 +555,94 @@ class Application(Adw.Application):
         if self.harness is not None:
             self.background(lambda: self.harness.use_model(model), lambda _r: None)
 
+    def programs(self) -> Programs:
+        return Programs(self.files, SubprocessRunner(sink=lambda _line: None), self.home)
+
+    def program_card(self, name: str) -> Gtk.Widget:
+        found = [p for p in self.programs().programs() if p.manifest.name == name]
+        if not found:
+            gone = Gtk.Label(label=f"{name} is no longer in ~/Code", xalign=0)
+            gone.add_css_class("harness-meta")
+            return gone
+        return ProgramCard(found[0], on_try=self.try_program,
+                           on_install=self.install_program, on_fix=self.fix_program,
+                           busy=self.program_busy.get(name),
+                           problem=self.program_problem.get(name))
+
+    def _program_work(self, name: str, waiting: str, work, done) -> None:
+        """Run a Program's build or install off the main loop, showing it on
+        its card and keeping what went wrong there."""
+        self.program_busy[name] = waiting
+        self.program_problem.pop(name, None)
+        self.drawer.refresh(restyle=True)
+
+        def run():
+            try:
+                result = work()
+            except Exception as error:  # noqa: BLE001 - shown on the card
+                GLib.idle_add(finish, None, str(error))
+                return
+            GLib.idle_add(finish, result, None)
+
+        def finish(result, problem):
+            self.program_busy.pop(name, None)
+            if problem is not None:
+                self.program_problem[name] = problem
+            else:
+                done(result)
+            self.drawer.refresh(restyle=True)
+            return False
+
+        threading.Thread(target=run, daemon=True).start()
+
+    def try_program(self, name: str) -> None:
+        def launch(prepared) -> None:
+            argv, folder = prepared
+            launcher = Gio.SubprocessLauncher.new(Gio.SubprocessFlags.NONE)
+            launcher.set_cwd(str(folder))
+            try:
+                launcher.spawnv(argv)
+            except GLib.Error as error:
+                self.program_problem[name] = error.message
+
+        self._program_work(name, "Building…",
+                           lambda: self.programs().prepare_try(name), launch)
+
+    def install_program(self, name: str) -> None:
+        label = self.programs().manifest(name).label
+        dialog = Adw.AlertDialog(
+            heading=f"Install {label}?",
+            body=(f"{label} will be in the applications menu and the launcher, "
+                  "and can be kept in the dock.\n\nPrograms are not confined yet: "
+                  "it runs as you, with everything you can reach."))
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("install", "Install")
+        dialog.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
+        dialog.set_close_response("cancel")
+
+        def chosen(_dialog, response: str) -> None:
+            if response == "install":
+                self._program_work(name, "Installing…",
+                                   lambda: self.programs().install(name),
+                                   lambda _commit: None)
+
+        dialog.connect("response", chosen)
+        dialog.present(self.drawer)
+
+    def fix_program(self, name: str, problem: str) -> None:
+        self.program_problem.pop(name, None)
+        label = self.programs().manifest(name).label
+        self.ask(f"{label} failed to build or start:\n\n```\n{problem}\n```\n\n"
+                 "Please fix it.")
+
     def undo(self, turn: Turn) -> None:
         """Reverse what a turn changed, newest first, without the model."""
         steps = turn.undo_steps()
 
         def reverse() -> None:
-            store = EngineStore()
+            store, programs = EngineStore(), self.programs()
             for step in steps:
-                undo(store, step)
+                undo(store, step, programs)
 
         def undone(_result) -> None:
             turn.undone = True
@@ -408,6 +651,108 @@ class Application(Adw.Application):
             self.drawer.refresh()
 
         self.background(reverse, undone)
+
+    @property
+    def session(self) -> str | None:
+        return self.harness.session if self.harness is not None else None
+
+    def load_history(self) -> None:
+        if self.harness is None:
+            return
+        harness, log, home = self.harness, self.log, self.home
+
+        def gather():
+            pasts = harness.conversations()
+            # Conversations from before the Harness moved them itself.
+            moves = misplaced(pasts, log.programs_worked_on() if log else [], home,
+                              Path.exists)
+            for session, folder in moves:
+                harness.move(session, folder)
+            return harness.conversations() if moves else pasts
+
+        def show(pasts) -> None:
+            self.pasts = pasts
+            self.drawer.show_history(*group(pasts, home))
+
+        self.background(gather, show)
+
+    def update_canvas(self) -> None:
+        # What this run changed, and what the Conversation changed before, as
+        # the log has it: a reopened Conversation brings its Canvas back.
+        earlier = self.log.programs_of(self.session) if self.log and self.session else []
+        # A Conversation in a Program's Project is about that Program first.
+        here = project_program(self.harness.directory, self.home) if self.harness else None
+        names = list(dict.fromkeys([*([here] if here else []), *earlier,
+                                    *self.conversation.programs]))
+        programs = self.programs()
+
+        def gather():
+            known = {p.manifest.name: p for p in programs.programs()}
+            return [(known[name], programs.files(name))
+                    for name in names if name in known]
+
+        self.background(gather, self.drawer.show_canvas)
+
+    def archive(self, session: str) -> None:
+        if self.harness is None:
+            return
+        harness = self.harness
+        self.background(lambda: harness.archive(session), lambda _r: self.load_history())
+
+    def ask_to_delete(self, session: str, title: str) -> None:
+        dialog = Adw.AlertDialog(
+            heading=f"Delete “{title}”?",
+            body=("This erases the conversation from opencode and from the Harness "
+                  "log, and cannot be undone. What it did stays done: a Theme "
+                  "applied or a Program made is not removed."))
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("delete", "Delete")
+        dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_close_response("cancel")
+
+        def chosen(_dialog, response: str) -> None:
+            if response != "delete" or self.harness is None:
+                return
+            harness, on_screen = self.harness, session == self.session
+
+            def deleted(_result) -> None:
+                if on_screen:
+                    self.conversation = Conversation()
+                    self.drawer.clear()
+                    self.drawer.refresh()
+                self.load_history()
+
+            self.background(lambda: harness.delete(session), deleted)
+
+        dialog.connect("response", chosen)
+        dialog.present(self.drawer)
+
+    def open_past(self, session: str) -> None:
+        if self.harness is None or self.conversation.busy or session == self.session:
+            return
+        harness = self.harness
+
+        def opened(past) -> None:
+            self.conversation = Conversation.restored(past)
+            self.drawer.clear()
+            self.drawer.refresh()
+            self.load_history()
+            self.update_canvas()
+
+        self.background(lambda: harness.resume(session), opened)
+
+    def new_conversation(self, folder: Path | None = None) -> None:
+        """A new Conversation, in ``folder``'s Project or in none."""
+        if self.conversation.busy:
+            return
+        self.conversation = Conversation()
+        if self.harness is not None:
+            self.harness.new_conversation(folder)
+        self.drawer.clear()
+        self.drawer.refresh()
+        self.drawer.entry.grab_focus()
+        self.load_history()
+        self.update_canvas()
 
     def ask(self, text: str) -> None:
         if self.harness is None:
@@ -444,16 +789,18 @@ class Application(Adw.Application):
             try:
                 service = locate(files, me, SubprocessRunner(sink=lambda _l: None))
                 engine = OpencodeEngine(UrllibClient(), service)
-                engine.attach_tools(TOOLS, [sys.executable, TOOL_SERVER])
                 tiers = {engine.action(TOOLS, tool): tier for tool, tier in TIERS.items()}
                 # A restarted service has a new password, so the Harness is
                 # rebuilt around the new connection; the next question opens
                 # a new session.
                 self.log = HarnessLog(files, me.home / LOG_FILE)
                 self.harness = Harness(engine, self.log, self.models.default,
-                                       tiers=tiers)
+                                       tiers=tiers, directory=me.home,
+                                       tools=(TOOLS, [sys.executable, TOOL_SERVER]),
+                                       may_touch=self.programs().holds)
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)
+                GLib.idle_add(lambda: self.load_history() or False)
                 for event in engine.events():
                     handled = self.harness.handle(event)
                     if handled is not None:
@@ -466,7 +813,15 @@ class Application(Adw.Application):
     def _apply(self, event) -> bool:
         self.conversation.apply(event)
         if isinstance(event, Finished | Stopped | Failed) and self.log is not None:
-            self.conversation.changed(self.log.last_changes())
+            changes = self.log.last_changes()
+            self.conversation.changed(changes)
+            worked_on = [c.program for c in changes if c.program]
+            if worked_on and self.harness is not None:
+                harness, folder = self.harness, self.home / CODE_DIR / worked_on[0]
+                self.background(lambda: harness.worked_on(folder),
+                                lambda _r: self.load_history())
+            self.load_history()
+            self.update_canvas()
         self.drawer.refresh()
         return False
 
@@ -477,6 +832,7 @@ class Application(Adw.Application):
     def _restyle(self) -> None:
         if self.drawer is not None:
             self.drawer.refresh(restyle=True)
+            self.drawer.canvas.restyle(self.look.scheme)
 
 
 if __name__ == "__main__":

@@ -57,7 +57,7 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
     padding: 6px 10px 6px 18px;
     border-top: 1px solid @harness_border;
 }
-.harness-composer entry { background: none; border: none; box-shadow: none; outline: none; }
+.harness-composer textview, .harness-composer textview text { background: none; min-height: 36px; }
 .harness-send { min-width: 28px; min-height: 28px; border-radius: 6px; color: @harness_accent; }
 .harness-footer { padding: 2px 18px 10px; }
 
@@ -67,3 +67,27 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-provider-card { padding: 8px 0; border-bottom: 1px solid @harness_border; }
 .harness-monogram { min-width: 20px; color: @harness_accent; font-weight: 700; }
 .harness-connected { color: @harness_success; font-size: 0.85em; }
+.harness-program { padding: 8px 0; border-top: 1px solid @harness_border; }
+
+.harness-canvas { background-color: @harness_sunken; border-left: 1px solid alpha(@harness_border, 0.6); }
+.harness-canvas tabbar, .harness-canvas tabbar .box,
+.harness-canvas scrolledwindow, .harness-canvas viewport, .harness-canvas list,
+.harness-canvas .navigation-sidebar { background-color: transparent; box-shadow: none; }
+.harness-canvas tabbar tab, .harness-canvas tabbar tab:backdrop { color: @harness_muted; border-radius: 8px; }
+.harness-canvas tabbar tab:selected, .harness-canvas tabbar tab:selected:backdrop {
+    color: @harness_fg;
+    background-color: alpha(@harness_fg, 0.08);
+}
+.harness-canvas .sidebar-pane { background-color: @harness_sunken; color: @harness_fg; border-right: 1px solid alpha(@harness_border, 0.6); }
+.harness-canvas .sidebar-pane label { color: @harness_fg; }
+.harness-path { padding: 6px 12px; border-bottom: 1px solid alpha(@harness_border, 0.6); }
+
+/* Row controls appear where the pointer is, keeping the sidebar quiet. */
+.harness-sidebar row button { opacity: 0; }
+.harness-sidebar row:hover button, .harness-sidebar row:selected button,
+.harness-sidebar row button:checked, .harness-sidebar row button:focus { opacity: 1; }
+/* The Canvas's code sits flush, unlike a code block inside an answer. */
+.harness-canvas .harness-code, .harness-canvas .harness-code text { border: none; border-radius: 0; box-shadow: none; }
+
+.harness-sidebar { background-color: @harness_raised; }
+.harness-sidebar scrolledwindow, .harness-sidebar viewport, .harness-sidebar list { background-color: transparent; }

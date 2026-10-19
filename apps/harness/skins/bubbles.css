@@ -13,8 +13,8 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
     box-shadow: 0 10px 30px alpha(@harness_sunken, 0.55);
 }
 
-.harness-header { padding: 12px 16px 10px; border-bottom: 1px solid @harness_border; }
-.harness-header .harness-title { font-weight: 700; }
+.harness-header { padding: 8px 10px; border-bottom: 1px solid alpha(@harness_border, 0.5); }
+.harness-header .harness-title { font-weight: 600; margin-left: 4px; }
 .harness-meta { color: @harness_muted; font-size: 0.85em; }
 
 .harness-turn { margin: 4px 16px; }
@@ -67,16 +67,19 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 
 .harness-composer {
     margin: 8px 12px 0;
-    padding: 4px 4px 4px 10px;
+    padding: 10px 8px 8px 14px;
     background-color: @harness_raised;
-    border: 1px solid @harness_border;
-    border-radius: 14px;
+    border: 1px solid alpha(@harness_border, 0.8);
+    border-radius: 20px;
 }
-.harness-composer entry { background: none; border: none; box-shadow: none; outline: none; }
+.harness-composer textview, .harness-composer textview text {
+    background: none;
+    min-height: 40px;
+}
 .harness-send {
-    min-width: 30px;
-    min-height: 30px;
-    border-radius: 10px;
+    min-width: 34px;
+    min-height: 34px;
+    border-radius: 999px;
     background-color: @harness_accent;
     color: @harness_on_accent;
 }
@@ -109,3 +112,43 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
     font-size: 0.85em;
 }
 .harness-sign-in { border-radius: 10px; background-color: @harness_accent; color: @harness_on_accent; }
+
+.harness-program {
+    background-color: alpha(@harness_raised, 0.6);
+    border: 1px solid alpha(@harness_fg, 0.06);
+    border-radius: 14px;
+    padding: 10px 12px;
+}
+
+.harness-canvas { background-color: @harness_sunken; border-left: 1px solid alpha(@harness_border, 0.6); }
+.harness-canvas tabbar, .harness-canvas tabbar .box,
+.harness-canvas scrolledwindow, .harness-canvas viewport, .harness-canvas list,
+.harness-canvas .navigation-sidebar { background-color: transparent; box-shadow: none; }
+.harness-canvas tabbar tab, .harness-canvas tabbar tab:backdrop { color: @harness_muted; border-radius: 8px; }
+.harness-canvas tabbar tab:selected, .harness-canvas tabbar tab:selected:backdrop {
+    color: @harness_fg;
+    background-color: alpha(@harness_fg, 0.08);
+}
+.harness-canvas .sidebar-pane { background-color: @harness_sunken; color: @harness_fg; border-right: 1px solid alpha(@harness_border, 0.6); }
+.harness-canvas .sidebar-pane label { color: @harness_fg; }
+.harness-path { padding: 6px 12px; border-bottom: 1px solid alpha(@harness_border, 0.6); }
+
+/* Row controls appear where the pointer is, keeping the sidebar quiet. */
+.harness-sidebar row button { opacity: 0; }
+.harness-sidebar row:hover button, .harness-sidebar row:selected button,
+.harness-sidebar row button:checked, .harness-sidebar row button:focus { opacity: 1; }
+/* The Canvas's code sits flush, unlike a code block inside an answer. */
+.harness-canvas .harness-code, .harness-canvas .harness-code text { border: none; border-radius: 0; box-shadow: none; }
+
+/* Frosted glass, in the Theme's own colour: a sheen from the top and a fine
+   highlight along the edge. Cinnamon cannot blur behind a window, so the
+   frost is drawn, not borrowed from the desktop. */
+.harness-sidebar {
+    background-color: @harness_glass;
+    background-image: linear-gradient(to bottom, alpha(@harness_glass_edge, 0.28), alpha(@harness_glass_edge, 0) 45%);
+    box-shadow: inset -1px 0 alpha(@harness_glass_edge, 0.6), inset 0 1px alpha(@harness_glass_edge, 0.4);
+}
+.harness-sidebar scrolledwindow, .harness-sidebar viewport,
+.harness-sidebar list { background-color: transparent; }
+.harness-sidebar row:selected { background-color: alpha(@harness_glass_edge, 0.32); }
+.harness-sidebar row:hover { background-color: alpha(@harness_glass_edge, 0.18); }

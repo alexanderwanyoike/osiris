@@ -12,11 +12,13 @@ from osiris.harness.engine import (
     Failed,
     Finished,
     ModelRef,
+    PastTurn,
     Stopped,
     Text,
 )
 from osiris.harness.harness import Decision, Refused
 from osiris.harness.log import Change
+from osiris.harness.titles import title_of
 
 
 class State(Enum):
@@ -39,6 +41,12 @@ class Turn:
     undone: bool = False
 
     @property
+    def programs(self) -> list[str]:
+        """The Programs this turn changed, each once, in the order they changed."""
+        named = (change.program for change in self.changes if change.program)
+        return list(dict.fromkeys(named))
+
+    @property
     def undoable(self) -> bool:
         return not self.undone and bool(self.undo_steps())
 
@@ -52,6 +60,17 @@ class Conversation:
         self.turns: list[Turn] = []
         self.model: ModelRef | None = None
         self.tokens_spent = 0
+
+    @property
+    def title(self) -> str | None:
+        return title_of(self.turns[0].question) if self.turns else None
+
+    @property
+    def programs(self) -> list[str]:
+        """Every Program this Conversation has changed, in the order it first did."""
+        return list(
+            dict.fromkeys(name for turn in self.turns for name in turn.programs)
+        )
 
     @property
     def busy(self) -> bool:
@@ -69,6 +88,15 @@ class Conversation:
         turn = Turn(question)
         self.turns.append(turn)
         return turn
+
+    @classmethod
+    def restored(cls, past: list[PastTurn]) -> Conversation:
+        """A past Conversation as it ended."""
+        talk = cls()
+        for turn in past:
+            talk.turns.append(Turn(turn.question, turn.answer, State.DONE, turn.model))
+            talk.model = turn.model or talk.model
+        return talk
 
     def changed(self, changes: list[Change]) -> None:
         """Record what the latest question led to, as the Harness log has it."""

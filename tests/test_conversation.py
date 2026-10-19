@@ -8,6 +8,7 @@ from osiris.harness.engine import (
     Failed,
     Finished,
     ModelRef,
+    PastTurn,
     Stopped,
     Text,
     Tokens,
@@ -171,3 +172,61 @@ def test_a_turn_that_changed_nothing_offers_no_undo() -> None:
     talk.asked("hello")
     talk.changed([])
     assert not talk.turns[-1].undoable
+
+
+def test_a_turn_knows_the_programs_it_changed_once_each_in_order() -> None:
+    talk = Conversation()
+    talk.asked("make a timer and a notes app")
+    talk.changed(
+        [
+            Change("Made Pomodoro", None, program="pomodoro"),
+            MADE,
+            Change("Made Notes", None, program="notes"),
+            Change("Pomodoro: Add a pause button", None, program="pomodoro"),
+        ]
+    )
+    assert talk.turns[-1].programs == ["pomodoro", "notes"]
+
+
+def test_a_new_conversation_has_no_title_yet() -> None:
+    assert Conversation().title is None
+
+
+def test_a_conversation_is_titled_by_its_first_question() -> None:
+    talk = Conversation()
+    talk.asked("Make me a calm theme\nfor working late")
+    talk.asked("Now warmer")
+    assert talk.title == "Make me a calm theme"
+
+
+def test_a_long_first_question_is_shortened_for_the_title() -> None:
+    talk = Conversation()
+    talk.asked("Build me a small pomodoro timer app in Python with breaks and stats")
+    assert talk.title == "Build me a small pomodoro timer app in Python…"
+
+
+def test_a_past_conversation_comes_back_with_its_answers() -> None:
+    talk = Conversation.restored(
+        [PastTurn("make a timer", "Made it.", GPT), PastTurn("thanks", "", None)]
+    )
+    assert [(t.question, t.answer, t.state, t.model) for t in talk.turns] == [
+        ("make a timer", "Made it.", State.DONE, GPT),
+        ("thanks", "", State.DONE, None),
+    ]
+    assert talk.title == "make a timer"
+    assert talk.model == GPT
+    assert not talk.busy
+
+
+def test_a_conversation_knows_every_program_it_has_touched() -> None:
+    talk = Conversation()
+    talk.asked("make a timer")
+    talk.changed([Change("Made Pomodoro", None, program="pomodoro")])
+    talk.asked("and a notes app")
+    talk.changed(
+        [
+            Change("Made Notes", None, program="notes"),
+            Change("Pomodoro: Add a pause button", None, program="pomodoro"),
+        ]
+    )
+    assert talk.programs == ["pomodoro", "notes"]

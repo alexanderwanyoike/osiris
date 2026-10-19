@@ -13,6 +13,8 @@ from osiris.harness.engine import (
     Failed,
     Finished,
     ModelRef,
+    Past,
+    PastTurn,
     Stopped,
     Text,
     Tokens,
@@ -166,6 +168,15 @@ class TestSessions:
         assert isinstance(body, dict)
         assert body["model"] == {"providerID": "openai", "id": "gpt-5.5"}
 
+    def test_a_session_can_start_in_a_folder(self) -> None:
+        http = FakeHttpClient(
+            replies={("POST", f"{URL}/api/session"): {"data": {"id": SESSION}}}
+        )
+        engine(http).start(directory=Path("/home/tester"))
+        _, _, body = http.requests[0]
+        assert isinstance(body, dict)
+        assert body["location"] == {"directory": "/home/tester"}
+
     def test_sending_posts_the_text_as_a_prompt(self) -> None:
         path = f"{URL}/api/session/{SESSION}/prompt"
         http = FakeHttpClient(replies={("POST", path): {"data": {}}})
@@ -186,11 +197,19 @@ class TestSessions:
             ("POST", path, {"model": {"providerID": "openai", "id": "gpt-5.5"}})
         ]
 
-    def test_a_tool_server_is_attached_as_a_local_mcp_server(self) -> None:
-        path = f"{URL}/api/experimental/mcp/osiris"
-        http = FakeHttpClient(replies={("PUT", path): None})
-        engine(http).attach_tools("osiris", ["python3", "/srv/tool_server.py"])
+    def test_a_tool_server_is_attached_afresh_for_a_folder(self) -> None:
+        """opencode 2.0 keeps tool servers per folder: one attached at home is
+        not there for a session in a Project."""
+        where = "location%5Bdirectory%5D=%2Fhome%2Ftester%2FCode%2Fpomodoro"
+        path = f"{URL}/api/experimental/mcp/osiris?{where}"
+        http = FakeHttpClient(replies={("DELETE", path): None, ("PUT", path): None})
+        engine(http).attach_tools(
+            "osiris",
+            ["python3", "/srv/tool_server.py"],
+            Path("/home/tester/Code/pomodoro"),
+        )
         assert http.requests == [
+            ("DELETE", path, None),
             (
                 "PUT",
                 path,
@@ -200,8 +219,23 @@ class TestSessions:
                         "command": ["python3", "/srv/tool_server.py"],
                     }
                 },
-            )
+            ),
         ]
+
+    def test_attaching_a_tool_server_never_registered_before_works(self) -> None:
+        where = "location%5Bdirectory%5D=%2Fhome%2Ftester"
+        path = f"{URL}/api/experimental/mcp/osiris?{where}"
+        http = FakeHttpClient(replies={("PUT", path): None})
+        engine(http).attach_tools(
+            "osiris", ["python3", "/srv/tool_server.py"], Path("/home/tester")
+        )
+        assert http.requests[-1][0] == "PUT"
+
+    def test_answering_a_request_the_engine_already_withdrew_is_not_an_error(
+        self,
+    ) -> None:
+        """opencode withdraws a step's other requests when one is rejected."""
+        engine(FakeHttpClient()).reply(SESSION, "per_2", allow=False, message="no")
 
     def test_a_tool_servers_requests_name_the_server_and_tool(self) -> None:
         """As opencode 2.0.32 does: ``tools.osiris.apply_theme`` in its code
@@ -265,3 +299,208 @@ class TestEvents:
             "data": {"sessionID": SESSION},
         }
         assert self.events(interrupted) == [Stopped(SESSION)]
+
+
+class TestHistory:
+    def test_the_harnesss_sessions_are_marked_as_its_own(self) -> None:
+        http = FakeHttpClient(
+            replies={("POST", f"{URL}/api/session"): {"data": {"id": SESSION}}}
+        )
+        engine(http).start()
+        _, _, body = http.requests[0]
+        assert isinstance(body, dict)
+        assert body["metadata"] == {"osiris": "harness"}
+
+    def test_a_session_is_renamed(self) -> None:
+        path = f"{URL}/api/session/{SESSION}"
+        http = FakeHttpClient(replies={("PATCH", path): {"data": {}}})
+        engine(http).rename(SESSION, "Make me a calm theme")
+        assert http.requests == [("PATCH", path, {"title": "Make me a calm theme"})]
+
+    def test_past_conversations_are_the_harnesss_sessions_newest_first(self) -> None:
+        def session(sid: str, title: str, folder: str, updated: int, mine: bool):
+            return {
+                "id": sid,
+                "title": title,
+                "location": {"directory": folder},
+                "time": {"created": updated - 10, "updated": updated},
+                **({"metadata": {"osiris": "harness"}} if mine else {}),
+            }
+
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{URL}/api/session?limit=200"): {
+                    "data": [
+                        session("ses_a", "Calm theme", "/home/tester", 1000, True),
+                        session("ses_tui", "refactor", "/home/tester/x", 3000, False),
+                        session(
+                            "ses_b",
+                            "Pomodoro",
+                            "/home/tester/Code/pomodoro",
+                            2000,
+                            True,
+                        ),
+                    ]
+                }
+            }
+        )
+        assert engine(http).conversations() == [
+            Past("ses_b", "Pomodoro", Path("/home/tester/Code/pomodoro"), 2.0),
+            Past("ses_a", "Calm theme", Path("/home/tester"), 1.0),
+        ]
+
+    def test_a_past_conversation_is_rebuilt_from_its_messages(self) -> None:
+        model = {"id": "gpt-6.1-sol", "providerID": "openai"}
+        http = FakeHttpClient(
+            replies={
+                (
+                    "GET",
+                    f"{URL}/api/session/{SESSION}/message?limit=200&order=asc",
+                ): {
+                    "data": [
+                        {"id": "m1", "type": "user", "text": "make a timer"},
+                        {
+                            "id": "m2",
+                            "type": "assistant",
+                            "model": model,
+                            "content": [{"type": "tool", "name": "read"}],
+                        },
+                        {"id": "m3", "text": "Instructions from: AGENTS.md"},
+                        {
+                            "id": "m4",
+                            "type": "assistant",
+                            "model": model,
+                            "content": [{"type": "text", "text": "Made it."}],
+                        },
+                        {"id": "m5", "type": "idle"},
+                        {"id": "m6", "type": "user", "text": "thanks"},
+                    ]
+                }
+            }
+        )
+        assert engine(http).history(SESSION) == [
+            PastTurn("make a timer", "Made it.", ModelRef("openai", "gpt-6.1-sol")),
+            PastTurn("thanks", "", None),
+        ]
+
+    def test_sessions_from_before_the_harness_marked_its_own_are_adopted(
+        self,
+    ) -> None:
+        old = {
+            "id": "ses_old",
+            "title": "Osiris Harness",
+            "location": {"directory": "/home/tester"},
+            "time": {"created": 1, "updated": 5000},
+        }
+        empty = {**old, "id": "ses_empty", "time": {"created": 1, "updated": 4000}}
+        first = "&order=asc"
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{URL}/api/session?limit=200"): {"data": [old, empty]},
+                ("GET", f"{URL}/api/session/ses_old/message?limit=200{first}"): {
+                    "data": [{"id": "m1", "type": "user", "text": "Which kernel?"}]
+                },
+                ("GET", f"{URL}/api/session/ses_empty/message?limit=200{first}"): {
+                    "data": []
+                },
+                ("PATCH", f"{URL}/api/session/ses_old"): {"data": {}},
+            }
+        )
+        assert engine(http).conversations() == [
+            Past("ses_old", "Which kernel?", Path("/home/tester"), 5.0)
+        ]
+        assert (
+            "PATCH",
+            f"{URL}/api/session/ses_old",
+            {"title": "Which kernel?", "metadata": {"osiris": "harness"}},
+        ) in http.requests
+
+    def test_a_long_conversation_is_read_page_by_page(self) -> None:
+        def page(start: int, count: int) -> list[dict[str, object]]:
+            return [
+                {"id": f"m{i}", "type": "user", "text": f"question {i}"}
+                for i in range(start, start + count)
+            ]
+
+        base = f"{URL}/api/session/{SESSION}/message"
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{base}?limit=200&order=asc"): {
+                    "data": page(0, 200),
+                    "cursor": {"next": "two", "previous": None},
+                },
+                ("GET", f"{base}?limit=200&cursor=two"): {
+                    "data": page(200, 3),
+                    "cursor": {"next": "three", "previous": "one"},
+                },
+            }
+        )
+        turns = engine(http).history(SESSION)
+        assert len(turns) == 203
+        assert turns[-1].question == "question 202"
+
+    def test_a_session_is_moved_into_a_folder(self) -> None:
+        path = f"{URL}/api/session/{SESSION}/move"
+        http = FakeHttpClient(replies={("POST", path): None})
+        engine(http).move(SESSION, Path("/home/tester/Code/pomodoro"))
+        assert http.requests == [
+            ("POST", path, {"directory": "/home/tester/Code/pomodoro"})
+        ]
+
+    def test_a_conversation_is_as_recent_as_its_last_work_not_its_last_rename(
+        self,
+    ) -> None:
+        renamed = {
+            "id": "ses_a",
+            "title": "Old work",
+            "location": {"directory": "/home/tester"},
+            "time": {"created": 1000, "updated": 9000, "idle": 2000},
+            "metadata": {"osiris": "harness"},
+        }
+        recent = {**renamed, "id": "ses_b", "title": "Recent work"}
+        recent["time"] = {"created": 3000, "updated": 4000, "idle": 4000}
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{URL}/api/session?limit=200"): {"data": [renamed, recent]}
+            }
+        )
+        assert [p.title for p in engine(http).conversations()] == [
+            "Recent work",
+            "Old work",
+        ]
+
+    def test_archiving_marks_a_session_and_hides_it_from_the_history(self) -> None:
+        path = f"{URL}/api/session/{SESSION}"
+        http = FakeHttpClient(replies={("PATCH", path): {"data": {}}})
+        engine(http).archive(SESSION)
+        assert http.requests == [
+            ("PATCH", path, {"metadata": {"osiris": "harness", "archived": True}})
+        ]
+        archived = {
+            "id": "ses_x",
+            "title": "Old",
+            "location": {"directory": "/home/tester"},
+            "time": {"created": 1, "updated": 2},
+            "metadata": {"osiris": "harness", "archived": True},
+        }
+        http = FakeHttpClient(
+            replies={("GET", f"{URL}/api/session?limit=200"): {"data": [archived]}}
+        )
+        assert engine(http).conversations() == []
+
+    def test_deleting_a_session(self) -> None:
+        path = f"{URL}/api/session/{SESSION}"
+        http = FakeHttpClient(replies={("DELETE", path): None})
+        engine(http).delete(SESSION)
+        assert http.requests == [("DELETE", path, None)]
+
+    def test_a_session_says_which_folder_it_runs_in(self) -> None:
+        path = f"{URL}/api/session/{SESSION}"
+        http = FakeHttpClient(
+            replies={
+                ("GET", path): {
+                    "data": {"location": {"directory": "/home/tester/Code/pomodoro"}}
+                }
+            }
+        )
+        assert engine(http).where(SESSION) == Path("/home/tester/Code/pomodoro")

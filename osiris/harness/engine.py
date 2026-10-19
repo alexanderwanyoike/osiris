@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 
@@ -84,10 +85,31 @@ class Failed:
 Event = Text | ToolCalled | ToolRequested | Answered | Finished | Stopped | Failed
 
 
+@dataclass(frozen=True)
+class Past:
+    """A Conversation the Harness had, as the Engine keeps it."""
+
+    session: str
+    title: str
+    directory: Path
+    #: Seconds since the epoch.
+    updated: float
+
+
+@dataclass(frozen=True)
+class PastTurn:
+    question: str
+    answer: str
+    model: ModelRef | None
+
+
 @runtime_checkable
 class Engine(Protocol):
-    def start(self, model: ModelRef | None = None) -> str:
-        """Open a session and return its id; None leaves the Engine's default."""
+    def start(
+        self, model: ModelRef | None = None, directory: Path | None = None
+    ) -> str:
+        """Open a session and return its id; None leaves the Engine's default
+        model, or its own folder."""
         ...
 
     def send(self, session: str, text: str) -> None: ...
@@ -104,7 +126,29 @@ class Engine(Protocol):
 
     def switch_model(self, session: str, model: ModelRef) -> None: ...
 
-    def attach_tools(self, name: str, command: list[str]) -> None:
+    def rename(self, session: str, title: str) -> None: ...
+
+    def archive(self, session: str) -> None:
+        """Keep a session, out of the way: it leaves the history."""
+        ...
+
+    def delete(self, session: str) -> None: ...
+
+    def where(self, session: str) -> Path:
+        """The folder a session runs in."""
+        ...
+
+    def move(self, session: str, directory: Path) -> None:
+        """Carry on the session in another folder: its Project."""
+        ...
+
+    def conversations(self) -> list[Past]:
+        """The Harness's own sessions, newest first; other programs' are left out."""
+        ...
+
+    def history(self, session: str) -> list[PastTurn]: ...
+
+    def attach_tools(self, name: str, command: list[str], directory: Path) -> None:
         """Run a tool server for every session; each of its tools still raises
         a ``ToolRequested`` before it runs."""
         ...

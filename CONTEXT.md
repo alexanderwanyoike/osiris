@@ -125,10 +125,15 @@ can edit or delete.
 _Avoid_: context, profile
 
 **Program**:
-Anything the **Harness** makes that is kept, installed and shared as one thing:
-an app with a window, an automation, a new capability for the **Harness**, or a
-website.
+Anything the **Harness** builds for the person to keep and use, installed and
+shared as one thing: an app, a script, a command, a website, an automation, a
+new tool for the **Harness**. Its **Program manifest** says how it runs.
 _Avoid_: app (for all of these), skill, plugin
+
+**Skill**:
+How the **Harness** goes about a kind of task, written as instructions it
+follows. A **Skill** changes how the **Harness** works; it is not a **Program**.
+_Avoid_: program, prompt
 
 **Program manifest**:
 What a **Program** is, what it may touch, and how it runs, read before it is
@@ -164,7 +169,9 @@ _Avoid_: metadata
   **Engine** and the shared AGENTS.md convention already make it.
 - A **Conversation** takes its **Project** from the **Entry point** that opened it
   (the terminal's folder, a file's folder), or from the person's choice before
-  the first message; with neither, it has none. It never changes afterwards.
+  the first message; with neither, it has none. It never changes afterwards,
+  with one exception: a **Conversation** with none takes the **Project** of the
+  first **Program** it creates or changes.
 - The **Harness** is one surface, **Compact** or **Expanded**, showing the same
   **Conversation**, history and permissions in both. Which it is follows its
   width, as the person drags it; expanding takes it to the widest and back.
@@ -195,6 +202,21 @@ _Avoid_: metadata
   that asks first, showing what the manifest allows.
 - A **Program** with a face is built from Osiris's own parts, so it follows the
   **Theme** and **Skin** like everything else.
+- A **Program**'s source is a **Project** of its own, in `~/Code`, kept in git.
+  Every change to it, by the **Harness** or the person, is one atomic commit;
+  undoing what an answer changed reverts its commits.
+- **Programs** are written in Python, C or C++, Rust, Go or JavaScript, whose
+  toolchains Osiris ships, unless the person asks for another language. They look like the
+  rest of Osiris unless the person asks otherwise.
+- A **Program**'s source is an ordinary project that any editor or coding agent
+  can carry on: standard build files and an AGENTS.md. Only its **Program
+  manifest** is Osiris's own.
+- The **Harness** knows the **Programs** it has built from their sources in
+  `~/Code`; there is no other record of them.
+- An installed **Program** is a copy of one commit of its source, there like any
+  other application: in the applications menu and the launcher, and it can be
+  kept in the dock. Changing the source changes nothing installed until the
+  person updates it; uninstalling keeps the source and its history.
 - A **Program** is shared as a single file; whoever receives it reads its
   **Program manifest** before installing. Putting anything online uses the
   person's own accounts and always asks first. Osiris runs no servers.

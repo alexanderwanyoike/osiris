@@ -32,6 +32,9 @@ htmlcov/
 # Temporary files
 *.tmp
 *.log
+# archinstall's command log: the installer tests run it as a normal user, so it
+# falls back from /var/log/archinstall to the current directory.
+cmd_history.txt
 *~
 
 # OS-specific files

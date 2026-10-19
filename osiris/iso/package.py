@@ -83,6 +83,14 @@ APPLICATIONS = (
 # the Harness's Engine (ADR 0015); markdown-it-py parses its answers and
 # GtkSourceView draws the code in them; the Osiris tool server speaks MCP with
 # the official SDK.
+#
+# Programs are written in Python, C or C++, Rust, Go or JavaScript (CONTEXT.md),
+# so their toolchains ship. Node.js is its Active LTS line, which Arch packages
+# as nodejs-lts-<codename>; move it when the next line becomes LTS. GJS draws
+# GTK windows from JavaScript.
+TOOLCHAINS = (
+    "gcc", "meson", "cmake", "rust", "go", "nodejs-lts-krypton", "npm", "gjs",
+)  # fmt: skip
 RUNTIME = (
     "python", "python-gobject", "gtk4", "libadwaita",
     "python-pillow", "python-numpy", "python-cairo", "glslang", "mesa-utils",
@@ -93,7 +101,7 @@ RUNTIME = (
 
 
 def depends() -> list[str]:
-    return sorted({*DESKTOP, *APPLICATIONS, *RUNTIME})
+    return sorted({*DESKTOP, *APPLICATIONS, *RUNTIME, *TOOLCHAINS})
 
 
 def pkgbuild(version: str, release: int = 1, requires: Sequence[str] = ()) -> str:

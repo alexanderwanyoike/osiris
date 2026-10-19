@@ -10,6 +10,7 @@ import base64
 import json
 from collections.abc import Iterator
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from osiris.harness.accounts import Method, ModelInfo, Provider, SignIn, SignInState
@@ -19,16 +20,30 @@ from osiris.harness.engine import (
     Failed,
     Finished,
     ModelRef,
+    Past,
+    PastTurn,
     Stopped,
     Text,
     Tokens,
     ToolCalled,
     ToolRequested,
 )
-from osiris.platform import CommandRunner, FileSystem, HttpClient, Identity
+from osiris.harness.titles import title_of
+from osiris.platform import CommandRunner, FileSystem, HttpClient, HttpError, Identity
 
 #: Where the service records its URL and password, relative to the home.
 SERVICE_FILE = ".local/state/opencode/service.json"
+
+#: Marks a session as the Harness's, so its history leaves out the sessions
+#: opencode's own terminal application opens on the same service.
+MINE = {"osiris": "harness"}
+#: How many sessions and messages a history reads; more is older than anyone
+#: scrolls to.
+HISTORY_LIMIT = 200
+#: What the Harness called every session before it marked and named them.
+UNMARKED_TITLE = "Osiris Harness"
+#: opencode serves at most this many messages a page.
+MESSAGE_LIMIT = 200
 
 #: Every action stops at a tool request, so the Harness's policy decides.
 #: Denying instead strips the tools from the request, which opencode's free
@@ -58,6 +73,19 @@ def locate(files: FileSystem, identity: Identity, runner: CommandRunner) -> Serv
     return Service(state["url"], state["password"])
 
 
+#: Characters a URL query carries as they are; everything else is escaped.
+_UNRESERVED = frozenset(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
+)
+
+
+def _quoted(text: str) -> str:
+    return "".join(
+        chr(byte) if chr(byte) in _UNRESERVED else f"%{byte:02X}"
+        for byte in text.encode()
+    )
+
+
 class OpencodeEngine:
     def __init__(self, http: HttpClient, service: Service) -> None:
         self._http = http
@@ -71,11 +99,16 @@ class OpencodeEngine:
             headers=self._service.headers(),
         )
 
-    def start(self, model: ModelRef | None = None) -> str:
+    def start(
+        self, model: ModelRef | None = None, directory: Path | None = None
+    ) -> str:
         body: dict[str, object] = {
             "title": "Osiris Harness",
             "permissions": ASK_EVERYTHING,
+            "metadata": MINE,
         }
+        if directory is not None:
+            body["location"] = {"directory": str(directory)}
         if model is not None:
             body["model"] = {"providerID": model.provider, "id": model.model}
         session: str = self._post("/api/session", body)["data"]["id"]
@@ -85,10 +118,16 @@ class OpencodeEngine:
         self._post(f"/api/session/{session}/prompt", {"text": text})
 
     def reply(self, session: str, request: str, *, allow: bool, message: str) -> None:
-        self._post(
-            f"/api/session/{session}/permission/{request}/reply",
-            {"decision": "once" if allow else "reject", "message": message},
-        )
+        try:
+            self._post(
+                f"/api/session/{session}/permission/{request}/reply",
+                {"decision": "once" if allow else "reject", "message": message},
+            )
+        except HttpError as error:
+            # Rejecting one of a step's requests withdraws the others, so a reply
+            # can arrive after its request is gone.
+            if error.status != 404:
+                raise
 
     def stop(self, session: str) -> None:
         self._post(f"/api/session/{session}/interrupt")
@@ -99,13 +138,134 @@ class OpencodeEngine:
             {"model": {"providerID": model.provider, "id": model.model}},
         )
 
-    def attach_tools(self, name: str, command: list[str]) -> None:
+    def attach_tools(self, name: str, command: list[str], directory: Path) -> None:
+        url = (
+            f"{self._service.url}/api/experimental/mcp/{name}"
+            f"?location%5Bdirectory%5D={_quoted(str(directory))}"
+        )
+        # opencode keeps a running server whose registration is unchanged, which
+        # would keep serving the code from before an update.
+        try:
+            self._http.request("DELETE", url, headers=self._service.headers())
+        except HttpError as error:
+            if error.status != 404:
+                raise
         self._http.request(
             "PUT",
-            f"{self._service.url}/api/experimental/mcp/{name}",
+            url,
             body={"config": {"type": "local", "command": command}},
             headers=self._service.headers(),
         )
+
+    def rename(self, session: str, title: str) -> None:
+        self._http.request(
+            "PATCH",
+            f"{self._service.url}/api/session/{session}",
+            body={"title": title},
+            headers=self._service.headers(),
+        )
+
+    def archive(self, session: str) -> None:
+        self._http.request(
+            "PATCH",
+            f"{self._service.url}/api/session/{session}",
+            body={"metadata": {**MINE, "archived": True}},
+            headers=self._service.headers(),
+        )
+
+    def delete(self, session: str) -> None:
+        self._http.request(
+            "DELETE",
+            f"{self._service.url}/api/session/{session}",
+            headers=self._service.headers(),
+        )
+
+    def where(self, session: str) -> Path:
+        return Path(
+            self._get(f"/api/session/{session}")["data"]["location"]["directory"]
+        )
+
+    def move(self, session: str, directory: Path) -> None:
+        self._post(f"/api/session/{session}/move", {"directory": str(directory)})
+
+    def _get(self, path: str) -> Any:
+        return self._http.request(
+            "GET", self._service.url + path, headers=self._service.headers()
+        )
+
+    def conversations(self) -> list[Past]:
+        sessions = self._get(f"/api/session?limit={HISTORY_LIMIT}")["data"]
+        found = []
+        for session in sessions:
+            metadata = session.get("metadata") or {}
+            if metadata.get("archived"):
+                continue
+            if metadata.get("osiris") != MINE["osiris"]:
+                if session.get("title") != UNMARKED_TITLE:
+                    continue
+                adopted = self._adopt(session["id"])
+                if adopted is None:
+                    continue
+                session = {**session, "title": adopted}
+            found.append(
+                Past(
+                    session["id"],
+                    session.get("title", ""),
+                    Path(session["location"]["directory"]),
+                    # Renaming and moving touch "updated"; "idle" is the last work.
+                    session["time"].get("idle", session["time"]["updated"]) / 1000,
+                )
+            )
+        return sorted(found, key=lambda past: past.updated, reverse=True)
+
+    def _adopt(self, session: str) -> str | None:
+        """Name and mark one of the Harness's sessions from before it marked
+        its own; None for one in which nothing was asked."""
+        turns = self.history(session)
+        if not turns:
+            return None
+        title = title_of(turns[0].question)
+        self._http.request(
+            "PATCH",
+            f"{self._service.url}/api/session/{session}",
+            body={"title": title, "metadata": MINE},
+            headers=self._service.headers(),
+        )
+        return title
+
+    def _messages(self, session: str) -> list[dict[str, Any]]:
+        """Every message of a session, oldest first, a page at a time; a cursor
+        carries its order, so only the first page names it."""
+        base = f"/api/session/{session}/message?limit={MESSAGE_LIMIT}"
+        page = self._get(f"{base}&order=asc")
+        messages = list(page["data"])
+        while len(page["data"]) == MESSAGE_LIMIT and (page.get("cursor") or {}).get(
+            "next"
+        ):
+            page = self._get(f"{base}&cursor={page['cursor']['next']}")
+            messages.extend(page["data"])
+        return messages
+
+    def history(self, session: str) -> list[PastTurn]:
+        turns: list[PastTurn] = []
+        for message in self._messages(session):
+            if message.get("type") == "user":
+                turns.append(PastTurn(message.get("text", ""), "", None))
+            elif message.get("type") == "assistant" and turns:
+                said = "".join(
+                    part.get("text", "")
+                    for part in message.get("content", [])
+                    if part.get("type") == "text"
+                )
+                if said:
+                    model = message.get("model") or {}
+                    last = turns[-1]
+                    turns[-1] = PastTurn(
+                        last.question,
+                        last.answer + said,
+                        ModelRef(model["providerID"], model["id"]) if model else None,
+                    )
+        return turns
 
     def action(self, server: str, tool: str) -> str:
         return f"{server}_{tool}"

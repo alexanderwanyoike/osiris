@@ -81,6 +81,16 @@ def test_the_osiris_tool_server_speaks_mcp_with_the_sdk_arch_ships() -> None:
     assert "python-mcp" in package.depends()
 
 
+@pytest.mark.parametrize(
+    "toolchain",
+    ["gcc", "meson", "cmake", "rust", "go", "nodejs-lts-krypton", "npm", "gjs"],
+)
+def test_the_first_class_languages_toolchains_ship(toolchain: str) -> None:
+    """Python, C and C++, Rust, Go and JavaScript on Node.js's Active LTS
+    (CONTEXT.md); Python is already there for Osiris itself."""
+    assert toolchain in package.depends()
+
+
 def test_every_bundled_package_is_built_and_depended_on() -> None:
     assert package.BUNDLED
     for name in package.BUNDLED:
