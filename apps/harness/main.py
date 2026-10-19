@@ -488,7 +488,7 @@ class Application(Adw.Application):
         """Quit once Osiris is upgraded under it and nothing is under way;
         D-Bus starts the new code on the next Super+A."""
         in_use = (self.open or self.conversation.busy
-                  or bool(self.program_busy))
+                  or bool(self.backgrounded) or bool(self.program_busy))
         if not self.upgrade.restart_due(in_use=in_use):
             return GLib.SOURCE_CONTINUE
         self.quit()
