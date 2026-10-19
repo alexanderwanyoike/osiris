@@ -28,6 +28,10 @@ The first slice of ROADMAP P3.5:
 - **Everything else is refused.** Any other action the model reaches for
   (running a command, reading a file, editing anything) is rejected, and the
   model is told what it may use instead.
+- **Unless the person allows everything.** A switch on the Providers page
+  (`osiris.harness.trust`) lets the Harness allow any request, logged with the
+  tier `anything`, and restarts the tool server so the model is told it may run
+  commands and change any file. It is off until the person turns it on.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
@@ -77,7 +81,7 @@ osiris/harness/conversation   what the drawer shows, from the Engine's events
 osiris/harness/activity       each step of an answer in plain words, and time spent
 osiris/harness/markdown       answers as blocks, inline text as escaped Pango markup
 osiris/harness/style          colour variables and code scheme from a Theme; Skin choice
-osiris/harness/harness        one conversation: the log, and actions allowed by tier
+osiris/harness/harness        its sessions: the log, and actions allowed by tier
 osiris/harness/tiers          Action tiers: a look, an undoable change
 osiris/harness/log            the Harness log
 osiris/harness/engine         the Engine port and its events
@@ -190,7 +194,11 @@ Harness answers it. Denying everything instead would strip the tools from the
 request, and opencode's free tier refuses such requests outright.
 
 The event stream carries every session on the service, including any opened
-by opencode's own terminal app. The Harness acts only on its own session.
+by opencode's own terminal app. The Harness acts only on its own sessions: the
+one on screen, and any still working on a question. The person can move to
+another Conversation while Osiris answers; the one left keeps being answered,
+its file requests judged against its own folder, and the sidebar shows a
+spinner beside it until it ends.
 
 ## Trying it in development
 

@@ -27,7 +27,9 @@ class Opened:
         self.deleted: list[tuple[str, str]] = []
 
 
-def sidebar(current: str | None = None) -> tuple[Sidebar, Opened]:
+def sidebar(
+    current: str | None = None, running: frozenset[str] = frozenset()
+) -> tuple[Sidebar, Opened]:
     opened = Opened()
     widget = Sidebar(
         on_open=opened.sessions.append,
@@ -36,7 +38,7 @@ def sidebar(current: str | None = None) -> tuple[Sidebar, Opened]:
         on_archive=opened.archived.append,
         on_delete=lambda session, title: opened.deleted.append((session, title)),
     )
-    widget.show_history([PROJECT], [THEME], current)
+    widget.show_history([PROJECT], [THEME], current, running)
     return widget, opened
 
 
@@ -126,3 +128,13 @@ def test_a_conversation_can_be_deleted() -> None:
         if isinstance(w, Gtk.Button) and w.get_label() == "Delete…"
     ).emit("clicked")
     assert opened.deleted == [("ses_theme", "Make me a calm theme")]
+
+
+def working(row: Gtk.Widget) -> bool:
+    return any(w.has_css_class("harness-running") for w in widgets(row))
+
+
+def test_a_conversation_still_working_says_so() -> None:
+    widget, _ = sidebar(running=frozenset({"ses_timer"}))
+    assert working(row_with(widget, "Build a pomodoro timer"))
+    assert not working(row_with(widget, "Make me a calm theme"))

@@ -63,6 +63,7 @@ from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
+from osiris.harness.trust import allow_everything, allows_everything  # noqa: E402
 from osiris.programs.programs import Programs  # noqa: E402
 from osiris.provision.upgrade import Upgrade  # noqa: E402
 from osiris.platform import (  # noqa: E402
@@ -368,6 +369,8 @@ class Drawer(Gtk.ApplicationWindow):
                 seconds, lambda: then() or False),
             default=self.app.models.default,
             on_model_chosen=self.app.choose_model,
+            allows_everything=self.app.everything_allowed,
+            on_allow_everything=self.app.set_allow_everything,
         )
         holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
                          margin_start=16, margin_end=16, margin_top=8)
@@ -404,7 +407,8 @@ class Drawer(Gtk.ApplicationWindow):
         self.sidebar_toggle.set_active(not shown)
 
     def show_history(self, projects, loose) -> None:
-        self.sidebar.show_history(projects, loose, getattr(self.app, "session", None))
+        self.sidebar.show_history(projects, loose, getattr(self.app, "session", None),
+                                  getattr(self.app, "running", frozenset()))
 
     def clear(self) -> None:
         for view in self.views:
@@ -451,6 +455,9 @@ class Application(Adw.Application):
         super().__init__(application_id=APP_ID)
         self.drawer: Drawer | None = None
         self.conversation = Conversation()
+        #: Conversations still being answered while another is on screen,
+        #: by session.
+        self.backgrounded: dict[str, Conversation] = {}
         self.harness: Harness | None = None
         self.log: HarnessLog | None = None
         #: The past Conversations the sidebar shows, newest first.
@@ -484,7 +491,7 @@ class Application(Adw.Application):
         """Quit once Osiris is upgraded under it and nothing is under way;
         D-Bus starts the new code on the next Super+A."""
         in_use = (self.open or self.conversation.busy
-                  or bool(self.program_busy))
+                  or bool(self.backgrounded) or bool(self.program_busy))
         if not self.upgrade.restart_due(in_use=in_use):
             return GLib.SOURCE_CONTINUE
         self.quit()
@@ -673,6 +680,10 @@ class Application(Adw.Application):
     def session(self) -> str | None:
         return self.harness.session if self.harness is not None else None
 
+    @property
+    def running(self) -> frozenset[str]:
+        return self.harness.running if self.harness is not None else frozenset()
+
     def load_history(self) -> None:
         if self.harness is None:
             return
@@ -731,36 +742,59 @@ class Application(Adw.Application):
             if response != "delete" or self.harness is None:
                 return
             harness, on_screen = self.harness, session == self.session
-
-            def deleted(_result) -> None:
-                if on_screen:
-                    self.conversation = Conversation()
-                    self.drawer.clear()
-                    self.drawer.refresh()
-                self.load_history()
-
-            self.background(lambda: harness.delete(session), deleted)
+            self.background(lambda: harness.delete(session),
+                            lambda _r: self._deleted(session, on_screen=on_screen))
 
         dialog.connect("response", chosen)
         dialog.present(self.drawer)
 
+    def _deleted(self, session: str, *, on_screen: bool) -> None:
+        self.backgrounded.pop(session, None)
+        if on_screen:
+            self.conversation = Conversation()
+            self.drawer.clear()
+            self.drawer.refresh()
+        self.load_history()
+
     def open_past(self, session: str) -> None:
-        if self.harness is None or self.conversation.busy or session == self.session:
+        if self.harness is None or session == self.session or not self._leave():
             return
         harness = self.harness
+        # Shown at once and kept by its session until the Harness has made it
+        # current, so its events reach it while resume is under way.
+        live = self.backgrounded.get(session)
+        if live is not None:
+            self.conversation = live
+            self.drawer.clear()
+            self.drawer.refresh()
 
         def opened(past) -> None:
-            self.conversation = Conversation.restored(past)
-            self.drawer.clear()
+            if live is None:
+                spent = self.log.tokens_spent(session) if self.log is not None else 0
+                self.conversation = Conversation.restored(past, tokens_spent=spent)
+                self.drawer.clear()
+            else:
+                self.backgrounded.pop(session, None)
             self.drawer.refresh()
             self.load_history()
             self.update_canvas()
 
         self.background(lambda: harness.resume(session), opened)
 
+    @property
+    def everything_allowed(self) -> bool:
+        return allows_everything(self.files, self.home)
+
+    def set_allow_everything(self, on: bool) -> None:
+        """Keep the person's choice; the tool server tells the model when it
+        starts, so it is restarted."""
+        allow_everything(self.files, self.home, on=on)
+        if self.harness is not None:
+            self.background(self.harness.restart_tools, lambda _r: None)
+
     def new_conversation(self, folder: Path | None = None) -> None:
         """A new Conversation, in ``folder``'s Project or in none."""
-        if self.conversation.busy:
+        if not self._leave():
             return
         self.conversation = Conversation()
         if self.harness is not None:
@@ -770,6 +804,17 @@ class Application(Adw.Application):
         self.drawer.entry.grab_focus()
         self.load_history()
         self.update_canvas()
+
+    def _leave(self) -> bool:
+        """Keep the Conversation on screen while Osiris still works on it;
+        False while its first question is on the way, as it has no session
+        to be kept by until the Engine opens one."""
+        if not self.conversation.busy:
+            return True
+        if self.session is None:
+            return False
+        self.backgrounded[self.session] = self.conversation
+        return True
 
     def ask(self, text: str) -> None:
         if self.harness is None:
@@ -787,6 +832,8 @@ class Application(Adw.Application):
             self.harness.ask(text)
         except HttpError as error:
             GLib.idle_add(self._failed_to_send, str(error))
+            return
+        GLib.idle_add(lambda: self.load_history() or False)
 
     def _failed_to_send(self, message: str) -> bool:
         if self.conversation.turns:
@@ -814,7 +861,9 @@ class Application(Adw.Application):
                 self.harness = Harness(engine, self.log, self.models.default,
                                        tiers=tiers, directory=me.home,
                                        tools=(TOOLS, [sys.executable, TOOL_SERVER]),
-                                       may_touch=self.programs().holds)
+                                       may_touch=self.programs().holds,
+                                       allow_everything=lambda: allows_everything(
+                                           self.files, self.home))
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)
                 GLib.idle_add(lambda: self.load_history() or False)
@@ -827,20 +876,37 @@ class Application(Adw.Application):
                 GLib.idle_add(self._refresh)
             time.sleep(RECONNECT_SECONDS)
 
+    def _conversation_of(self, session: str) -> Conversation | None:
+        """The Conversation an event is for: one kept working off screen, the
+        one on screen, or none."""
+        if session in self.backgrounded:
+            return self.backgrounded[session]
+        return self.conversation if session == self.session else None
+
     def _apply(self, event) -> bool:
-        self.conversation.apply(event)
-        if isinstance(event, Finished | Stopped | Failed) and self.log is not None:
+        conversation = self._conversation_of(event.session)
+        if conversation is None:
+            return False
+        conversation.apply(event)
+        if isinstance(event, Finished | Stopped | Failed):
+            self._ended(event.session, conversation)
+        self.drawer.refresh()
+        return False
+
+    def _ended(self, session: str, conversation: Conversation) -> None:
+        """An answer is over. One that ended off screen is let go, for the
+        history to show; the changes and the Canvas are the screen's."""
+        self.backgrounded.pop(session, None)
+        if conversation is self.conversation and self.log is not None:
             changes = self.log.last_changes()
-            self.conversation.changed(changes)
+            conversation.changed(changes)
             worked_on = [c.program for c in changes if c.program]
             if worked_on and self.harness is not None:
                 harness, folder = self.harness, self.home / CODE_DIR / worked_on[0]
-                self.background(lambda: harness.worked_on(folder),
+                self.background(lambda: harness.worked_on(session, folder),
                                 lambda _r: self.load_history())
-            self.load_history()
             self.update_canvas()
-        self.drawer.refresh()
-        return False
+        self.load_history()
 
     def _refresh(self) -> bool:
         self.drawer.refresh()

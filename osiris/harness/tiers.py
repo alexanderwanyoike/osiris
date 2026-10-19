@@ -13,3 +13,5 @@ from enum import Enum
 class Tier(Enum):
     LOOK = "look"
     UNDOABLE = "undoable"
+    #: Allowed only because the person allowed the Harness everything.
+    ANYTHING = "anything"

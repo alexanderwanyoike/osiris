@@ -14,6 +14,7 @@ from osiris.harness.engine import (
     Answered,
     Event,
     Failed,
+    Finished,
     ModelRef,
     Past,
     PastTurn,
@@ -100,7 +101,9 @@ POMODORO = HOME / "Code" / "pomodoro"
 
 
 def harness(
-    model: ModelRef | None = GPT, tiers: dict[str, Tier] | None = None
+    model: ModelRef | None = GPT,
+    tiers: dict[str, Tier] | None = None,
+    allowed: list[bool] | None = None,
 ) -> tuple[Harness, FakeEngine, FakeFileSystem]:
     engine, files = FakeEngine(), FakeFileSystem()
     log = HarnessLog(files, HOME / LOG_FILE, clock=lambda: NOON)
@@ -112,6 +115,7 @@ def harness(
         directory=HOME,
         may_touch=lambda path: path == POMODORO or POMODORO in path.parents,
         tools=("osiris", ["python3", "tool_server.py"]),
+        allow_everything=lambda: bool(allowed and allowed[0]),
     )
     return subject, engine, files
 
@@ -354,11 +358,46 @@ def test_a_new_conversation_opens_a_new_session_on_its_first_question() -> None:
     assert engine.sent == [("ses_1", "hello"), ("ses_2", "something else")]
 
 
-def test_after_a_new_conversation_the_old_sessions_events_are_left_alone() -> None:
+@pytest.mark.parametrize(
+    "end", [Finished("ses_1"), Stopped("ses_1"), Failed("ses_1", "no account")]
+)
+def test_after_a_new_conversation_an_ended_sessions_events_are_left_alone(
+    end: Event,
+) -> None:
     subject, _, _ = harness()
     subject.ask("hello")
+    subject.handle(end)
     subject.new_conversation()
     assert subject.handle(Text("ses_1", "late text")) is None
+
+
+def test_a_session_still_working_after_a_new_conversation_is_still_served() -> None:
+    """Its permission requests must still be answered, or it would hang."""
+    subject, engine, _ = harness(tiers={"osiris_apply_theme": Tier.UNDOABLE})
+    subject.ask("make it calm")
+    subject.new_conversation()
+    decision = subject.handle(
+        ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",))
+    )
+    assert decision == Allowed("ses_1", "osiris_apply_theme", Tier.UNDOABLE, ("*",))
+    assert engine.replies == [("ses_1", "per_1", True, "")]
+
+
+def test_moving_away_while_a_question_is_still_being_sent_keeps_it_on_its_session() -> (
+    None
+):
+    """The drawer sends on a thread, and the person may start a new
+    Conversation once the session is open but before the question is sent."""
+    subject, engine, _ = harness()
+
+    def renamed_then_moved_away(session: str, title: str) -> None:
+        engine.renamed.append((session, title))
+        subject.new_conversation()
+
+    engine.rename = renamed_then_moved_away  # type: ignore[method-assign]
+    subject.ask("hello")
+    assert engine.sent == [("ses_1", "hello")]
+    assert subject.running == {"ses_1"}
 
 
 def test_the_first_question_names_the_session() -> None:
@@ -390,10 +429,33 @@ def test_the_session_on_screen_is_known_once_something_is_asked() -> None:
     assert subject.session == "ses_1"
 
 
+def test_the_sessions_still_working_are_known() -> None:
+    subject, _, _ = harness()
+    assert subject.running == frozenset()
+    subject.ask("hello")
+    subject.new_conversation()
+    subject.ask("something else")
+    assert subject.running == {"ses_1", "ses_2"}
+    subject.handle(Finished("ses_1"))
+    assert subject.running == {"ses_2"}
+
+
+def test_reopening_a_session_still_working_makes_it_current_and_keeps_it_running() -> (
+    None
+):
+    subject, engine, _ = harness()
+    subject.ask("hello")
+    subject.new_conversation()
+    subject.resume("ses_1")
+    assert subject.running == {"ses_1"}
+    subject.stop()
+    assert engine.stopped == ["ses_1"]
+
+
 def test_a_conversation_with_no_project_takes_its_programs_project() -> None:
     subject, engine, _ = harness()
     subject.ask("build me a timer")
-    subject.worked_on(POMODORO)
+    subject.worked_on("ses_1", POMODORO)
     assert engine.moved == [("ses_1", POMODORO)]
     subject.handle(ToolRequested("ses_1", "per_1", "read", ("main.py",)))
     assert engine.replies[-1][2] is True
@@ -402,9 +464,23 @@ def test_a_conversation_with_no_project_takes_its_programs_project() -> None:
 def test_a_conversation_in_a_project_stays_there() -> None:
     subject, engine, _ = harness()
     subject.ask("build me a timer")
-    subject.worked_on(POMODORO)
-    subject.worked_on(HOME / "Code" / "notes")
+    subject.worked_on("ses_1", POMODORO)
+    subject.worked_on("ses_1", HOME / "Code" / "notes")
     assert engine.moved == [("ses_1", POMODORO)]
+
+
+def test_a_program_worked_on_off_screen_never_moves_the_conversation_on_screen() -> (
+    None
+):
+    """The drawer hears that a session worked on a Program after it ends,
+    when the person may have moved to another Conversation."""
+    subject, engine, _ = harness()
+    subject.ask("build me a timer")
+    subject.new_conversation()
+    subject.ask("something else")
+    subject.worked_on("ses_1", POMODORO)
+    assert engine.moved == []
+    assert subject.directory == HOME
 
 
 def test_a_past_conversation_can_be_moved_into_a_project() -> None:
@@ -453,11 +529,20 @@ def test_deleting_the_conversation_on_screen_starts_a_new_one() -> None:
     assert engine.sent[-1] == ("ses_2", "again")
 
 
+def test_a_deleted_session_is_no_longer_running() -> None:
+    subject, _, _ = harness()
+    subject.ask("hello")
+    subject.new_conversation()
+    subject.ask("something else")
+    subject.delete("ses_1")
+    assert subject.running == {"ses_2"}
+
+
 def test_the_tools_are_attached_where_the_session_runs_once_each() -> None:
     subject, engine, _ = harness()
     subject.ask("hello")
     subject.ask("again")
-    subject.worked_on(POMODORO)
+    subject.worked_on("ses_1", POMODORO)
     assert engine.attached == [("osiris", HOME), ("osiris", POMODORO)]
 
 
@@ -468,6 +553,17 @@ def test_a_resumed_conversation_runs_and_reads_files_in_its_own_folder() -> None
     subject.handle(ToolRequested("ses_9", "per_1", "read", ("main.py",)))
     assert engine.replies[-1][2] is True
     assert subject.directory == POMODORO
+
+
+def test_a_session_off_screen_reads_files_in_its_own_folder() -> None:
+    """Switching Conversation changes the folder on screen, not the folder a
+    running session's paths are relative to."""
+    subject, engine, _ = harness()
+    subject.new_conversation(POMODORO)
+    subject.ask("add a pause button")
+    subject.new_conversation()
+    subject.handle(ToolRequested("ses_1", "per_1", "read", ("main.py",)))
+    assert engine.replies == [("ses_1", "per_1", True, "")]
 
 
 def test_a_reply_the_engine_cannot_take_is_logged_and_the_conversation_goes_on() -> (
@@ -492,3 +588,27 @@ def test_a_refusal_names_the_ai_as_the_person_knows_it() -> None:
     the project's word for it."""
     assert "Harness" not in REFUSED
     assert "Osiris" in REFUSED
+
+
+def test_once_the_person_allows_everything_nothing_is_refused() -> None:
+    allowed = [False]
+    subject, engine, _ = harness(allowed=allowed)
+    subject.ask("what is in /etc")
+    subject.handle(ToolRequested("ses_1", "per_1", "bash", ("ls /etc",)))
+    allowed[0] = True
+    decision = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls /etc",)))
+    assert engine.replies == [
+        ("ses_1", "per_1", False, REFUSED),
+        ("ses_1", "per_2", True, ""),
+    ]
+    assert decision == Allowed("ses_1", "bash", Tier.ANYTHING, ("ls /etc",))
+
+
+def test_restarting_the_tools_attaches_them_again_where_they_run() -> None:
+    """The tool server reads what it may tell the model when it starts."""
+    subject, engine, _ = harness()
+    subject.ask("hello")
+    subject.restart_tools()
+    subject.new_conversation(POMODORO)
+    subject.ask("add a pause button")
+    assert engine.attached == [("osiris", HOME), ("osiris", HOME), ("osiris", POMODORO)]
