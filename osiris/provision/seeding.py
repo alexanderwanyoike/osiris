@@ -24,3 +24,9 @@ _SYSTEM_SHELLS = ("/bin/bash", "/usr/bin/bash")
 def moves_to_zsh(shell: str) -> bool:
     """Whether setup should make zsh this account's login shell."""
     return shell in _SYSTEM_SHELLS
+
+
+def pins_dock(launchers: list[str]) -> bool:
+    """Whether setup should pin Osiris's dock items, given the files already
+    in the dock's launchers folder."""
+    return not any(name.endswith(".dockitem") for name in launchers)
