@@ -154,3 +154,14 @@ def test_a_conversation_with_an_answer_not_yet_seen_says_so() -> None:
     widget, _ = sidebar(unread=frozenset({"ses_theme"}))
     assert unread(row_with(widget, "Make me a calm theme"))
     assert not unread(row_with(widget, "Build a pomodoro timer"))
+
+
+def test_a_conversation_working_again_shows_its_spinner_rather_than_its_dot() -> None:
+    """Asked again before the last answer was seen: what it is doing now
+    matters more, and the row has room for one sign."""
+    widget, _ = sidebar(
+        running=frozenset({"ses_theme"}), unread=frozenset({"ses_theme"})
+    )
+    row = row_with(widget, "Make me a calm theme")
+    assert working(row)
+    assert not any(w.has_css_class("harness-unread-dot") for w in widgets(row))
