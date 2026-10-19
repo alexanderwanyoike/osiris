@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/base-Arch%20Linux-1793d1" alt="Base: Arch Linux">
 </p>
 
-![The Osiris desktop: a terminal and Pomodoro, a timer the AI wrote, both on the Tokyo Night theme](docs/screenshots/desktop.png)
+![The Osiris desktop: a terminal and Pomodoro, a timer the agent wrote, both on the Tokyo Night theme](docs/screenshots/desktop.png)
 
 **Osiris is a Linux operating system with an AI agent.** It's based on Arch
 Linux and uses the Cinnamon desktop.
@@ -30,25 +30,26 @@ can undo any change it makes.
 
 Osiris is in early development (alpha).
 
-## The AI
+## The agent
 
-Press Super+A, or the button at the right of the panel, and a sidebar opens
-where you can type to the AI. It is called Osiris, like the system.
+Press Super+A, or the button at the right of the panel, and a sidebar opens.
+This is Osiris's agent: you type what you want, and it does it, using the AI
+model you connected.
 
-Ask it for an app, say a Pomodoro timer, and it writes one. A card under its
-answer lets you try the app, then install it, which adds it to your
-applications menu. From there you can pin it to the dock. It can write apps in
-Python, C or C++, Rust, Go or JavaScript.
+Ask for an app, say a Pomodoro timer, and the agent writes one. A card under
+its answer lets you try it, then install it into your applications menu, and
+from there you can pin it to the dock. It writes apps in Python, C or C++,
+Rust, Go or JavaScript.
 
-Ask it for a new look, say "a calm theme for working late", and it makes a
-theme and applies it. It can write you a moving wallpaper too.
+Ask for a new look, say "a calm theme for working late", and it makes a theme
+and applies it. It can also write you a moving wallpaper.
 
-After every change there is an Undo button. Undo works without asking the AI
-again.
+Every change comes with an Undo button, which works without going back to the
+AI.
 
-The AI can only do what Osiris allows. It can look around, make changes that
-can be undone, and edit the code of the apps it wrote. Anything else it tries
-is refused, and you see what it tried.
+The agent can only do what Osiris allows. It can look around, make changes
+that can be undone, and edit the code of the apps it wrote. Anything else is
+refused, and you see what it tried.
 
 ![The sidebar expanded: the conversation that made Pomodoro, beside its code](docs/screenshots/harness.png)
 
@@ -56,17 +57,17 @@ is refused, and you see what it tried.
 
 A theme sets the colours of everything at once: apps, window borders, the
 panel, the dock, the app launcher, the terminal, folder icons and the
-wallpaper. Apps the AI writes follow the theme too. Switching takes effect
+wallpaper. Apps the agent writes follow the theme too. Switching takes effect
 straight away, without logging out.
 
 Press Super+T to flip through the themes, and Enter to pick one. Seven come
 with Osiris: Osiris Obsidian, Tokyo Night, Nord, Catppuccin Mocha, Rose Pine,
 Rose Pine Dawn and Everforest. You can make your own in the Appearance app,
-starting from a colour or a picture, or ask the AI for one.
+starting from a colour or a picture, or ask the agent for one.
 
 Wallpapers move. Each one is a small shader, a program that runs on your
 graphics card and animates slowly in the theme's colours. On a computer without
-a graphics card you get the still version. Ask the AI for a new one, say "rain
+a graphics card you get the still version. Ask the agent for a new one, say "rain
 running down a window", and it writes the shader and puts it on your desktop.
 
 ![Super+T, the theme switcher](docs/screenshots/switcher.png)
@@ -75,11 +76,11 @@ running down a window", and it writes the shader and puts it on your desktop.
 
 ## Your code and settings
 
-Each app the AI writes is a folder in `~/Code`, kept in git, so you can see
+Each app the agent writes is a folder in `~/Code`, kept in git, so you can see
 every change it made. You can open it in any editor or carry on with another
 coding tool. Uninstalling an app leaves its code where it is.
 
-The AI runs through [opencode](https://opencode.ai). You connect it to the AI
+The agent runs on [opencode](https://opencode.ai). You connect it to the AI
 provider you want, with your own account or key.
 
 Updating Osiris doesn't overwrite your theme, your dock, your terminal settings
@@ -107,7 +108,7 @@ btrfs, and encrypt the system if you want.
 | Login and boot | LightDM with slick-greeter, Plymouth, GRUB, all branded |
 | Terminal | ghostty, FiraCode Nerd Font with ligatures |
 | Shell | zsh with oh-my-zsh |
-| Osiris apps | Appearance, the theme switcher, the AI sidebar and the installer, written in Python with GTK 4 and libadwaita |
+| Osiris apps | Appearance, the theme switcher, the agent's sidebar and the installer, written in Python with GTK 4 and libadwaita |
 | Agent engine | opencode |
 
 ## Get it
@@ -138,7 +139,7 @@ Osiris is alpha. Missing so far:
 
 - Installed systems get Arch updates, but not Osiris updates yet: there is no
   Osiris package repository online.
-- Apps the AI writes run with your full user permissions; they are not
+- Apps the agent writes run with your full user permissions; they are not
   sandboxed. Osiris tells you this before you install one.
 - Changing the shape of the desktop (window style, panel and dock layout), not
   just its colours, is planned but not built.
@@ -161,7 +162,7 @@ mypy and import-linter in CI, and the GTK apps are tested headless under Xvfb.
 |---|---|
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | The stack and why each piece was chosen |
 | [THEMING.md](docs/THEMING.md) | How Themes work, how to write one, how the creator works |
-| [HARNESS.md](docs/HARNESS.md) | The AI you ask (the Harness, in the code): its tools, what it may do, and why |
+| [HARNESS.md](docs/HARNESS.md) | The agent (the Harness, in the code): its tools, what it may do, and why |
 | [PROGRAMS.md](docs/PROGRAMS.md) | How Osiris builds, tries and installs Programs |
 | [INSTALLER.md](docs/INSTALLER.md) | Building the ISO, the install flow, the guardrails |
 | [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Working on Osiris: the VM, the loop, the traps |
