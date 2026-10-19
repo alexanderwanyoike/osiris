@@ -100,7 +100,9 @@ POMODORO = HOME / "Code" / "pomodoro"
 
 
 def harness(
-    model: ModelRef | None = GPT, tiers: dict[str, Tier] | None = None
+    model: ModelRef | None = GPT,
+    tiers: dict[str, Tier] | None = None,
+    allowed: list[bool] | None = None,
 ) -> tuple[Harness, FakeEngine, FakeFileSystem]:
     engine, files = FakeEngine(), FakeFileSystem()
     log = HarnessLog(files, HOME / LOG_FILE, clock=lambda: NOON)
@@ -112,6 +114,7 @@ def harness(
         directory=HOME,
         may_touch=lambda path: path == POMODORO or POMODORO in path.parents,
         tools=("osiris", ["python3", "tool_server.py"]),
+        allow_everything=lambda: bool(allowed and allowed[0]),
     )
     return subject, engine, files
 
@@ -492,3 +495,27 @@ def test_a_refusal_names_the_ai_as_the_person_knows_it() -> None:
     the project's word for it."""
     assert "Harness" not in REFUSED
     assert "Osiris" in REFUSED
+
+
+def test_once_the_person_allows_everything_nothing_is_refused() -> None:
+    allowed = [False]
+    subject, engine, _ = harness(allowed=allowed)
+    subject.ask("what is in /etc")
+    subject.handle(ToolRequested("ses_1", "per_1", "bash", ("ls /etc",)))
+    allowed[0] = True
+    decision = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls /etc",)))
+    assert engine.replies == [
+        ("ses_1", "per_1", False, REFUSED),
+        ("ses_1", "per_2", True, ""),
+    ]
+    assert decision == Allowed("ses_1", "bash", Tier.ANYTHING, ("ls /etc",))
+
+
+def test_restarting_the_tools_attaches_them_again_where_they_run() -> None:
+    """The tool server reads what it may tell the model when it starts."""
+    subject, engine, _ = harness()
+    subject.ask("hello")
+    subject.restart_tools()
+    subject.new_conversation(POMODORO)
+    subject.ask("add a pause button")
+    assert engine.attached == [("osiris", HOME), ("osiris", HOME), ("osiris", POMODORO)]

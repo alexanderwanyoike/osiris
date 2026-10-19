@@ -28,6 +28,10 @@ The first slice of ROADMAP P3.5:
 - **Everything else is refused.** Any other action the model reaches for
   (running a command, reading a file, editing anything) is rejected, and the
   model is told what it may use instead.
+- **Unless the person allows everything.** A switch on the Providers page
+  (`osiris.harness.trust`) lets the Harness allow any request, logged with the
+  tier `anything`, and restarts the tool server so the model is told it may run
+  commands and change any file. It is off until the person turns it on.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
