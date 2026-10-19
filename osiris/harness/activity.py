@@ -8,13 +8,14 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Verb:
     doing: str
+    done: str
 
 
 #: The Engine's actions, as words.
 VERBS = {
-    "read": Verb("Reading"),
-    "edit": Verb("Editing"),
-    "list": Verb("Listing"),
+    "read": Verb("Reading", "Read"),
+    "edit": Verb("Editing", "Edited"),
+    "list": Verb("Listing", "Listed"),
 }
 
 
@@ -28,3 +29,7 @@ class Step:
     @property
     def doing(self) -> str:
         return f"{VERBS[self.action].doing} {self.resources[0]}"
+
+    @property
+    def record(self) -> str:
+        return f"{VERBS[self.action].done} {self.resources[0]}"
