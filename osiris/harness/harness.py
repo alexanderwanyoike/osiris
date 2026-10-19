@@ -114,6 +114,12 @@ class Harness:
             self._engine.attach_tools(*self._tools, directory)
             self._tools_in.add(directory)
 
+    def restart_tools(self) -> None:
+        """Attach the tool server again where it runs now; other folders get a
+        fresh one when next used."""
+        self._tools_in.clear()
+        self._ready(self._directory)
+
     def resume(self, session: str) -> list[PastTurn]:
         """Continue a past Conversation, in its folder; returns what was said."""
         directory = self._engine.where(session)
