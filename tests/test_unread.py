@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from osiris.harness.engine import Failed, Finished, Stopped
-from osiris.harness.unread import Unread
+from osiris.harness.unread import UNREAD_FILE, Unread
 from osiris.platform import FakeFileSystem
 
 HOME = Path("/home/tester")
@@ -49,3 +49,13 @@ def test_unread_survives_a_restart_of_the_harness() -> None:
     files = FakeFileSystem()
     Unread(files, HOME).ended(Finished("ses_1"), looking=False)
     assert Unread(files, HOME).sessions() == frozenset({"ses_1"})
+
+
+def test_unread_is_kept_as_plain_text_one_session_per_line() -> None:
+    files = FakeFileSystem()
+    unread = Unread(files, HOME)
+    unread.ended(Finished("ses_1"), looking=False)
+    unread.ended(Finished("ses_2"), looking=False)
+    unread.read("ses_1")
+    assert UNREAD_FILE == ".local/state/osiris/harness/unread"
+    assert files.read(HOME / UNREAD_FILE) == "ses_2\n"
