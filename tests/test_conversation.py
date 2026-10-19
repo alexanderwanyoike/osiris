@@ -92,7 +92,7 @@ def test_a_refused_action_is_shown_on_its_turn() -> None:
     talk.asked("list /etc")
     talk.apply(ToolCalled(S, "call_1", {"command": "ls /etc"}, executed=False))
     talk.apply(Refused(S, "shell", ("ls /etc",)))
-    assert talk.turns[-1].refused == ["shell: ls /etc"]
+    assert talk.turns[-1].steps == [Step("shell", ("ls /etc",), allowed=False)]
 
 
 def test_an_allowed_action_is_not_shown_as_refused() -> None:
@@ -100,7 +100,7 @@ def test_an_allowed_action_is_not_shown_as_refused() -> None:
     talk.asked("make it calm")
     talk.apply(ToolRequested(S, "per_1", "osiris_apply_theme", ("*",)))
     talk.apply(Allowed(S, "osiris_apply_theme", Tier.UNDOABLE, ("*",)))
-    assert talk.turns[-1].refused == []
+    assert all(step.allowed for step in talk.turns[-1].steps)
 
 
 def test_every_decided_action_is_a_step_of_its_turn_in_order() -> None:
