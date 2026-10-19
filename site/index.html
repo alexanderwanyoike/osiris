@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Osiris</title>
-  <meta name="description" content="Osiris is a Linux operating system with AI built in, based on Arch Linux with the Cinnamon desktop.">
+  <meta name="description" content="Osiris is a Linux operating system with an AI agent, based on Arch Linux with the Cinnamon desktop.">
   <meta property="og:title" content="Osiris">
-  <meta property="og:description" content="A Linux operating system with AI built in.">
+  <meta property="og:description" content="A Linux operating system with an AI agent.">
   <meta property="og:image" content="screenshots/desktop.png">
   <link rel="icon" href="logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
@@ -18,7 +18,7 @@
       <span>Osiris</span>
     </a>
     <nav>
-      <a href="#ai">The AI</a>
+      <a href="#agent">The agent</a>
       <a href="#themes">Themes</a>
       <a href="#get">Get it</a>
       <a class="github" href="https://github.com/alexanderwanyoike/osiris">GitHub</a>
@@ -29,33 +29,35 @@
     <section class="hero">
       <img class="mark" src="logo.svg" alt="The Osiris mark" width="96" height="96">
       <h1>Osiris</h1>
-      <p class="lead">A Linux operating system with AI built in.</p>
-      <p class="sub">Based on Arch Linux, with the Cinnamon desktop. Ask the AI to
-        change how your desktop looks, or to write small apps for you. The apps it
-        writes show up in your menu and match your theme.</p>
+      <p class="lead">A Linux operating system with an AI agent.</p>
+      <p class="sub">Based on Arch Linux, with the Cinnamon desktop. The agent can
+        change how your desktop looks and write small apps for you, using an AI
+        model from a provider you connect, such as OpenAI. The apps it writes show
+        up in your menu and match your theme.</p>
       <div class="actions">
         <a class="button primary" href="#get">Get Osiris</a>
         <a class="button" href="https://github.com/alexanderwanyoike/osiris">View the code</a>
       </div>
       <p class="status">Early development (alpha). Free and open source.</p>
       <figure class="shot hero-shot">
-        <img src="screenshots/desktop.png" alt="The Osiris desktop: a terminal and Pomodoro, a timer the AI wrote, both on the Tokyo Night theme" loading="eager">
+        <img src="screenshots/desktop.png" alt="The Osiris desktop: a terminal and Pomodoro, a timer the agent wrote, both on the Tokyo Night theme" loading="eager">
       </figure>
     </section>
 
-    <section id="ai" class="feature">
+    <section id="agent" class="feature">
       <div class="copy">
-        <h2>The AI</h2>
-        <p>Press <kbd>Super</kbd> + <kbd>A</kbd> and a sidebar opens where you can
-          type to the AI. It is called Osiris, like the system.</p>
-        <p>Ask it for an app, say a Pomodoro timer, and it writes one. Try it, then
-          install it into your applications menu and pin it to the dock. It writes
-          Python, C or C++, Rust, Go or JavaScript.</p>
-        <p>Ask for a new look, or a moving wallpaper, and it makes one and puts it
-          on your desktop. After every change there is an Undo button.</p>
-        <p>The AI can only do what Osiris allows: look around, make changes that can
-          be undone, and edit the code of the apps it wrote. Anything else is
-          refused, and you see what it tried.</p>
+        <h2>The agent</h2>
+        <p>Press <kbd>Super</kbd> + <kbd>A</kbd> and a sidebar opens. This is
+          Osiris's agent: you type what you want, and it does it, using the AI
+          model you connected.</p>
+        <p>Ask for an app, say a Pomodoro timer, and the agent writes one. Try it,
+          then install it into your applications menu and pin it to the dock. It
+          writes Python, C or C++, Rust, Go or JavaScript.</p>
+        <p>Ask for a new look or a moving wallpaper, and it makes one and puts it
+          on your desktop. Every change comes with an Undo button.</p>
+        <p>The agent can only do what Osiris allows: look around, make changes
+          that can be undone, and edit the code of the apps it wrote. Anything else
+          is refused, and you see what it tried.</p>
       </div>
       <figure class="shot">
         <img src="screenshots/harness.png" alt="The sidebar expanded: the conversation that made Pomodoro, beside its code" loading="lazy">
@@ -67,7 +69,7 @@
         <h2>Themes</h2>
         <p>A theme sets the colours of everything at once: apps, window borders,
           the panel, the dock, the app launcher, the terminal, folder icons and the
-          wallpaper. Apps the AI writes follow it too. Switching is instant, no
+          wallpaper. Apps the agent writes follow it too. Switching is instant, no
           logging out.</p>
         <p>Press <kbd>Super</kbd> + <kbd>T</kbd> to flip through the seven themes
           that come with Osiris, or make your own from a colour or a picture.</p>
@@ -89,13 +91,13 @@
     <section class="cards">
       <article>
         <h3>Your code</h3>
-        <p>Each app the AI writes is a folder in <code>~/Code</code>, kept in git,
+        <p>Each app the agent writes is a folder in <code>~/Code</code>, kept in git,
           so you can see every change it made and carry on in any editor.</p>
       </article>
       <article>
-        <h3>Your AI</h3>
-        <p>The AI runs through <a href="https://opencode.ai">opencode</a>. Connect
-          the provider you want, with your own account or key.</p>
+        <h3>Your model</h3>
+        <p>The agent runs on <a href="https://opencode.ai">opencode</a>. Connect
+          the AI provider you want, with your own account or key.</p>
       </article>
       <article>
         <h3>Your settings</h3>
