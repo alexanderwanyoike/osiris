@@ -404,7 +404,8 @@ class Drawer(Gtk.ApplicationWindow):
         self.sidebar_toggle.set_active(not shown)
 
     def show_history(self, projects, loose) -> None:
-        self.sidebar.show_history(projects, loose, getattr(self.app, "session", None))
+        self.sidebar.show_history(projects, loose, getattr(self.app, "session", None),
+                                  getattr(self.app, "running", frozenset()))
 
     def clear(self) -> None:
         for view in self.views:
@@ -672,6 +673,10 @@ class Application(Adw.Application):
     @property
     def session(self) -> str | None:
         return self.harness.session if self.harness is not None else None
+
+    @property
+    def running(self) -> frozenset[str]:
+        return self.harness.running if self.harness is not None else frozenset()
 
     def load_history(self) -> None:
         if self.harness is None:
