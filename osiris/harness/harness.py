@@ -12,6 +12,7 @@ from osiris.harness.engine import (
     Engine,
     Event,
     Failed,
+    Finished,
     ModelRef,
     Past,
     PastTurn,
@@ -86,12 +87,15 @@ class Harness:
         self._tools = tools
         self._tools_in: set[Path] = set()
         self._session: str | None = None
+        #: Sessions working on a question, served whichever one is on screen.
+        self._running: set[str] = set()
 
     def ask(self, text: str) -> None:
         if self._session is None:
             self._ready(self._directory)
             self._session = self._engine.start(self._model, self._directory)
             self._engine.rename(self._session, title_of(text))
+        self._running.add(self._session)
         self._log.write("sent", session=self._session, text=text)
         self._engine.send(self._session, text)
 
@@ -188,8 +192,10 @@ class Harness:
 
         None for another program's session: the Engine's stream carries them all.
         """
-        if self._session is None or event.session != self._session:
+        if event.session != self._session and event.session not in self._running:
             return None
+        if isinstance(event, Finished | Stopped | Failed):
+            self._running.discard(event.session)
         match event:
             case Answered(session, model, tokens, cost):
                 self._log.write(
