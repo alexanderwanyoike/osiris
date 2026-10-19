@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from osiris.harness.activity import Step
 from osiris.harness.conversation import Conversation, State
 from osiris.harness.engine import (
@@ -43,6 +45,16 @@ def test_the_answer_streams_into_the_latest_turn() -> None:
     talk.apply(Text(S, "there"))
     assert talk.turns[-1].answer == "hi there"
     assert talk.turns[-1].state is State.ANSWERING
+
+
+@pytest.mark.parametrize("ending", ["", "\n", "\n\n"])
+def test_text_after_a_complete_step_starts_a_new_paragraph(ending: str) -> None:
+    talk = Conversation()
+    talk.asked("make a timer")
+    talk.apply(Text(S, f"Wired up the controls.{ending}"))
+    talk.apply(Answered(S, GPT, tokens(10, 2), cost=0.0))
+    talk.apply(Text(S, "Built your app."))
+    assert talk.turns[-1].answer == "Wired up the controls.\n\nBuilt your app."
 
 
 def test_a_finished_answer_names_its_model_and_frees_the_bar() -> None:
