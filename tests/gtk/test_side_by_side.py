@@ -9,7 +9,7 @@ from typing import Any
 import main
 
 from osiris.harness.conversation import Conversation
-from osiris.harness.engine import Event, Text
+from osiris.harness.engine import Event, Finished, Text
 from osiris.harness.harness import Harness
 from osiris.harness.log import LOG_FILE, HarnessLog
 from osiris.platform import FakeFileSystem
@@ -105,3 +105,21 @@ def test_what_osiris_still_says_off_screen_reaches_its_own_conversation() -> Non
     heard(stand_in, Text("ses_1", "Calmer now."))
     assert working.turns[-1].answer == "Calmer now."
     assert stand_in.conversation.turns[-1].answer == ""
+
+
+def test_a_conversation_ending_off_screen_is_let_go_and_leaves_the_screen_alone() -> (
+    None
+):
+    """The history shows it from then on. What the log says changed belongs
+    to the question on screen, so it is not put on that answer early."""
+    stand_in, _ = app()
+    asked(stand_in, "make it calm")
+    stand_in.new_conversation()
+    on_screen = asked(stand_in, "something else")
+    stand_in.log.write("changed", summary="Applied Calm", undo={"theme": "nord"})
+    histories, canvases = stand_in.histories, stand_in.canvases
+    heard(stand_in, Finished("ses_1"))
+    assert stand_in.backgrounded == {}
+    assert on_screen.turns[-1].changes == []
+    assert stand_in.canvases == canvases
+    assert stand_in.histories > histories
