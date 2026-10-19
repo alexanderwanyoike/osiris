@@ -5,8 +5,10 @@
 Run as root in archlinux:latest by .github/workflows/release.yml, with this
 repository mounted read-only at /src and scratch space at /work. The ISO and
 its checksum go to osiris/<version>/ in the bucket, through rclone configured
-by the RCLONE_CONFIG_R2_* variables the workflow passes in. What a tag must
-say, and the checksum's form, are decided in osiris/iso/release.py.
+by the RCLONE_CONFIG_R2_* variables the workflow passes in. The packages are
+signed with the key in PACKAGE_SIGNING_KEY and published, with their
+signatures, to repo/x86_64/, the repository installed systems update from. What a tag must say, the checksum's
+form and the upload order are decided in osiris/iso/release.py.
 """
 import argparse
 import hashlib
@@ -14,13 +16,20 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 sys.path.insert(0, REPO)
 
 import osiris  # noqa: E402
-from osiris.iso.release import ReleaseError, checksum_line, version_from_tag  # noqa: E402
+from osiris.iso import package  # noqa: E402
+from osiris.iso.release import (  # noqa: E402
+    ReleaseError,
+    checksum_line,
+    publish_order,
+    version_from_tag,
+)
 
 # archiso and what iso/repo.py and iso/profile.py need, and what
 # iso/bundled/plank-reloaded needs to compile.
@@ -35,9 +44,31 @@ BUILD_DEPENDS = (
 CHUNK = "64M"
 
 
-def run(*argv: str) -> None:
+def run(*argv: str, env: dict[str, str] | None = None) -> None:
     print("+", " ".join(argv), flush=True)
-    subprocess.run(argv, check=True)
+    subprocess.run(argv, check=True, env=env)
+
+
+def sign(repository: str, key: str) -> None:
+    """Sign every package. pacman fetches each package's .sig beside it;
+    repo-add leaves signatures out of the database unless asked."""
+    env = {**os.environ, "GNUPGHOME": tempfile.mkdtemp()}
+    subprocess.run(["gpg", "--batch", "--import"], input=key.encode(), env=env,
+                   check=True)
+    packages = sorted(os.path.join(repository, name)
+                      for name in os.listdir(repository)
+                      if name.endswith(".pkg.tar.zst"))
+    for path in packages:
+        run("gpg", "--batch", "--yes", "--detach-sign", "--no-armor",
+            "--local-user", package.SIGNING_KEY, path, env=env)
+
+
+def publish(repository: str, destination: str) -> None:
+    packages, databases = publish_order(os.listdir(repository))
+    for name in packages + databases:
+        # The databases are symlinks to their archives; upload what they name.
+        run("rclone", "copy", "--copy-links", "--s3-chunk-size", CHUNK,
+            os.path.join(repository, name), destination)
 
 
 def sha256(path: str) -> str:
@@ -72,6 +103,8 @@ def main() -> None:
     # makepkg refuses to run as root; mkarchiso must.
     run("runuser", "-u", "builder", "--", "python3",
         os.path.join(tree, "iso", "repo.py"), "--out", out)
+    repository = os.path.join(out, "repo")
+    sign(repository, os.environ["PACKAGE_SIGNING_KEY"])
     run("python3", os.path.join(tree, "iso", "profile.py"),
         "--out", out, "--version", version)
 
@@ -84,7 +117,8 @@ def main() -> None:
     destination = f"r2:{args.bucket}/osiris/{version}/"
     for path in (iso, checksum):
         run("rclone", "copy", "--s3-chunk-size", CHUNK, path, destination)
-    print(f"RELEASED {name} to {destination}", flush=True)
+    publish(repository, f"r2:{args.bucket}/repo/x86_64/")
+    print(f"RELEASED {name} to {destination}, and the packages", flush=True)
 
 
 if __name__ == "__main__":
