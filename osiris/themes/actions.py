@@ -100,3 +100,26 @@ def delete_theme(store: ThemeStore, name: str) -> None:
             f"{theme['label']} is applied; apply another theme first"
         )
     store.delete(name)
+
+
+def use_wallpaper(store: ThemeStore, wallpaper: str, label: str) -> tuple[str, str]:
+    """Apply a copy of the Theme in use that wears ``wallpaper``.
+
+    Returns the copy's name and the Theme it replaced, which is what Undo
+    applies before deleting the copy.
+    """
+    previous = store.current()
+    if previous is None:
+        raise ThemeActionError("Apply a theme first; a wallpaper belongs to a theme")
+    theme = find(store, previous)
+    copy_label = f"{theme['label']} {label}"
+    name = slug(copy_label)
+    if any(other["name"] == name for other in store.themes()):
+        raise ThemeActionError(
+            f"There is already a theme called {copy_label}; choose another label"
+        )
+    store.save(
+        {**theme, "name": name, "label": copy_label, "wallpaper_style": wallpaper}
+    )
+    store.apply(name)
+    return name, previous
