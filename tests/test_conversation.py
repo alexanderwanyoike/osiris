@@ -127,6 +127,14 @@ def test_while_the_answer_streams_the_turn_is_writing() -> None:
     assert turn.doing == "Writing"
 
 
+def test_a_refused_step_leaves_the_turn_thinking() -> None:
+    talk = Conversation()
+    turn = talk.asked("list /etc")
+    talk.apply(Allowed(S, "read", Tier.LOOK, ("main.py",)))
+    talk.apply(Refused(S, "bash", ("ls /etc",)))
+    assert turn.doing == "Thinking"
+
+
 def test_a_failure_keeps_the_engines_reason() -> None:
     talk = Conversation()
     talk.asked("hello")
