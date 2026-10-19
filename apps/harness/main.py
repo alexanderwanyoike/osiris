@@ -688,6 +688,10 @@ class Application(Adw.Application):
     def running(self) -> frozenset[str]:
         return self.harness.running if self.harness is not None else frozenset()
 
+    @property
+    def unread_sessions(self) -> frozenset[str]:
+        return self.unread.sessions()
+
     def load_history(self) -> None:
         if self.harness is None:
             return
