@@ -64,7 +64,8 @@ user.
 **Harness**:
 The AI built into Osiris that a person talks to: what it can do, what it is
 allowed to do, how it shows its work, what it builds and remembers, and where it
-appears.
+appears. The person knows it as **Osiris**: everything they see names it Osiris
+("Ask Osiris"), never the Harness, which is the project's own word for it.
 _Avoid_: assistant, agent, copilot
 
 **Engine**:

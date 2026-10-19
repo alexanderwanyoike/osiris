@@ -2,6 +2,8 @@
 name = "osiris"
 version = "0.1.0"
 description = "A Linux distribution: Arch, Cinnamon, themed, installable"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 requires-python = ">=3.14"
 dependencies = [
     "numpy>=1.26",
@@ -34,7 +36,8 @@ dev = [
 ]
 
 [build-system]
-requires = ["setuptools>=68"]
+# 77 is the first to read an SPDX licence expression (PEP 639).
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]

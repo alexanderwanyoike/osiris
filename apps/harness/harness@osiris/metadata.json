@@ -1,7 +1,7 @@
 {
     "uuid": "harness@osiris",
-    "name": "Osiris Harness",
-    "description": "Opens and closes the Harness drawer.",
+    "name": "Ask Osiris",
+    "description": "Opens and closes the Osiris drawer.",
     "icon": "sidebar-show-right-symbolic",
     "max-instances": 1
 }

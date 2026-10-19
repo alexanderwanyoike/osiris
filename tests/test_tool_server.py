@@ -286,3 +286,9 @@ def test_the_model_is_told_windows_are_gtk_and_libadwaita_and_nothing_else() -> 
 
     assert "tkinter" in INSTRUCTIONS
     assert "GTK 4 and libadwaita" in INSTRUCTIONS
+
+
+def test_the_model_is_told_the_person_knows_it_as_osiris() -> None:
+    from osiris.apps.tool_server import INSTRUCTIONS
+
+    assert "you are osiris" in INSTRUCTIONS.lower()

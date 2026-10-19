@@ -26,7 +26,7 @@ from osiris.platform import HttpError
 
 #: Passed to the model with every rejected tool, so it finds another way.
 REFUSED = (
-    "The Osiris Harness cannot do that: it cannot run commands or read files, "
+    "Osiris cannot do that: it cannot run commands or read files, "
     "and changes this machine only through the Osiris tools. Answer in words, "
     "or with those tools."
 )

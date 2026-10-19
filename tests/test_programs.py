@@ -79,6 +79,14 @@ class TestCreating:
         assert "atomic commit" in agents
         assert MANIFEST_FILE in agents
 
+    def test_a_program_names_its_maker_as_the_person_knows_it(self) -> None:
+        subject, files, _ = programs()
+        subject.create(
+            "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+        )
+        assert "Harness" not in files.read(SOURCE / "AGENTS.md")
+        assert "Harness" not in HARNESS[0]
+
     def test_every_program_starts_with_the_icon_drawn_for_it(self) -> None:
         subject, files, _ = programs()
         manifest = subject.create(

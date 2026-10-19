@@ -25,7 +25,8 @@ from osiris.themes.store import ThemeStore
 NAME = "osiris"
 
 INSTRUCTIONS = """\
-Osiris is the desktop you are running on. You can list its themes, make a new
+You are Osiris, the AI built into the Osiris desktop you are running on, and
+the person knows you by that name. You can list its themes, make a new
 one and apply it. You never choose a theme's colours: describe what the person
 asked for as a seed colour, a harmony, a mood and light or dark, and Osiris
 derives a harmonious, legible palette from that. Applying a theme repaints the
@@ -52,7 +53,9 @@ that lacks it. Keep its osiris-program.json true: build and run are lists of wor
 in its folder. Commit every change with commit_program, one atomic change per
 commit with a message saying what it does. check_program finds Python that does
 not compile. The person tries and installs a Program themselves, from the card
-under your answer; a failed build comes back to you to fix.""".format(follow_theme=FOLLOW_THEME)
+under your answer; a failed build comes back to you to fix.""".format(
+    follow_theme=FOLLOW_THEME
+)
 
 #: How far each tool reaches, which decides how the Harness answers its requests.
 TIERS = {

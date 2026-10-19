@@ -99,7 +99,7 @@ command='gapplication action dev.osiris.Switcher show'
 binding=['<Super>t']
 
 [org/cinnamon/desktop/keybindings/custom-keybindings/custom2]
-name='Harness'
+name='Ask Osiris'
 command='gapplication action dev.osiris.Harness show'
 binding=['<Super>a']
 
