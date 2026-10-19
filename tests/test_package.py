@@ -124,7 +124,7 @@ def test_the_hook_is_where_pacman_reads_hooks_shipped_by_packages() -> None:
 
 def test_setup_runs_after_the_systems_own_hooks_and_before_the_last_snapshot() -> None:
     name = package.HOOK_PATH.rsplit("/", 1)[1]
-    ours_first = sorted([name, "90-mkinitcpio-install.hook", "zz_snap-pac-post.hook"])
+    ours_first = sorted([name, "90-mkinitcpio-install.hook", "zz-snap-pac-post.hook"])
     assert ours_first.index(name) == 1
     for before in ("gtk-update-icon-cache.hook", "update-desktop-database.hook"):
         assert before < name
