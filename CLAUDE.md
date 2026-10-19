@@ -7,6 +7,16 @@ themed properly, and a graphical installer on a live ISO. It was rebuilt
 ground-up after v1 (Debian + live-build, dual Sway/Cinnamon) was scrapped as
 too painful to build and too bloated.
 
+Osiris is a Linux desktop you can ask for things, built on three ideas. Weigh
+every feature against them:
+
+- **AI first.** Asking is how things get done: Osiris (the Harness) builds the
+  Programs a person needs and changes the desktop for them.
+- **Coherent.** Everything looks and works as one system, including the
+  Programs Osiris builds, which follow the Theme.
+- **Yours.** What Osiris builds is the person's: real code in `~/Code` with its
+  history, their choice of model, and choices no upgrade overwrites.
+
 The scope is deliberately narrow. Osiris writes no GTK theme, no icon set and
 no compositor; it orchestrates the ones that exist. What it adds is coherence -
 one theme choice retints nine surfaces at once - and an install that produces
