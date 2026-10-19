@@ -106,7 +106,7 @@ The generated theme contains:
 ~/.themes/Osiris-<palette>/
     index.theme          metatheme metadata
     gtk-3.0/gtk.css      @import the base theme, then @define-color overrides
-    gtk-4.0/gtk.css      same, for libadwaita applications
+    gtk-4.0/gtk.css      same, for GTK 4 applications without libadwaita
     cinnamon/            Cinnamon's built-in shell theme plus palette rules
 ```
 
@@ -119,6 +119,7 @@ so `~/.themes` does not accumulate.
 | Surface | Mechanism | Updates |
 |---|---|---|
 | GTK 3/4 applications | generated theme, `gtk-theme` | **live** |
+| libadwaita applications | the palette as libadwaita's colours in `~/.config/gtk-4.0/gtk.css` (`osiris/themes/adwaita.py`); light or dark through the XApp portal | **live** |
 | Cinnamon panel, menu, notifications | generated `cinnamon/` theme | **live** |
 | Wallpaper | `picture-uri` | **live** |
 | Folder icons | generated icon theme, `icon-theme` | **live** |
