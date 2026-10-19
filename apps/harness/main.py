@@ -408,7 +408,8 @@ class Drawer(Gtk.ApplicationWindow):
 
     def show_history(self, projects, loose) -> None:
         self.sidebar.show_history(projects, loose, getattr(self.app, "session", None),
-                                  getattr(self.app, "running", frozenset()))
+                                  getattr(self.app, "running", frozenset()),
+                                  getattr(self.app, "unread_sessions", frozenset()))
 
     def clear(self) -> None:
         for view in self.views:
