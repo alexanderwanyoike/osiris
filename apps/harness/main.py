@@ -64,6 +64,7 @@ from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.harness.trust import allow_everything, allows_everything  # noqa: E402
+from osiris.harness.unread import Unread  # noqa: E402
 from osiris.programs.programs import Programs  # noqa: E402
 from osiris.provision.upgrade import Upgrade  # noqa: E402
 from osiris.platform import (  # noqa: E402
@@ -468,6 +469,7 @@ class Application(Adw.Application):
         self.files = RealFileSystem()
         self.home = SystemIdentity().home
         self.models: Models = load_models(self.files, self.home)
+        self.unread = Unread(self.files, self.home)
         self.problem = "Starting the Engine..."
         #: What each Program's card is waiting on, or what went wrong, by name.
         self.program_busy: dict[str, str] = {}
@@ -899,6 +901,8 @@ class Application(Adw.Application):
             return False
         conversation.apply(event)
         if isinstance(event, Finished | Stopped | Failed):
+            looking = self.open and conversation is self.conversation
+            self.unread.ended(event, looking=looking)
             self._ended(event.session, conversation)
         self.drawer.refresh()
         return False
