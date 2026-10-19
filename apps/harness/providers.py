@@ -46,7 +46,8 @@ class ProvidersPage(Gtk.Box):
     POLL_SECONDS = 2
 
     def __init__(self, accounts, background, open_page=None, later=None,
-                 default=None, on_model_chosen=None):
+                 default=None, on_model_chosen=None, allows_everything=False,
+                 on_allow_everything=None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-providers")
         self._accounts = accounts
@@ -65,9 +66,23 @@ class ProvidersPage(Gtk.Box):
         model_line = Gtk.Box(spacing=8)
         model_line.append(Gtk.Label(label="Default model", xalign=0, hexpand=True))
         model_line.append(self._picker)
+        allow_line = Gtk.Box(spacing=8)
+        allow_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
+        allow_text.append(Gtk.Label(label="Allow everything", xalign=0))
+        warning = Gtk.Label(label="Let Osiris run commands and change any file, "
+                                  "without refusing.", xalign=0, wrap=True)
+        warning.add_css_class("harness-meta")
+        allow_text.append(warning)
+        allow_switch = Gtk.Switch(active=allows_everything, valign=Gtk.Align.CENTER)
+        if on_allow_everything is not None:
+            allow_switch.connect(
+                "notify::active", lambda s, _p: on_allow_everything(s.get_active()))
+        allow_line.append(allow_text)
+        allow_line.append(allow_switch)
         self._search = Gtk.SearchEntry(placeholder_text="Search other providers")
         self._search.connect("changed", self._filter)
         self.append(model_line)
+        self.append(allow_line)
         self.append(self._list)
         self.append(self._search)
         self.append(self._problem)
