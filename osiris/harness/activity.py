@@ -9,6 +9,8 @@ from dataclasses import dataclass
 class Verb:
     doing: str
     done: str
+    #: What the action is always done to; empty names its resources instead.
+    what: str = ""
 
 
 #: The Engine's actions, as words.
@@ -16,6 +18,13 @@ VERBS = {
     "read": Verb("Reading", "Read"),
     "edit": Verb("Editing", "Edited"),
     "list": Verb("Listing", "Listed"),
+    "osiris_list_themes": Verb("Looking at", "Looked at", "the themes"),
+    "osiris_create_theme": Verb("Making", "Made", "a theme"),
+    "osiris_apply_theme": Verb("Applying", "Applied", "a theme"),
+    "osiris_list_programs": Verb("Looking at", "Looked at", "your programs"),
+    "osiris_create_program": Verb("Starting", "Started", "a program"),
+    "osiris_commit_program": Verb("Saving", "Saved", "a change"),
+    "osiris_check_program": Verb("Checking", "Checked", "the program"),
 }
 
 
@@ -42,5 +51,7 @@ class Step:
 
     @property
     def _what(self) -> str:
+        if VERBS[self.action].what:
+            return VERBS[self.action].what
         first, *rest = self.resources
         return f"{_path(first)} and {len(rest)} more" if rest else _path(first)
