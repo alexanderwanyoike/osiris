@@ -34,8 +34,13 @@ class Step:
 
     @property
     def doing(self) -> str:
-        return f"{VERBS[self.action].doing} {_path(self.resources[0])}"
+        return f"{VERBS[self.action].doing} {self._what}"
 
     @property
     def record(self) -> str:
-        return f"{VERBS[self.action].done} {_path(self.resources[0])}"
+        return f"{VERBS[self.action].done} {self._what}"
+
+    @property
+    def _what(self) -> str:
+        first, *rest = self.resources
+        return f"{_path(first)} and {len(rest)} more" if rest else _path(first)
