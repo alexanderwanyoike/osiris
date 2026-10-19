@@ -255,3 +255,23 @@ def test_the_canvas_draws_code_in_the_themes_colours_from_the_start(
     )
     window.show_canvas([(Program(manifest, tmp_path, "a", None), [Path("main.py")])])
     assert window.canvas.current_view().get_buffer().get_style_scheme() is scheme
+
+
+def test_in_a_narrow_drawer_the_conversation_list_slides_over_the_conversation() -> (
+    None
+):
+    from gi.repository import GLib
+
+    window, _ = drawer()
+    window.set_default_size(440, 800)
+    window.present()
+    context = GLib.MainContext.default()
+    for _ in range(200):
+        context.iteration(False)
+        if window.get_width() == 440:
+            break
+    for _ in range(50):
+        context.iteration(False)
+    window.sidebar_toggle.set_active(True)
+    assert window.split.get_collapsed()
+    assert not window.canvas_toggle.get_visible()
