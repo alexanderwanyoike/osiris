@@ -42,6 +42,10 @@ CLASSES = (
     "harness-canvas",
     "harness-path",
     "harness-sidebar",
+    "harness-working",
+    "harness-dot",
+    "harness-doing",
+    "harness-elapsed",
 )
 
 
