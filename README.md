@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="branding/logo-white.svg">
-    <img src="branding/logo.svg" alt="Osiris" width="120">
+    <img src="branding/logo.svg" alt="Osiris" width="320">
   </picture>
 </p>
 
