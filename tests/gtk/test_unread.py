@@ -91,3 +91,16 @@ def test_bringing_the_drawer_back_to_an_unread_conversation_marks_it_read() -> N
     stand_in.toggle()
     assert stand_in.unread.sessions() == frozenset()
     assert stand_in.withdrawn == ["ses_1"]
+
+
+def test_bringing_the_drawer_back_to_an_unread_conversation_redraws_the_sidebar() -> (
+    None
+):
+    """So its dot goes."""
+    stand_in, _ = app()
+    asked(stand_in, "make it calm")
+    stand_in.open = False
+    heard(stand_in, Finished("ses_1"))
+    histories = stand_in.histories
+    stand_in.toggle()
+    assert stand_in.histories == histories + 1
