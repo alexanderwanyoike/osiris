@@ -157,3 +157,12 @@ def test_deleting_an_unread_conversation_forgets_it_and_its_notification() -> No
     stand_in._deleted("ses_1", on_screen=False)
     assert stand_in.unread.sessions() == frozenset()
     assert stand_in.withdrawn == ["ses_1"]
+
+
+def test_archiving_an_unread_conversation_forgets_it_and_its_notification() -> None:
+    """Archived is out of the way: no dot to come back to, nothing on the
+    desktop about it."""
+    stand_in = answered_off_screen()
+    stand_in.archive("ses_1")
+    assert stand_in.unread.sessions() == frozenset()
+    assert stand_in.withdrawn == ["ses_1"]
