@@ -115,6 +115,14 @@ class HarnessLog:
                 )
         return questions
 
+    def undone(self) -> list[tuple[str, ...]]:
+        """The changes of each answer the person undid, by their summaries."""
+        return [
+            tuple(entry["changes"])
+            for entry in self._entries()
+            if entry["kind"] == "undone"
+        ]
+
     def last_changes(self) -> list[Change]:
         """The changes logged since the last question was sent."""
         changes: list[Change] = []
