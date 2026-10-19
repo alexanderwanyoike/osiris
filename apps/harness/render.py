@@ -5,6 +5,7 @@ osiris/harness/markdown.py, where it is tested. Every widget here only carries
 CSS classes; how they look is the Skin's, in which colour the Theme's.
 """
 import re
+import time
 from collections.abc import Callable
 from datetime import datetime
 
@@ -14,6 +15,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("GtkSource", "5")
 from gi.repository import GLib, Gtk, GtkSource, Pango  # noqa: E402
 
+from osiris.harness.activity import elapsed  # noqa: E402
 from osiris.harness.conversation import State, Turn  # noqa: E402
 from osiris.harness.markdown import (  # noqa: E402
     Code,
@@ -171,11 +173,45 @@ def block_widget(block, scheme: GtkSource.StyleScheme | None) -> Gtk.Widget:
     return _markup_label(GLib.markup_escape_text(str(block)), "harness-paragraph")
 
 
+class WorkingRow(Gtk.Box):
+    """While Osiris works: a pulse, what it is doing, and how long it has been."""
+
+    def __init__(self, clock: Callable[[], float]):
+        super().__init__(spacing=10, halign=Gtk.Align.START, visible=False)
+        self.add_css_class("harness-working")
+        dots = Gtk.Box(spacing=4, valign=Gtk.Align.CENTER)
+        dots.add_css_class("harness-dots")
+        for _ in range(3):
+            dot = Gtk.Box(valign=Gtk.Align.CENTER)
+            dot.add_css_class("harness-dot")
+            dots.append(dot)
+        self._doing = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END)
+        self._doing.add_css_class("harness-doing")
+        self._elapsed = Gtk.Label(xalign=0)
+        self._elapsed.add_css_class("harness-meta")
+        self._elapsed.add_css_class("harness-elapsed")
+        self.append(dots)
+        self.append(self._doing)
+        self.append(self._elapsed)
+        self._clock = clock
+        self._since = clock()
+
+    def show(self, doing: str) -> None:
+        self._doing.set_text(doing)
+        self._tick()
+        self.set_visible(True)
+
+    def _tick(self) -> bool:
+        self._elapsed.set_text(elapsed(self._clock() - self._since))
+        return True
+
+
 class TurnView(Gtk.Box):
     """One question and its answer, redrawn only where the answer changed."""
 
     def __init__(self, turn: Turn, on_undo: Callable[[Turn], None],
-                 program_card: Callable[[str], Gtk.Widget]):
+                 program_card: Callable[[str], Gtk.Widget],
+                 clock: Callable[[], float] = time.monotonic):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-turn")
         self._on_undo = on_undo
@@ -188,6 +224,8 @@ class TurnView(Gtk.Box):
         self.answer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.answer.add_css_class("harness-answer")
         self.append(self.answer)
+        self.working = WorkingRow(clock)
+        self.append(self.working)
         self.extras = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.append(self.extras)
         self._blocks: list = []
@@ -237,9 +275,7 @@ class TurnView(Gtk.Box):
             self.extras.remove(child)
             child = following
         if turn.state in (State.WAITING, State.ANSWERING):
-            caret = Gtk.Label(label="▍", xalign=0)
-            caret.add_css_class("harness-caret")
-            self.extras.append(caret)
+            self.working.show(turn.doing)
         for refused in turn.refused:
             chip = Gtk.Box(spacing=6, halign=Gtk.Align.START)
             chip.add_css_class("harness-chip")
