@@ -130,3 +130,18 @@ def test_an_action_osiris_has_no_words_for_is_named_by_its_own(
 ) -> None:
     step = Step(action, ("*",))
     assert (step.doing, step.record) == (doing, record)
+
+
+@pytest.mark.parametrize(
+    ("action", "doing"),
+    [
+        ("read", "Reading a file"),
+        ("external_directory", "Looking in a folder"),
+        ("bash", "Running a command"),
+        ("grep", "Searching for something"),
+    ],
+)
+def test_a_step_that_names_nothing_still_reads_as_a_sentence(
+    action: str, doing: str
+) -> None:
+    assert Step(action, ()).doing == doing
