@@ -452,6 +452,9 @@ class Application(Adw.Application):
         super().__init__(application_id=APP_ID)
         self.drawer: Drawer | None = None
         self.conversation = Conversation()
+        #: Conversations still being answered while another is on screen,
+        #: by session.
+        self.backgrounded: dict[str, Conversation] = {}
         self.harness: Harness | None = None
         self.log: HarnessLog | None = None
         #: The past Conversations the sidebar shows, newest first.
@@ -765,8 +768,7 @@ class Application(Adw.Application):
 
     def new_conversation(self, folder: Path | None = None) -> None:
         """A new Conversation, in ``folder``'s Project or in none."""
-        if self.conversation.busy:
-            return
+        self._leave()
         self.conversation = Conversation()
         if self.harness is not None:
             self.harness.new_conversation(folder)
@@ -775,6 +777,11 @@ class Application(Adw.Application):
         self.drawer.entry.grab_focus()
         self.load_history()
         self.update_canvas()
+
+    def _leave(self) -> None:
+        """Keep the Conversation on screen while Osiris still works on it."""
+        if self.conversation.busy:
+            self.backgrounded[self.session] = self.conversation
 
     def ask(self, text: str) -> None:
         if self.harness is None:
