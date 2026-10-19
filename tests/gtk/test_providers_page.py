@@ -216,3 +216,20 @@ def test_a_connected_provider_wears_a_connected_chip_with_a_check() -> None:
     assert len(chips) == 1
     icons = [w.get_icon_name() for w in widgets(chips[0]) if isinstance(w, Gtk.Image)]
     assert icons == ["object-select-symbolic"]
+
+
+def test_the_page_offers_to_allow_everything_and_shows_the_choice() -> None:
+    page = ProvidersPage(FakeAccounts(), background=now, allows_everything=True)
+    assert "Allow everything" in texts(page)
+    assert find(page, Gtk.Switch).get_active()
+
+
+def test_turning_on_allow_everything_is_passed_on() -> None:
+    chosen: list[bool] = []
+    page = ProvidersPage(
+        FakeAccounts(), background=now, on_allow_everything=chosen.append
+    )
+    switch = find(page, Gtk.Switch)
+    assert not switch.get_active()
+    switch.set_active(True)
+    assert chosen == [True]

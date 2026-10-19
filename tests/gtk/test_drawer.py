@@ -18,6 +18,7 @@ class FakeApp(Adw.Application):
         self.conversation = Conversation()
         self.accounts = None
         self.models = Models(None, None)
+        self.everything_allowed = False
 
         class Look:
             style = None
@@ -126,6 +127,7 @@ def test_the_providers_page_opens_with_a_back_button_carrying_an_arrow() -> None
     app.background = now
     app.open_page = lambda _url: None
     app.choose_model = lambda _model: None
+    app.set_allow_everything = lambda _on: None
     window.show_providers()
     backs = [w for w in widgets(window) if isinstance(w, Adw.ButtonContent)]
     assert [(b.get_label(), b.get_icon_name()) for b in backs] == [

@@ -287,3 +287,10 @@ def test_a_conversation_knows_every_program_it_has_touched() -> None:
         ]
     )
     assert talk.programs == ["pomodoro", "notes"]
+
+
+def test_a_restored_conversation_shows_the_tokens_it_had_spent() -> None:
+    talk = Conversation.restored(
+        [PastTurn("make a timer", "Made it.", GPT)], tokens_spent=2048
+    )
+    assert talk.tokens_spent == 2048

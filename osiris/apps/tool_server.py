@@ -37,8 +37,7 @@ You can also build Programs: anything the person wants to keep and use. Start
 one with create_program, which makes its folder as a git repository and tells
 you its path; to work on an existing Program, find its folder with
 list_programs. Write its code there with your file tools, always by the
-absolute path those give you, never with ~; nothing outside that folder is
-yours to touch, and you cannot run commands. Write in Python, C or C++, Rust, Go or
+absolute path those give you, never with ~; {{reach}} Write in Python, C or C++, Rust, Go or
 JavaScript unless the person asks for another language. Anything with a window
 is GTK 4 and libadwaita (GJS for JavaScript), never tkinter, Qt, Electron or a
 web view, so it looks like the rest of Osiris, and never give it colours of its own: style only with libadwaita's
@@ -57,6 +56,18 @@ not compile. The person tries and installs a Program themselves, from the card
 under your answer; a failed build comes back to you to fix.""".format(
     follow_theme=FOLLOW_THEME
 )
+
+#: What the model may touch beyond its tools, by the person's choice
+#: (osiris.harness.trust).
+REACH = {
+    False: "nothing outside that folder is\nyours to touch, and you cannot run commands.",
+    True: "the person has allowed you\neverything: you may run commands and read or change any file, though a\nProgram's code still belongs in its own folder.",
+}
+
+
+def instructions(*, allow_everything: bool) -> str:
+    return INSTRUCTIONS.replace("{reach}", REACH[allow_everything])
+
 
 #: How far each tool reaches, which decides how the Harness answers its requests.
 TIERS = {
@@ -102,11 +113,20 @@ def undo(
 
 
 def server(
-    store: ThemeStore, programs: Programs, log: HarnessLog, wallpapers: UserWallpapers
+    store: ThemeStore,
+    programs: Programs,
+    log: HarnessLog,
+    wallpapers: UserWallpapers,
+    *,
+    allow_everything: bool = False,
 ) -> FastMCP:
     """The tools, acting on ``store``; every change they make is written to
     ``log`` with the step that undoes it."""
-    tools = FastMCP(NAME, instructions=INSTRUCTIONS, log_level="WARNING")
+    tools = FastMCP(
+        NAME,
+        instructions=instructions(allow_everything=allow_everything),
+        log_level="WARNING",
+    )
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["list_themes"]])
     def list_themes() -> list[dict[str, object]]:

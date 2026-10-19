@@ -63,6 +63,7 @@ from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
+from osiris.harness.trust import allow_everything, allows_everything  # noqa: E402
 from osiris.programs.programs import Programs  # noqa: E402
 from osiris.provision.upgrade import Upgrade  # noqa: E402
 from osiris.platform import (  # noqa: E402
@@ -368,6 +369,8 @@ class Drawer(Gtk.ApplicationWindow):
                 seconds, lambda: then() or False),
             default=self.app.models.default,
             on_model_chosen=self.app.choose_model,
+            allows_everything=self.app.everything_allowed,
+            on_allow_everything=self.app.set_allow_everything,
         )
         holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
                          margin_start=16, margin_end=16, margin_top=8)
@@ -767,7 +770,8 @@ class Application(Adw.Application):
 
         def opened(past) -> None:
             if live is None:
-                self.conversation = Conversation.restored(past)
+                spent = self.log.tokens_spent(session) if self.log is not None else 0
+                self.conversation = Conversation.restored(past, tokens_spent=spent)
                 self.drawer.clear()
             else:
                 self.backgrounded.pop(session, None)
@@ -776,6 +780,17 @@ class Application(Adw.Application):
             self.update_canvas()
 
         self.background(lambda: harness.resume(session), opened)
+
+    @property
+    def everything_allowed(self) -> bool:
+        return allows_everything(self.files, self.home)
+
+    def set_allow_everything(self, on: bool) -> None:
+        """Keep the person's choice; the tool server tells the model when it
+        starts, so it is restarted."""
+        allow_everything(self.files, self.home, on=on)
+        if self.harness is not None:
+            self.background(self.harness.restart_tools, lambda _r: None)
 
     def new_conversation(self, folder: Path | None = None) -> None:
         """A new Conversation, in ``folder``'s Project or in none."""
@@ -846,7 +861,9 @@ class Application(Adw.Application):
                 self.harness = Harness(engine, self.log, self.models.default,
                                        tiers=tiers, directory=me.home,
                                        tools=(TOOLS, [sys.executable, TOOL_SERVER]),
-                                       may_touch=self.programs().holds)
+                                       may_touch=self.programs().holds,
+                                       allow_everything=lambda: allows_everything(
+                                           self.files, self.home))
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)
                 GLib.idle_add(lambda: self.load_history() or False)

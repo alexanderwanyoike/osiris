@@ -71,6 +71,7 @@ class Harness:
         directory: Path,
         may_touch: Callable[[Path], bool],
         tools: tuple[str, list[str]] | None = None,
+        allow_everything: Callable[[], bool] = lambda: False,
     ) -> None:
         """``tiers`` names every action the Harness may take; it rejects the rest.
         File actions are allowed only on paths ``may_touch`` accepts, read from
@@ -90,6 +91,7 @@ class Harness:
         #: Sessions working on a question, served whichever one is on screen,
         #: and the folder each runs in.
         self._running: dict[str, Path] = {}
+        self._allow_everything = allow_everything
 
     def ask(self, text: str) -> None:
         directory, session = self._directory, self._session
@@ -121,6 +123,12 @@ class Harness:
         if self._tools is not None and directory not in self._tools_in:
             self._engine.attach_tools(*self._tools, directory)
             self._tools_in.add(directory)
+
+    def restart_tools(self) -> None:
+        """Attach the tool server again where it runs now; other folders get a
+        fresh one when next used."""
+        self._tools_in.clear()
+        self._ready(self._directory)
 
     def resume(self, session: str) -> list[PastTurn]:
         """Continue a past Conversation, in its folder; returns what was said."""
@@ -186,7 +194,7 @@ class Harness:
             and all(self._inside(folder, resource) for resource in resources)
         ):
             return FILE_TIERS[action]
-        return None
+        return Tier.ANYTHING if self._allow_everything() else None
 
     def _inside(self, folder: Path, resource: str) -> bool:
         """Whether a path the Engine names, relative to the session's folder or

@@ -114,3 +114,40 @@ def test_forgetting_a_session_erases_everything_logged_for_it() -> None:
     assert subject.last_changes() == []
     subject.write("changed", summary="Made Notes", undo=None, program="notes")
     assert subject.programs_of("ses_2") == ["notes"]
+
+
+def test_the_tokens_a_session_spent_are_added_up_from_its_answers() -> None:
+    subject = log()
+    tokens = {
+        "input": 100,
+        "output": 20,
+        "reasoning": 5,
+        "cache_read": 900,
+        "cache_write": 0,
+    }
+    subject.write(
+        "answered",
+        session="ses_1",
+        provider="openai",
+        model="gpt",
+        tokens=tokens,
+        cost=0,
+    )
+    subject.write(
+        "answered",
+        session="ses_2",
+        provider="openai",
+        model="gpt",
+        tokens=tokens,
+        cost=0,
+    )
+    subject.write(
+        "answered",
+        session="ses_1",
+        provider="openai",
+        model="gpt",
+        tokens=tokens,
+        cost=0,
+    )
+    assert subject.tokens_spent("ses_1") == 250
+    assert subject.tokens_spent("ses_3") == 0

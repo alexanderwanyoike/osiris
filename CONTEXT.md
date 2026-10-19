@@ -105,6 +105,9 @@ _Avoid_: artifact, preview pane
 How far an action of the **Harness** reaches, which decides whether it asks
 first: a look, an undoable change, or a change that cannot be undone or is not
 the person's own.
+A person can **allow everything**: then the **Harness** refuses nothing, runs
+commands and touches any file, and the model is told so. It is the person's
+choice, off until they turn it on.
 _Avoid_: permission level
 
 **Conversation**:

@@ -393,3 +393,12 @@ def test_the_model_is_told_how_a_wallpaper_shader_is_written() -> None:
     described = tools(FakeThemeStore())["make_wallpaper"].description
     for needed in ("vec3 wallpaper(vec2 uv)", "u_time", "GLSL 1.20", "compose("):
         assert needed in described
+
+
+def test_the_model_is_told_it_may_do_anything_once_the_person_allows_it() -> None:
+    from osiris.apps.tool_server import instructions
+
+    assert "you cannot run commands" in instructions(allow_everything=False)
+    allowed = instructions(allow_everything=True)
+    assert "you cannot run commands" not in allowed
+    assert "run commands" in allowed
