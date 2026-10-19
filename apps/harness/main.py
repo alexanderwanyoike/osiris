@@ -53,7 +53,12 @@ from osiris.apps.tool_server import NAME as TOOLS, TIERS, undo  # noqa: E402
 
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
 from osiris.harness.harness import Harness  # noqa: E402
-from osiris.harness.history import CODE_DIR, group, misplaced  # noqa: E402
+from osiris.harness.history import (  # noqa: E402
+    CODE_DIR,
+    group,
+    misplaced,
+    project_program,
+)
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
@@ -661,7 +666,10 @@ class Application(Adw.Application):
         # What this run changed, and what the Conversation changed before, as
         # the log has it: a reopened Conversation brings its Canvas back.
         earlier = self.log.programs_of(self.session) if self.log and self.session else []
-        names = list(dict.fromkeys([*earlier, *self.conversation.programs]))
+        # A Conversation in a Program's Project is about that Program first.
+        here = project_program(self.harness.directory, self.home) if self.harness else None
+        names = list(dict.fromkeys([*([here] if here else []), *earlier,
+                                    *self.conversation.programs]))
         programs = self.programs()
 
         def gather():
