@@ -14,6 +14,7 @@ from osiris.harness.engine import (
     Answered,
     Event,
     Failed,
+    Finished,
     ModelRef,
     Past,
     PastTurn,
@@ -354,9 +355,15 @@ def test_a_new_conversation_opens_a_new_session_on_its_first_question() -> None:
     assert engine.sent == [("ses_1", "hello"), ("ses_2", "something else")]
 
 
-def test_after_a_new_conversation_the_old_sessions_events_are_left_alone() -> None:
+@pytest.mark.parametrize(
+    "end", [Finished("ses_1"), Stopped("ses_1"), Failed("ses_1", "no account")]
+)
+def test_after_a_new_conversation_an_ended_sessions_events_are_left_alone(
+    end: Event,
+) -> None:
     subject, _, _ = harness()
     subject.ask("hello")
+    subject.handle(end)
     subject.new_conversation()
     assert subject.handle(Text("ses_1", "late text")) is None
 
