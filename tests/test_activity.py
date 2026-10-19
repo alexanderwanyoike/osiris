@@ -102,3 +102,16 @@ def test_a_page_fetched_is_named_by_its_site() -> None:
         "Fetching docs.gtk.org",
         "Fetched docs.gtk.org",
     )
+
+
+def test_a_web_search_is_named_by_its_query() -> None:
+    step = Step("websearch", ("gtk4 css animation",))
+    assert step.doing == "Searching the web for gtk4 css animation"
+
+
+def test_a_folder_outside_the_project_is_named_by_its_last_two_parts() -> None:
+    step = Step("external_directory", ("/home/tester/Code/pomodoro/*",))
+    assert (step.doing, step.record) == (
+        "Looking in Code/pomodoro",
+        "Looked in Code/pomodoro",
+    )
