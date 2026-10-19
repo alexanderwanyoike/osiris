@@ -21,10 +21,13 @@ import argparse
 import os
 import subprocess
 import sys
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 
+import osiris  # noqa: E402
+from osiris.provision import upgrade  # noqa: E402
 from osiris.provision.pacman_conf import without_local_repository  # noqa: E402
 
 # Order matters: themes.py composites the logo that branding.py installs into
@@ -70,6 +73,8 @@ def main() -> None:
         subprocess.run(argv, check=True)
 
     forget_install_medium()
+    # Last, so a running Osiris app that sees it restarts onto finished code.
+    upgrade.MARKER.write_text(f"{osiris.__version__} {time.time_ns()}\n")
     print("OSIRIS_SETUP_DONE")
 
 
