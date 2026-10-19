@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from osiris.harness.engine import Finished, Text
 
-from .test_side_by_side import app, asked, heard
+from .test_side_by_side import App, app, asked, heard
 
 
 def test_an_answer_ending_off_screen_leaves_its_conversation_unread() -> None:
@@ -56,3 +56,19 @@ def test_the_sidebar_is_told_which_conversations_are_unread() -> None:
     stand_in.new_conversation()
     heard(stand_in, Finished("ses_1"))
     assert stand_in.unread_sessions == frozenset({"ses_1"})
+
+
+def answered_off_screen() -> App:
+    """Osiris finished "make it calm" (ses_1) while ses_2 was on screen."""
+    stand_in, _ = app()
+    asked(stand_in, "make it calm")
+    stand_in.new_conversation()
+    asked(stand_in, "something else")
+    heard(stand_in, Finished("ses_1"))
+    return stand_in
+
+
+def test_opening_an_unread_conversation_marks_it_read() -> None:
+    stand_in = answered_off_screen()
+    stand_in.open_past("ses_1")
+    assert stand_in.unread.sessions() == frozenset()
