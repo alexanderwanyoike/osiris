@@ -6,6 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from osiris.harness.conversation import Conversation, State
+from osiris.harness.markdown import first_line
 
 #: How much of the answer a notice tells.
 GLANCE = 72
@@ -25,7 +26,7 @@ def notice_of(conversation: Conversation) -> Notice:
 
 
 def _start(answer: str) -> str:
-    line = next((line.strip() for line in answer.splitlines() if line.strip()), "")
+    line = first_line(answer)
     if len(line) <= GLANCE:
         return line
     return line[:GLANCE].rsplit(" ", 1)[0] + "…"
