@@ -846,8 +846,18 @@ class Application(Adw.Application):
                 GLib.idle_add(self._refresh)
             time.sleep(RECONNECT_SECONDS)
 
+    def _conversation_of(self, session: str) -> Conversation | None:
+        """The Conversation an event is for: one kept working off screen, the
+        one on screen, or none."""
+        if session in self.backgrounded:
+            return self.backgrounded[session]
+        return self.conversation if session == self.session else None
+
     def _apply(self, event) -> bool:
-        self.conversation.apply(event)
+        conversation = self._conversation_of(event.session)
+        if conversation is None:
+            return False
+        conversation.apply(event)
         if isinstance(event, Finished | Stopped | Failed) and self.log is not None:
             changes = self.log.last_changes()
             self.conversation.changed(changes)
