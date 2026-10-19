@@ -37,6 +37,23 @@ sys.argv[0] = "osiris-setup"
 runpy.run_path("{SOURCE_DIR}/provision/setup.py", run_name="__main__")
 """
 
+#: pacman runs hooks in name order; after the kernel's and mkinitcpio's, since
+#: setup rebuilds the initramfs with the boot splash.
+HOOK_PATH = "/usr/share/libalpm/hooks/95-osiris-setup.hook"
+
+#: Upgrade only: on a first install archinstall runs setup itself, once the
+#: accounts it provisions exist.
+HOOK = f"""[Trigger]
+Operation = Upgrade
+Type = Package
+Target = {NAME}
+
+[Action]
+Description = Re-applying Osiris to this system...
+When = PostTransaction
+Exec = {SETUP}
+"""
+
 #: Packages that are in no official Arch repository, built from the pinned
 #: PKGBUILDs in iso/bundled/<name>/ into Osiris's own repository alongside this
 #: one, so the install can depend on them without the AUR.
