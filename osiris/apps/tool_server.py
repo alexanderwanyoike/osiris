@@ -37,9 +37,9 @@ you its path; to work on an existing Program, find its folder with
 list_programs. Write its code there with your file tools, always by the
 absolute path those give you, never with ~; nothing outside that folder is
 yours to touch, and you cannot run commands. Write in Python, C or C++, Rust, Go or
-JavaScript unless the person asks for another language; give anything with a
-window GTK 4 and libadwaita (GJS for JavaScript) so it looks like the rest of
-Osiris, and never give it colours of its own: style only with libadwaita's
+JavaScript unless the person asks for another language. Anything with a window
+is GTK 4 and libadwaita (GJS for JavaScript), never tkinter, Qt, Electron or a
+web view, so it looks like the rest of Osiris, and never give it colours of its own: style only with libadwaita's
 named colours (@accent_bg_color, @window_bg_color, @card_bg_color and the rest),
 so it follows the person's Theme as they change it, unless they ask otherwise.
 A window also follows a Theme change live, without a restart, when its
