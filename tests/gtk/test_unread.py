@@ -149,3 +149,11 @@ def test_clicking_the_notification_of_the_conversation_on_screen_marks_it_read()
     assert stand_in.open
     assert stand_in.unread.sessions() == frozenset()
     assert stand_in.withdrawn == ["ses_1"]
+
+
+def test_deleting_an_unread_conversation_forgets_it_and_its_notification() -> None:
+    stand_in = answered_off_screen()
+    stand_in.harness.delete("ses_1")
+    stand_in._deleted("ses_1", on_screen=False)
+    assert stand_in.unread.sessions() == frozenset()
+    assert stand_in.withdrawn == ["ses_1"]
