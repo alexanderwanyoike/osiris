@@ -44,6 +44,8 @@ class FakeEngine:
     switched: list[tuple[str, ModelRef]] = field(default_factory=list)
     renamed: list[tuple[str, str]] = field(default_factory=list)
     moved: list[tuple[str, Path]] = field(default_factory=list)
+    archived: list[str] = field(default_factory=list)
+    deleted: list[str] = field(default_factory=list)
     attached: list[tuple[str, Path]] = field(default_factory=list)
     past: list[PastTurn] = field(default_factory=list)
 
@@ -74,6 +76,12 @@ class FakeEngine:
 
     def move(self, session: str, directory: Path) -> None:
         self.moved.append((session, directory))
+
+    def archive(self, session: str) -> None:
+        self.archived.append(session)
+
+    def delete(self, session: str) -> None:
+        self.deleted.append(session)
 
     def attach_tools(self, name: str, command: list[str], directory: Path) -> None:
         self.attached.append((name, directory))
@@ -390,6 +398,46 @@ def test_a_past_conversation_can_be_moved_into_a_project() -> None:
     subject, engine, _ = harness()
     subject.move("ses_old", POMODORO)
     assert engine.moved == [("ses_old", POMODORO)]
+
+
+def test_a_new_conversation_can_start_in_a_project() -> None:
+    subject, engine, _ = harness()
+    subject.new_conversation(POMODORO)
+    subject.ask("add a pause button")
+    assert engine.directories == [POMODORO]
+
+
+def test_a_new_conversation_with_no_project_starts_at_home() -> None:
+    subject, engine, _ = harness()
+    subject.new_conversation(POMODORO)
+    subject.new_conversation()
+    subject.ask("hello")
+    assert engine.directories == [HOME]
+
+
+def test_archiving_keeps_a_conversation_out_of_the_way() -> None:
+    subject, engine, _ = harness()
+    subject.archive("ses_old")
+    assert engine.archived == ["ses_old"]
+
+
+def test_deleting_erases_a_conversation_from_the_engine_and_the_log() -> None:
+    subject, engine, files = harness()
+    subject.ask("hello")
+    subject.new_conversation()
+    subject.ask("something else")
+    subject.delete("ses_1")
+    assert engine.deleted == ["ses_1"]
+    assert all(entry.get("session") != "ses_1" for entry in entries(files))
+    assert any(entry.get("session") == "ses_2" for entry in entries(files))
+
+
+def test_deleting_the_conversation_on_screen_starts_a_new_one() -> None:
+    subject, engine, _ = harness()
+    subject.ask("hello")
+    subject.delete("ses_1")
+    subject.ask("again")
+    assert engine.sent[-1] == ("ses_2", "again")
 
 
 def test_the_tools_are_attached_where_the_session_runs_once_each() -> None:

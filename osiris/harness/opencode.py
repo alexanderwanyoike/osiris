@@ -159,6 +159,21 @@ class OpencodeEngine:
             headers=self._service.headers(),
         )
 
+    def archive(self, session: str) -> None:
+        self._http.request(
+            "PATCH",
+            f"{self._service.url}/api/session/{session}",
+            body={"metadata": {**MINE, "archived": True}},
+            headers=self._service.headers(),
+        )
+
+    def delete(self, session: str) -> None:
+        self._http.request(
+            "DELETE",
+            f"{self._service.url}/api/session/{session}",
+            headers=self._service.headers(),
+        )
+
     def move(self, session: str, directory: Path) -> None:
         self._post(f"/api/session/{session}/move", {"directory": str(directory)})
 
@@ -171,7 +186,10 @@ class OpencodeEngine:
         sessions = self._get(f"/api/session?limit={HISTORY_LIMIT}")["data"]
         found = []
         for session in sessions:
-            if session.get("metadata") != MINE:
+            metadata = session.get("metadata") or {}
+            if metadata.get("archived"):
+                continue
+            if metadata.get("osiris") != MINE["osiris"]:
                 if session.get("title") != UNMARKED_TITLE:
                     continue
                 adopted = self._adopt(session["id"])

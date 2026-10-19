@@ -4,6 +4,7 @@
 The grouping is decided in osiris/harness/history.py, where it is tested.
 """
 from collections.abc import Callable
+from pathlib import Path
 
 import gi
 
@@ -18,11 +19,16 @@ INDENT = 26
 
 
 class Sidebar(Gtk.Box):
-    def __init__(self, *, on_open: Callable[[str], None], on_new: Callable[[], None]):
+    def __init__(self, *, on_open: Callable[[str], None], on_new: Callable[[], None],
+                 on_new_in: Callable[[Path], None], on_archive: Callable[[str], None],
+                 on_delete: Callable[[str, str], None]):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.add_css_class("harness-sidebar")
         self._on_open = on_open
         self._on_new = on_new
+        self._on_new_in = on_new_in
+        self._on_archive = on_archive
+        self._on_delete = on_delete
         self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
         self.list.add_css_class("navigation-sidebar")
         self.list.connect("row-activated", self._activated)
@@ -37,7 +43,12 @@ class Sidebar(Gtk.Box):
         if projects:
             self._heading("Projects")
             for project in projects:
-                self._row(project.name, icon="folder-symbolic", action=None)
+                row = self._row(project.name, icon="folder-symbolic", action=None)
+                start = Gtk.Button(icon_name="list-add-symbolic",
+                                   tooltip_text=f"New conversation in {project.name}")
+                start.add_css_class("flat")
+                start.connect("clicked", lambda _b, f=project.folder: self._on_new_in(f))
+                row.get_child().append(start)
                 for past in project.conversations:
                     self._conversation(past, current, indent=INDENT)
         if loose:
@@ -67,8 +78,19 @@ class Sidebar(Gtk.Box):
         self.list.append(row)
 
     def _conversation(self, past: Past, current: str | None, *, indent: int) -> None:
-        row = self._row(past.title or "Untitled", icon=None, action=past.session,
-                        indent=indent)
+        title = past.title or "Untitled"
+        row = self._row(title, icon=None, action=past.session, indent=indent)
+        actions = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        for label, act in (("Archive", lambda: self._on_archive(past.session)),
+                           ("Delete…", lambda: self._on_delete(past.session, title))):
+            choice = Gtk.Button(label=label)
+            choice.add_css_class("flat")
+            choice.connect("clicked", lambda _b, act=act: act())
+            actions.append(choice)
+        more = Gtk.MenuButton(icon_name="view-more-symbolic", tooltip_text="More",
+                              popover=Gtk.Popover(child=actions))
+        more.add_css_class("flat")
+        row.get_child().append(more)
         if past.session == current:
             self.list.select_row(row)
 

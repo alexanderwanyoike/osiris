@@ -1,7 +1,8 @@
 """The Harness log: everything sent to a model and everything done, kept.
 
 One JSON object per line, appended and never rewritten, so the person can read
-it with any tool and nothing in it changes after the fact.
+it with any tool and nothing in it changes after the fact; the one exception is
+deleting a Conversation, which erases it from here too (CONTEXT.md).
 """
 
 from __future__ import annotations
@@ -70,6 +71,17 @@ class HarnessLog:
             ):
                 changed.setdefault(entry["program"])
         return list(changed)
+
+    def forget(self, session: str) -> None:
+        """Erase everything logged for a deleted Conversation."""
+        kept = []
+        current = ""
+        for entry in self._entries():
+            current = entry.get("session", current)
+            if current != session:
+                kept.append(json.dumps(entry, ensure_ascii=False) + "\n")
+        if self._files.exists(self._path):
+            self._files.write(self._path, "".join(kept))
 
     def _entries(self) -> list[dict[str, Any]]:
         if not self._files.exists(self._path):

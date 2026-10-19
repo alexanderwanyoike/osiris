@@ -203,8 +203,12 @@ class Drawer(Gtk.ApplicationWindow):
         self.pages = Gtk.Stack(vexpand=True,
                                transition_type=Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
         self.pages.add_named(body, "chat")
-        self.sidebar = Sidebar(on_open=lambda session: self.app.open_past(session),
-                               on_new=lambda: self.app.new_conversation())
+        self.sidebar = Sidebar(
+            on_open=lambda session: self.app.open_past(session),
+            on_new=lambda: self.app.new_conversation(),
+            on_new_in=lambda folder: self.app.new_conversation(folder),
+            on_archive=lambda session: self.app.archive(session),
+            on_delete=lambda session, title: self.app.ask_to_delete(session, title))
         self.split = Adw.OverlaySplitView(sidebar=self.sidebar, content=self.pages,
                                           min_sidebar_width=220,
                                           max_sidebar_width=280, vexpand=True)
@@ -680,6 +684,40 @@ class Application(Adw.Application):
 
         self.background(gather, self.drawer.show_canvas)
 
+    def archive(self, session: str) -> None:
+        if self.harness is None:
+            return
+        harness = self.harness
+        self.background(lambda: harness.archive(session), lambda _r: self.load_history())
+
+    def ask_to_delete(self, session: str, title: str) -> None:
+        dialog = Adw.AlertDialog(
+            heading=f"Delete “{title}”?",
+            body=("This erases the conversation from opencode and from the Harness "
+                  "log, and cannot be undone. What it did stays done: a Theme "
+                  "applied or a Program made is not removed."))
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("delete", "Delete")
+        dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_close_response("cancel")
+
+        def chosen(_dialog, response: str) -> None:
+            if response != "delete" or self.harness is None:
+                return
+            harness, on_screen = self.harness, session == self.session
+
+            def deleted(_result) -> None:
+                if on_screen:
+                    self.conversation = Conversation()
+                    self.drawer.clear()
+                    self.drawer.refresh()
+                self.load_history()
+
+            self.background(lambda: harness.delete(session), deleted)
+
+        dialog.connect("response", chosen)
+        dialog.present(self.drawer)
+
     def open_past(self, session: str) -> None:
         if self.harness is None or self.conversation.busy or session == self.session:
             return
@@ -696,12 +734,13 @@ class Application(Adw.Application):
                       self.home)
         self.background(lambda: harness.resume(session, folder), opened)
 
-    def new_conversation(self) -> None:
+    def new_conversation(self, folder: Path | None = None) -> None:
+        """A new Conversation, in ``folder``'s Project or in none."""
         if self.conversation.busy:
             return
         self.conversation = Conversation()
         if self.harness is not None:
-            self.harness.new_conversation()
+            self.harness.new_conversation(folder)
         self.drawer.clear()
         self.drawer.refresh()
         self.drawer.entry.grab_focus()

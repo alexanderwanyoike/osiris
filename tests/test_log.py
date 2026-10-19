@@ -102,3 +102,15 @@ def test_the_log_says_which_programs_a_session_changed() -> None:
     subject.write("changed", summary="Pomodoro: pause", undo=None, program="pomodoro")
     subject.write("changed", summary="Made Clock", undo=None, program="clock")
     assert subject.programs_of("ses_1") == ["pomodoro", "clock"]
+
+
+def test_forgetting_a_session_erases_everything_logged_for_it() -> None:
+    subject = log()
+    subject.write("sent", session="ses_1", text="build a timer")
+    subject.write("changed", summary="Made Pomodoro", undo=None, program="pomodoro")
+    subject.write("sent", session="ses_2", text="hello")
+    subject.forget("ses_1")
+    assert subject.programs_of("ses_1") == []
+    assert subject.last_changes() == []
+    subject.write("changed", summary="Made Notes", undo=None, program="notes")
+    assert subject.programs_of("ses_2") == ["notes"]
