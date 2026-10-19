@@ -25,6 +25,10 @@ def _as_written(resource: str) -> str:
     return cut.rstrip() + "…"
 
 
+def _site(address: str) -> str:
+    return address.partition("://")[2].partition("/")[0] or address
+
+
 @dataclass(frozen=True)
 class Phrase:
     doing: str
@@ -42,6 +46,7 @@ PHRASES = {
     "list": Phrase("Listing", "Listed"),
     "glob": Phrase("Finding", "Found", shown=_as_written),
     "grep": Phrase("Searching for", "Searched for", shown=_as_written),
+    "webfetch": Phrase("Fetching", "Fetched", shown=_site),
     "bash": Phrase("Running", "Ran", shown=_as_written),
     "shell": Phrase("Running", "Ran", shown=_as_written),
     "osiris_list_themes": Phrase("Looking at", "Looked at", "the themes"),
