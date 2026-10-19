@@ -33,7 +33,7 @@ APPLICATIONS_DIR = ".local/share/applications"
 #: Inside an installed copy: the commit it was made from.
 COMMIT_FILE = ".osiris-commit"
 #: Who the Harness's commits are by, so its changes are told from the person's.
-HARNESS = ("Osiris Harness", "harness@osiris.invalid")
+HARNESS = ("Osiris", "osiris@osiris.invalid")
 
 #: Folders that hold what git, builds and package managers keep, not source.
 _NOT_SOURCE = {
@@ -53,8 +53,8 @@ AGENTS = """\
 
 {description}
 
-This is an Osiris Program: the Osiris Harness made it, and any editor or coding
-agent can carry it on.
+This is an Osiris Program: Osiris made it, and any editor or coding agent can
+carry it on.
 
 - How it builds and runs is in `{manifest}` (`build` and `run`, each a list of
   words run in this folder). Keep them true when you change how it is built.
