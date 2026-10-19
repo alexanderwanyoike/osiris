@@ -20,6 +20,7 @@ def harness(upgraded: bool, **state: object) -> SimpleNamespace:
     app = SimpleNamespace(
         open=False,
         conversation=Conversation(),
+        backgrounded={},
         program_busy={},
         upgrade=Upgrade(files, MARKER),
         quits=0,
@@ -48,6 +49,16 @@ def test_an_upgraded_harness_waits_while_an_answer_is_coming() -> None:
     asking = Conversation()
     asking.asked("build me a timer")
     app = harness(upgraded=True, conversation=asking)
+    main.Application._restart_if_upgraded(app)
+    assert app.quits == 0
+
+
+def test_an_upgraded_harness_waits_while_a_conversation_off_screen_is_answered() -> (
+    None
+):
+    asking = Conversation()
+    asking.asked("build me a timer")
+    app = harness(upgraded=True, backgrounded={"ses_1": asking})
     main.Application._restart_if_upgraded(app)
     assert app.quits == 0
 
