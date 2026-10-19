@@ -835,7 +835,7 @@ class Application(Adw.Application):
             worked_on = [c.program for c in changes if c.program]
             if worked_on and self.harness is not None:
                 harness, folder = self.harness, self.home / CODE_DIR / worked_on[0]
-                self.background(lambda: harness.worked_on(folder),
+                self.background(lambda: harness.worked_on(event.session, folder),
                                 lambda _r: self.load_history())
             self.load_history()
             self.update_canvas()

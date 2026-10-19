@@ -147,10 +147,12 @@ class Harness:
         if session == self._session:
             self.new_conversation()
 
-    def worked_on(self, folder: Path) -> None:
+    def worked_on(self, session: str, folder: Path) -> None:
         """A Conversation with no Project takes the Project of the first Program
-        it works on; one already in a Project stays there (CONTEXT.md)."""
-        if self._session is None or self._directory != self._home:
+        it works on; one already in a Project stays there (CONTEXT.md). Only the
+        current one is moved here; the history's pass over misplaced
+        Conversations moves the rest."""
+        if session != self._session or self._directory != self._home:
             return
         self._engine.move(self._session, folder)
         self._directory = folder
