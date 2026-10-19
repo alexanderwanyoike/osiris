@@ -53,3 +53,8 @@ def test_packages_are_published_before_the_database_that_names_them() -> None:
         "osiris.files",
         "osiris.files.tar.gz",
     ]
+
+
+def test_the_databases_repo_add_set_aside_are_not_published() -> None:
+    packages, databases = publish_order(["osiris.db.tar.gz", "osiris.db.tar.gz.old"])
+    assert (packages, databases) == ([], ["osiris.db.tar.gz"])
