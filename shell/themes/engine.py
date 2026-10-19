@@ -643,14 +643,17 @@ def _write(path: str, text: str) -> None:
         fh.write(text)
 
 
-def _seed(path: str, text: str) -> None:
-    """Write a file the person keeps, unless they already have one."""
+def _read(path: str) -> str | None:
     try:
         with open(path) as fh:
-            existing: str | None = fh.read()
+            return fh.read()
     except FileNotFoundError:
-        existing = None
-    if may_write(existing):
+        return None
+
+
+def _seed(path: str, text: str) -> None:
+    """Write a file the person keeps, unless they already have one."""
+    if may_write(_read(path)):
         _write(path, text)
 
 
