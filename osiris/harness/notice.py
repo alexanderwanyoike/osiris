@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from osiris.harness.conversation import Conversation, State
 from osiris.harness.markdown import first_line
 
-#: How much of the answer a notice tells.
+#: How much of an answer or a failure a notice tells.
 GLANCE = 72
 
 
@@ -27,8 +27,8 @@ def notice_of(conversation: Conversation) -> Notice:
     return Notice("Osiris replied", f"{conversation.title}\n{_start(turn.answer)}")
 
 
-def _start(answer: str) -> str:
-    line = first_line(answer)
+def _start(text: str) -> str:
+    line = first_line(text)
     if len(line) <= GLANCE:
         return line
     return line[:GLANCE].rsplit(" ", 1)[0] + "…"
