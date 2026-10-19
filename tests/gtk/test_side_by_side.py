@@ -9,7 +9,7 @@ from typing import Any
 import main
 
 from osiris.harness.conversation import Conversation
-from osiris.harness.engine import Event, Finished, Text
+from osiris.harness.engine import Event, Finished, PastTurn, Text
 from osiris.harness.harness import Harness
 from osiris.harness.log import LOG_FILE, HarnessLog
 from osiris.platform import FakeFileSystem
@@ -123,3 +123,12 @@ def test_a_conversation_ending_off_screen_is_let_go_and_leaves_the_screen_alone(
     assert on_screen.turns[-1].changes == []
     assert stand_in.canvases == canvases
     assert stand_in.histories > histories
+
+
+def test_a_past_conversation_can_be_opened_while_osiris_works() -> None:
+    stand_in, engine = app()
+    engine.past = [PastTurn("make a timer", "Made it.", GPT)]
+    working = asked(stand_in, "make it calm")
+    stand_in.open_past("ses_9")
+    assert [turn.answer for turn in stand_in.conversation.turns] == ["Made it."]
+    assert stand_in.backgrounded == {"ses_1": working}
