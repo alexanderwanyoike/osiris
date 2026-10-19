@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from osiris.harness.activity import Step
+from osiris.harness.activity import Step, summary
 
 
 @pytest.mark.parametrize(
@@ -159,3 +159,10 @@ def test_a_refused_step_is_recorded_as_not_allowed(
     action: str, resources: tuple[str, ...], record: str
 ) -> None:
     assert Step(action, resources, allowed=False).record == record
+
+
+@pytest.mark.parametrize(("count", "said"), [(1, "Used 1 tool"), (4, "Used 4 tools")])
+def test_the_steps_of_an_answer_are_summed_up_as_tools_used(
+    count: int, said: str
+) -> None:
+    assert summary([Step("read", ("main.py",))] * count) == said
