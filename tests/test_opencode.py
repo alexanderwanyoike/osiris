@@ -493,3 +493,14 @@ class TestHistory:
         http = FakeHttpClient(replies={("DELETE", path): None})
         engine(http).delete(SESSION)
         assert http.requests == [("DELETE", path, None)]
+
+    def test_a_session_says_which_folder_it_runs_in(self) -> None:
+        path = f"{URL}/api/session/{SESSION}"
+        http = FakeHttpClient(
+            replies={
+                ("GET", path): {
+                    "data": {"location": {"directory": "/home/tester/Code/pomodoro"}}
+                }
+            }
+        )
+        assert engine(http).where(SESSION) == Path("/home/tester/Code/pomodoro")
