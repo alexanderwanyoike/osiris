@@ -9,6 +9,7 @@ from typing import Any
 import main
 
 from osiris.harness.conversation import Conversation
+from osiris.harness.engine import Event, Text
 from osiris.harness.harness import Harness
 from osiris.harness.log import LOG_FILE, HarnessLog
 from osiris.platform import FakeFileSystem
@@ -62,6 +63,13 @@ def app() -> tuple[App, FakeEngine]:
     return stand_in, engine
 
 
+def heard(stand_in: App, event: Event) -> None:
+    """An event from the Engine, through the Harness to the main loop."""
+    handled = stand_in.harness.handle(event)
+    if handled is not None:
+        stand_in._apply(handled)
+
+
 def asked(stand_in: App, text: str) -> Conversation:
     """A question sent on the Conversation on screen, as the drawer sends it."""
     stand_in.conversation.asked(text)
@@ -87,3 +95,13 @@ def test_while_the_first_question_is_still_on_its_way_the_conversation_stays() -
     stand_in.new_conversation()
     assert stand_in.conversation is sending
     assert stand_in.backgrounded == {}
+
+
+def test_what_osiris_still_says_off_screen_reaches_its_own_conversation() -> None:
+    stand_in, _ = app()
+    working = asked(stand_in, "make it calm")
+    stand_in.new_conversation()
+    asked(stand_in, "something else")
+    heard(stand_in, Text("ses_1", "Calmer now."))
+    assert working.turns[-1].answer == "Calmer now."
+    assert stand_in.conversation.turns[-1].answer == ""
