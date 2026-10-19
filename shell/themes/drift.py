@@ -33,7 +33,9 @@ from paths import home  # noqa: E402
 
 # wallpaper has put the osiris package on sys.path.
 from osiris.platform.hardware import rendering_accelerated  # noqa: E402
+from osiris.platform import RealFileSystem  # noqa: E402
 from osiris.platform.process import SubprocessRunner  # noqa: E402
+from osiris.provision.upgrade import Upgrade  # noqa: E402
 from osiris.themes import wallpapers as packages  # noqa: E402
 
 POLL = 2
@@ -257,7 +259,10 @@ def main() -> None:
     # moving wallpaper is worth, so such a machine keeps the still one.
     accelerated = rendering_accelerated(SubprocessRunner(sink=lambda line: None))
     last: tuple[object, dict | None] = (None, None)
+    upgrade = Upgrade(RealFileSystem())
     while True:
+        if upgrade.happened():
+            os.execv(sys.executable, [sys.executable, *sys.argv])
         try:
             theme = wanted()
             # Worked out again only when the theme or its package changes; a
