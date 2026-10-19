@@ -100,6 +100,15 @@ class TestCreating:
         assert runner.calls == []
         assert not files.exists(SOURCE)
 
+    def test_its_agents_file_says_how_a_window_follows_the_theme_live(self) -> None:
+        subject, files, _ = programs()
+        subject.create(
+            "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+        )
+        agents = files.read(SOURCE / "AGENTS.md")
+        assert "Adwaita-empty" in agents
+        assert ".config/gtk-4.0/gtk.css" in agents
+
     def test_a_folder_that_exists_is_never_taken_over(self) -> None:
         files = FakeFileSystem()
         files.make_directory(SOURCE)

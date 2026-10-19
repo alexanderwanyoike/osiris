@@ -17,7 +17,7 @@ from pydantic import Field
 
 from osiris.harness.log import HarnessLog
 from osiris.harness.tiers import Tier
-from osiris.programs.programs import Programs
+from osiris.programs.programs import FOLLOW_THEME, Programs
 from osiris.themes import actions
 from osiris.themes.intent import Harmony, Mood
 from osiris.themes.store import ThemeStore
@@ -39,13 +39,18 @@ JavaScript unless the person asks for another language; give anything with a
 window GTK 4 and libadwaita (GJS for JavaScript) so it looks like the rest of
 Osiris, and never give it colours of its own: style only with libadwaita's
 named colours (@accent_bg_color, @window_bg_color, @card_bg_color and the rest),
-so it follows the person's Theme as they change it, unless they ask otherwise. Every Program has an icon that shows what it is: icon.svg in its
+so it follows the person's Theme as they change it, unless they ask otherwise.
+A window also follows a Theme change live, without a restart, when its
+application's startup handler runs this (Python; the same calls in any
+language), which every Program with a window needs:
+
+{follow_theme} Every Program has an icon that shows what it is: icon.svg in its
 folder, named as "icon" in its osiris-program.json; give one to any Program
 that lacks it. Keep its osiris-program.json true: build and run are lists of words run
 in its folder. Commit every change with commit_program, one atomic change per
 commit with a message saying what it does. check_program finds Python that does
 not compile. The person tries and installs a Program themselves, from the card
-under your answer; a failed build comes back to you to fix."""
+under your answer; a failed build comes back to you to fix.""".format(follow_theme=FOLLOW_THEME)
 
 #: How far each tool reaches, which decides how the Harness answers its requests.
 TIERS = {
