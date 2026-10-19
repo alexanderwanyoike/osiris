@@ -30,3 +30,20 @@ def test_an_answer_the_person_watched_end_in_the_open_drawer_is_read() -> None:
     asked(stand_in, "make it calm")
     heard(stand_in, Finished("ses_1"))
     assert stand_in.unread.sessions() == frozenset()
+
+
+def test_an_answer_ending_unread_is_told_on_the_desktop_by_its_conversation() -> None:
+    """Notified under its session, so a newer answer replaces the older
+    notification rather than piling up."""
+    stand_in, _ = app()
+    asked(stand_in, "make it calm")
+    stand_in.open = False
+    heard(stand_in, Finished("ses_1"))
+    assert [session for session, _ in stand_in.sent] == ["ses_1"]
+
+
+def test_an_answer_the_person_watched_end_is_not_told_on_the_desktop() -> None:
+    stand_in, _ = app()
+    asked(stand_in, "make it calm")
+    heard(stand_in, Finished("ses_1"))
+    assert stand_in.sent == []
