@@ -94,3 +94,11 @@ def test_a_search_is_named_by_its_pattern(
 ) -> None:
     step = Step(action, (pattern,))
     assert (step.doing, step.record) == (doing, record)
+
+
+def test_a_page_fetched_is_named_by_its_site() -> None:
+    step = Step("webfetch", ("https://docs.gtk.org/gtk4/class.Label.html",))
+    assert (step.doing, step.record) == (
+        "Fetching docs.gtk.org",
+        "Fetched docs.gtk.org",
+    )
