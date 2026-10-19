@@ -767,6 +767,7 @@ class Application(Adw.Application):
     def open_past(self, session: str) -> None:
         if self.harness is None or session == self.session or not self._leave():
             return
+        self.unread.read(session)
         harness = self.harness
         # Shown at once and kept by its session until the Harness has made it
         # current, so its events reach it while resume is under way.
