@@ -12,8 +12,17 @@ def _path(resource: str) -> str:
     return "/".join(parts[-2:])
 
 
+#: The most of a command, pattern or query a row shows.
+LONGEST = 40
+
+
 def _as_written(resource: str) -> str:
-    return resource
+    """Whole if it fits, else cut at the last word that does."""
+    if len(resource) <= LONGEST:
+        return resource
+    head = resource[:LONGEST]
+    cut = head.rsplit(" ", 1)[0] if " " in head else head[:-1]
+    return cut.rstrip() + "…"
 
 
 @dataclass(frozen=True)
