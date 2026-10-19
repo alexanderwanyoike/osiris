@@ -104,3 +104,12 @@ def test_the_time_counts_up_each_second_while_osiris_works() -> None:
     view = drawn(Turn("make a timer"), clock=lambda: now[0])
     now[0] = 103.0
     assert happens(lambda: "3s" in shown(view))
+
+
+def test_once_the_answer_ends_the_working_row_goes_and_stops_counting() -> None:
+    turn = Turn("make a timer")
+    view = drawn(turn)
+    turn.state = State.DONE
+    view.update(turn, STYLE, None)
+    assert "Thinking" not in shown(view)
+    assert not view.working.ticking
