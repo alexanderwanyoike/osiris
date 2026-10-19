@@ -510,8 +510,13 @@ class Application(Adw.Application):
         if self.open:
             self.close_drawer()
         else:
-            self.open = True
-            self.drawer.summon()
+            self.summon()
+
+    def summon(self) -> None:
+        self.open = True
+        self.drawer.summon()
+        if self.session is not None:
+            self._seen(self.session)
 
     def close_drawer(self) -> None:
         """Ask the extension to slide the drawer away; minimise if it cannot."""
