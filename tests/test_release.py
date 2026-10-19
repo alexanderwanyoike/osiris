@@ -13,7 +13,7 @@ def test_a_tag_names_the_version_it_releases() -> None:
 
 def test_a_tag_that_disagrees_with_the_code_is_refused() -> None:
     """Homes are brought up to the code's version, so a release must carry it."""
-    with pytest.raises(ReleaseError, match="0.2.0.*0.1.0"):
+    with pytest.raises(ReleaseError, match=r"0\.2\.0.*0\.1\.0"):
         version_from_tag("v0.2.0", code_version="0.1.0")
 
 
