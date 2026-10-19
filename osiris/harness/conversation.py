@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 
-from osiris.harness.activity import Step
+from osiris.harness.activity import THINKING, Step
 from osiris.harness.engine import (
     Answered,
     Event,
@@ -38,6 +38,8 @@ class Turn:
     model: ModelRef | None = None
     refused: list[str] = field(default_factory=list)
     steps: list[Step] = field(default_factory=list)
+    #: What Osiris is doing now, in words.
+    doing: str = THINKING
     error: str = ""
     changes: list[Change] = field(default_factory=list)
     undone: bool = False
@@ -118,6 +120,7 @@ class Conversation:
                 self.tokens_spent += tokens.input + tokens.output + tokens.reasoning
             case Allowed(_, action, _, resources):
                 turn.steps.append(Step(action, resources))
+                turn.doing = turn.steps[-1].doing
             case Refused(_, action, resources):
                 turn.refused.append(f"{action}: {', '.join(resources)}")
                 turn.steps.append(Step(action, resources, allowed=False))

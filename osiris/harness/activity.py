@@ -12,6 +12,9 @@ def _path(resource: str) -> str:
     return "/".join(parts[-2:])
 
 
+#: What Osiris is doing between steps.
+THINKING = "Thinking"
+
 #: The most of a command, pattern or query a row shows.
 LONGEST = 40
 
