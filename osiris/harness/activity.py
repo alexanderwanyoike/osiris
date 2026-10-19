@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 
@@ -113,3 +113,7 @@ class Step:
         first, *rest = self.resources
         shown = phrase.shown(first)
         return f"{shown} and {len(rest)} more" if rest else shown
+
+
+def summary(steps: Sequence[Step]) -> str:
+    return f"Used {len(steps)} tool{'' if len(steps) == 1 else 's'}"
