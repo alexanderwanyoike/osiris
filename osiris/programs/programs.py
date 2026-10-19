@@ -63,6 +63,39 @@ agent can carry it on.
 - Windows use GTK 4 and libadwaita, so the Program follows the Osiris Theme.
   Never write colours: style only with libadwaita's named colours
   (`@accent_bg_color`, `@window_bg_color`, `@card_bg_color` and the rest).
+- A window follows the Theme live, without being restarted, by running this in
+  the application's startup handler (Python; the same calls in any language):
+
+```python
+{follow_theme}```
+"""
+
+#: What keeps a running libadwaita window on the person's Theme. A theme switch
+#: rewrites the palette file, which GTK reads only at startup, and changes the
+#: GTK theme name, which unpins libadwaita's own "Adwaita-empty" and lets GTK's
+#: theme take over; so the window reloads the one and puts the other back.
+FOLLOW_THEME = """\
+palette = Gtk.CssProvider()
+path = os.path.expanduser("~/.config/gtk-4.0/gtk.css")
+settings = Gtk.Settings.get_default()
+pinned = settings.get_property("gtk-theme-name")  # "Adwaita-empty"
+
+def follow(*_):
+    if os.path.exists(path):
+        palette.load_from_path(path)
+
+def repin(*_):
+    if settings.get_property("gtk-theme-name") != pinned:
+        settings.set_property("gtk-theme-name", pinned)
+        follow()
+
+follow()
+Gtk.StyleContext.add_provider_for_display(
+    Gdk.Display.get_default(), palette, Gtk.STYLE_PROVIDER_PRIORITY_USER + 1)
+self.theme_monitor = Gio.File.new_for_path(path).monitor_file(
+    Gio.FileMonitorFlags.NONE, None)
+self.theme_monitor.connect("changed", follow)
+settings.connect("notify::gtk-theme-name", repin)
 """
 
 
@@ -195,7 +228,12 @@ class Programs:
         self._files.write(source / "README.md", f"# {label}\n\n{description}\n")
         self._files.write(
             source / "AGENTS.md",
-            AGENTS.format(label=label, description=description, manifest=MANIFEST_FILE),
+            AGENTS.format(
+                label=label,
+                description=description,
+                manifest=MANIFEST_FILE,
+                follow_theme=FOLLOW_THEME,
+            ),
         )
         self._git(name, "init", "-q")
         self._git(name, "add", "-A")
