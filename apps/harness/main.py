@@ -767,7 +767,7 @@ class Application(Adw.Application):
     def open_past(self, session: str) -> None:
         if self.harness is None or session == self.session or not self._leave():
             return
-        self.unread.read(session)
+        self._seen(session)
         harness = self.harness
         # Shown at once and kept by its session until the Harness has made it
         # current, so its events reach it while resume is under way.
@@ -913,6 +913,10 @@ class Application(Adw.Application):
             self._ended(event.session, conversation)
         self.drawer.refresh()
         return False
+
+    def _seen(self, session: str) -> None:
+        self.unread.read(session)
+        self.withdraw_notification(session)
 
     def _notify(self, session: str, conversation: Conversation) -> None:
         notice = notice_of(conversation)
