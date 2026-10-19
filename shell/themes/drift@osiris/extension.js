@@ -32,11 +32,16 @@ const THEME = GLib.build_filenamev([CONFIG, 'theme']);
 // smooth for motion this slow. Muffin calls a software renderer accelerated,
 // so rather than ask, the extension watches what Cinnamon spends and halves
 // the rate while it is over BUDGET of a core, down to SLOWEST_MS. Still over
-// budget there, the machine has no GPU to speak of: the still wallpaper is
-// left showing for the rest of the session, and UNSUPPORTED says why.
+// budget there, the still wallpaper shows for RETRY_MS, doubling while it keeps
+// happening, and UNSUPPORTED says why. What it measures is all of Cinnamon, so
+// ordinary busyness (a theme switch, windows opening) trips it as surely as a
+// software renderer would; giving up for the session made the wallpaper stop
+// for good after half a minute of use.
 const FASTEST_MS = 33;
 const SLOWEST_MS = 500;
 const BUDGET = 0.15;
+const RETRY_MS = 30000;
+const LONGEST_RETRY_MS = 600000;
 const MEASURE_MS = 5000;
 const FADE_MS = 1500;
 
@@ -111,8 +116,9 @@ class Drift {
         this._target = 0;
         this._effect = null;
         this._theme = readText(THEME);
-        // Each session finds out afresh; a new GPU or driver may change it.
-        this._unsupported = false;
+        this._resting = false;
+        this._retry = 0;
+        this._retryMs = RETRY_MS;
         GLib.unlink(UNSUPPORTED);
 
         this._layer = new Clutter.Actor({ opacity: 0 });
@@ -172,7 +178,7 @@ class Drift {
         }
         // The state can outlive a theme switch by a moment; a wallpaper is
         // only drawn over the theme it belongs to.
-        if (!state || state.problem || this._unsupported || !shadersAvailable() ||
+        if (!state || state.problem || this._resting || !shadersAvailable() ||
             readText(PREFERENCE) === 'off' || readText(THEME) !== state.theme)
             state = null;
         if (JSON.stringify(state) !== JSON.stringify(this._state)) {
@@ -280,9 +286,11 @@ class Drift {
         let share = (cpu - before) / (now - then);
         let interval = this._interval;
         if (share > BUDGET && interval === SLOWEST_MS) {
-            this._giveUp();
+            this._pause();
             return;
         }
+        if (share <= BUDGET)
+            this._retryMs = RETRY_MS;
         if (share > BUDGET)
             interval = Math.min(SLOWEST_MS, interval * 2);
         else if (share < BUDGET / 3)
@@ -293,14 +301,24 @@ class Drift {
         }
     }
 
-    _giveUp() {
-        this._unsupported = true;
+    _pause() {
+        this._resting = true;
         try {
             GLib.file_set_contents(UNSUPPORTED,
-                'Moving wallpapers need a graphics card; showing the still one instead.\n');
+                'The desktop was too busy to keep the wallpaper moving; it will start again shortly.\n');
         } catch (e) {
             logError(e, 'drift@osiris');
         }
+        this._retry = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this._retryMs, () => {
+            this._retry = 0;
+            this._resting = false;
+            this._interval = FASTEST_MS;
+            this._measured = null;
+            GLib.unlink(UNSUPPORTED);
+            this._reload();
+            return GLib.SOURCE_REMOVE;
+        });
+        this._retryMs = Math.min(LONGEST_RETRY_MS, this._retryMs * 2);
         this._reload();
     }
 
@@ -407,6 +425,8 @@ class Drift {
     destroy() {
         if (this._tick)
             GLib.source_remove(this._tick);
+        if (this._retry)
+            GLib.source_remove(this._retry);
         if (this._debounce)
             GLib.source_remove(this._debounce);
         this._watches.forEach(monitor => monitor.cancel());
