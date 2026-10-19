@@ -169,3 +169,10 @@ def test_each_question_of_a_session_gets_back_the_changes_it_led_to() -> None:
         [],
         [Change("Pomodoro: pause", commit, program="pomodoro")],
     ]
+
+
+def test_the_log_says_which_answers_changes_were_undone() -> None:
+    subject = log()
+    subject.write("changed", summary="Made Harbour", undo=None)
+    subject.write("undone", changes=["Made Harbour", "Applied Harbour"])
+    assert subject.undone() == [("Made Harbour", "Applied Harbour")]
