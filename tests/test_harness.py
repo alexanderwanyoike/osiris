@@ -409,6 +409,17 @@ def test_the_session_on_screen_is_known_once_something_is_asked() -> None:
     assert subject.session == "ses_1"
 
 
+def test_the_sessions_still_working_are_known() -> None:
+    subject, _, _ = harness()
+    assert subject.running == frozenset()
+    subject.ask("hello")
+    subject.new_conversation()
+    subject.ask("something else")
+    assert subject.running == {"ses_1", "ses_2"}
+    subject.handle(Finished("ses_1"))
+    assert subject.running == {"ses_2"}
+
+
 def test_a_conversation_with_no_project_takes_its_programs_project() -> None:
     subject, engine, _ = harness()
     subject.ask("build me a timer")
