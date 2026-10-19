@@ -76,7 +76,7 @@ Exec=/usr/bin/osiris-switcher --gapplication-service
 LOGIN = """[Desktop Entry]
 Type=Application
 Name=Osiris theme
-Comment=Apply the default Osiris theme on first login
+Comment=Bring this home up to the installed Osiris
 Exec=/usr/bin/python3 /usr/share/osiris/themes/engine.py --login
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
@@ -205,7 +205,7 @@ def main() -> None:
     n = copy_tree(os.path.join(src_themes, TRANSITION), target, (".js", ".json"))
     print(f"  {n} files -> {target}")
 
-    print("applying the default theme on first login")
+    print("bringing each home up to date at login")
     os.makedirs("/etc/xdg/autostart", exist_ok=True)
     with open("/etc/xdg/autostart/osiris-theme.desktop", "w") as fh:
         fh.write(LOGIN)
