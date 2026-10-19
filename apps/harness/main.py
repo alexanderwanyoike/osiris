@@ -768,7 +768,8 @@ class Application(Adw.Application):
 
     def new_conversation(self, folder: Path | None = None) -> None:
         """A new Conversation, in ``folder``'s Project or in none."""
-        self._leave()
+        if not self._leave():
+            return
         self.conversation = Conversation()
         if self.harness is not None:
             self.harness.new_conversation(folder)
@@ -778,10 +779,16 @@ class Application(Adw.Application):
         self.load_history()
         self.update_canvas()
 
-    def _leave(self) -> None:
-        """Keep the Conversation on screen while Osiris still works on it."""
-        if self.conversation.busy:
-            self.backgrounded[self.session] = self.conversation
+    def _leave(self) -> bool:
+        """Keep the Conversation on screen while Osiris still works on it;
+        False while its first question is on the way, as it has no session
+        to be kept by until the Engine opens one."""
+        if not self.conversation.busy:
+            return True
+        if self.session is None:
+            return False
+        self.backgrounded[self.session] = self.conversation
+        return True
 
     def ask(self, text: str) -> None:
         if self.harness is None:
