@@ -134,3 +134,18 @@ def test_the_notification_reaches_the_harness_as_its_open_conversation_action() 
     assert action.get_parameter_type().dup_string() == "s"
     action.activate(GLib.Variant("s", "ses_1"))
     assert opened == ["ses_1"]
+
+
+def test_clicking_the_notification_of_the_conversation_on_screen_marks_it_read() -> (
+    None
+):
+    """Answered on screen while the drawer was away: the click brings the
+    drawer back to it."""
+    stand_in, _ = app()
+    asked(stand_in, "make it calm")
+    stand_in.open = False
+    heard(stand_in, Finished("ses_1"))
+    stand_in.open_conversation("ses_1")
+    assert stand_in.open
+    assert stand_in.unread.sessions() == frozenset()
+    assert stand_in.withdrawn == ["ses_1"]
