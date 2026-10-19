@@ -83,6 +83,17 @@ class HarnessLog:
         if self._files.exists(self._path):
             self._files.write(self._path, "".join(kept))
 
+    def tokens_spent(self, session: str) -> int:
+        """The tokens a session's answers used, counted as the drawer counts
+        them while it answers: input, output and reasoning."""
+        return sum(
+            entry["tokens"]["input"]
+            + entry["tokens"]["output"]
+            + entry["tokens"]["reasoning"]
+            for entry in self._entries()
+            if entry["kind"] == "answered" and entry.get("session") == session
+        )
+
     def _entries(self) -> list[dict[str, Any]]:
         if not self._files.exists(self._path):
             return []
