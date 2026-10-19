@@ -45,3 +45,8 @@ def test_a_finished_step_is_recorded_in_the_past_tense(
 )
 def test_a_long_path_is_shown_by_its_last_two_parts(path: str, shown: str) -> None:
     assert Step("read", (path,)).doing == f"Reading {shown}"
+
+
+def test_a_step_on_several_files_names_the_first_and_counts_the_rest() -> None:
+    step = Step("edit", ("pomodoro/main.py", "pomodoro/timer.py", "README.md"))
+    assert step.doing == "Editing pomodoro/main.py and 2 more"
