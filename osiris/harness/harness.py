@@ -105,6 +105,10 @@ class Harness:
         return self._session
 
     @property
+    def running(self) -> frozenset[str]:
+        return frozenset(self._running)
+
+    @property
     def directory(self) -> Path:
         """The folder the session runs in: its Project, or home for none."""
         return self._directory
