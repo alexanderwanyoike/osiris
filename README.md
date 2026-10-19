@@ -40,7 +40,7 @@ applications menu. From there you can pin it to the dock. It can write apps in
 Python, C or C++, Rust, Go or JavaScript.
 
 Ask it for a new look, say "a calm theme for working late", and it makes a
-theme and applies it.
+theme and applies it. It can write you a moving wallpaper too.
 
 After every change there is an Undo button. Undo works without asking the AI
 again.
@@ -62,6 +62,11 @@ Press Super+T to flip through the themes, and Enter to pick one. Seven come
 with Osiris: Osiris Obsidian, Tokyo Night, Nord, Catppuccin Mocha, Rose Pine,
 Rose Pine Dawn and Everforest. You can make your own in the Appearance app,
 starting from a colour or a picture, or ask the AI for one.
+
+Wallpapers move. Each one is a small shader, a program that runs on your
+graphics card and animates slowly in the theme's colours. On a computer without
+a graphics card you get the still version. Ask the AI for a new one, say "rain
+running down a window", and it writes the shader and puts it on your desktop.
 
 ![Super+T, the theme switcher](docs/screenshots/switcher.png)
 
