@@ -138,7 +138,7 @@ class Engine(Protocol):
 
     def history(self, session: str) -> list[PastTurn]: ...
 
-    def attach_tools(self, name: str, command: list[str]) -> None:
+    def attach_tools(self, name: str, command: list[str], directory: Path) -> None:
         """Run a tool server for every session; each of its tools still raises
         a ``ToolRequested`` before it runs."""
         ...

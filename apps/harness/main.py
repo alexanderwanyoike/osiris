@@ -664,7 +664,6 @@ class Application(Adw.Application):
             try:
                 service = locate(files, me, SubprocessRunner(sink=lambda _l: None))
                 engine = OpencodeEngine(UrllibClient(), service)
-                engine.attach_tools(TOOLS, [sys.executable, TOOL_SERVER])
                 tiers = {engine.action(TOOLS, tool): tier for tool, tier in TIERS.items()}
                 # A restarted service has a new password, so the Harness is
                 # rebuilt around the new connection; the next question opens
@@ -672,6 +671,7 @@ class Application(Adw.Application):
                 self.log = HarnessLog(files, me.home / LOG_FILE)
                 self.harness = Harness(engine, self.log, self.models.default,
                                        tiers=tiers, directory=me.home,
+                                       tools=(TOOLS, [sys.executable, TOOL_SERVER]),
                                        may_touch=self.programs().holds)
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)
