@@ -1,7 +1,7 @@
 {
     "uuid": "harness-drawer@osiris",
-    "name": "Osiris Harness drawer",
-    "description": "Keeps the Harness at the right edge of the screen and slides it in and out.",
+    "name": "Osiris drawer",
+    "description": "Keeps Osiris at the right edge of the screen and slides it in and out.",
     "url": "https://github.com/alexanderwanyoike/osiris",
     "cinnamon-version": ["6.4", "6.6"]
 }

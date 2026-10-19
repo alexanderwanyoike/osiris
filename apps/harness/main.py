@@ -99,7 +99,7 @@ DRAWER_PATH = "/dev/osiris/HarnessDrawer"
 
 class Drawer(Gtk.ApplicationWindow):
     def __init__(self, app: "Application"):
-        super().__init__(application=app, title="Harness", decorated=False)
+        super().__init__(application=app, title="Osiris", decorated=False)
         self.app = app
         self.add_css_class("harness-drawer")
         self.set_default_size(WIDTH, 800)
@@ -717,8 +717,8 @@ class Application(Adw.Application):
     def ask_to_delete(self, session: str, title: str) -> None:
         dialog = Adw.AlertDialog(
             heading=f"Delete “{title}”?",
-            body=("This erases the conversation from opencode and from the Harness "
-                  "log, and cannot be undone. What it did stays done: a Theme "
+            body=("This erases the conversation from opencode and from Osiris, "
+                  "and cannot be undone. What it did stays done: a Theme "
                   "applied or a Program made is not removed."))
         dialog.add_response("cancel", "Cancel")
         dialog.add_response("delete", "Delete")

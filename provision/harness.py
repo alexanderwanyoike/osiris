@@ -42,8 +42,8 @@ runpy.run_path("/usr/share/osiris/harness/main.py", run_name="__main__")
 # Engine connection is already open. D-Bus starts it if it is not running.
 AUTOSTART = """[Desktop Entry]
 Type=Application
-Name=Osiris Harness
-Comment=Keep the Super+A Harness bar ready
+Name=Osiris
+Comment=Keep Osiris ready for Super+A
 Exec=/usr/bin/osiris-harness --gapplication-service
 NoDisplay=true
 X-GNOME-Autostart-enabled=true

@@ -475,3 +475,10 @@ def test_a_reply_the_engine_cannot_take_is_logged_and_the_conversation_goes_on()
     decision = subject.handle(ToolRequested("ses_1", "per_1", "bash", ("ls",)))
     assert decision == Refused("ses_1", "bash", ("ls",))
     assert "reply-failed" in [entry["kind"] for entry in entries(files)]
+
+
+def test_a_refusal_names_the_ai_as_the_person_knows_it() -> None:
+    """The model passes a refusal on in its own words; "the Harness" is only
+    the project's word for it."""
+    assert "Harness" not in REFUSED
+    assert "Osiris" in REFUSED

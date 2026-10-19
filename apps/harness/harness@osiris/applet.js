@@ -7,7 +7,7 @@ class HarnessApplet extends Applet.IconApplet {
     constructor(orientation, panelHeight, instanceId) {
         super(orientation, panelHeight, instanceId);
         this.set_applet_icon_symbolic_name('sidebar-show-right-symbolic');
-        this.set_applet_tooltip('Harness (Super+A)');
+        this.set_applet_tooltip('Ask Osiris (Super+A)');
     }
 
     on_applet_clicked(event) {
