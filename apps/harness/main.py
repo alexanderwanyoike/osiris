@@ -394,6 +394,8 @@ class Application(Adw.Application):
         self.conversation = Conversation()
         self.harness: Harness | None = None
         self.log: HarnessLog | None = None
+        #: The past Conversations the sidebar shows, newest first.
+        self.pasts: list = []
         self.look: Look | None = None
         self.accounts: OpencodeAccounts | None = None
         self.files = RealFileSystem()
@@ -602,8 +604,12 @@ class Application(Adw.Application):
         if self.harness is None:
             return
         harness = self.harness
-        self.background(harness.conversations, lambda pasts: self.drawer.show_history(
-            *group(pasts, self.home)))
+
+        def show(pasts) -> None:
+            self.pasts = pasts
+            self.drawer.show_history(*group(pasts, self.home))
+
+        self.background(harness.conversations, show)
 
     def open_past(self, session: str) -> None:
         if self.harness is None or self.conversation.busy or session == self.session:
@@ -616,7 +622,9 @@ class Application(Adw.Application):
             self.drawer.refresh()
             self.load_history()
 
-        self.background(lambda: harness.resume(session), opened)
+        folder = next((p.directory for p in self.pasts if p.session == session),
+                      self.home)
+        self.background(lambda: harness.resume(session, folder), opened)
 
     def new_conversation(self) -> None:
         if self.conversation.busy:
