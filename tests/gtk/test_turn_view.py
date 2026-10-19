@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 
-from gi.repository import Gtk
+from gi.repository import GLib, Gtk
 from render import TurnView
 
 from osiris.harness.conversation import State, Turn
@@ -85,3 +86,21 @@ def test_a_working_turn_says_it_is_thinking_and_for_how_long() -> None:
     view.update(turn, STYLE, None)
     assert "Thinking" in shown(view)
     assert "14s" in shown(view)
+
+
+def happens(condition: Callable[[], bool], within: float = 2.0) -> bool:
+    """Whether condition comes true while the main loop runs, within seconds."""
+    deadline = time.monotonic() + within
+    while time.monotonic() < deadline:
+        GLib.MainContext.default().iteration(False)
+        if condition():
+            return True
+        time.sleep(0.01)
+    return False
+
+
+def test_the_time_counts_up_each_second_while_osiris_works() -> None:
+    now = [100.0]
+    view = drawn(Turn("make a timer"), clock=lambda: now[0])
+    now[0] = 103.0
+    assert happens(lambda: "3s" in shown(view))
