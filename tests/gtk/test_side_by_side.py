@@ -147,3 +147,16 @@ def test_opening_a_conversation_still_working_shows_it_as_it_goes_on() -> None:
     assert stand_in.backgrounded == {"ses_2": other}
     heard(stand_in, Text("ses_1", "Calmer now."))
     assert working.turns[-1].answer == "Calmer now."
+
+
+def test_the_sidebar_is_refreshed_once_a_question_has_its_session_working() -> None:
+    """So the new Conversation is listed, with its spinner."""
+    from gi.repository import GLib
+
+    stand_in, _ = app()
+    stand_in.conversation.asked("make it calm")
+    stand_in._send("make it calm")
+    context = GLib.MainContext.default()
+    for _ in range(50):
+        context.iteration(False)
+    assert stand_in.histories == 1
