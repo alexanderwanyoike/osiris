@@ -104,6 +104,14 @@ def test_every_decided_action_is_a_step_of_its_turn_in_order() -> None:
     ]
 
 
+def test_a_turn_is_thinking_until_a_step_then_doing_that_step() -> None:
+    talk = Conversation()
+    turn = talk.asked("add a pause button")
+    assert turn.doing == "Thinking"
+    talk.apply(Allowed(S, "edit", Tier.UNDOABLE, ("pomodoro/main.py",)))
+    assert turn.doing == "Editing pomodoro/main.py"
+
+
 def test_a_failure_keeps_the_engines_reason() -> None:
     talk = Conversation()
     talk.asked("hello")
