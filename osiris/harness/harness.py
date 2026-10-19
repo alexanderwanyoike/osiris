@@ -143,6 +143,7 @@ class Harness:
         stays done (CONTEXT.md)."""
         self._engine.delete(session)
         self._log.forget(session)
+        self._running.pop(session, None)
         if session == self._session:
             self.new_conversation()
 
