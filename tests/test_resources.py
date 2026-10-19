@@ -98,3 +98,19 @@ class TestRendering:
         assert Resources.substitute(document, {"name": "x"}) == (
             '{ "logo": { "padding": { "top": 1 } }, "n": "x" }'
         )
+
+
+class TestOsRelease:
+    """os-release(5): shell-compatible KEY=value lines, comments allowed."""
+
+    def test_it_names_osiris_and_stays_arch_like(self, resources: Resources) -> None:
+        fields = dict(
+            line.split("=", 1)
+            for line in resources.read("system/os-release").splitlines()
+            if line and not line.startswith("#")
+        )
+        assert fields["NAME"] == '"Osiris"'
+        assert fields["PRETTY_NAME"] == '"Osiris"'
+        assert fields["ID"] == "osiris"
+        assert fields["ID_LIKE"] == "arch"
+        assert all(re.fullmatch(r"[A-Z_]+", key) for key in fields)
