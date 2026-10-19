@@ -24,3 +24,7 @@ class Unread:
             return False
         self._sessions.add(event.session)
         return True
+
+    def read(self, session: str) -> None:
+        """Opened, or gone from the history: deleted or archived."""
+        self._sessions.discard(session)
