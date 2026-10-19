@@ -725,7 +725,7 @@ def apply(name: str) -> list[str]:
 
     _write(os.path.join(HOME, ".config", "rofi", "themes", "osiris.rasi"),
            rofi_theme(theme))
-    _write(os.path.join(HOME, ".config", "rofi", "config.rasi"), ROFI_CONFIG)
+    _seed(os.path.join(HOME, ".config", "rofi", "config.rasi"), ROFI_CONFIG)
     _write(os.path.join(HOME, terminal.THEME_FILE),
            terminal.theme_file(theme, mono=ui["mono"]))
     _seed(os.path.join(HOME, terminal.CONFIG_FILE), terminal.CONFIG)
