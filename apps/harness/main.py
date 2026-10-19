@@ -431,6 +431,8 @@ class Application(Adw.Application):
         self.conversation = Conversation()
         self.harness: Harness | None = None
         self.log: HarnessLog | None = None
+        #: The past Conversations the sidebar shows, newest first.
+        self.pasts: list = []
         self.look: Look | None = None
         self.accounts: OpencodeAccounts | None = None
         self.files = RealFileSystem()
@@ -649,8 +651,11 @@ class Application(Adw.Application):
                 harness.move(session, folder)
             return harness.conversations() if moves else pasts
 
-        self.background(gather, lambda pasts: self.drawer.show_history(
-            *group(pasts, home)))
+        def show(pasts) -> None:
+            self.pasts = pasts
+            self.drawer.show_history(*group(pasts, home))
+
+        self.background(gather, show)
 
     def update_canvas(self) -> None:
         # What this run changed, and what the Conversation changed before, as
@@ -678,7 +683,9 @@ class Application(Adw.Application):
             self.load_history()
             self.update_canvas()
 
-        self.background(lambda: harness.resume(session), opened)
+        folder = next((p.directory for p in self.pasts if p.session == session),
+                      self.home)
+        self.background(lambda: harness.resume(session, folder), opened)
 
     def new_conversation(self) -> None:
         if self.conversation.busy:
@@ -727,7 +734,6 @@ class Application(Adw.Application):
             try:
                 service = locate(files, me, SubprocessRunner(sink=lambda _l: None))
                 engine = OpencodeEngine(UrllibClient(), service)
-                engine.attach_tools(TOOLS, [sys.executable, TOOL_SERVER])
                 tiers = {engine.action(TOOLS, tool): tier for tool, tier in TIERS.items()}
                 # A restarted service has a new password, so the Harness is
                 # rebuilt around the new connection; the next question opens
@@ -735,6 +741,7 @@ class Application(Adw.Application):
                 self.log = HarnessLog(files, me.home / LOG_FILE)
                 self.harness = Harness(engine, self.log, self.models.default,
                                        tiers=tiers, directory=me.home,
+                                       tools=(TOOLS, [sys.executable, TOOL_SERVER]),
                                        may_touch=self.programs().holds)
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)

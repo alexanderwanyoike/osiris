@@ -73,6 +73,19 @@ def locate(files: FileSystem, identity: Identity, runner: CommandRunner) -> Serv
     return Service(state["url"], state["password"])
 
 
+#: Characters a URL query carries as they are; everything else is escaped.
+_UNRESERVED = frozenset(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
+)
+
+
+def _quoted(text: str) -> str:
+    return "".join(
+        chr(byte) if chr(byte) in _UNRESERVED else f"%{byte:02X}"
+        for byte in text.encode()
+    )
+
+
 class OpencodeEngine:
     def __init__(self, http: HttpClient, service: Service) -> None:
         self._http = http
@@ -119,8 +132,11 @@ class OpencodeEngine:
             {"model": {"providerID": model.provider, "id": model.model}},
         )
 
-    def attach_tools(self, name: str, command: list[str]) -> None:
-        url = f"{self._service.url}/api/experimental/mcp/{name}"
+    def attach_tools(self, name: str, command: list[str], directory: Path) -> None:
+        url = (
+            f"{self._service.url}/api/experimental/mcp/{name}"
+            f"?location%5Bdirectory%5D={_quoted(str(directory))}"
+        )
         # opencode keeps a running server whose registration is unchanged, which
         # would keep serving the code from before an update.
         try:

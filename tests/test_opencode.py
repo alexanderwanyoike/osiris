@@ -197,10 +197,17 @@ class TestSessions:
             ("POST", path, {"model": {"providerID": "openai", "id": "gpt-5.5"}})
         ]
 
-    def test_a_tool_server_is_attached_afresh_as_a_local_mcp_server(self) -> None:
-        path = f"{URL}/api/experimental/mcp/osiris"
+    def test_a_tool_server_is_attached_afresh_for_a_folder(self) -> None:
+        """opencode 2.0 keeps tool servers per folder: one attached at home is
+        not there for a session in a Project."""
+        where = "location%5Bdirectory%5D=%2Fhome%2Ftester%2FCode%2Fpomodoro"
+        path = f"{URL}/api/experimental/mcp/osiris?{where}"
         http = FakeHttpClient(replies={("DELETE", path): None, ("PUT", path): None})
-        engine(http).attach_tools("osiris", ["python3", "/srv/tool_server.py"])
+        engine(http).attach_tools(
+            "osiris",
+            ["python3", "/srv/tool_server.py"],
+            Path("/home/tester/Code/pomodoro"),
+        )
         assert http.requests == [
             ("DELETE", path, None),
             (
@@ -216,9 +223,12 @@ class TestSessions:
         ]
 
     def test_attaching_a_tool_server_never_registered_before_works(self) -> None:
-        path = f"{URL}/api/experimental/mcp/osiris"
+        where = "location%5Bdirectory%5D=%2Fhome%2Ftester"
+        path = f"{URL}/api/experimental/mcp/osiris?{where}"
         http = FakeHttpClient(replies={("PUT", path): None})
-        engine(http).attach_tools("osiris", ["python3", "/srv/tool_server.py"])
+        engine(http).attach_tools(
+            "osiris", ["python3", "/srv/tool_server.py"], Path("/home/tester")
+        )
         assert http.requests[-1][0] == "PUT"
 
     def test_a_tool_servers_requests_name_the_server_and_tool(self) -> None:
