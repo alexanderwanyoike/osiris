@@ -69,3 +69,9 @@ def test_an_osiris_tool_is_named_by_what_it_does(
 ) -> None:
     step = Step(f"osiris_{tool}", ("*",))
     assert (step.doing, step.record) == (doing, record)
+
+
+@pytest.mark.parametrize("action", ["bash", "shell"])
+def test_a_command_is_named_as_written(action: str) -> None:
+    step = Step(action, ("ls /etc",))
+    assert (step.doing, step.record) == ("Running ls /etc", "Ran ls /etc")
