@@ -29,6 +29,22 @@ PAYLOAD = ("osiris", "provision", "apps", "branding", "shell/themes")
 
 SETUP = "/usr/bin/osiris-setup"
 
+#: Where installed systems take Osiris's packages from: the R2 bucket the
+#: release workflow publishes to. pacman fills in $arch.
+REPOSITORY_SERVER = "https://osiris-downloads.alphaneuron.net/repo/$arch"
+
+#: The key every package in the hosted repository is signed with. Its public
+#: half ships as a pacman keyring, which setup has pacman-key populate.
+SIGNING_KEY = "80C22F65792336234534EFF9E4DC194EAA4D22AF"
+KEYRING_SOURCE = "iso/keyring/osiris.gpg"
+KEYRING_DIR = "/usr/share/pacman/keyrings"
+
+
+def trusted() -> str:
+    """The keyring's -trusted file: the key, trusted fully."""
+    return f"{SIGNING_KEY}:4:\n"
+
+
 SETUP_LAUNCHER = f"""#!/usr/bin/env python3
 import runpy
 import sys
