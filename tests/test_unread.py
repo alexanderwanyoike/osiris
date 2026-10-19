@@ -43,3 +43,9 @@ def test_opening_a_conversation_marks_it_read() -> None:
     unread.ended(Finished("ses_2"), looking=False)
     unread.read("ses_1")
     assert unread.sessions() == frozenset({"ses_2"})
+
+
+def test_unread_survives_a_restart_of_the_harness() -> None:
+    files = FakeFileSystem()
+    Unread(files, HOME).ended(Finished("ses_1"), looking=False)
+    assert Unread(files, HOME).sessions() == frozenset({"ses_1"})
