@@ -8,8 +8,7 @@
 <h1 align="center">Osiris</h1>
 
 <p align="center">
-  Arch underneath. A Cinnamon desktop themed as one system.<br>
-  An AI built in that changes your desktop and builds you programs.
+  A Linux operating system with AI built in.
 </p>
 
 <p align="center">
@@ -18,85 +17,80 @@
   <img src="https://img.shields.io/badge/base-Arch%20Linux-1793d1" alt="Base: Arch Linux">
 </p>
 
-![The Osiris desktop: a terminal and a Program Osiris built, both on the Tokyo Night Theme](docs/screenshots/desktop.png)
+![The Osiris desktop: a terminal and Pomodoro, a timer the AI wrote, both on the Tokyo Night theme](docs/screenshots/desktop.png)
 
-Osiris is a Linux distribution with a narrow scope on purpose. It writes no GTK
-theme, no icon set and no compositor of its own; Arch, Cinnamon, Plank, rofi,
-LightDM and ghostty already work. What it adds is **coherence**: one Theme
-choice repaints every surface of the desktop at once, live. It also adds an
-install that gives you that desktop, so you aren't left with a base system and
-an evening of configuring. And you can **ask Osiris**: an AI built into the
-desktop that changes it and builds programs for you.
+**Osiris is a Linux operating system with AI built in.** It's based on Arch
+Linux and uses the Cinnamon desktop.
 
-## What you get
+You can ask the AI to change how your desktop looks, or to write small apps for
+you. The apps it writes show up in your menu and match your theme. Everything
+it makes is saved as normal code on your computer, and you can undo any change
+it makes.
 
-### One Theme, every surface
+Osiris is in early development (alpha).
 
-Choose a Theme and the GTK 3 and GTK 4 applications, the window borders, the
-Cinnamon panel, the Plank dock, the rofi launcher, the terminal, the folder
-icons and the wallpaper all change together, without logging out.
+## The AI
 
-- **Super+T** opens a full-screen switcher: arrow through the Themes, Enter to apply.
-- Seven Themes ship: Osiris Obsidian, Tokyo Night, Nord, Catppuccin Mocha,
-  Rose Pine, Rose Pine Dawn and Everforest.
-- Make your own in the Appearance app, from one colour or from a picture, or
-  ask Osiris for "a calm theme for working late". Osiris derives a
-  legible palette with OKLCH harmony rules, so a Theme stays readable.
-- Every Theme has a generated wallpaper, and on a machine with a GPU the
-  wallpaper moves.
+Press Super+A, or the button at the right of the panel, and a sidebar opens
+where you can type to the AI. It is called Osiris, like the system.
 
-![Super+T, the Theme switcher](docs/screenshots/switcher.png)
+Ask it for an app, say a Pomodoro timer, and it writes one. A card under its
+answer lets you try the app, then install it, which adds it to your
+applications menu. From there you can pin it to the dock. It can write apps in
+Python, C or C++, Rust, Go or JavaScript.
 
-![The same desktop on Rose Pine Dawn: the terminal and the Program repaint with it](docs/screenshots/light.png)
+Ask it for a new look, say "a calm theme for working late", and it makes a
+theme and applies it.
 
-### Ask Osiris
+After every change there is an Undo button. Undo works without asking the AI
+again.
 
-**Super+A**, or the button at the right of the panel, slides Osiris in
-from the right edge: an AI agent that runs inside the desktop, with tools for
-acting on it.
+The AI can only do what Osiris allows. It can look around, make changes that
+can be undone, and edit the code of the apps it wrote. Anything else it tries
+is refused, and you see what it tried.
 
-- **It makes and applies Themes.** It describes what you asked for, and
-  the desktop's own colour rules turn that into a palette. Every change it makes ends
-  with an Undo.
-- **It builds Programs.** Ask for a Pomodoro timer and it writes one in
-  `~/Code/pomodoro`, a git repository with one atomic commit per change. It
-  writes Python, C or C++, Rust, Go or JavaScript, and its windows use GTK 4
-  and libadwaita, so they follow your Theme as you change it. From the card
-  under its answer you **Try** a Program, then **Install** it into the
-  applications menu, rofi and the dock.
-- **The desktop decides what it may do, not the model.** It may look around and
-  make changes that can be undone, and edit files only inside a Program's own
-  folder. Anything else it reaches for is refused, and the drawer shows you
-  what was refused.
-- **Bring your own model.** The agent loop runs on
-  [opencode](https://opencode.ai), so any provider opencode supports works.
-- Conversations are kept, grouped by Project. Expand the drawer and the code
-  a Program is made of sits beside the conversation.
+![The sidebar expanded: the conversation that made Pomodoro, beside its code](docs/screenshots/harness.png)
 
-![Osiris expanded: a conversation and the Program it built, side by side](docs/screenshots/harness.png)
+## Themes
 
-### An installer that leaves a finished desktop
+A theme sets the colours of everything at once: apps, window borders, the
+panel, the dock, the app launcher, the terminal, folder icons and the
+wallpaper. Apps the AI writes follow the theme too. Switching takes effect
+straight away, without logging out.
 
-The live ISO boots on BIOS and UEFI machines into the full Osiris desktop, with
-**Install Osiris** on it. The installer is a GTK 4 app that asks for region,
-disk, filesystem, encryption and an account, then hands the work to Arch's own
-[archinstall](https://github.com/archlinux/archinstall). Osiris never writes
-partitioning, bootloader or encryption code of its own.
+Press Super+T to flip through the themes, and Enter to pick one. Seven come
+with Osiris: Osiris Obsidian, Tokyo Night, Nord, Catppuccin Mocha, Rose Pine,
+Rose Pine Dawn and Everforest. You can make your own in the Appearance app,
+starting from a colour or a picture, or ask the AI for one.
 
-- Erase a disk, or install beside another system on a UEFI machine.
-- ext4, or btrfs with subvolumes and compression.
-- Optional encryption of the whole system, unlocked at boot behind the Osiris
-  boot splash.
-- GRUB, Plymouth and the login screen all carry the Osiris mark.
+![Super+T, the theme switcher](docs/screenshots/switcher.png)
+
+![The same desktop on Rose Pine Dawn](docs/screenshots/light.png)
+
+## Your code and settings
+
+Each app the AI writes is a folder in `~/Code`, kept in git, so you can see
+every change it made. You can open it in any editor or carry on with another
+coding tool. Uninstalling an app leaves its code where it is.
+
+The AI runs through [opencode](https://opencode.ai). You connect it to the AI
+provider you want, with your own account or key.
+
+Updating Osiris doesn't overwrite your theme, your dock, your terminal settings
+or files you have edited.
+
+Osiris is open source, under the GPL.
+
+## Installing
+
+The ISO starts a live session of the full desktop, with an Install Osiris icon
+on it. It works on both BIOS and UEFI computers. The installer asks for your
+region, disk, filesystem, encryption and account, then uses Arch's
+[archinstall](https://github.com/archlinux/archinstall) to do the install. You
+can wipe a disk or install next to another system (UEFI only), use ext4 or
+btrfs, and encrypt the system if you want.
 
 ![The login screen](docs/screenshots/greeter.png)
-
-### Upgrades that keep what you chose
-
-Upgrading Osiris never overwrites your Theme, your dock, your terminal
-settings or the files you edit. Setup reruns after an upgrade, each home
-catches up at your next login, and the Osiris apps that were running restart
-onto the new code once you put them away.
 
 ## The stack
 
@@ -107,7 +101,7 @@ onto the new code once you put them away.
 | Login and boot | LightDM with slick-greeter, Plymouth, GRUB, all branded |
 | Terminal | ghostty, FiraCode Nerd Font with ligatures |
 | Shell | zsh with oh-my-zsh |
-| Apps | Appearance, the Theme switcher, the Osiris drawer and the installer: GTK 4 and libadwaita, in Python |
+| Osiris apps | Appearance, the theme switcher, the AI sidebar and the installer, written in Python with GTK 4 and libadwaita |
 | Agent engine | opencode |
 
 ## Get it
@@ -132,39 +126,28 @@ refuses to run as root). The second builds the ISO into
 connection, and takes around half an hour. [INSTALLER.md](docs/INSTALLER.md)
 has the details and how to boot the result in QEMU.
 
-## Where it stands
+## Status
 
-Working today: the themed desktop, the seven Themes and the creator, the
-Super+T switcher, asking Osiris and the Programs it builds, the installer, and upgrades that
-keep your choices.
+Osiris is alpha. Missing so far:
 
-Not there yet:
+- Installed systems get Arch updates, but not Osiris updates yet: there is no
+  Osiris package repository online.
+- Apps the AI writes run with your full user permissions; they are not
+  sandboxed. Osiris tells you this before you install one.
+- Changing the shape of the desktop (window style, panel and dock layout), not
+  just its colours, is planned but not built.
 
-- **Osiris updates on installed machines.** An installed system takes Arch's
-  updates through pacman, but there is no hosted Osiris package repository yet,
-  so it cannot get new versions of Osiris itself.
-- **Skins.** Swapping the shape of the desktop (window style, panel, dock,
-  launcher) as well as its colours is designed and prototyped, not built.
-- **Programs run unconfined**, as you. Osiris says so before you install one.
-
-[ROADMAP.md](docs/ROADMAP.md) has every phase and its definition of done.
+[ROADMAP.md](docs/ROADMAP.md) has the plan.
 
 ## How it is built
 
-Three rules shape the code:
+Osiris doesn't write its own window theme, icon set or desktop components. It
+uses existing ones (Cinnamon, Plank, rofi, ghostty, adw-gtk3, Papirus) and
+configures them to match. Installing, partitioning and the bootloader are done
+by Arch's own tools (archinstall, archiso, pacman), not by Osiris code.
 
-- **Orchestrate, do not implement.** Osiris configures and generates against
-  what upstream already ships, rather than maintaining a theme, an icon set or a
-  desktop component of its own.
-- **Never hand-roll critical machinery.** Anything that could erase a disk or
-  leave a machine unbootable (partitioning, bootloaders, building the ISO) is
-  done by the tools Arch maintains: archinstall, archiso, pacman.
-- **No bash that we author.** Build, install and glue code is Python, and every
-  process is spawned as an argv list, never through a shell. The repository has
-  no `.sh` files; the one bash file archiso requires is generated.
-
-The code is tested test-first, with `ruff`, `mypy --strict`, import-layer
-contracts and `pytest` in CI, and the GTK apps are driven headless under Xvfb.
+The code is Python, with no shell scripts. It is tested with pytest, ruff,
+mypy and import-linter in CI, and the GTK apps are tested headless under Xvfb.
 
 ## Documentation
 
