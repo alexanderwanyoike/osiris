@@ -36,3 +36,22 @@ def test_a_failed_answer_says_osiris_could_not_finish_and_why() -> None:
         "Osiris could not finish",
         "Make me a calm theme\nThe provider's limit was reached",
     )
+
+
+def test_only_the_start_of_the_answer_is_told_on_one_line() -> None:
+    """A notification is a glance; the drawer holds the rest."""
+    talk = answered(
+        "Build me a timer",
+        Text(
+            "ses_1",
+            "\nI built Pomodoro, a timer that counts down twenty-five minutes "
+            "of work and then five of rest, and rings between them.\n\n"
+            "Try it from the card below.",
+        ),
+        Finished("ses_1"),
+    )
+    _, line = notice_of(talk).body.split("\n")
+    assert (
+        line
+        == "I built Pomodoro, a timer that counts down twenty-five minutes of work…"
+    )
