@@ -120,6 +120,13 @@ def test_once_a_step_is_complete_the_turn_is_thinking_again() -> None:
     assert turn.doing == "Thinking"
 
 
+def test_while_the_answer_streams_the_turn_is_writing() -> None:
+    talk = Conversation()
+    turn = talk.asked("hello")
+    talk.apply(Text(S, "hi"))
+    assert turn.doing == "Writing"
+
+
 def test_a_failure_keeps_the_engines_reason() -> None:
     talk = Conversation()
     talk.asked("hello")
