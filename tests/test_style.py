@@ -58,6 +58,11 @@ class TestColours:
         assert colours["window_bg_color"] == "#1a1a1f"
         assert colours["accent_bg_color"] == "#7c8aeb"
 
+    def test_the_sidebar_in_the_drawer_matches_the_palette(self) -> None:
+        colours = defined(colours_css(OBSIDIAN))
+        assert colours["sidebar_bg_color"] == colours["harness_raised"]
+        assert colours["sidebar_fg_color"] == colours["harness_fg"]
+
     @pytest.mark.parametrize("palette", [OBSIDIAN, DAWN])
     def test_text_on_the_accent_is_whichever_end_of_the_palette_reads(
         self, palette: dict[str, object]

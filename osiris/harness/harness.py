@@ -13,6 +13,7 @@ from osiris.harness.engine import (
     Event,
     Failed,
     ModelRef,
+    Past,
     PastTurn,
     Stopped,
     ToolCalled,
@@ -93,9 +94,16 @@ class Harness:
         self._engine.send(self._session, text)
 
     @property
+    def session(self) -> str | None:
+        return self._session
+
+    @property
     def directory(self) -> Path:
         """The folder the session runs in: its Project, or home for none."""
         return self._directory
+
+    def conversations(self) -> list[Past]:
+        return self._engine.conversations()
 
     def _ready(self, directory: Path) -> None:
         if self._tools is not None and directory not in self._tools_in:

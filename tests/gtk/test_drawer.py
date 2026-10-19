@@ -26,6 +26,10 @@ class FakeApp(Adw.Application):
         self.look = Look()
         self.asked: list[str] = []
         self.new_conversations = 0
+        self.opened: list[str] = []
+
+    def open_past(self, session: str) -> None:
+        self.opened.append(session)
 
     def ask(self, text: str) -> None:
         self.asked.append(text)
@@ -172,3 +176,32 @@ def test_the_model_in_play_is_a_menu_in_the_composer() -> None:
     window.refresh()
     menus = [w for w in widgets(window) if isinstance(w, Gtk.MenuButton)]
     assert any("default model" in texts(m) for m in menus)
+
+
+def test_the_sidebar_is_beside_the_conversation_and_has_a_toggle() -> None:
+    from gi.repository import Gtk
+
+    from tests.gtk.conftest import widgets
+
+    window, _ = drawer()
+    assert isinstance(window.split, Adw.OverlaySplitView)
+    (toggle,) = [
+        w
+        for w in widgets(window)
+        if isinstance(w, Gtk.ToggleButton) and w.get_tooltip_text() == "Conversations"
+    ]
+    toggle.set_active(True)
+    assert window.split.get_show_sidebar()
+
+
+def test_choosing_a_past_conversation_in_the_sidebar_opens_it() -> None:
+    from pathlib import Path
+
+    from osiris.harness.engine import Past
+
+    window, _ = drawer()
+    past = Past("ses_theme", "Make me a calm theme", Path("/home/tester"), 1.0)
+    window.show_history([], [past])
+    row = window.sidebar.list.get_row_at_index(2)
+    window.sidebar.list.emit("row-activated", row)
+    assert window.app.opened == ["ses_theme"]
