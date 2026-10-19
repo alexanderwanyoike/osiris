@@ -117,6 +117,7 @@ class Conversation:
                 turn.state = State.ANSWERING
             case Answered(_, model, tokens, _):
                 turn.model = self.model = model
+                turn.doing = THINKING
                 self.tokens_spent += tokens.input + tokens.output + tokens.reasoning
             case Allowed(_, action, _, resources):
                 turn.steps.append(Step(action, resources))
