@@ -92,13 +92,14 @@ class Harness:
         self._running: dict[str, Path] = {}
 
     def ask(self, text: str) -> None:
-        if self._session is None:
-            self._ready(self._directory)
-            self._session = self._engine.start(self._model, self._directory)
-            self._engine.rename(self._session, title_of(text))
-        self._running[self._session] = self._directory
-        self._log.write("sent", session=self._session, text=text)
-        self._engine.send(self._session, text)
+        directory, session = self._directory, self._session
+        if session is None:
+            self._ready(directory)
+            session = self._session = self._engine.start(self._model, directory)
+            self._engine.rename(session, title_of(text))
+        self._running[session] = directory
+        self._log.write("sent", session=session, text=text)
+        self._engine.send(session, text)
 
     @property
     def session(self) -> str | None:
