@@ -21,7 +21,9 @@ class Notice:
 def notice_of(conversation: Conversation) -> Notice:
     turn = conversation.turns[-1]
     if turn.state is State.FAILED:
-        return Notice("Osiris could not finish", f"{conversation.title}\n{turn.error}")
+        return Notice(
+            "Osiris could not finish", f"{conversation.title}\n{_start(turn.error)}"
+        )
     return Notice("Osiris replied", f"{conversation.title}\n{_start(turn.answer)}")
 
 
