@@ -753,7 +753,7 @@ class Application(Adw.Application):
         dialog.present(self.drawer)
 
     def open_past(self, session: str) -> None:
-        if self.harness is None or self.conversation.busy or session == self.session:
+        if self.harness is None or session == self.session or not self._leave():
             return
         harness = self.harness
 
