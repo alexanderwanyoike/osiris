@@ -19,6 +19,12 @@ VERBS = {
 }
 
 
+def _path(resource: str) -> str:
+    """The last two parts of a path; a folder pattern loses its ``*``."""
+    parts = [part for part in resource.removesuffix("*").split("/") if part]
+    return "/".join(parts[-2:])
+
+
 @dataclass(frozen=True)
 class Step:
     """One action the Harness decided on while answering."""
@@ -28,8 +34,8 @@ class Step:
 
     @property
     def doing(self) -> str:
-        return f"{VERBS[self.action].doing} {self.resources[0]}"
+        return f"{VERBS[self.action].doing} {_path(self.resources[0])}"
 
     @property
     def record(self) -> str:
-        return f"{VERBS[self.action].done} {self.resources[0]}"
+        return f"{VERBS[self.action].done} {_path(self.resources[0])}"
