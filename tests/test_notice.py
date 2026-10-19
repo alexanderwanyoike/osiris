@@ -66,3 +66,18 @@ def test_markdown_at_the_start_of_the_answer_is_not_shown_as_marks() -> None:
     )
     _, line = notice_of(talk).body.split("\n")
     assert line == "Calm is applied, with nord kept"
+
+
+def test_a_long_failure_is_told_on_one_line_too() -> None:
+    talk = answered(
+        "Make me a calm theme",
+        Failed(
+            "ses_1",
+            "The request to the provider failed after three attempts because "
+            "the connection was reset\nTraceback (most recent call last):",
+        ),
+    )
+    _, line = notice_of(talk).body.split("\n")
+    assert line == (
+        "The request to the provider failed after three attempts because the…"
+    )
