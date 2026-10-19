@@ -70,6 +70,7 @@ class Harness:
         directory: Path,
         may_touch: Callable[[Path], bool],
         tools: tuple[str, list[str]] | None = None,
+        allow_everything: Callable[[], bool] = lambda: False,
     ) -> None:
         """``tiers`` names every action the Harness may take; it rejects the rest.
         File actions are allowed only on paths ``may_touch`` accepts, read from
@@ -86,6 +87,7 @@ class Harness:
         self._tools = tools
         self._tools_in: set[Path] = set()
         self._session: str | None = None
+        self._allow_everything = allow_everything
 
     def ask(self, text: str) -> None:
         if self._session is None:
@@ -164,7 +166,7 @@ class Harness:
             return self._tiers[action]
         if action in FILE_TIERS and resources and all(map(self._inside, resources)):
             return FILE_TIERS[action]
-        return None
+        return Tier.ANYTHING if self._allow_everything() else None
 
     def _inside(self, resource: str) -> bool:
         """Whether a path the Engine names, relative to the session's folder or
