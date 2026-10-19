@@ -99,6 +99,30 @@ class HarnessLog:
             return []
         return [json.loads(line) for line in self._files.read(self._path).splitlines()]
 
+    def changes_by_question(self, session: str) -> list[list[Change]]:
+        """For each question the session was asked, in order, the changes
+        logged after it until the next question to any session."""
+        questions: list[list[Change]] = []
+        collecting = False
+        for entry in self._entries():
+            if entry["kind"] == "sent":
+                collecting = entry.get("session") == session
+                if collecting:
+                    questions.append([])
+            elif entry["kind"] == "changed" and collecting:
+                questions[-1].append(
+                    Change(entry["summary"], entry["undo"], entry.get("program"))
+                )
+        return questions
+
+    def undone(self) -> list[tuple[str, ...]]:
+        """The changes of each answer the person undid, by their summaries."""
+        return [
+            tuple(entry["changes"])
+            for entry in self._entries()
+            if entry["kind"] == "undone"
+        ]
+
     def last_changes(self) -> list[Change]:
         """The changes logged since the last question was sent."""
         changes: list[Change] = []

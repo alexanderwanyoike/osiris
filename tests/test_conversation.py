@@ -294,3 +294,39 @@ def test_a_restored_conversation_shows_the_tokens_it_had_spent() -> None:
         [PastTurn("make a timer", "Made it.", GPT)], tokens_spent=2048
     )
     assert talk.tokens_spent == 2048
+
+
+MADE = Change(
+    "Made Pomodoro", {"action": "trash_program", "name": "pomodoro"}, "pomodoro"
+)
+THEME = Change("Made Harbour", {"action": "delete_theme", "name": "harbour"})
+
+
+def test_a_restored_conversation_keeps_what_each_answer_changed() -> None:
+    """Its Program cards and Undo come back with it."""
+    talk = Conversation.restored(
+        [PastTurn("make a timer", "Made it.", GPT), PastTurn("a theme", "Done.", GPT)],
+        changes=[[MADE], [THEME]],
+    )
+    assert [turn.changes for turn in talk.turns] == [[MADE], [THEME]]
+    assert talk.turns[0].programs == ["pomodoro"]
+    assert talk.turns[1].undoable
+
+
+def test_changes_are_matched_to_the_latest_answers_when_history_is_longer() -> None:
+    """Answers from before the log began have no changes to give back."""
+    talk = Conversation.restored(
+        [PastTurn("hi", "Hello.", GPT), PastTurn("make a timer", "Made it.", GPT)],
+        changes=[[MADE]],
+    )
+    assert [turn.changes for turn in talk.turns] == [[], [MADE]]
+
+
+def test_an_answer_whose_changes_were_undone_stays_undone() -> None:
+    talk = Conversation.restored(
+        [PastTurn("a theme", "Done.", GPT)],
+        changes=[[THEME]],
+        undone=[("Made Harbour",)],
+    )
+    assert talk.turns[0].undone
+    assert not talk.turns[0].undoable

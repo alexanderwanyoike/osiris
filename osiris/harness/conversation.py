@@ -95,13 +95,28 @@ class Conversation:
         return turn
 
     @classmethod
-    def restored(cls, past: list[PastTurn], tokens_spent: int = 0) -> Conversation:
-        """A past Conversation as it ended."""
+    def restored(
+        cls,
+        past: list[PastTurn],
+        tokens_spent: int = 0,
+        changes: list[list[Change]] | None = None,
+        undone: list[tuple[str, ...]] | None = None,
+    ) -> Conversation:
+        """A past Conversation as it ended, with what each answer changed.
+
+        ``changes`` holds one list per question the log saw, matched to the
+        latest answers: answers from before the log began have none."""
         talk = cls()
         talk.tokens_spent = tokens_spent
         for turn in past:
             talk.turns.append(Turn(turn.question, turn.answer, State.DONE, turn.model))
             talk.model = turn.model or talk.model
+        undid = set(undone or [])
+        for answer, made in zip(
+            reversed(talk.turns), reversed(changes or []), strict=False
+        ):
+            answer.changes = made
+            answer.undone = bool(made) and tuple(c.summary for c in made) in undid
         return talk
 
     def changed(self, changes: list[Change]) -> None:
