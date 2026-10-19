@@ -220,14 +220,17 @@ class Drawer(Gtk.ApplicationWindow):
         box.append(header)
         box.append(self.split)
         layout = Adw.BreakpointBin(child=box, width_request=320, height_request=360)
+        # Of the breakpoints that match, libadwaita applies only the last added,
+        # so the narrower one comes last and repeats the wider one's setters.
+        no_canvas = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(NO_CANVAS_BELOW))
         compact = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(COMPACT_BELOW))
+        for breakpoint in (no_canvas, compact):
+            breakpoint.add_setter(self.canvas_toggle, "visible", False)
+            breakpoint.add_setter(self.canvas, "visible", False)
         compact.add_setter(self.split, "collapsed", True)
         compact.add_setter(self.sidebar_toggle, "active", False)
-        layout.add_breakpoint(compact)
-        no_canvas = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(NO_CANVAS_BELOW))
-        no_canvas.add_setter(self.canvas_toggle, "visible", False)
-        no_canvas.add_setter(self.canvas, "visible", False)
         layout.add_breakpoint(no_canvas)
+        layout.add_breakpoint(compact)
         # The Skin shapes this surface; the window around it stays transparent,
         # and children are clipped to the surface's rounded corners.
         surface = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
