@@ -60,6 +60,7 @@ from osiris.harness.history import (  # noqa: E402
     project_program,
 )
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
+from osiris.harness.notice import notice_of  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
@@ -902,10 +903,19 @@ class Application(Adw.Application):
         conversation.apply(event)
         if isinstance(event, Finished | Stopped | Failed):
             looking = self.open and conversation is self.conversation
-            self.unread.ended(event, looking=looking)
+            if self.unread.ended(event, looking=looking):
+                self._notify(event.session, conversation)
             self._ended(event.session, conversation)
         self.drawer.refresh()
         return False
+
+    def _notify(self, session: str, conversation: Conversation) -> None:
+        notice = notice_of(conversation)
+        notification = Gio.Notification.new(notice.title)
+        notification.set_body(notice.body)
+        notification.set_default_action_and_target(
+            "app.open-conversation", GLib.Variant("s", session))
+        self.send_notification(session, notification)
 
     def _ended(self, session: str, conversation: Conversation) -> None:
         """An answer is over. One that ended off screen is let go, for the
