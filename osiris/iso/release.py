@@ -32,3 +32,14 @@ def version_from_tag(tag: str, *, code_version: str) -> str:
 def checksum_line(name: str, digest: str) -> str:
     """One line of a SHA256SUMS-style file, as `sha256sum -c` reads it."""
     return f"{digest}  {name}\n"
+
+
+_PACKAGE = (".pkg.tar.zst", ".pkg.tar.zst.sig")
+
+
+def publish_order(names: list[str]) -> tuple[list[str], list[str]]:
+    """A repository's files as two uploads: the packages and their signatures,
+    then the databases, so the database never names a package not yet there."""
+    packages = sorted(name for name in names if name.endswith(_PACKAGE))
+    databases = sorted(name for name in names if not name.endswith((*_PACKAGE, ".old")))
+    return packages, databases

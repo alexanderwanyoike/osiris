@@ -28,7 +28,11 @@ sys.path.insert(0, os.path.dirname(HERE))
 
 import osiris  # noqa: E402
 from osiris.provision import upgrade  # noqa: E402
-from osiris.provision.pacman_conf import without_local_repository  # noqa: E402
+from osiris.iso.package import KEYRING_DIR, REPOSITORY_SERVER  # noqa: E402
+from osiris.provision.pacman_conf import (  # noqa: E402
+    with_hosted_repository,
+    without_local_repository,
+)
 
 # Order matters: themes.py composites the logo that branding.py installs into
 # the wallpapers, harness.py's bar imports the package themes.py installs, and
@@ -54,6 +58,26 @@ def forget_install_medium() -> None:
         print(f"  removed the install medium's [{REPOSITORY}] repository")
 
 
+def use_hosted_repository() -> None:
+    """Trust the package signing key, then take Osiris's packages from the
+    hosted repository instead of the install medium's.
+
+    Without the keyring, which the osiris package installs, pacman would
+    refuse every package from it, so the medium's repository is only removed.
+    """
+    if not os.path.exists(os.path.join(KEYRING_DIR, f"{REPOSITORY}.gpg")):
+        forget_install_medium()
+        return
+    subprocess.run(["pacman-key", "--populate", REPOSITORY], check=True)
+    with open(PACMAN_CONF) as fh:
+        text = fh.read()
+    updated = with_hosted_repository(text, REPOSITORY, REPOSITORY_SERVER)
+    if updated != text:
+        with open(PACMAN_CONF, "w") as fh:
+            fh.write(updated)
+        print(f"  pacman takes [{REPOSITORY}] from {REPOSITORY_SERVER}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--live", action="store_true",
@@ -72,7 +96,11 @@ def main() -> None:
         print(f"== {script} ==", flush=True)
         subprocess.run(argv, check=True)
 
-    forget_install_medium()
+    # The live medium's installer installs from the medium's own repository.
+    if args.live:
+        forget_install_medium()
+    else:
+        use_hosted_repository()
     # Last, so a running Osiris app that sees it restarts onto finished code.
     upgrade.MARKER.write_text(f"{osiris.__version__} {time.time_ns()}\n")
     print("OSIRIS_SETUP_DONE")
