@@ -66,6 +66,13 @@ class Conversation:
         return title_of(self.turns[0].question) if self.turns else None
 
     @property
+    def programs(self) -> list[str]:
+        """Every Program this Conversation has changed, in the order it first did."""
+        return list(
+            dict.fromkeys(name for turn in self.turns for name in turn.programs)
+        )
+
+    @property
     def busy(self) -> bool:
         return bool(self.turns) and self.turns[-1].state in (
             State.WAITING,

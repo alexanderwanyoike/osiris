@@ -336,3 +336,18 @@ class TestState:
 
     def test_a_program_installed_from_its_latest_commit_is_up_to_date(self) -> None:
         assert self.program("abc", "abc").state is State.UP_TO_DATE
+
+
+class TestFiles:
+    def test_a_programs_files_are_its_source_without_what_tools_keep(self) -> None:
+        files = made()
+        files.write(SOURCE / "main.py", "x")
+        files.write(SOURCE / "ui" / "window.py", "x")
+        files.write(SOURCE / ".git" / "HEAD", "x")
+        files.write(SOURCE / "target" / "debug" / "pomodoro", "x")
+        subject, _, _ = programs(files)
+        assert subject.files("pomodoro") == [
+            Path("main.py"),
+            Path(MANIFEST_FILE),
+            Path("ui/window.py"),
+        ]

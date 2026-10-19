@@ -39,6 +39,8 @@ CLASSES = (
     "harness-monogram",
     "harness-connected",
     "harness-program",
+    "harness-canvas",
+    "harness-path",
 )
 
 

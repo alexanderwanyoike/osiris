@@ -205,3 +205,53 @@ def test_choosing_a_past_conversation_in_the_sidebar_opens_it() -> None:
     row = window.sidebar.list.get_row_at_index(2)
     window.sidebar.list.emit("row-activated", row)
     assert window.app.opened == ["ses_theme"]
+
+
+def test_the_canvas_opens_when_there_is_something_to_show_and_folds_the_sidebar() -> (
+    None
+):
+    from pathlib import Path
+
+    from osiris.programs.manifest import parse
+    from osiris.programs.programs import Program
+
+    window, _ = drawer()
+    assert not window.canvas_toggle.get_sensitive()
+    manifest = parse(
+        '{"name": "pomodoro", "label": "Pomodoro", "description": "x",'
+        ' "run": ["python3", "main.py"]}'
+    )
+    window.show_canvas([(Program(manifest, Path("/nonexistent"), "a", None), [])])
+    assert window.canvas_toggle.get_sensitive()
+    assert window.canvas_toggle.get_active()
+    assert window.canvas.get_visible()
+    assert not window.split.get_show_sidebar()
+    window.canvas_toggle.set_active(False)
+    assert not window.canvas.get_visible()
+    assert window.split.get_show_sidebar()
+
+
+def test_the_canvas_draws_code_in_the_themes_colours_from_the_start(
+    tmp_path,
+) -> None:
+    from pathlib import Path
+
+    gi.require_version("GtkSource", "5")
+    from gi.repository import GtkSource
+
+    from osiris.programs.manifest import parse
+    from osiris.programs.programs import Program
+
+    scheme = GtkSource.StyleSchemeManager.get_default().get_scheme("Adwaita-dark")
+    (tmp_path / "main.py").write_text("print('tick')\n")
+    import main
+
+    app = FakeApp()
+    app.look.scheme = scheme
+    window = main.Drawer(app)
+    manifest = parse(
+        '{"name": "pomodoro", "label": "Pomodoro", "description": "x",'
+        ' "run": ["python3", "main.py"]}'
+    )
+    window.show_canvas([(Program(manifest, tmp_path, "a", None), [Path("main.py")])])
+    assert window.canvas.current_view().get_buffer().get_style_scheme() is scheme

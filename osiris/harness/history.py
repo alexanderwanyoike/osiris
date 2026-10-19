@@ -56,3 +56,10 @@ def misplaced(
             found.append((session, folder))
             homeless.discard(session)
     return found
+
+
+def project_program(directory: Path, home: Path) -> str | None:
+    """The Program whose source is the Project a Conversation runs in, if any."""
+    if directory.parent == home / CODE_DIR:
+        return directory.name
+    return None

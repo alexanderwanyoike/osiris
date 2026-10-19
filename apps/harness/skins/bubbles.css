@@ -119,3 +119,16 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
     border-radius: 14px;
     padding: 10px 12px;
 }
+
+.harness-canvas { background-color: @harness_sunken; border-left: 1px solid alpha(@harness_border, 0.6); }
+.harness-canvas tabbar, .harness-canvas tabbar .box,
+.harness-canvas scrolledwindow, .harness-canvas viewport, .harness-canvas list,
+.harness-canvas .navigation-sidebar { background-color: transparent; box-shadow: none; }
+.harness-canvas tabbar tab, .harness-canvas tabbar tab:backdrop { color: @harness_muted; border-radius: 8px; }
+.harness-canvas tabbar tab:selected, .harness-canvas tabbar tab:selected:backdrop {
+    color: @harness_fg;
+    background-color: alpha(@harness_fg, 0.08);
+}
+.harness-canvas .sidebar-pane { background-color: @harness_sunken; color: @harness_fg; border-right: 1px solid alpha(@harness_border, 0.6); }
+.harness-canvas .sidebar-pane label { color: @harness_fg; }
+.harness-path { padding: 6px 12px; border-bottom: 1px solid alpha(@harness_border, 0.6); }
