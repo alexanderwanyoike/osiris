@@ -18,15 +18,15 @@
   <img src="https://img.shields.io/badge/base-Arch%20Linux-1793d1" alt="Base: Arch Linux">
 </p>
 
-![The Osiris desktop: a terminal and a Program the Harness built, both on the Tokyo Night Theme](docs/screenshots/desktop.png)
+![The Osiris desktop: a terminal and a Program Osiris built, both on the Tokyo Night Theme](docs/screenshots/desktop.png)
 
 Osiris is a Linux distribution with a narrow scope on purpose. It writes no GTK
 theme, no icon set and no compositor of its own; Arch, Cinnamon, Plank, rofi,
 LightDM and ghostty already work. What it adds is **coherence**: one Theme
 choice repaints every surface of the desktop at once, live. It also adds an
 install that gives you that desktop, so you aren't left with a base system and
-an evening of configuring, and the **Harness**, an AI that can change the
-desktop and build programs for you.
+an evening of configuring. And you can **ask Osiris**: an AI built into the
+desktop that changes it and builds programs for you.
 
 ## What you get
 
@@ -40,7 +40,7 @@ icons and the wallpaper all change together, without logging out.
 - Seven Themes ship: Osiris Obsidian, Tokyo Night, Nord, Catppuccin Mocha,
   Rose Pine, Rose Pine Dawn and Everforest.
 - Make your own in the Appearance app, from one colour or from a picture, or
-  ask the Harness for "a calm theme for working late". Osiris derives a
+  ask Osiris for "a calm theme for working late". Osiris derives a
   legible palette with OKLCH harmony rules, so a Theme stays readable.
 - Every Theme has a generated wallpaper, and on a machine with a GPU the
   wallpaper moves.
@@ -49,14 +49,14 @@ icons and the wallpaper all change together, without logging out.
 
 ![The same desktop on Rose Pine Dawn: the terminal and the Program repaint with it](docs/screenshots/light.png)
 
-### The Harness
+### Ask Osiris
 
-**Super+A**, or the button at the right of the panel, slides the Harness in
-from the right edge. It is an AI agent that runs inside Osiris, with tools that
-let it act on your desktop.
+**Super+A**, or the button at the right of the panel, slides Osiris in
+from the right edge: an AI agent that runs inside the desktop, with tools for
+acting on it.
 
 - **It makes and applies Themes.** It describes what you asked for, and
-  Osiris's own rules turn that into the colours. Every change it makes ends
+  the desktop's own colour rules turn that into a palette. Every change it makes ends
   with an Undo.
 - **It builds Programs.** Ask for a Pomodoro timer and it writes one in
   `~/Code/pomodoro`, a git repository with one atomic commit per change. It
@@ -64,7 +64,7 @@ let it act on your desktop.
   and libadwaita, so they follow your Theme as you change it. From the card
   under its answer you **Try** a Program, then **Install** it into the
   applications menu, rofi and the dock.
-- **Osiris decides what it may do, not the model.** It may look around and
+- **The desktop decides what it may do, not the model.** It may look around and
   make changes that can be undone, and edit files only inside a Program's own
   folder. Anything else it reaches for is refused, and the drawer shows you
   what was refused.
@@ -73,7 +73,7 @@ let it act on your desktop.
 - Conversations are kept, grouped by Project. Expand the drawer and the code
   a Program is made of sits beside the conversation.
 
-![The Harness expanded: a conversation and the Program it built, side by side](docs/screenshots/harness.png)
+![Osiris expanded: a conversation and the Program it built, side by side](docs/screenshots/harness.png)
 
 ### An installer that leaves a finished desktop
 
@@ -107,7 +107,7 @@ onto the new code once you put them away.
 | Login and boot | LightDM with slick-greeter, Plymouth, GRUB, all branded |
 | Terminal | ghostty, FiraCode Nerd Font with ligatures |
 | Shell | zsh with oh-my-zsh |
-| Apps | Appearance, the Theme switcher, the Harness and the installer: GTK 4 and libadwaita, in Python |
+| Apps | Appearance, the Theme switcher, the Osiris drawer and the installer: GTK 4 and libadwaita, in Python |
 | Agent engine | opencode |
 
 ## Get it
@@ -135,7 +135,7 @@ has the details and how to boot the result in QEMU.
 ## Where it stands
 
 Working today: the themed desktop, the seven Themes and the creator, the
-Super+T switcher, the Harness with Programs, the installer, and upgrades that
+Super+T switcher, asking Osiris and the Programs it builds, the installer, and upgrades that
 keep your choices.
 
 Not there yet:
@@ -145,7 +145,7 @@ Not there yet:
   so it cannot get new versions of Osiris itself.
 - **Skins.** Swapping the shape of the desktop (window style, panel, dock,
   launcher) as well as its colours is designed and prototyped, not built.
-- **Programs run unconfined**, as you. The Harness says so before you install one.
+- **Programs run unconfined**, as you. Osiris says so before you install one.
 
 [ROADMAP.md](docs/ROADMAP.md) has every phase and its definition of done.
 
@@ -172,8 +172,8 @@ contracts and `pytest` in CI, and the GTK apps are driven headless under Xvfb.
 |---|---|
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | The stack and why each piece was chosen |
 | [THEMING.md](docs/THEMING.md) | How Themes work, how to write one, how the creator works |
-| [HARNESS.md](docs/HARNESS.md) | The Harness: its tools, what it may do, and why |
-| [PROGRAMS.md](docs/PROGRAMS.md) | How the Harness builds, tries and installs Programs |
+| [HARNESS.md](docs/HARNESS.md) | The AI you ask (the Harness, in the code): its tools, what it may do, and why |
+| [PROGRAMS.md](docs/PROGRAMS.md) | How Osiris builds, tries and installs Programs |
 | [INSTALLER.md](docs/INSTALLER.md) | Building the ISO, the install flow, the guardrails |
 | [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Working on Osiris: the VM, the loop, the traps |
 | [CONTEXT.md](CONTEXT.md) | The project's language: Theme, Skin, Harness, Program and the rest |
