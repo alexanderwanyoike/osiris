@@ -71,6 +71,11 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 /* Figures of one width, so the count does not jitter as it ticks. */
 .harness-elapsed { font-feature-settings: "tnum"; }
 
+.harness-activity { color: @harness_muted; font-size: 0.85em; }
+.harness-step { padding: 1px 0 1px 18px; border-left: 1px solid @harness_border; margin-left: 6px; }
+.harness-step image { color: @harness_accent; }
+.harness-step.refused image { color: @harness_danger; }
+
 .harness-composer {
     margin: 6px 0 0;
     padding: 6px 10px 6px 18px;
