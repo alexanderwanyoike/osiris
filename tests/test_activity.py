@@ -33,3 +33,15 @@ def test_a_finished_step_is_recorded_in_the_past_tense(
     action: str, resources: tuple[str, ...], record: str
 ) -> None:
     assert Step(action, resources).record == record
+
+
+@pytest.mark.parametrize(
+    ("path", "shown"),
+    [
+        ("/home/tester/Code/pomodoro/main.py", "pomodoro/main.py"),
+        ("Code/pomodoro/src/timer.py", "src/timer.py"),
+        ("/home/tester/Code/pomodoro/*", "Code/pomodoro"),
+    ],
+)
+def test_a_long_path_is_shown_by_its_last_two_parts(path: str, shown: str) -> None:
+    assert Step("read", (path,)).doing == f"Reading {shown}"
