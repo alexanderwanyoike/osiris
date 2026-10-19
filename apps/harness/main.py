@@ -381,13 +381,6 @@ class Drawer(Gtk.ApplicationWindow):
         self.pages.add_named(Gtk.ScrolledWindow(child=holder, vexpand=True), "providers")
         self.pages.set_visible_child_name("providers")
 
-    def open_conversation(self, session: str) -> None:
-        """What a notification opens when clicked: the drawer, on its
-        Conversation."""
-        if not self.open:
-            self.summon()
-        self.open_past(session)
-
     def summon(self) -> None:
         self.present()
         self.entry.grab_focus()
