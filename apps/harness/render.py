@@ -195,11 +195,14 @@ class WorkingRow(Gtk.Box):
         self.append(self._elapsed)
         self._clock = clock
         self._since = clock()
+        self._timer = 0
 
     def show(self, doing: str) -> None:
         self._doing.set_text(doing)
         self._tick()
         self.set_visible(True)
+        if not self._timer:
+            self._timer = GLib.timeout_add_seconds(1, self._tick)
 
     def _tick(self) -> bool:
         self._elapsed.set_text(elapsed(self._clock() - self._since))
