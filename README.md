@@ -8,7 +8,7 @@
 <h1 align="center">Osiris</h1>
 
 <p align="center">
-  A Linux operating system with AI built in.
+  A Linux operating system with an AI agent.
 </p>
 
 <p align="center">
@@ -19,13 +19,14 @@
 
 ![The Osiris desktop: a terminal and Pomodoro, a timer the AI wrote, both on the Tokyo Night theme](docs/screenshots/desktop.png)
 
-**Osiris is a Linux operating system with AI built in.** It's based on Arch
+**Osiris is a Linux operating system with an AI agent.** It's based on Arch
 Linux and uses the Cinnamon desktop.
 
-You can ask the AI to change how your desktop looks, or to write small apps for
-you. The apps it writes show up in your menu and match your theme. Everything
-it makes is saved as normal code on your computer, and you can undo any change
-it makes.
+The agent can change how your desktop looks and write small apps for you. It
+runs on your computer, and the AI model behind it comes from a provider you
+connect, such as OpenAI. The apps it writes show up in your menu and match your
+theme. Everything it makes is saved as normal code on your computer, and you
+can undo any change it makes.
 
 Osiris is in early development (alpha).
 
