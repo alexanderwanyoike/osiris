@@ -67,6 +67,7 @@ class Harness:
         tiers: Mapping[str, Tier],
         directory: Path,
         may_touch: Callable[[Path], bool],
+        tools: tuple[str, list[str]] | None = None,
     ) -> None:
         """``tiers`` names every action the Harness may take; it rejects the rest.
         File actions are allowed only on paths ``may_touch`` accepts, read from
@@ -79,10 +80,14 @@ class Harness:
         #: Where a Conversation with no Project runs.
         self._home = directory
         self._may_touch = may_touch
+        #: The tool server, which the Engine keeps per folder.
+        self._tools = tools
+        self._tools_in: set[Path] = set()
         self._session: str | None = None
 
     def ask(self, text: str) -> None:
         if self._session is None:
+            self._ready(self._directory)
             self._session = self._engine.start(self._model, self._directory)
             self._engine.rename(self._session, title_of(text))
         self._log.write("sent", session=self._session, text=text)
@@ -92,12 +97,24 @@ class Harness:
     def session(self) -> str | None:
         return self._session
 
+    @property
+    def directory(self) -> Path:
+        """The folder the session runs in: its Project, or home for none."""
+        return self._directory
+
     def conversations(self) -> list[Past]:
         return self._engine.conversations()
 
-    def resume(self, session: str) -> list[PastTurn]:
-        """Continue a past Conversation; returns what was said in it."""
+    def _ready(self, directory: Path) -> None:
+        if self._tools is not None and directory not in self._tools_in:
+            self._engine.attach_tools(*self._tools, directory)
+            self._tools_in.add(directory)
+
+    def resume(self, session: str, directory: Path) -> list[PastTurn]:
+        """Continue a past Conversation, in its folder; returns what was said."""
         self._session = session
+        self._directory = directory
+        self._ready(directory)
         return self._engine.history(session)
 
     def new_conversation(self, folder: Path | None = None) -> None:
@@ -124,6 +141,7 @@ class Harness:
             return
         self._engine.move(self._session, folder)
         self._directory = folder
+        self._ready(folder)
 
     def move(self, session: str, folder: Path) -> None:
         self._engine.move(session, folder)

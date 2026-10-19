@@ -46,6 +46,7 @@ class FakeEngine:
     moved: list[tuple[str, Path]] = field(default_factory=list)
     archived: list[str] = field(default_factory=list)
     deleted: list[str] = field(default_factory=list)
+    attached: list[tuple[str, Path]] = field(default_factory=list)
     past: list[PastTurn] = field(default_factory=list)
 
     def start(
@@ -82,6 +83,9 @@ class FakeEngine:
     def delete(self, session: str) -> None:
         self.deleted.append(session)
 
+    def attach_tools(self, name: str, command: list[str], directory: Path) -> None:
+        self.attached.append((name, directory))
+
     def history(self, session: str) -> list[PastTurn]:
         return self.past
 
@@ -104,6 +108,7 @@ def harness(
         tiers=tiers or {},
         directory=HOME,
         may_touch=lambda path: path == POMODORO or POMODORO in path.parents,
+        tools=("osiris", ["python3", "tool_server.py"]),
     )
     return subject, engine, files
 
@@ -353,7 +358,7 @@ def test_the_first_question_names_the_session() -> None:
 def test_a_past_conversation_is_resumed_in_its_own_session() -> None:
     subject, engine, _ = harness()
     engine.past = [PastTurn("make a timer", "Made it.", GPT)]
-    assert subject.resume("ses_9") == engine.past
+    assert subject.resume("ses_9", HOME) == engine.past
     subject.ask("add a pause button")
     assert engine.started == []
     assert engine.sent == [("ses_9", "add a pause button")]
@@ -433,3 +438,20 @@ def test_deleting_the_conversation_on_screen_starts_a_new_one() -> None:
     subject.delete("ses_1")
     subject.ask("again")
     assert engine.sent[-1] == ("ses_2", "again")
+
+
+def test_the_tools_are_attached_where_the_session_runs_once_each() -> None:
+    subject, engine, _ = harness()
+    subject.ask("hello")
+    subject.ask("again")
+    subject.worked_on(POMODORO)
+    assert engine.attached == [("osiris", HOME), ("osiris", POMODORO)]
+
+
+def test_a_resumed_conversation_runs_and_reads_files_in_its_own_folder() -> None:
+    subject, engine, _ = harness()
+    subject.resume("ses_9", POMODORO)
+    assert engine.attached == [("osiris", POMODORO)]
+    subject.handle(ToolRequested("ses_9", "per_1", "read", ("main.py",)))
+    assert engine.replies[-1][2] is True
+    assert subject.directory == POMODORO

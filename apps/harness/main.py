@@ -53,7 +53,12 @@ from osiris.apps.tool_server import NAME as TOOLS, TIERS, undo  # noqa: E402
 
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
 from osiris.harness.harness import Harness  # noqa: E402
-from osiris.harness.history import CODE_DIR, group, misplaced  # noqa: E402
+from osiris.harness.history import (  # noqa: E402
+    CODE_DIR,
+    group,
+    misplaced,
+    project_program,
+)
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
@@ -435,6 +440,8 @@ class Application(Adw.Application):
         self.conversation = Conversation()
         self.harness: Harness | None = None
         self.log: HarnessLog | None = None
+        #: The past Conversations the sidebar shows, newest first.
+        self.pasts: list = []
         self.look: Look | None = None
         self.accounts: OpencodeAccounts | None = None
         self.files = RealFileSystem()
@@ -653,14 +660,20 @@ class Application(Adw.Application):
                 harness.move(session, folder)
             return harness.conversations() if moves else pasts
 
-        self.background(gather, lambda pasts: self.drawer.show_history(
-            *group(pasts, home)))
+        def show(pasts) -> None:
+            self.pasts = pasts
+            self.drawer.show_history(*group(pasts, home))
+
+        self.background(gather, show)
 
     def update_canvas(self) -> None:
         # What this run changed, and what the Conversation changed before, as
         # the log has it: a reopened Conversation brings its Canvas back.
         earlier = self.log.programs_of(self.session) if self.log and self.session else []
-        names = list(dict.fromkeys([*earlier, *self.conversation.programs]))
+        # A Conversation in a Program's Project is about that Program first.
+        here = project_program(self.harness.directory, self.home) if self.harness else None
+        names = list(dict.fromkeys([*([here] if here else []), *earlier,
+                                    *self.conversation.programs]))
         programs = self.programs()
 
         def gather():
@@ -716,7 +729,9 @@ class Application(Adw.Application):
             self.load_history()
             self.update_canvas()
 
-        self.background(lambda: harness.resume(session), opened)
+        folder = next((p.directory for p in self.pasts if p.session == session),
+                      self.home)
+        self.background(lambda: harness.resume(session, folder), opened)
 
     def new_conversation(self, folder: Path | None = None) -> None:
         """A new Conversation, in ``folder``'s Project or in none."""
@@ -766,7 +781,6 @@ class Application(Adw.Application):
             try:
                 service = locate(files, me, SubprocessRunner(sink=lambda _l: None))
                 engine = OpencodeEngine(UrllibClient(), service)
-                engine.attach_tools(TOOLS, [sys.executable, TOOL_SERVER])
                 tiers = {engine.action(TOOLS, tool): tier for tool, tier in TIERS.items()}
                 # A restarted service has a new password, so the Harness is
                 # rebuilt around the new connection; the next question opens
@@ -774,6 +788,7 @@ class Application(Adw.Application):
                 self.log = HarnessLog(files, me.home / LOG_FILE)
                 self.harness = Harness(engine, self.log, self.models.default,
                                        tiers=tiers, directory=me.home,
+                                       tools=(TOOLS, [sys.executable, TOOL_SERVER]),
                                        may_touch=self.programs().holds)
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)
