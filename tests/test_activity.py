@@ -115,3 +115,18 @@ def test_a_folder_outside_the_project_is_named_by_its_last_two_parts() -> None:
         "Looking in Code/pomodoro",
         "Looked in Code/pomodoro",
     )
+
+
+@pytest.mark.parametrize(
+    ("action", "doing", "record"),
+    [
+        ("todowrite", "Using todowrite", "Used todowrite"),
+        ("doom_loop", "Using doom loop", "Used doom loop"),
+        ("osiris_delete_theme", "Using delete theme", "Used delete theme"),
+    ],
+)
+def test_an_action_osiris_has_no_words_for_is_named_by_its_own(
+    action: str, doing: str, record: str
+) -> None:
+    step = Step(action, ("*",))
+    assert (step.doing, step.record) == (doing, record)
