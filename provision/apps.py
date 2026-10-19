@@ -18,8 +18,11 @@ import shutil
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import homes  # noqa: E402
 from run import run  # noqa: E402
+
+from osiris.provision.seeding import moves_to_zsh  # noqa: E402
 
 OMZ_REPO = "https://github.com/ohmyzsh/ohmyzsh.git"
 OMZ_DIR = "/usr/share/oh-my-zsh"
@@ -130,7 +133,7 @@ def configure_shell() -> None:
             print(f"  seeded {target}")
         # ZSH_CUSTOM points here, and zsh creates nothing itself.
         homes.makedirs(f"{user.pw_dir}/.config/osiris/zsh", user)
-        if user.pw_shell != "/usr/bin/zsh":
+        if moves_to_zsh(user.pw_shell):
             run("chsh", "-s", "/usr/bin/zsh", user.pw_name)
 
 
