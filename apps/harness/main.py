@@ -782,6 +782,7 @@ class Application(Adw.Application):
 
     def _deleted(self, session: str, *, on_screen: bool) -> None:
         self.backgrounded.pop(session, None)
+        self._seen(session)
         if on_screen:
             self.conversation = Conversation()
             self.drawer.clear()
