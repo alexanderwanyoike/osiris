@@ -75,3 +75,8 @@ def test_an_osiris_tool_is_named_by_what_it_does(
 def test_a_command_is_named_as_written(action: str) -> None:
     step = Step(action, ("ls /etc",))
     assert (step.doing, step.record) == ("Running ls /etc", "Ran ls /etc")
+
+
+def test_a_long_command_is_cut_at_a_word_and_marked_as_cut() -> None:
+    step = Step("bash", ("find /home/tester/Code -name '*.py' -newer main.py",))
+    assert step.doing == "Running find /home/tester/Code -name '*.py'…"
