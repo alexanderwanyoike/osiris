@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from osiris.harness.conversation import Conversation
-from osiris.harness.engine import Event, Finished, Text
+from osiris.harness.engine import Event, Failed, Finished, Text
 from osiris.harness.notice import Notice, notice_of
 
 
@@ -23,4 +23,16 @@ def test_a_finished_answer_says_osiris_replied_with_the_title_and_the_answer() -
     )
     assert notice_of(talk) == Notice(
         "Osiris replied", "Make me a calm theme\nI made Calm and applied it."
+    )
+
+
+def test_a_failed_answer_says_osiris_could_not_finish_and_why() -> None:
+    talk = answered(
+        "Make me a calm theme",
+        Text("ses_1", "Starting on"),
+        Failed("ses_1", "The provider's limit was reached"),
+    )
+    assert notice_of(talk) == Notice(
+        "Osiris could not finish",
+        "Make me a calm theme\nThe provider's limit was reached",
     )
