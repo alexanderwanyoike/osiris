@@ -57,7 +57,7 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
     padding: 6px 10px 6px 18px;
     border-top: 1px solid @harness_border;
 }
-.harness-composer entry { background: none; border: none; box-shadow: none; outline: none; }
+.harness-composer textview, .harness-composer textview text { background: none; min-height: 36px; }
 .harness-send { min-width: 28px; min-height: 28px; border-radius: 6px; color: @harness_accent; }
 .harness-footer { padding: 2px 18px 10px; }
 

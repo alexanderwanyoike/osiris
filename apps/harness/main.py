@@ -70,6 +70,8 @@ WIDTH = 440
 RECONNECT_SECONDS = 3
 #: The widest the conversation grows, in pixels, however wide the drawer.
 READABLE = 820
+#: The top bar's title before the first question.
+UNTITLED = "New conversation"
 
 #: Run by the Engine for every session; it acts through the theme engine.
 TOOL_SERVER = os.path.join(HERE, "tool_server.py")
@@ -85,12 +87,14 @@ class Drawer(Gtk.ApplicationWindow):
         self.set_default_size(WIDTH, 800)
         self.connect("realize", self._realize)
 
-        title = Gtk.Label(label="Harness", xalign=0, hexpand=True)
-        title.add_css_class("harness-title")
-        self.meta = Gtk.Label(xalign=1, ellipsize=Pango.EllipsizeMode.START)
-        self.meta.add_css_class("harness-meta")
-        # The model in play doubles as the way to change it.
-        providers_button = Gtk.Button(child=self.meta, tooltip_text="Providers and models")
+        new = Gtk.Button(icon_name="list-add-symbolic", tooltip_text="New conversation")
+        new.add_css_class("flat")
+        new.connect("clicked", lambda _b: self.app.new_conversation())
+        self.title = Gtk.Label(label=UNTITLED, xalign=0, hexpand=True,
+                               ellipsize=Pango.EllipsizeMode.END)
+        self.title.add_css_class("harness-title")
+        providers_button = Gtk.Button(icon_name="open-menu-symbolic",
+                                      tooltip_text="Providers and accounts")
         providers_button.add_css_class("flat")
         providers_button.connect("clicked", lambda _b: self.show_providers())
         # Deep agentic work wants the whole screen; the drawer comes back after.
@@ -101,10 +105,10 @@ class Drawer(Gtk.ApplicationWindow):
         self.expand_button.connect("clicked", self._toggle_expanded)
         header = Gtk.Box(spacing=8)
         header.add_css_class("harness-header")
-        header.append(Gtk.Image(icon_name="osiris-symbolic"))
-        header.append(title)
-        header.append(providers_button)
+        header.append(new)
+        header.append(self.title)
         header.append(self.expand_button)
+        header.append(providers_button)
 
         self.turns = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
                              valign=Gtk.Align.END, vexpand=True,
@@ -115,17 +119,45 @@ class Drawer(Gtk.ApplicationWindow):
             child=Adw.Clamp(maximum_size=READABLE, child=self.turns), vexpand=True,
             hscrollbar_policy=Gtk.PolicyType.NEVER)
 
-        self.entry = Gtk.Entry(placeholder_text="Ask Osiris", hexpand=True)
+        self.entry = Gtk.TextView(wrap_mode=Gtk.WrapMode.WORD_CHAR, accepts_tab=False,
+                                  hexpand=True, top_margin=6, bottom_margin=6)
         self.entry.add_css_class("harness-input")
-        self.entry.connect("activate", self._ask)
+        placeholder = Gtk.Label(label="Ask Osiris", xalign=0, valign=Gtk.Align.START,
+                                margin_top=6, can_target=False)
+        placeholder.add_css_class("harness-meta")
+        self.entry.get_buffer().connect(
+            "changed", lambda b: placeholder.set_visible(b.get_char_count() == 0))
+        enter = Gtk.EventControllerKey()
+        enter.connect("key-pressed", self._composer_key)
+        self.entry.add_controller(enter)
+        typed = Gtk.Overlay(child=self.entry)
+        typed.add_overlay(placeholder)
+
+        self.model_label = Gtk.Label(ellipsize=Pango.EllipsizeMode.START)
+        self.model_label.add_css_class("harness-meta")
+        self.models = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        self.models.add_css_class("navigation-sidebar")
+        self.models.connect("row-activated", self._model_chosen)
+        model_face = Gtk.Box(spacing=4)
+        model_face.append(Gtk.Image(icon_name="pan-down-symbolic"))
+        model_face.append(self.model_label)
+        self.model_menu = Gtk.MenuButton(
+            child=model_face, tooltip_text="Model",
+            popover=Gtk.Popover(child=self.models))
+        self.model_menu.add_css_class("flat")
+        self.model_menu.connect("notify::active", self._models_shown)
         self.send = Gtk.Button(icon_name="go-up-symbolic", tooltip_text="Ask",
                                valign=Gtk.Align.CENTER)
         self.send.add_css_class("harness-send")
         self.send.connect("clicked", self._send_or_stop)
-        composer = Gtk.Box(spacing=6)
+        controls = Gtk.Box(spacing=6)
+        controls.append(Gtk.Box(hexpand=True))
+        controls.append(self.model_menu)
+        controls.append(self.send)
+        composer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         composer.add_css_class("harness-composer")
-        composer.append(self.entry)
-        composer.append(self.send)
+        composer.append(typed)
+        composer.append(controls)
 
         self.footer = Gtk.Label(xalign=0, wrap=True)
         self.footer.add_css_class("harness-meta")
@@ -207,17 +239,55 @@ class Drawer(Gtk.ApplicationWindow):
         self.app.close_drawer()
         return True
 
-    def _ask(self, _entry) -> None:
-        text = self.entry.get_text().strip()
-        if text and not self.app.conversation.busy:
-            self.entry.set_text("")
-            self.app.ask(text)
+    def _ask(self) -> None:
+        buffer = self.entry.get_buffer()
+        text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+        if text.strip() and not self.app.conversation.busy:
+            buffer.set_text("")
+            self.app.ask(text.strip())
+
+    def _composer_key(self, _controller, keyval, _code, state) -> bool:
+        # Enter asks; Shift+Enter starts a new line.
+        if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter) and not (
+                state & Gdk.ModifierType.SHIFT_MASK):
+            self._ask()
+            return True
+        return False
 
     def _send_or_stop(self, _button) -> None:
         if self.app.conversation.busy:
             self.app.stop()
         else:
-            self._ask(self.entry)
+            self._ask()
+
+    def _models_shown(self, button, _spec) -> None:
+        if not button.get_active():
+            return
+        while (row := self.models.get_row_at_index(0)) is not None:
+            self.models.remove(row)
+        providers = Gtk.Label(label="Providers and accounts…", xalign=0)
+        providers.model = None
+        self.models.append(providers)
+        if self.app.accounts is None:
+            return
+        accounts = self.app.accounts
+        self.app.background(accounts.models, self._models_found)
+
+    def _models_found(self, found) -> None:
+        # Above "Providers and accounts…", in the Engine's order.
+        for position, info in enumerate(found):
+            label = Gtk.Label(label=info.name, xalign=0)
+            label.model = info.ref
+            self.models.insert(label, position)
+
+    def _model_chosen(self, _list, row) -> None:
+        chosen = row.get_child().model
+        self.model_menu.popdown()
+        if chosen is None:
+            self.show_providers()
+        else:
+            self.app.choose_model(chosen)
+        self.refresh()
 
     def show_providers(self) -> None:
         if self.app.accounts is None:
@@ -251,6 +321,11 @@ class Drawer(Gtk.ApplicationWindow):
         self.present()
         self.entry.grab_focus()
 
+    def clear(self) -> None:
+        for view in self.views:
+            self.turns.remove(view)
+        self.views = []
+
     def refresh(self, restyle: bool = False) -> None:
         conversation, look = self.app.conversation, self.app.look
         fresh = len(self.views)
@@ -272,7 +347,8 @@ class Drawer(Gtk.ApplicationWindow):
         self.send.set_icon_name("media-playback-stop-symbolic" if busy
                                 else "go-up-symbolic")
         self.send.set_tooltip_text("Stop" if busy else "Ask")
-        self.meta.set_text(self.app.header_line())
+        self.title.set_text(conversation.title or UNTITLED)
+        self.model_label.set_text(conversation.model_label(self.app.models.default))
         self.footer.set_text(self.app.footer_line())
         self._follow()
 
@@ -368,14 +444,11 @@ class Application(Adw.Application):
         except GLib.Error:
             self.drawer.minimize()
 
-    def header_line(self) -> str:
-        named = self.conversation.model_label(self.models.default)
-        return f"{named}  ·  {self.conversation.tokens_spent:,} tokens"
-
     def footer_line(self) -> str:
         if self.harness is None:
             return self.problem
-        return "allowance not reported"
+        spent = self.conversation.tokens_spent
+        return f"{spent:,} tokens  ·  allowance not reported"
 
     def background(self, work, done) -> None:
         """Run work off the main loop and hand its result back to it."""
@@ -494,6 +567,16 @@ class Application(Adw.Application):
             self.drawer.refresh()
 
         self.background(reverse, undone)
+
+    def new_conversation(self) -> None:
+        if self.conversation.busy:
+            return
+        self.conversation = Conversation()
+        if self.harness is not None:
+            self.harness.new_conversation()
+        self.drawer.clear()
+        self.drawer.refresh()
+        self.drawer.entry.grab_focus()
 
     def ask(self, text: str) -> None:
         if self.harness is None:

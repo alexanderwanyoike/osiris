@@ -82,6 +82,10 @@ class Harness:
         self._log.write("sent", session=self._session, text=text)
         self._engine.send(self._session, text)
 
+    def new_conversation(self) -> None:
+        """The next question opens a new session; the old one is left as it is."""
+        self._session = None
+
     def use_model(self, model: ModelRef) -> None:
         """Answer with this model from now on, in this conversation too."""
         self._model = model
