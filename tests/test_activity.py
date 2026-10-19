@@ -80,3 +80,17 @@ def test_a_command_is_named_as_written(action: str) -> None:
 def test_a_long_command_is_cut_at_a_word_and_marked_as_cut() -> None:
     step = Step("bash", ("find /home/tester/Code -name '*.py' -newer main.py",))
     assert step.doing == "Running find /home/tester/Code -name '*.py'…"
+
+
+@pytest.mark.parametrize(
+    ("action", "pattern", "doing", "record"),
+    [
+        ("glob", "**/*.py", "Finding **/*.py", "Found **/*.py"),
+        ("grep", "def main", "Searching for def main", "Searched for def main"),
+    ],
+)
+def test_a_search_is_named_by_its_pattern(
+    action: str, pattern: str, doing: str, record: str
+) -> None:
+    step = Step(action, (pattern,))
+    assert (step.doing, step.record) == (doing, record)
