@@ -39,3 +39,23 @@ def test_the_changes_are_those_logged_since_the_last_question() -> None:
         Change("Made Ember", {"action": "delete_theme", "name": "ember"}),
         Change("Applied Ember", {"action": "apply_theme", "name": "calm"}),
     ]
+
+
+def test_a_change_to_a_program_names_it() -> None:
+    subject = log()
+    subject.write("sent", session="ses_1", text="add a pause button")
+    subject.write(
+        "changed",
+        summary="Pomodoro: Add a pause button",
+        undo={"action": "revert_commit", "name": "pomodoro", "commit": "abc"},
+        program="pomodoro",
+    )
+    (change,) = subject.last_changes()
+    assert change.program == "pomodoro"
+
+
+def test_a_change_to_anything_else_names_no_program() -> None:
+    subject = log()
+    subject.write("changed", summary="Made Harbour", undo=None)
+    (change,) = subject.last_changes()
+    assert change.program is None

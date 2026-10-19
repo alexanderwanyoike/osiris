@@ -10,6 +10,7 @@ import base64
 import json
 from collections.abc import Iterator
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from osiris.harness.accounts import Method, ModelInfo, Provider, SignIn, SignInState
@@ -25,7 +26,7 @@ from osiris.harness.engine import (
     ToolCalled,
     ToolRequested,
 )
-from osiris.platform import CommandRunner, FileSystem, HttpClient, Identity
+from osiris.platform import CommandRunner, FileSystem, HttpClient, HttpError, Identity
 
 #: Where the service records its URL and password, relative to the home.
 SERVICE_FILE = ".local/state/opencode/service.json"
@@ -71,11 +72,15 @@ class OpencodeEngine:
             headers=self._service.headers(),
         )
 
-    def start(self, model: ModelRef | None = None) -> str:
+    def start(
+        self, model: ModelRef | None = None, directory: Path | None = None
+    ) -> str:
         body: dict[str, object] = {
             "title": "Osiris Harness",
             "permissions": ASK_EVERYTHING,
         }
+        if directory is not None:
+            body["location"] = {"directory": str(directory)}
         if model is not None:
             body["model"] = {"providerID": model.provider, "id": model.model}
         session: str = self._post("/api/session", body)["data"]["id"]
@@ -100,9 +105,17 @@ class OpencodeEngine:
         )
 
     def attach_tools(self, name: str, command: list[str]) -> None:
+        url = f"{self._service.url}/api/experimental/mcp/{name}"
+        # opencode keeps a running server whose registration is unchanged, which
+        # would keep serving the code from before an update.
+        try:
+            self._http.request("DELETE", url, headers=self._service.headers())
+        except HttpError as error:
+            if error.status != 404:
+                raise
         self._http.request(
             "PUT",
-            f"{self._service.url}/api/experimental/mcp/{name}",
+            url,
             body={"config": {"type": "local", "command": command}},
             headers=self._service.headers(),
         )

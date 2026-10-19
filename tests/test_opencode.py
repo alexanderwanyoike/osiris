@@ -166,6 +166,15 @@ class TestSessions:
         assert isinstance(body, dict)
         assert body["model"] == {"providerID": "openai", "id": "gpt-5.5"}
 
+    def test_a_session_can_start_in_a_folder(self) -> None:
+        http = FakeHttpClient(
+            replies={("POST", f"{URL}/api/session"): {"data": {"id": SESSION}}}
+        )
+        engine(http).start(directory=Path("/home/tester"))
+        _, _, body = http.requests[0]
+        assert isinstance(body, dict)
+        assert body["location"] == {"directory": "/home/tester"}
+
     def test_sending_posts_the_text_as_a_prompt(self) -> None:
         path = f"{URL}/api/session/{SESSION}/prompt"
         http = FakeHttpClient(replies={("POST", path): {"data": {}}})
@@ -186,11 +195,12 @@ class TestSessions:
             ("POST", path, {"model": {"providerID": "openai", "id": "gpt-5.5"}})
         ]
 
-    def test_a_tool_server_is_attached_as_a_local_mcp_server(self) -> None:
+    def test_a_tool_server_is_attached_afresh_as_a_local_mcp_server(self) -> None:
         path = f"{URL}/api/experimental/mcp/osiris"
-        http = FakeHttpClient(replies={("PUT", path): None})
+        http = FakeHttpClient(replies={("DELETE", path): None, ("PUT", path): None})
         engine(http).attach_tools("osiris", ["python3", "/srv/tool_server.py"])
         assert http.requests == [
+            ("DELETE", path, None),
             (
                 "PUT",
                 path,
@@ -200,8 +210,14 @@ class TestSessions:
                         "command": ["python3", "/srv/tool_server.py"],
                     }
                 },
-            )
+            ),
         ]
+
+    def test_attaching_a_tool_server_never_registered_before_works(self) -> None:
+        path = f"{URL}/api/experimental/mcp/osiris"
+        http = FakeHttpClient(replies={("PUT", path): None})
+        engine(http).attach_tools("osiris", ["python3", "/srv/tool_server.py"])
+        assert http.requests[-1][0] == "PUT"
 
     def test_a_tool_servers_requests_name_the_server_and_tool(self) -> None:
         """As opencode 2.0.32 does: ``tools.osiris.apply_theme`` in its code

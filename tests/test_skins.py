@@ -38,6 +38,7 @@ CLASSES = (
     "harness-provider-card",
     "harness-monogram",
     "harness-connected",
+    "harness-program",
 )
 
 

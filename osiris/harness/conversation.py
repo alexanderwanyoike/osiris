@@ -39,6 +39,12 @@ class Turn:
     undone: bool = False
 
     @property
+    def programs(self) -> list[str]:
+        """The Programs this turn changed, each once, in the order they changed."""
+        named = (change.program for change in self.changes if change.program)
+        return list(dict.fromkeys(named))
+
+    @property
     def undoable(self) -> bool:
         return not self.undone and bool(self.undo_steps())
 

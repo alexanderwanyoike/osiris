@@ -13,9 +13,9 @@ from enum import Enum
 from typing import Any
 
 from osiris.model.colour import Colour, InvalidColour
+from osiris.model.names import slug
 from osiris.themes.derive import build
 from osiris.themes.intent import Harmony, Mood, ThemeIntent, seeds
-from osiris.themes.library import slug
 from osiris.themes.store import ThemeStore
 
 

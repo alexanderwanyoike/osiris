@@ -171,3 +171,17 @@ def test_a_turn_that_changed_nothing_offers_no_undo() -> None:
     talk.asked("hello")
     talk.changed([])
     assert not talk.turns[-1].undoable
+
+
+def test_a_turn_knows_the_programs_it_changed_once_each_in_order() -> None:
+    talk = Conversation()
+    talk.asked("make a timer and a notes app")
+    talk.changed(
+        [
+            Change("Made Pomodoro", None, program="pomodoro"),
+            MADE,
+            Change("Made Notes", None, program="notes"),
+            Change("Pomodoro: Add a pause button", None, program="pomodoro"),
+        ]
+    )
+    assert talk.turns[-1].programs == ["pomodoro", "notes"]

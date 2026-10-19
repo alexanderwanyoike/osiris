@@ -19,6 +19,10 @@ import argparse
 import os
 import shutil
 import subprocess
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import homes  # noqa: E402
 
 HARNESS_DIR = "/usr/share/osiris/harness"
 LAUNCHER_PATH = "/usr/bin/osiris-harness"
@@ -59,6 +63,15 @@ def write(path: str, text: str, mode: int = 0o644) -> None:
     print(f"  {path}")
 
 
+def make_programs_menu_folder() -> None:
+    """The folder installed Programs put their menu entries in, in /etc/skel and
+    for existing users. Cinnamon watches it only if it exists when the session
+    starts, so the first Program installed would otherwise not appear."""
+    for home in ["/etc/skel"] + [p.pw_dir for p in homes.desktop_users()]:
+        owner = None if home == "/etc/skel" else homes.owner_of(home)
+        homes.makedirs(os.path.join(home, ".local", "share", "applications"), owner)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=os.path.dirname(
@@ -93,6 +106,7 @@ def main() -> None:
     run_quietly = ["gtk-update-icon-cache", "-q", "-f", "-t", "/usr/share/icons/hicolor"]
     subprocess.run(run_quietly, check=False)
     print(f"  logos -> {icons}")
+    make_programs_menu_folder()
     print("HARNESS_INSTALLED")
 
 

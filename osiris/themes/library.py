@@ -7,7 +7,6 @@ of the colour wheel, narrowed by a search and a filter.
 
 from __future__ import annotations
 
-import re
 from collections.abc import Iterable, Mapping
 from enum import Enum
 from typing import Any
@@ -65,17 +64,6 @@ def family_of(theme: Theme) -> Family:
         if degrees >= start:
             family = candidate
     return family
-
-
-def slug(label: str) -> str:
-    """A theme name from a human label.
-
-    Names index the theme files, the generated GTK theme directory and the
-    asset manifest, so they have to survive being a filename and a GTK theme
-    name on every filesystem we care about.
-    """
-    out = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")
-    return out or "untitled"
 
 
 def _label(theme: Theme) -> str:
