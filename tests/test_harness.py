@@ -489,6 +489,17 @@ def test_a_resumed_conversation_runs_and_reads_files_in_its_own_folder() -> None
     assert subject.directory == POMODORO
 
 
+def test_a_session_off_screen_reads_files_in_its_own_folder() -> None:
+    """Switching Conversation changes the folder on screen, not the folder a
+    running session's paths are relative to."""
+    subject, engine, _ = harness()
+    subject.new_conversation(POMODORO)
+    subject.ask("add a pause button")
+    subject.new_conversation()
+    subject.handle(ToolRequested("ses_1", "per_1", "read", ("main.py",)))
+    assert engine.replies == [("ses_1", "per_1", True, "")]
+
+
 def test_a_reply_the_engine_cannot_take_is_logged_and_the_conversation_goes_on() -> (
     None
 ):
