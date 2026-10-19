@@ -435,7 +435,7 @@ def test_reopening_a_session_still_working_makes_it_current_and_keeps_it_running
 def test_a_conversation_with_no_project_takes_its_programs_project() -> None:
     subject, engine, _ = harness()
     subject.ask("build me a timer")
-    subject.worked_on(POMODORO)
+    subject.worked_on("ses_1", POMODORO)
     assert engine.moved == [("ses_1", POMODORO)]
     subject.handle(ToolRequested("ses_1", "per_1", "read", ("main.py",)))
     assert engine.replies[-1][2] is True
@@ -444,9 +444,23 @@ def test_a_conversation_with_no_project_takes_its_programs_project() -> None:
 def test_a_conversation_in_a_project_stays_there() -> None:
     subject, engine, _ = harness()
     subject.ask("build me a timer")
-    subject.worked_on(POMODORO)
-    subject.worked_on(HOME / "Code" / "notes")
+    subject.worked_on("ses_1", POMODORO)
+    subject.worked_on("ses_1", HOME / "Code" / "notes")
     assert engine.moved == [("ses_1", POMODORO)]
+
+
+def test_a_program_worked_on_off_screen_never_moves_the_conversation_on_screen() -> (
+    None
+):
+    """The drawer hears that a session worked on a Program after it ends,
+    when the person may have moved to another Conversation."""
+    subject, engine, _ = harness()
+    subject.ask("build me a timer")
+    subject.new_conversation()
+    subject.ask("something else")
+    subject.worked_on("ses_1", POMODORO)
+    assert engine.moved == []
+    assert subject.directory == HOME
 
 
 def test_a_past_conversation_can_be_moved_into_a_project() -> None:
@@ -508,7 +522,7 @@ def test_the_tools_are_attached_where_the_session_runs_once_each() -> None:
     subject, engine, _ = harness()
     subject.ask("hello")
     subject.ask("again")
-    subject.worked_on(POMODORO)
+    subject.worked_on("ses_1", POMODORO)
     assert engine.attached == [("osiris", HOME), ("osiris", POMODORO)]
 
 
