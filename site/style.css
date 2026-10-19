@@ -101,6 +101,12 @@ kbd {
   text-decoration: none;
 }
 
+/* osiris-symbolic.svg is black, for GTK to recolour; the page is dark. */
+.brand img,
+.hero .mark {
+  filter: invert(1);
+}
+
 .top nav {
   display: flex;
   gap: 22px;
