@@ -368,6 +368,18 @@ def test_after_a_new_conversation_an_ended_sessions_events_are_left_alone(
     assert subject.handle(Text("ses_1", "late text")) is None
 
 
+def test_a_session_still_working_after_a_new_conversation_is_still_served() -> None:
+    """Its permission requests must still be answered, or it would hang."""
+    subject, engine, _ = harness(tiers={"osiris_apply_theme": Tier.UNDOABLE})
+    subject.ask("make it calm")
+    subject.new_conversation()
+    decision = subject.handle(
+        ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",))
+    )
+    assert decision == Allowed("ses_1", "osiris_apply_theme", Tier.UNDOABLE, ("*",))
+    assert engine.replies == [("ses_1", "per_1", True, "")]
+
+
 def test_the_first_question_names_the_session() -> None:
     subject, engine, _ = harness()
     subject.ask("Make me a calm theme\nfor working late")
