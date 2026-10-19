@@ -49,7 +49,9 @@ AI.
 
 The agent can only do what Osiris allows. It can look around, make changes
 that can be undone, and edit the code of the apps it wrote. Anything else is
-refused, and you see what it tried.
+refused, and you see what it tried. If you want it to do more, turn on Allow
+everything on its Providers page: it can then run commands and change any
+file.
 
 ![The sidebar expanded: the conversation that made Pomodoro, beside its code](docs/screenshots/harness.png)
 
