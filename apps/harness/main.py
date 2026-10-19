@@ -816,6 +816,8 @@ class Application(Adw.Application):
             self.harness.ask(text)
         except HttpError as error:
             GLib.idle_add(self._failed_to_send, str(error))
+            return
+        GLib.idle_add(lambda: self.load_history() or False)
 
     def _failed_to_send(self, message: str) -> bool:
         if self.conversation.turns:
