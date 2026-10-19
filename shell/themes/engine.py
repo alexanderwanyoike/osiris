@@ -756,7 +756,7 @@ def apply(name: str) -> list[str]:
     return []
 
 
-def first_login() -> None:
+def login() -> None:
     """Apply the default theme, once, for a user who has never chosen one.
 
     Run from an autostart entry in every session. Without it a new account
@@ -772,11 +772,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Apply an Osiris theme.")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--apply", metavar="NAME", help="apply this theme")
-    group.add_argument("--first-login", action="store_true",
+    group.add_argument("--login", action="store_true",
                        help="apply the default theme if none has been chosen")
     args = parser.parse_args()
-    if args.first_login:
-        first_login()
+    if args.login:
+        login()
     else:
         apply(args.apply)
 
