@@ -21,6 +21,7 @@ from osiris.programs.programs import FOLLOW_THEME, Programs
 from osiris.themes import actions
 from osiris.themes.intent import Harmony, Mood
 from osiris.themes.store import ThemeStore
+from osiris.themes.wallpapers import UserWallpapers
 
 NAME = "osiris"
 
@@ -66,6 +67,7 @@ TIERS = {
     "create_program": Tier.UNDOABLE,
     "commit_program": Tier.UNDOABLE,
     "check_program": Tier.LOOK,
+    "make_wallpaper": Tier.UNDOABLE,
 }
 
 #: A seed as the model must give it; words like "dusk blue" are refused.
@@ -77,7 +79,12 @@ ANNOTATIONS = {
 }
 
 
-def undo(store: ThemeStore, step: Mapping[str, str], programs: Programs) -> None:
+def undo(
+    store: ThemeStore,
+    step: Mapping[str, str],
+    programs: Programs,
+    wallpapers: UserWallpapers,
+) -> None:
     """Run the step a logged change recorded to reverse itself."""
     match step["action"]:
         case "apply_theme":
@@ -88,11 +95,15 @@ def undo(store: ThemeStore, step: Mapping[str, str], programs: Programs) -> None
             programs.revert(step["name"], step["commit"])
         case "trash_program":
             programs.trash(step["name"])
+        case "delete_wallpaper":
+            wallpapers.delete(step["name"])
         case other:
             raise actions.ThemeActionError(f"Osiris cannot undo {other}")
 
 
-def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
+def server(
+    store: ThemeStore, programs: Programs, log: HarnessLog, wallpapers: UserWallpapers
+) -> FastMCP:
     """The tools, acting on ``store``; every change they make is written to
     ``log`` with the step that undoes it."""
     tools = FastMCP(NAME, instructions=INSTRUCTIONS, log_level="WARNING")
@@ -224,5 +235,48 @@ def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
         Other languages are checked by their build when the person tries them."""
         problems = programs.check(name)
         return "\n".join(problems) if problems else "No problems found."
+
+    @tools.tool(annotations=ANNOTATIONS[TIERS["make_wallpaper"]])
+    def make_wallpaper(label: str, shader: str) -> str:
+        """Make a moving wallpaper and put it on the desktop, worn by a copy of
+        the theme in use, so the theme itself is untouched.
+
+        label: what the person will see it called, such as "Rain".
+        shader: GLSL 1.20 defining vec3 wallpaper(vec2 uv), which returns the
+        colour of each pixel, drawn on the GPU every frame. uv runs from (0, 0)
+        at the top left to (1, 1). Already declared for you: u_time, where the
+        loop is, from 0 to 1, coming round every 60 seconds, so animate with
+        sin(TURN * u_time) and the like, where the end meets the start (TURN is
+        two pi); u_size, the screen in pixels; the theme's colours as vec3:
+        u_background, u_surface, u_foreground, u_accent, u_accent_muted,
+        u_success, u_warning, u_danger, and the wallpaper's own tones u_base,
+        u_shape and u_line; u_dark, 1.0 on a dark theme. Use only these
+        colours, so the wallpaper follows the theme. End with
+        compose(uv, fill, line, 0.42): it lays a fill and a line strength,
+        each 0 to 1, over the theme's base and keeps the centre quiet for the
+        Osiris mark. GLSL 1.20 has no %, no bitwise operators and no textures;
+        give loops constant bounds. It runs every frame: keep it cheap, and the
+        motion slow and calm. A shader that does not compile comes back with
+        the errors by its own line numbers; fix it and call again.
+        """
+        name = wallpapers.write(label, shader)
+        log.write(
+            "changed",
+            summary=f"Made the {label} wallpaper",
+            undo={"action": "delete_wallpaper", "name": name},
+        )
+        theme, previous = actions.use_wallpaper(store, name, label)
+        theme_label = actions.find(store, theme)["label"]
+        log.write(
+            "changed",
+            summary=f"Made {theme_label}",
+            undo={"action": "delete_theme", "name": theme},
+        )
+        log.write(
+            "changed",
+            summary=f"Applied {theme_label}",
+            undo={"action": "apply_theme", "name": previous},
+        )
+        return f"Made the {label} wallpaper and applied it as {theme_label}."
 
     return tools

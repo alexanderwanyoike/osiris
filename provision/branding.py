@@ -2,7 +2,8 @@
 
     python3 provision/branding.py [--repo PATH]
 
-Touches three surfaces:
+Touches four surfaces:
+  * /etc/os-release, the system's name as other tools report it
   * Plymouth boot splash showing the Osiris logo on the brand background
   * LightDM slick-greeter background
   * /usr/share/osiris/ as the canonical place other components read assets from
@@ -21,6 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from run import run  # noqa: E402
 
 from osiris.provision import plymouth  # noqa: E402
+from osiris.resources.loader import Resources  # noqa: E402
 
 BRANDING_DIR = "/usr/share/osiris"
 WALLPAPERS_DIR = "/usr/share/backgrounds/osiris"
@@ -32,6 +34,7 @@ SPLASH_LOGO = "/usr/share/osiris/logo-splash.png"
 # The greeter draws its logo in a corner; the 320px splash asset clips there.
 GREETER_LOGO = "/usr/share/osiris/logo-greeter.png"
 MENU_ICON = "/usr/share/icons/hicolor/scalable/apps/osiris-symbolic.svg"
+OS_RELEASE = "/etc/os-release"
 
 SLICK_GREETER_CONF = f"""[Greeter]
 background={BRANDED_WALLPAPER}
@@ -137,6 +140,14 @@ def add_mkinitcpio_hook() -> bool:
     return True
 
 
+def install_os_release() -> None:
+    """Name the system; see osiris/resources/system/os-release for why here."""
+    print("naming the system")
+    if os.path.islink(OS_RELEASE):
+        os.remove(OS_RELEASE)
+    write(OS_RELEASE, Resources().read("system/os-release"))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=os.path.dirname(
@@ -148,6 +159,7 @@ def main() -> None:
     if os.geteuid() != 0:
         sys.exit("must run as root")
 
+    install_os_release()
     install_assets(args.repo)
     install_plymouth()
     add_mkinitcpio_hook()

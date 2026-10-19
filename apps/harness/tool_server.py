@@ -13,7 +13,7 @@ for candidate in ("/usr/share/osiris/lib", REPO):
         sys.path.insert(0, candidate)
         break
 
-from theme_store import EngineStore  # noqa: E402
+from theme_store import EngineStore, user_wallpapers  # noqa: E402
 
 from osiris.apps.tool_server import server  # noqa: E402
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
@@ -22,5 +22,7 @@ from osiris.programs.programs import Programs  # noqa: E402
 
 if __name__ == "__main__":
     files, home = RealFileSystem(), SystemIdentity().home
-    programs = Programs(files, SubprocessRunner(sink=lambda _line: None), home)
-    server(EngineStore(), programs, HarnessLog(files, home / LOG_FILE)).run()
+    runner = SubprocessRunner(sink=lambda _line: None)
+    programs = Programs(files, runner, home)
+    wallpapers = user_wallpapers(files, runner, home)
+    server(EngineStore(), programs, HarnessLog(files, home / LOG_FILE), wallpapers).run()

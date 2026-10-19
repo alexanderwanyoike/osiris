@@ -27,7 +27,13 @@ The first slice of ROADMAP P3.5:
   [The Osiris tools](#the-osiris-tools).
 - **Everything else is refused.** Any other action the model reaches for
   (running a command, reading a file, editing anything) is rejected, and the
-  model is told what it may use instead. The drawer shows what was refused.
+  model is told what it may use instead.
+- **It shows its work.** While Osiris answers, a row under the answer pulses
+  in the Theme's accent, says in plain words what it is doing ("Thinking",
+  "Editing pomodoro/main.py", "Making a theme") and counts the time since the
+  question. Every step it took, allowed or refused, is kept under the answer,
+  folded away as "Used 4 tools", each in the past tense ("Edited
+  pomodoro/main.py") or as "Not allowed to run ls /etc".
 - **The Harness log** keeps everything: each question before it is sent, each
   answer with the model that gave it and its tokens, every tool call whether or
   not it asked, every action allowed and its **Action tier**, every change with
@@ -68,6 +74,7 @@ apps/harness/skins/           Bubbles and Transcript
 apps/harness/harness-drawer@osiris   Cinnamon extension: right edge, full height, slide
 apps/harness/harness@osiris   Cinnamon applet: the panel button
 osiris/harness/conversation   what the drawer shows, from the Engine's events
+osiris/harness/activity       each step of an answer in plain words, and time spent
 osiris/harness/markdown       answers as blocks, inline text as escaped Pango markup
 osiris/harness/style          colour variables and code scheme from a Theme; Skin choice
 osiris/harness/harness        one conversation: the log, and actions allowed by tier

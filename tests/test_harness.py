@@ -207,8 +207,18 @@ def test_the_decision_is_passed_on_in_place_of_the_request() -> None:
         ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",))
     )
     refused = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls",)))
-    assert allowed == Allowed("ses_1", "osiris_apply_theme", Tier.UNDOABLE)
+    assert allowed == Allowed("ses_1", "osiris_apply_theme", Tier.UNDOABLE, ("*",))
     assert refused == Refused("ses_1", "bash", ("ls",))
+
+
+def test_an_allowed_action_is_passed_on_with_what_it_touches() -> None:
+    subject, _, _ = harness()
+    subject.ask("add a pause button")
+    decision = subject.handle(
+        ToolRequested("ses_1", "per_1", "edit", ("Code/pomodoro/main.py",))
+    )
+    assert isinstance(decision, Allowed)
+    assert decision.resources == ("Code/pomodoro/main.py",)
 
 
 def test_a_rejection_points_the_model_at_the_tools_it_may_use() -> None:
@@ -311,7 +321,7 @@ def test_files_inside_a_program_may_be_read_and_edited(
     subject, engine, _ = harness()
     subject.ask("add a pause button")
     decision = subject.handle(ToolRequested("ses_1", "per_1", action, resources))
-    assert decision == Allowed("ses_1", action, tier)
+    assert decision == Allowed("ses_1", action, tier, resources)
     assert engine.replies == [("ses_1", "per_1", True, "")]
 
 

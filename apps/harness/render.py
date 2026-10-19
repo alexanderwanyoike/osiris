@@ -5,6 +5,7 @@ osiris/harness/markdown.py, where it is tested. Every widget here only carries
 CSS classes; how they look is the Skin's, in which colour the Theme's.
 """
 import re
+import time
 from collections.abc import Callable
 from datetime import datetime
 
@@ -14,6 +15,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("GtkSource", "5")
 from gi.repository import GLib, Gtk, GtkSource, Pango  # noqa: E402
 
+from osiris.harness.activity import Step, elapsed, summary  # noqa: E402
 from osiris.harness.conversation import State, Turn  # noqa: E402
 from osiris.harness.markdown import (  # noqa: E402
     Code,
@@ -171,11 +173,88 @@ def block_widget(block, scheme: GtkSource.StyleScheme | None) -> Gtk.Widget:
     return _markup_label(GLib.markup_escape_text(str(block)), "harness-paragraph")
 
 
+class WorkingRow(Gtk.Box):
+    """While Osiris works: a pulse, what it is doing, and how long it has been."""
+
+    def __init__(self, clock: Callable[[], float]):
+        super().__init__(spacing=10, halign=Gtk.Align.START, visible=False)
+        self.add_css_class("harness-working")
+        dots = Gtk.Box(spacing=4, valign=Gtk.Align.CENTER)
+        dots.add_css_class("harness-dots")
+        for _ in range(3):
+            dot = Gtk.Box(valign=Gtk.Align.CENTER)
+            dot.add_css_class("harness-dot")
+            dots.append(dot)
+        self._doing = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END)
+        self._doing.add_css_class("harness-doing")
+        self._elapsed = Gtk.Label(xalign=0)
+        self._elapsed.add_css_class("harness-meta")
+        self._elapsed.add_css_class("harness-elapsed")
+        self.append(dots)
+        self.append(self._doing)
+        self.append(self._elapsed)
+        self._clock = clock
+        self._since = clock()
+        self._timer = 0
+
+    def show(self, doing: str) -> None:
+        self._doing.set_text(doing)
+        self._tick()
+        self.set_visible(True)
+        if not self._timer:
+            self._timer = GLib.timeout_add_seconds(1, self._tick)
+
+    def stop(self) -> None:
+        if self._timer:
+            GLib.source_remove(self._timer)
+            self._timer = 0
+        self.set_visible(False)
+
+    @property
+    def ticking(self) -> bool:
+        return bool(self._timer)
+
+    def _tick(self) -> bool:
+        self._elapsed.set_text(elapsed(self._clock() - self._since))
+        return True
+
+
+class ActivityRecord(Gtk.Expander):
+    """Every step of an answer, folded away under it."""
+
+    def __init__(self):
+        super().__init__(visible=False)
+        self.add_css_class("harness-activity")
+        self._steps = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        self.set_child(self._steps)
+        self._shown = 0
+
+    def show(self, steps: list[Step]) -> None:
+        for step in steps[self._shown:]:
+            self._steps.append(self._row(step))
+        self._shown = len(steps)
+        self.set_label(summary(steps))
+        self.set_visible(bool(steps))
+
+    @staticmethod
+    def _row(step: Step) -> Gtk.Widget:
+        row = Gtk.Box(spacing=8)
+        row.add_css_class("harness-step")
+        if not step.allowed:
+            row.add_css_class("refused")
+        row.append(Gtk.Image(icon_name="object-select-symbolic" if step.allowed
+                             else "changes-prevent-symbolic"))
+        row.append(Gtk.Label(label=step.record, xalign=0,
+                             ellipsize=Pango.EllipsizeMode.END))
+        return row
+
+
 class TurnView(Gtk.Box):
     """One question and its answer, redrawn only where the answer changed."""
 
     def __init__(self, turn: Turn, on_undo: Callable[[Turn], None],
-                 program_card: Callable[[str], Gtk.Widget]):
+                 program_card: Callable[[str], Gtk.Widget],
+                 clock: Callable[[], float] = time.monotonic):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-turn")
         self._on_undo = on_undo
@@ -188,6 +267,10 @@ class TurnView(Gtk.Box):
         self.answer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.answer.add_css_class("harness-answer")
         self.append(self.answer)
+        self.record = ActivityRecord()
+        self.append(self.record)
+        self.working = WorkingRow(clock)
+        self.append(self.working)
         self.extras = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.append(self.extras)
         self._blocks: list = []
@@ -236,18 +319,11 @@ class TurnView(Gtk.Box):
             following = child.get_next_sibling()
             self.extras.remove(child)
             child = following
+        self.record.show(turn.steps)
         if turn.state in (State.WAITING, State.ANSWERING):
-            caret = Gtk.Label(label="▍", xalign=0)
-            caret.add_css_class("harness-caret")
-            self.extras.append(caret)
-        for refused in turn.refused:
-            chip = Gtk.Box(spacing=6, halign=Gtk.Align.START)
-            chip.add_css_class("harness-chip")
-            chip.append(Gtk.Image(icon_name="changes-prevent-symbolic"))
-            chip.append(Gtk.Label(label=f"Not allowed yet · {refused}",
-                                  ellipsize=Pango.EllipsizeMode.END,
-                                  max_width_chars=48))
-            self.extras.append(chip)
+            self.working.show(turn.doing)
+        else:
+            self.working.stop()
         if turn.changes:
             self.extras.append(self._changes(turn))
         for name in turn.programs:

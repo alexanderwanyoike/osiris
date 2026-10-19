@@ -13,6 +13,7 @@ from osiris.themes.actions import (
     create_theme,
     delete_theme,
     list_themes,
+    use_wallpaper,
 )
 from osiris.themes.derive import build
 from osiris.themes.intent import Harmony, Mood, ThemeIntent, seeds
@@ -144,3 +145,40 @@ def test_the_applied_theme_is_never_deleted() -> None:
 def test_deleting_an_unknown_theme_is_refused() -> None:
     with pytest.raises(ThemeActionError, match="no theme called harbour"):
         delete_theme(FakeThemeStore(), "harbour")
+
+
+def test_a_new_wallpaper_is_worn_by_a_copy_of_the_theme_in_use() -> None:
+    store = FakeThemeStore(
+        themes=[
+            {"name": "nord", "label": "Nord", "dark": True, "wallpaper_style": "aurora"}
+        ],
+        current="nord",
+    )
+    theme, previous = use_wallpaper(store, "rain", "Rain")
+    assert (theme, previous) == ("nord-rain", "nord")
+    assert store.saved == [
+        {
+            "name": "nord-rain",
+            "label": "Nord Rain",
+            "dark": True,
+            "wallpaper_style": "rain",
+        }
+    ]
+    assert store.applied == ["nord-rain"]
+
+
+def test_a_wallpaper_needs_a_theme_in_use_to_wear_it() -> None:
+    with pytest.raises(ThemeActionError, match="Apply a theme first"):
+        use_wallpaper(FakeThemeStore(), "rain", "Rain")
+
+
+def test_a_copy_that_would_replace_a_theme_is_refused() -> None:
+    store = FakeThemeStore(
+        themes=[
+            {"name": "nord", "label": "Nord", "dark": True},
+            {"name": "nord-rain", "label": "Nord Rain", "dark": True},
+        ],
+        current="nord",
+    )
+    with pytest.raises(ThemeActionError, match="already a theme called Nord Rain"):
+        use_wallpaper(store, "rain", "Rain")

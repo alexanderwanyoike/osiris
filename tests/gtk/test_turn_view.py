@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-from gi.repository import Gtk
+import time
+from collections.abc import Callable
+
+from gi.repository import GLib, Gtk
 from render import TurnView
 
+from osiris.harness.activity import Step
 from osiris.harness.conversation import State, Turn
 from osiris.harness.log import Change
 from osiris.harness.markdown import InlineStyle
 
-from .conftest import find, texts, widgets
+from .conftest import find, shown, texts, widgets
 
 STYLE = InlineStyle(code_foreground="#ffffff", code_background="#000000")
 MADE = Change("Made Harbour", {"action": "delete_theme", "name": "harbour"})
@@ -20,6 +24,7 @@ def drawn(
     turn: Turn,
     undone: list[Turn] | None = None,
     cards: list[str] | None = None,
+    clock: Callable[[], float] = lambda: 0.0,
 ) -> TurnView:
     def card(name: str) -> Gtk.Widget:
         (cards if cards is not None else []).append(name)
@@ -29,6 +34,7 @@ def drawn(
         turn,
         on_undo=(undone if undone is not None else []).append,
         program_card=card,
+        clock=clock,
     )
     view.update(turn, STYLE, None)
     return view
@@ -71,3 +77,61 @@ def test_a_turn_that_changed_programs_shows_a_card_for_each() -> None:
     view = drawn(turn, cards=cards)
     assert cards == ["pomodoro", "notes"]
     assert "card for pomodoro" in texts(view)
+
+
+def test_a_working_turn_says_it_is_thinking_and_for_how_long() -> None:
+    now = [100.0]
+    turn = Turn("make a timer")
+    view = drawn(turn, clock=lambda: now[0])
+    now[0] = 114.0
+    view.update(turn, STYLE, None)
+    assert "Thinking" in shown(view)
+    assert "14s" in shown(view)
+
+
+def happens(condition: Callable[[], bool], within: float = 2.0) -> bool:
+    """Whether condition comes true while the main loop runs, within seconds."""
+    deadline = time.monotonic() + within
+    while time.monotonic() < deadline:
+        GLib.MainContext.default().iteration(False)
+        if condition():
+            return True
+        time.sleep(0.01)
+    return False
+
+
+def test_the_time_counts_up_each_second_while_osiris_works() -> None:
+    now = [100.0]
+    view = drawn(Turn("make a timer"), clock=lambda: now[0])
+    now[0] = 103.0
+    assert happens(lambda: "3s" in shown(view))
+
+
+def test_once_the_answer_ends_the_working_row_goes_and_stops_counting() -> None:
+    turn = Turn("make a timer")
+    view = drawn(turn)
+    turn.state = State.DONE
+    view.update(turn, STYLE, None)
+    assert "Thinking" not in shown(view)
+    assert not view.working.ticking
+
+
+def test_what_osiris_did_is_kept_folded_under_the_answer() -> None:
+    turn = finished()
+    turn.steps = [
+        Step("edit", ("pomodoro/main.py",)),
+        Step("bash", ("ls /etc",), allowed=False),
+    ]
+    record = find(drawn(turn), Gtk.Expander)
+    assert record.get_label() == "Used 2 tools"
+    assert not record.get_expanded()
+    steps = record.get_child()
+    assert "Edited pomodoro/main.py" in texts(steps)
+    assert "Not allowed to run ls /etc" in texts(steps)
+    icons = [w.get_icon_name() for w in widgets(steps) if isinstance(w, Gtk.Image)]
+    assert icons == ["object-select-symbolic", "changes-prevent-symbolic"]
+
+
+def test_an_answer_that_took_no_steps_keeps_no_record() -> None:
+    view = drawn(finished())
+    assert not any(text.startswith("Used") for text in shown(view))

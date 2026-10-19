@@ -19,6 +19,7 @@ from osiris.programs.manifest import MANIFEST_FILE
 from osiris.programs.programs import Programs
 from osiris.themes.actions import ThemeActionError
 from osiris.themes.store import FakeThemeStore
+from osiris.themes.wallpapers import UserWallpapers
 
 HARBOUR = {
     "label": "Harbour",
@@ -43,8 +44,21 @@ def new_programs(
     return Programs(files or FakeFileSystem(), runner or FakeRunner(), HOME)
 
 
+WALLPAPERS = HOME / ".local/share/osiris/wallpapers"
+RAIN = "vec3 wallpaper(vec2 uv) {\n    return u_accent * uv.y;\n}\n"
+
+
+def new_wallpapers(
+    files: FakeFileSystem | None = None, runner: FakeRunner | None = None
+) -> UserWallpapers:
+    return UserWallpapers(
+        files or FakeFileSystem(), runner or FakeRunner(), WALLPAPERS, ""
+    )
+
+
 def tools(store: FakeThemeStore) -> dict[str, Any]:
-    tool_list = asyncio.run(server(store, new_programs(), new_log()).list_tools())
+    subject = server(store, new_programs(), new_log(), new_wallpapers())
+    tool_list = asyncio.run(subject.list_tools())
     return {tool.name: tool for tool in tool_list}
 
 
@@ -54,8 +68,14 @@ def call(
     arguments: dict[str, Any],
     log: HarnessLog | None = None,
     programs: Programs | None = None,
+    wallpapers: UserWallpapers | None = None,
 ) -> Any:
-    subject = server(store, programs or new_programs(), log or new_log())
+    subject = server(
+        store,
+        programs or new_programs(),
+        log or new_log(),
+        wallpapers or new_wallpapers(),
+    )
     return asyncio.run(subject.call_tool(name, arguments))
 
 
@@ -68,6 +88,7 @@ def test_the_server_offers_the_theme_and_program_actions_and_nothing_else() -> N
         "create_program",
         "commit_program",
         "check_program",
+        "make_wallpaper",
     }
 
 
@@ -80,6 +101,7 @@ def test_listing_and_checking_are_looks_and_the_rest_undoable_changes() -> None:
         "create_program": Tier.UNDOABLE,
         "commit_program": Tier.UNDOABLE,
         "check_program": Tier.LOOK,
+        "make_wallpaper": Tier.UNDOABLE,
     }
 
 
@@ -120,7 +142,7 @@ def test_a_refused_action_reaches_the_model_with_its_reason() -> None:
 
 
 def test_the_server_logs_only_warnings_into_the_engines_output() -> None:
-    subject = server(FakeThemeStore(), new_programs(), new_log())
+    subject = server(FakeThemeStore(), new_programs(), new_log(), new_wallpapers())
     assert subject.settings.log_level == "WARNING"
 
 
@@ -171,15 +193,30 @@ def test_undo_runs_the_step_a_change_recorded() -> None:
         ],
         current="harbour",
     )
-    undo(store, {"action": "apply_theme", "name": "nord"}, new_programs())
-    undo(store, {"action": "delete_theme", "name": "harbour"}, new_programs())
+    undo(
+        store,
+        {"action": "apply_theme", "name": "nord"},
+        new_programs(),
+        new_wallpapers(),
+    )
+    undo(
+        store,
+        {"action": "delete_theme", "name": "harbour"},
+        new_programs(),
+        new_wallpapers(),
+    )
     assert store.applied == ["nord"]
     assert store.deleted == ["harbour"]
 
 
 def test_an_unknown_undo_step_is_refused() -> None:
     with pytest.raises(ThemeActionError, match="cannot undo"):
-        undo(FakeThemeStore(), {"action": "format_disk", "name": "sda"}, new_programs())
+        undo(
+            FakeThemeStore(),
+            {"action": "format_disk", "name": "sda"},
+            new_programs(),
+            new_wallpapers(),
+        )
 
 
 def test_a_model_is_told_a_seed_is_a_hex_colour_before_it_tries() -> None:
@@ -253,8 +290,14 @@ def test_undo_trashes_a_program_or_reverts_a_commit() -> None:
         FakeThemeStore(),
         {"action": "revert_commit", "name": "pomodoro", "commit": "abc123"},
         subject,
+        new_wallpapers(),
     )
-    undo(FakeThemeStore(), {"action": "trash_program", "name": "pomodoro"}, subject)
+    undo(
+        FakeThemeStore(),
+        {"action": "trash_program", "name": "pomodoro"},
+        subject,
+        new_wallpapers(),
+    )
     argvs = [call.argv for call in runner.calls]
     assert argvs[0][-3:] == ("revert", "--no-edit", "abc123")
     assert argvs[1] == ("gio", "trash", str(POMODORO))
@@ -292,3 +335,61 @@ def test_the_model_is_told_the_person_knows_it_as_osiris() -> None:
     from osiris.apps.tool_server import INSTRUCTIONS
 
     assert "you are osiris" in INSTRUCTIONS.lower()
+
+
+def test_making_a_wallpaper_wears_it_and_logs_each_step_to_undo() -> None:
+    log = new_log()
+    store = FakeThemeStore(
+        themes=[{"name": "nord", "label": "Nord", "dark": True}], current="nord"
+    )
+    call(store, "make_wallpaper", {"label": "Rain", "shader": RAIN}, log)
+    assert store.current() == "nord-rain"
+    assert log.last_changes() == [
+        Change(
+            "Made the Rain wallpaper", {"action": "delete_wallpaper", "name": "rain"}
+        ),
+        Change("Made Nord Rain", {"action": "delete_theme", "name": "nord-rain"}),
+        Change("Applied Nord Rain", {"action": "apply_theme", "name": "nord"}),
+    ]
+
+
+def test_a_shader_that_does_not_compile_reaches_the_model_to_fix() -> None:
+    runner = FakeRunner(
+        results={
+            "glslangValidator": Result(
+                ("glslangValidator",),
+                2,
+                "ERROR: 0:6: 'floot' : undeclared identifier\n",
+            )
+        }
+    )
+    store = FakeThemeStore(
+        themes=[{"name": "nord", "label": "Nord", "dark": True}], current="nord"
+    )
+    with pytest.raises(ToolError, match="undeclared identifier"):
+        call(
+            store,
+            "make_wallpaper",
+            {"label": "Rain", "shader": RAIN},
+            wallpapers=new_wallpapers(runner=runner),
+        )
+    assert store.current() == "nord"
+
+
+def test_undo_deletes_a_wallpaper_it_made() -> None:
+    files = FakeFileSystem()
+    wallpapers = new_wallpapers(files)
+    wallpapers.write("Rain", RAIN)
+    undo(
+        FakeThemeStore(),
+        {"action": "delete_wallpaper", "name": "rain"},
+        new_programs(),
+        wallpapers,
+    )
+    assert not files.exists(WALLPAPERS / "rain" / "shader.glsl")
+
+
+def test_the_model_is_told_how_a_wallpaper_shader_is_written() -> None:
+    described = tools(FakeThemeStore())["make_wallpaper"].description
+    for needed in ("vec3 wallpaper(vec2 uv)", "u_time", "GLSL 1.20", "compose("):
+        assert needed in described
