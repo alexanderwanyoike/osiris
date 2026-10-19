@@ -145,3 +145,17 @@ def test_a_step_that_names_nothing_still_reads_as_a_sentence(
     action: str, doing: str
 ) -> None:
     assert Step(action, ()).doing == doing
+
+
+@pytest.mark.parametrize(
+    ("action", "resources", "record"),
+    [
+        ("bash", ("ls /etc",), "Not allowed to run ls /etc"),
+        ("edit", (".bashrc",), "Not allowed to edit .bashrc"),
+        ("osiris_delete_theme", ("*",), "Not allowed to use delete theme"),
+    ],
+)
+def test_a_refused_step_is_recorded_as_not_allowed(
+    action: str, resources: tuple[str, ...], record: str
+) -> None:
+    assert Step(action, resources, allowed=False).record == record
