@@ -160,3 +160,13 @@ def test_the_sidebar_is_refreshed_once_a_question_has_its_session_working() -> N
     for _ in range(50):
         context.iteration(False)
     assert stand_in.histories == 1
+
+
+def test_a_conversation_deleted_while_working_off_screen_is_let_go() -> None:
+    """The Engine erases it, so no end will ever come to let it go."""
+    stand_in, _ = app()
+    asked(stand_in, "make it calm")
+    stand_in.new_conversation()
+    stand_in.harness.delete("ses_1")
+    stand_in._deleted("ses_1", on_screen=False)
+    assert stand_in.backgrounded == {}
