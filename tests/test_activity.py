@@ -59,7 +59,7 @@ def test_a_step_on_several_files_names_the_first_and_counts_the_rest() -> None:
         ("create_theme", "Making a theme", "Made a theme"),
         ("apply_theme", "Applying a theme", "Applied a theme"),
         ("list_programs", "Looking at your programs", "Looked at your programs"),
-        ("create_program", "Starting a program", "Started a program"),
+        ("create_program", "Making a program", "Made a program"),
         ("commit_program", "Saving a change", "Saved a change"),
         ("check_program", "Checking the program", "Checked the program"),
     ],
