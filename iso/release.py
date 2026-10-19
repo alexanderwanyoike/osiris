@@ -103,10 +103,12 @@ def main() -> None:
     # makepkg refuses to run as root; mkarchiso must.
     run("runuser", "-u", "builder", "--", "python3",
         os.path.join(tree, "iso", "repo.py"), "--out", out)
-    repository = os.path.join(out, "repo")
-    sign(repository, os.environ["PACKAGE_SIGNING_KEY"])
     run("python3", os.path.join(tree, "iso", "profile.py"),
         "--out", out, "--version", version)
+    # Only now: the medium carries this repository unsigned, and pacman checks
+    # any signature it finds, against a key neither the build nor the medium has.
+    repository = os.path.join(out, "repo")
+    sign(repository, os.environ["PACKAGE_SIGNING_KEY"])
 
     name = f"osiris-{version}-x86_64.iso"
     iso = os.path.join(out, "out", name)
