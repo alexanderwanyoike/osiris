@@ -770,8 +770,7 @@ class Application(Adw.Application):
 
         def opened(past) -> None:
             if live is None:
-                spent = self.log.tokens_spent(session) if self.log is not None else 0
-                self.conversation = Conversation.restored(past, tokens_spent=spent)
+                self.conversation = self._restored(session, past)
                 self.drawer.clear()
             else:
                 self.backgrounded.pop(session, None)
@@ -791,6 +790,16 @@ class Application(Adw.Application):
         allow_everything(self.files, self.home, on=on)
         if self.harness is not None:
             self.background(self.harness.restart_tools, lambda _r: None)
+
+    def _restored(self, session: str, past) -> Conversation:
+        """A past Conversation with its tokens, Program cards and Undo, which
+        the Engine's history does not carry and the log does."""
+        if self.log is None:
+            return Conversation.restored(past)
+        return Conversation.restored(past,
+                                     tokens_spent=self.log.tokens_spent(session),
+                                     changes=self.log.changes_by_question(session),
+                                     undone=self.log.undone())
 
     def new_conversation(self, folder: Path | None = None) -> None:
         """A new Conversation, in ``folder``'s Project or in none."""
