@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from osiris.harness.activity import Step, summary
+from osiris.harness.activity import Step, elapsed, summary
 
 
 @pytest.mark.parametrize(
@@ -166,3 +166,11 @@ def test_the_steps_of_an_answer_are_summed_up_as_tools_used(
     count: int, said: str
 ) -> None:
     assert summary([Step("read", ("main.py",))] * count) == said
+
+
+@pytest.mark.parametrize(
+    ("seconds", "said"),
+    [(0.4, "0s"), (14.9, "14s"), (59, "59s"), (60, "1m 00s"), (65, "1m 05s")],
+)
+def test_time_spent_is_said_in_seconds_then_minutes(seconds: float, said: str) -> None:
+    assert elapsed(seconds) == said
