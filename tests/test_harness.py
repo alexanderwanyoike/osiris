@@ -509,3 +509,13 @@ def test_once_the_person_allows_everything_nothing_is_refused() -> None:
         ("ses_1", "per_2", True, ""),
     ]
     assert decision == Allowed("ses_1", "bash", Tier.ANYTHING, ("ls /etc",))
+
+
+def test_restarting_the_tools_attaches_them_again_where_they_run() -> None:
+    """The tool server reads what it may tell the model when it starts."""
+    subject, engine, _ = harness()
+    subject.ask("hello")
+    subject.restart_tools()
+    subject.new_conversation(POMODORO)
+    subject.ask("add a pause button")
+    assert engine.attached == [("osiris", HOME), ("osiris", HOME), ("osiris", POMODORO)]
