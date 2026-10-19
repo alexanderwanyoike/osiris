@@ -50,7 +50,26 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 
 .harness-chip { color: @harness_muted; font-size: 0.82em; padding: 0; }
 .harness-error { color: @harness_danger; }
-.harness-caret { color: @harness_accent; }
+
+/* While Osiris works: three small squares light in turn, like a cursor
+   stepping along the line. */
+@keyframes harness-step {
+    0%, 70%, 100% { opacity: 0.2; }
+    35% { opacity: 1; }
+}
+.harness-working { font-size: 0.9em; }
+.harness-dot {
+    min-width: 5px;
+    min-height: 5px;
+    border-radius: 1px;
+    background-color: @harness_accent;
+    animation: harness-step 1.4s ease-in-out infinite;
+}
+.harness-dot:nth-child(2) { animation-delay: 200ms; }
+.harness-dot:nth-child(3) { animation-delay: 400ms; }
+.harness-doing { color: @harness_muted; font-style: italic; }
+/* Figures of one width, so the count does not jitter as it ticks. */
+.harness-elapsed { font-feature-settings: "tnum"; }
 
 .harness-composer {
     margin: 6px 0 0;
