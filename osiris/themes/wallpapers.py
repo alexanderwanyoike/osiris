@@ -117,12 +117,18 @@ def source(prelude: str, shader: str) -> str:
 
 
 def check(wallpaper: Wallpaper, prelude: str, runner: CommandRunner) -> str | None:
+    """Why the package's shader would not compile, or None; see check_shader."""
+    return check_shader(wallpaper.shader.read_text(), prelude, runner, wallpaper.name)
+
+
+def check_shader(
+    shader: str, prelude: str, runner: CommandRunner, name: str
+) -> str | None:
     """Why the shader would not compile, by its own line numbers, or None.
 
     glslangValidator is the reference compiler; without it the shader is
     assumed good, and the extension's own fallback is what remains.
     """
-    shader = wallpaper.shader.read_text()
     program = source(prelude, shader)
     lines = shader.splitlines()
     first = program.splitlines().index(lines[0]) + 1 if lines else 0
@@ -146,7 +152,7 @@ def check(wallpaper: Wallpaper, prelude: str, runner: CommandRunner) -> str | No
             continue
         number, message = int(match.group(1)), match.group(2)
         if first <= number < first + count:
-            where = f"{wallpaper.name}/{wallpaper.shader.name}:{number - first + 1}"
+            where = f"{name}/shader.glsl:{number - first + 1}"
             reasons.append(f"{where}: {message}")
         else:
             reasons.append(f"line {number} of the program: {message}")
