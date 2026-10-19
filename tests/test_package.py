@@ -6,6 +6,7 @@ check that matters: makepkg is the only authority on what a PKGBUILD means.
 
 from __future__ import annotations
 
+import configparser
 import shutil
 import subprocess
 from pathlib import Path
@@ -96,3 +97,26 @@ def test_every_bundled_package_is_built_and_depended_on() -> None:
     for name in package.BUNDLED:
         assert (REPOSITORY / "iso" / "bundled" / name / "PKGBUILD").is_file()
         assert name in package.depends()
+
+
+def hook() -> configparser.ConfigParser:
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.optionxform = str  # type: ignore[assignment,method-assign]
+    parser.read_string(package.HOOK)
+    return parser
+
+
+def test_upgrading_osiris_reruns_setup_once_the_upgrade_is_in_place() -> None:
+    parsed = hook()
+    assert dict(parsed["Trigger"]) == {
+        "Operation": "Upgrade",
+        "Type": "Package",
+        "Target": package.NAME,
+    }
+    assert parsed["Action"]["When"] == "PostTransaction"
+    assert parsed["Action"]["Exec"] == package.SETUP
+
+
+def test_the_hook_is_where_pacman_reads_hooks_shipped_by_packages() -> None:
+    assert package.HOOK_PATH.startswith("/usr/share/libalpm/hooks/")
+    assert package.HOOK_PATH.endswith(".hook")
