@@ -194,7 +194,8 @@ class Drawer(Gtk.ApplicationWindow):
         chat.append(self.scroller)
         chat.append(Adw.Clamp(maximum_size=READABLE, child=bottom))
         self.canvas = Canvas(read=lambda path: path.read_text(errors="replace"),
-                             open_in_code=open_in_code)
+                             open_in_code=open_in_code,
+                             scheme=app.look.scheme if app.look is not None else None)
         self.canvas.set_visible(False)
         body = Gtk.Paned(start_child=chat, end_child=self.canvas,
                          shrink_start_child=False, resize_end_child=True,
