@@ -44,9 +44,13 @@ PHRASES = {
     "read": Phrase("Reading", "Read"),
     "edit": Phrase("Editing", "Edited"),
     "list": Phrase("Listing", "Listed"),
+    "external_directory": Phrase("Looking in", "Looked in"),
     "glob": Phrase("Finding", "Found", shown=_as_written),
     "grep": Phrase("Searching for", "Searched for", shown=_as_written),
     "webfetch": Phrase("Fetching", "Fetched", shown=_site),
+    "websearch": Phrase(
+        "Searching the web for", "Searched the web for", shown=_as_written
+    ),
     "bash": Phrase("Running", "Ran", shown=_as_written),
     "shell": Phrase("Running", "Ran", shown=_as_written),
     "osiris_list_themes": Phrase("Looking at", "Looked at", "the themes"),
