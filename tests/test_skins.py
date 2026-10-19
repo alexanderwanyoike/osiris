@@ -42,6 +42,12 @@ CLASSES = (
     "harness-canvas",
     "harness-path",
     "harness-sidebar",
+    "harness-working",
+    "harness-dot",
+    "harness-doing",
+    "harness-elapsed",
+    "harness-activity",
+    "harness-step",
 )
 
 
@@ -62,7 +68,8 @@ def test_a_skin_names_no_colour_of_its_own(name: str) -> None:
 
 @pytest.mark.parametrize("name", SKINS)
 def test_a_skin_only_refers_to_colours_the_theme_provides(name: str) -> None:
-    used = set(re.findall(r"@([a-z_]+)", stylesheet(name)))
+    # @keyframes is an at-rule that names an animation, not a colour.
+    used = set(re.findall(r"@(?!keyframes\b)([a-z_]+)", stylesheet(name)))
     assert used <= set(VARIABLES), used - set(VARIABLES)
 
 

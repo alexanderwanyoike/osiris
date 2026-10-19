@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import pytest
+
+from osiris.harness.activity import Step
 from osiris.harness.conversation import Conversation, State
 from osiris.harness.engine import (
     Answered,
@@ -44,6 +47,16 @@ def test_the_answer_streams_into_the_latest_turn() -> None:
     assert talk.turns[-1].state is State.ANSWERING
 
 
+@pytest.mark.parametrize("ending", ["", "\n", "\n\n"])
+def test_text_after_a_complete_step_starts_a_new_paragraph(ending: str) -> None:
+    talk = Conversation()
+    talk.asked("make a timer")
+    talk.apply(Text(S, f"Wired up the controls.{ending}"))
+    talk.apply(Answered(S, GPT, tokens(10, 2), cost=0.0))
+    talk.apply(Text(S, "Built your app."))
+    assert talk.turns[-1].answer == "Wired up the controls.\n\nBuilt your app."
+
+
 def test_a_finished_answer_names_its_model_and_frees_the_bar() -> None:
     talk = Conversation()
     talk.asked("hello")
@@ -79,15 +92,59 @@ def test_a_refused_action_is_shown_on_its_turn() -> None:
     talk.asked("list /etc")
     talk.apply(ToolCalled(S, "call_1", {"command": "ls /etc"}, executed=False))
     talk.apply(Refused(S, "shell", ("ls /etc",)))
-    assert talk.turns[-1].refused == ["shell: ls /etc"]
+    assert talk.turns[-1].steps == [Step("shell", ("ls /etc",), allowed=False)]
 
 
 def test_an_allowed_action_is_not_shown_as_refused() -> None:
     talk = Conversation()
     talk.asked("make it calm")
     talk.apply(ToolRequested(S, "per_1", "osiris_apply_theme", ("*",)))
-    talk.apply(Allowed(S, "osiris_apply_theme", Tier.UNDOABLE))
-    assert talk.turns[-1].refused == []
+    talk.apply(Allowed(S, "osiris_apply_theme", Tier.UNDOABLE, ("*",)))
+    assert all(step.allowed for step in talk.turns[-1].steps)
+
+
+def test_every_decided_action_is_a_step_of_its_turn_in_order() -> None:
+    talk = Conversation()
+    talk.asked("add a pause button")
+    talk.apply(Allowed(S, "read", Tier.LOOK, ("main.py",)))
+    talk.apply(Refused(S, "bash", ("ls",)))
+    talk.apply(Allowed(S, "edit", Tier.UNDOABLE, ("main.py",)))
+    assert talk.turns[-1].steps == [
+        Step("read", ("main.py",)),
+        Step("bash", ("ls",), allowed=False),
+        Step("edit", ("main.py",)),
+    ]
+
+
+def test_a_turn_is_thinking_until_a_step_then_doing_that_step() -> None:
+    talk = Conversation()
+    turn = talk.asked("add a pause button")
+    assert turn.doing == "Thinking"
+    talk.apply(Allowed(S, "edit", Tier.UNDOABLE, ("pomodoro/main.py",)))
+    assert turn.doing == "Editing pomodoro/main.py"
+
+
+def test_once_a_step_is_complete_the_turn_is_thinking_again() -> None:
+    talk = Conversation()
+    turn = talk.asked("add a pause button")
+    talk.apply(Allowed(S, "edit", Tier.UNDOABLE, ("pomodoro/main.py",)))
+    talk.apply(Answered(S, GPT, tokens(10, 2), cost=0.0))
+    assert turn.doing == "Thinking"
+
+
+def test_while_the_answer_streams_the_turn_is_writing() -> None:
+    talk = Conversation()
+    turn = talk.asked("hello")
+    talk.apply(Text(S, "hi"))
+    assert turn.doing == "Writing"
+
+
+def test_a_refused_step_leaves_the_turn_thinking() -> None:
+    talk = Conversation()
+    turn = talk.asked("list /etc")
+    talk.apply(Allowed(S, "read", Tier.LOOK, ("main.py",)))
+    talk.apply(Refused(S, "bash", ("ls /etc",)))
+    assert turn.doing == "Thinking"
 
 
 def test_a_failure_keeps_the_engines_reason() -> None:

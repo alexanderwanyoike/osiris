@@ -63,7 +63,31 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
     font-size: 0.85em;
 }
 .harness-error { color: @harness_danger; }
-.harness-caret { color: @harness_accent; }
+
+/* While Osiris works: three dots rise and brighten in turn, a wave quiet
+   enough to sit beside the answer without pulling the eye from it. */
+@keyframes harness-wave {
+    0%, 60%, 100% { opacity: 0.35; transform: translateY(0) scale(0.8); }
+    30% { opacity: 1; transform: translateY(-3px) scale(1); }
+}
+.harness-working { margin-top: 2px; font-size: 0.92em; }
+.harness-dot {
+    min-width: 6px;
+    min-height: 6px;
+    border-radius: 999px;
+    background-color: @harness_accent;
+    animation: harness-wave 1.2s ease-in-out infinite;
+}
+.harness-dot:nth-child(2) { animation-delay: 150ms; }
+.harness-dot:nth-child(3) { animation-delay: 300ms; }
+.harness-doing { color: @harness_muted; }
+/* Figures of one width, so the count does not jitter as it ticks. */
+.harness-elapsed { font-feature-settings: "tnum"; }
+
+.harness-activity { color: @harness_muted; font-size: 0.88em; }
+.harness-step { padding: 2px 0 2px 20px; }
+.harness-step image { color: @harness_success; }
+.harness-step.refused image { color: @harness_warning; }
 
 .harness-composer {
     margin: 8px 12px 0;

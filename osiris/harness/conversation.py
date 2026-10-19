@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 
+from osiris.harness.activity import THINKING, WRITING, Step
 from osiris.harness.engine import (
     Answered,
     Event,
@@ -16,7 +17,7 @@ from osiris.harness.engine import (
     Stopped,
     Text,
 )
-from osiris.harness.harness import Decision, Refused
+from osiris.harness.harness import Allowed, Decision, Refused
 from osiris.harness.log import Change
 from osiris.harness.titles import title_of
 
@@ -35,7 +36,9 @@ class Turn:
     answer: str = ""
     state: State = State.WAITING
     model: ModelRef | None = None
-    refused: list[str] = field(default_factory=list)
+    steps: list[Step] = field(default_factory=list)
+    #: What Osiris is doing now, in words.
+    doing: str = THINKING
     error: str = ""
     changes: list[Change] = field(default_factory=list)
     undone: bool = False
@@ -60,6 +63,8 @@ class Conversation:
         self.turns: list[Turn] = []
         self.model: ModelRef | None = None
         self.tokens_spent = 0
+        #: Each step's text is written on its own, so the next starts a paragraph.
+        self._step_ended = False
 
     @property
     def title(self) -> str | None:
@@ -109,13 +114,23 @@ class Conversation:
         turn = self.turns[-1]
         match event:
             case Text(_, delta):
+                if self._step_ended and turn.answer:
+                    turn.answer = turn.answer.rstrip("\n") + "\n\n"
+                self._step_ended = False
                 turn.answer += delta
                 turn.state = State.ANSWERING
+                turn.doing = WRITING
             case Answered(_, model, tokens, _):
                 turn.model = self.model = model
+                turn.doing = THINKING
+                self._step_ended = True
                 self.tokens_spent += tokens.input + tokens.output + tokens.reasoning
+            case Allowed(_, action, _, resources):
+                turn.steps.append(Step(action, resources))
+                turn.doing = turn.steps[-1].doing
             case Refused(_, action, resources):
-                turn.refused.append(f"{action}: {', '.join(resources)}")
+                turn.steps.append(Step(action, resources, allowed=False))
+                turn.doing = THINKING
             case Finished():
                 turn.state = State.DONE
             case Stopped():
