@@ -116,8 +116,25 @@ btrfs, and encrypt the system if you want.
 Osiris is alpha software. It installs and runs, but expect rough edges, and
 try it in a virtual machine before trusting it with a disk you care about.
 
-There is no published ISO yet; for now you build it yourself. On an Arch Linux
-machine with `archiso` installed:
+Download the ISO, about 2.5 GB, and its checksum:
+
+- [osiris-0.1.0-x86_64.iso](https://osiris-downloads.alphaneuron.net/osiris/0.1.0/osiris-0.1.0-x86_64.iso)
+- [osiris-0.1.0-x86_64.iso.sha256](https://osiris-downloads.alphaneuron.net/osiris/0.1.0/osiris-0.1.0-x86_64.iso.sha256)
+
+Check the download, then write it to a USB stick (replace `/dev/sdX` with your
+stick; everything on it is erased):
+
+```bash
+sha256sum -c osiris-0.1.0-x86_64.iso.sha256
+```
+
+```bash
+sudo dd if=osiris-0.1.0-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
+```
+
+### Building it yourself
+
+On an Arch Linux machine with `archiso` installed:
 
 ```bash
 python3 iso/repo.py

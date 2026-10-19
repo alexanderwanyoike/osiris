@@ -1,0 +1,49 @@
+name: Release
+
+# Builds the ISO for a tag such as v0.1.0 and publishes it, with its checksum,
+# to the R2 bucket served at https://osiris-downloads.alphaneuron.net/. The
+# work is in iso/release.py; this only gives it an Arch container to run in.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  BUCKET: osiris-releases
+
+jobs:
+  iso:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v7
+
+      # mkarchiso needs around 10 GB of scratch space; /mnt is the runner's
+      # large temporary disk, and / has too little room left.
+      - run: sudo mkdir -p /mnt/work
+
+      - name: Start an Arch container
+        env:
+          RCLONE_CONFIG_R2_TYPE: s3
+          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          RCLONE_CONFIG_R2_ACL: private
+          # The token can write objects but not list or create buckets.
+          RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
+        run: >-
+          docker run --detach --name build --privileged
+          --volume ${{ github.workspace }}:/src:ro --volume /mnt/work:/work
+          --env RCLONE_CONFIG_R2_TYPE --env RCLONE_CONFIG_R2_PROVIDER
+          --env RCLONE_CONFIG_R2_ACCESS_KEY_ID --env RCLONE_CONFIG_R2_SECRET_ACCESS_KEY
+          --env RCLONE_CONFIG_R2_ENDPOINT --env RCLONE_CONFIG_R2_ACL
+          --env RCLONE_CONFIG_R2_NO_CHECK_BUCKET
+          archlinux:latest sleep infinity
+
+      - run: docker exec build pacman -Syu --noconfirm python
+
+      - name: Build and publish
+        run: docker exec build python3 /src/iso/release.py ${{ github.ref_name }} --bucket ${{ env.BUCKET }}
