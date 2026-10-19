@@ -37,22 +37,24 @@ class Phrase:
     what: str = ""
     #: How one of its resources reads.
     shown: Callable[[str], str] = _path
+    #: What it is done to when the Engine names nothing.
+    unnamed: str = "something"
 
 
 #: The Engine's actions, as words.
 PHRASES = {
-    "read": Phrase("Reading", "Read"),
-    "edit": Phrase("Editing", "Edited"),
-    "list": Phrase("Listing", "Listed"),
-    "external_directory": Phrase("Looking in", "Looked in"),
+    "read": Phrase("Reading", "Read", unnamed="a file"),
+    "edit": Phrase("Editing", "Edited", unnamed="a file"),
+    "list": Phrase("Listing", "Listed", unnamed="a folder"),
+    "external_directory": Phrase("Looking in", "Looked in", unnamed="a folder"),
     "glob": Phrase("Finding", "Found", shown=_as_written),
     "grep": Phrase("Searching for", "Searched for", shown=_as_written),
     "webfetch": Phrase("Fetching", "Fetched", shown=_site),
     "websearch": Phrase(
         "Searching the web for", "Searched the web for", shown=_as_written
     ),
-    "bash": Phrase("Running", "Ran", shown=_as_written),
-    "shell": Phrase("Running", "Ran", shown=_as_written),
+    "bash": Phrase("Running", "Ran", shown=_as_written, unnamed="a command"),
+    "shell": Phrase("Running", "Ran", shown=_as_written, unnamed="a command"),
     "osiris_list_themes": Phrase("Looking at", "Looked at", "the themes"),
     "osiris_create_theme": Phrase("Making", "Made", "a theme"),
     "osiris_apply_theme": Phrase("Applying", "Applied", "a theme"),
@@ -90,6 +92,8 @@ class Step:
         phrase = self._phrase
         if phrase.what:
             return phrase.what
+        if not self.resources:
+            return phrase.unnamed
         first, *rest = self.resources
         shown = phrase.shown(first)
         return f"{shown} and {len(rest)} more" if rest else shown
