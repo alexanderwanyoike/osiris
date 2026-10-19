@@ -858,18 +858,25 @@ class Application(Adw.Application):
         if conversation is None:
             return False
         conversation.apply(event)
-        if isinstance(event, Finished | Stopped | Failed) and self.log is not None:
+        if isinstance(event, Finished | Stopped | Failed):
+            self._ended(event.session, conversation)
+        self.drawer.refresh()
+        return False
+
+    def _ended(self, session: str, conversation: Conversation) -> None:
+        """An answer is over. One that ended off screen is let go, for the
+        history to show; the changes and the Canvas are the screen's."""
+        self.backgrounded.pop(session, None)
+        if conversation is self.conversation and self.log is not None:
             changes = self.log.last_changes()
-            self.conversation.changed(changes)
+            conversation.changed(changes)
             worked_on = [c.program for c in changes if c.program]
             if worked_on and self.harness is not None:
                 harness, folder = self.harness, self.home / CODE_DIR / worked_on[0]
-                self.background(lambda: harness.worked_on(event.session, folder),
+                self.background(lambda: harness.worked_on(session, folder),
                                 lambda _r: self.load_history())
-            self.load_history()
             self.update_canvas()
-        self.drawer.refresh()
-        return False
+        self.load_history()
 
     def _refresh(self) -> bool:
         self.drawer.refresh()
