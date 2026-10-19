@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from gi.repository import Gtk
 from render import TurnView
 
@@ -9,7 +11,7 @@ from osiris.harness.conversation import State, Turn
 from osiris.harness.log import Change
 from osiris.harness.markdown import InlineStyle
 
-from .conftest import find, texts, widgets
+from .conftest import find, shown, texts, widgets
 
 STYLE = InlineStyle(code_foreground="#ffffff", code_background="#000000")
 MADE = Change("Made Harbour", {"action": "delete_theme", "name": "harbour"})
@@ -20,6 +22,7 @@ def drawn(
     turn: Turn,
     undone: list[Turn] | None = None,
     cards: list[str] | None = None,
+    clock: Callable[[], float] = lambda: 0.0,
 ) -> TurnView:
     def card(name: str) -> Gtk.Widget:
         (cards if cards is not None else []).append(name)
@@ -29,6 +32,7 @@ def drawn(
         turn,
         on_undo=(undone if undone is not None else []).append,
         program_card=card,
+        clock=clock,
     )
     view.update(turn, STYLE, None)
     return view
@@ -71,3 +75,13 @@ def test_a_turn_that_changed_programs_shows_a_card_for_each() -> None:
     view = drawn(turn, cards=cards)
     assert cards == ["pomodoro", "notes"]
     assert "card for pomodoro" in texts(view)
+
+
+def test_a_working_turn_says_it_is_thinking_and_for_how_long() -> None:
+    now = [100.0]
+    turn = Turn("make a timer")
+    view = drawn(turn, clock=lambda: now[0])
+    now[0] = 114.0
+    view.update(turn, STYLE, None)
+    assert "Thinking" in shown(view)
+    assert "14s" in shown(view)
