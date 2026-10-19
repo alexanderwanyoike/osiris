@@ -487,6 +487,10 @@ class Application(Adw.Application):
         show = Gio.SimpleAction.new("show", None)
         show.connect("activate", lambda *_: self.toggle())
         self.add_action(show)
+        opening = Gio.SimpleAction.new("open-conversation", GLib.VariantType.new("s"))
+        opening.connect("activate", lambda _action, session:
+                        self.open_conversation(session.get_string()))
+        self.add_action(opening)
 
     def do_startup(self):
         Adw.Application.do_startup(self)
