@@ -47,7 +47,7 @@ from canvas import Canvas, open_in_code  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
 from render import TurnView  # noqa: E402
 from sidebar import Sidebar  # noqa: E402
-from theme_store import EngineStore  # noqa: E402
+from theme_store import EngineStore, user_wallpapers  # noqa: E402
 
 from osiris.apps.tool_server import NAME as TOOLS, TIERS, undo  # noqa: E402
 
@@ -656,8 +656,10 @@ class Application(Adw.Application):
 
         def reverse() -> None:
             store, programs = EngineStore(), self.programs()
+            wallpapers = user_wallpapers(
+                self.files, SubprocessRunner(sink=lambda _line: None), self.home)
             for step in steps:
-                undo(store, step, programs)
+                undo(store, step, programs, wallpapers)
 
         def undone(_result) -> None:
             turn.undone = True
