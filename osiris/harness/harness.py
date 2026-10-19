@@ -87,15 +87,16 @@ class Harness:
         self._tools = tools
         self._tools_in: set[Path] = set()
         self._session: str | None = None
-        #: Sessions working on a question, served whichever one is on screen.
-        self._running: set[str] = set()
+        #: Sessions working on a question, served whichever one is on screen,
+        #: and the folder each runs in.
+        self._running: dict[str, Path] = {}
 
     def ask(self, text: str) -> None:
         if self._session is None:
             self._ready(self._directory)
             self._session = self._engine.start(self._model, self._directory)
             self._engine.rename(self._session, title_of(text))
-        self._running.add(self._session)
+        self._running[self._session] = self._directory
         self._log.write("sent", session=self._session, text=text)
         self._engine.send(self._session, text)
 
@@ -148,6 +149,8 @@ class Harness:
             return
         self._engine.move(self._session, folder)
         self._directory = folder
+        if self._session in self._running:
+            self._running[self._session] = folder
         self._ready(folder)
 
     def move(self, session: str, folder: Path) -> None:
@@ -163,18 +166,25 @@ class Harness:
         if self._session is not None:
             self._engine.stop(self._session)
 
-    def _tier(self, action: str, resources: tuple[str, ...]) -> Tier | None:
+    def _tier(
+        self, session: str, action: str, resources: tuple[str, ...]
+    ) -> Tier | None:
         if action in self._tiers:
             return self._tiers[action]
-        if action in FILE_TIERS and resources and all(map(self._inside, resources)):
+        folder = self._running.get(session, self._directory)
+        if (
+            action in FILE_TIERS
+            and resources
+            and all(self._inside(folder, resource) for resource in resources)
+        ):
             return FILE_TIERS[action]
         return None
 
-    def _inside(self, resource: str) -> bool:
+    def _inside(self, folder: Path, resource: str) -> bool:
         """Whether a path the Engine names, relative to the session's folder or
         absolute, and perhaps a folder pattern ending in ``*``, is one the
         Harness may touch. ``..`` is resolved first, so it cannot climb out."""
-        path = posixpath.join(str(self._directory), resource.removesuffix("*"))
+        path = posixpath.join(str(folder), resource.removesuffix("*"))
         return self._may_touch(Path(posixpath.normpath(path)))
 
     def _reply(self, session: str, request: str, *, allow: bool, message: str) -> None:
@@ -195,7 +205,7 @@ class Harness:
         if event.session != self._session and event.session not in self._running:
             return None
         if isinstance(event, Finished | Stopped | Failed):
-            self._running.discard(event.session)
+            self._running.pop(event.session, None)
         match event:
             case Answered(session, model, tokens, cost):
                 self._log.write(
@@ -215,7 +225,7 @@ class Harness:
                     executed=executed,
                 )
             case ToolRequested(session, request, action, resources) if (
-                tier := self._tier(action, resources)
+                tier := self._tier(session, action, resources)
             ):
                 self._reply(session, request, allow=True, message="")
                 self._log.write(
