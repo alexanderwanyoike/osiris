@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 
-from osiris.harness.activity import THINKING, Step
+from osiris.harness.activity import THINKING, WRITING, Step
 from osiris.harness.engine import (
     Answered,
     Event,
@@ -115,6 +115,7 @@ class Conversation:
             case Text(_, delta):
                 turn.answer += delta
                 turn.state = State.ANSWERING
+                turn.doing = WRITING
             case Answered(_, model, tokens, _):
                 turn.model = self.model = model
                 turn.doing = THINKING

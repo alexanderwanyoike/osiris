@@ -14,6 +14,8 @@ def _path(resource: str) -> str:
 
 #: What Osiris is doing between steps.
 THINKING = "Thinking"
+#: What Osiris is doing while its answer streams.
+WRITING = "Writing"
 
 #: The most of a command, pattern or query a row shows.
 LONGEST = 40
