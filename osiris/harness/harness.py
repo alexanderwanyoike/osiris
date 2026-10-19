@@ -1,4 +1,4 @@
-"""The Harness: one conversation, logged, on whichever Engine it is given."""
+"""The Harness: its Conversations, logged, on whichever Engine it is given."""
 
 from __future__ import annotations
 
