@@ -37,9 +37,11 @@ sys.argv[0] = "osiris-setup"
 runpy.run_path("{SOURCE_DIR}/provision/setup.py", run_name="__main__")
 """
 
-#: pacman runs hooks in name order; after the kernel's and mkinitcpio's, since
-#: setup rebuilds the initramfs with the boot splash.
-HOOK_PATH = "/usr/share/libalpm/hooks/95-osiris-setup.hook"
+#: pacman runs hooks in name order, digits before letters. Setup goes after
+#: every hook that updates the system it re-applies to, mkinitcpio's and the
+#: icon caches' among them, and before snap-pac's closing snapshot
+#: (zz-snap-pac-post.hook), so that snapshot holds what setup did.
+HOOK_PATH = "/usr/share/libalpm/hooks/zz-osiris-setup.hook"
 
 #: Upgrade only: on a first install archinstall runs setup itself, once the
 #: accounts it provisions exist.
