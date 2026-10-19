@@ -146,7 +146,21 @@ _Avoid_: metadata
 - Switching **Theme** keeps every **Skin**; switching a **Skin** keeps the **Theme**.
 - Choosing a **Skin set** replaces every **Skin**; a modified **Skin set** is kept
   so it can be chosen again.
+- What a person keeps of their **Skins** is only their choice: the **Skin set**
+  they chose and the surfaces they swapped. The **Skins** themselves ship with
+  Osiris, so an upgrade improves them without touching that choice.
+- Choosing another **Skin set** starts it as shipped; a modified **Skin set** is
+  kept beside its stock one, and either can be chosen again.
+- A **Skin set** shapes the windows, the panel, the dock, the launcher, the
+  **Harness**, the fonts, the icons and the cursor. The **Boot screens** keep
+  Osiris's own shape, and the **Wallpaper** belongs to the **Theme**.
 - A GTK **Skin** is a base that can be recoloured plus a shape layer (ADR 0013).
+- Osiris ships five **Skin sets**, Osiris, Crisp, Paper, Pebble and Bold, each one
+  shape everywhere: round where it is round, square where it is square.
+- An upgrade of Osiris never overwrites a person's choice: their **Theme**,
+  **Skins**, keybindings, dock and the files they edit. What Osiris keeps in a
+  home is upgraded once, at the next login, and what runs in a session restarts
+  onto the new version by itself.
 - Every **Theme** has a **Generated wallpaper**.
 - A **Wallpaper** comes from a model only when the **Engine** itself can make
   images; Osiris adds no image model of its own. Further providers may supply
