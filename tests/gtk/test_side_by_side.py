@@ -76,3 +76,14 @@ def test_a_new_conversation_while_osiris_works_keeps_the_one_left_working() -> N
     assert stand_in.conversation is not working
     assert not stand_in.conversation.turns
     assert stand_in.backgrounded == {"ses_1": working}
+
+
+def test_while_the_first_question_is_still_on_its_way_the_conversation_stays() -> None:
+    """Until the Engine has opened its session there is nothing to keep it by,
+    and nothing would reach it."""
+    stand_in, _ = app()
+    stand_in.conversation.asked("make it calm")
+    sending = stand_in.conversation
+    stand_in.new_conversation()
+    assert stand_in.conversation is sending
+    assert stand_in.backgrounded == {}
