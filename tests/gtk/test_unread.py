@@ -47,3 +47,12 @@ def test_an_answer_the_person_watched_end_is_not_told_on_the_desktop() -> None:
     asked(stand_in, "make it calm")
     heard(stand_in, Finished("ses_1"))
     assert stand_in.sent == []
+
+
+def test_the_sidebar_is_told_which_conversations_are_unread() -> None:
+    """The drawer hands the sidebar the Application's unread_sessions."""
+    stand_in, _ = app()
+    asked(stand_in, "make it calm")
+    stand_in.new_conversation()
+    heard(stand_in, Finished("ses_1"))
+    assert stand_in.unread_sessions == frozenset({"ses_1"})
