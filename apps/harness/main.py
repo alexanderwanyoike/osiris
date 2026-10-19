@@ -756,10 +756,20 @@ class Application(Adw.Application):
         if self.harness is None or session == self.session or not self._leave():
             return
         harness = self.harness
+        # Shown at once and kept by its session until the Harness has made it
+        # current, so its events reach it while resume is under way.
+        live = self.backgrounded.get(session)
+        if live is not None:
+            self.conversation = live
+            self.drawer.clear()
+            self.drawer.refresh()
 
         def opened(past) -> None:
-            self.conversation = Conversation.restored(past)
-            self.drawer.clear()
+            if live is None:
+                self.conversation = Conversation.restored(past)
+                self.drawer.clear()
+            else:
+                self.backgrounded.pop(session, None)
             self.drawer.refresh()
             self.load_history()
             self.update_canvas()
