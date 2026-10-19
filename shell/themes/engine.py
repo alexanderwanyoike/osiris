@@ -41,8 +41,10 @@ import plank  # noqa: E402
 from paths import home, use_osiris_package  # noqa: E402
 
 use_osiris_package()
+import osiris  # noqa: E402
 from osiris.provision.seeding import may_write  # noqa: E402
 from osiris.themes import terminal  # noqa: E402
+from osiris.themes.at_login import theme_to_apply  # noqa: E402
 from osiris.themes.adwaita import adwaita_css  # noqa: E402
 from osiris.themes.switch import Switch, keyfile  # noqa: E402
 
@@ -70,6 +72,8 @@ STATE = os.path.join(HOME, ".config", "osiris", "theme")
 FAVOURITES = os.path.join(HOME, ".config", "osiris", "favourites")
 #: Applied on a user's first login, before they have chosen anything.
 DEFAULT_THEME = "osiris-obsidian"
+#: The Osiris version this home was last brought up to at login.
+BROUGHT_UP_TO = os.path.join(HOME, ".config", "osiris", "version")
 WALLPAPERS = "/usr/share/backgrounds/osiris"
 
 THEMES_DIR = os.path.join(HOME, ".themes")
@@ -643,14 +647,17 @@ def _write(path: str, text: str) -> None:
         fh.write(text)
 
 
-def _seed(path: str, text: str) -> None:
-    """Write a file the person keeps, unless they already have one."""
+def _read(path: str) -> str | None:
     try:
         with open(path) as fh:
-            existing: str | None = fh.read()
+            return fh.read()
     except FileNotFoundError:
-        existing = None
-    if may_write(existing):
+        return None
+
+
+def _seed(path: str, text: str) -> None:
+    """Write a file the person keeps, unless they already have one."""
+    if may_write(_read(path)):
         _write(path, text)
 
 
@@ -756,27 +763,30 @@ def apply(name: str) -> list[str]:
     return []
 
 
-def first_login() -> None:
-    """Apply the default theme, once, for a user who has never chosen one.
+def login() -> None:
+    """Bring this home up to the installed Osiris; see osiris.themes.at_login.
 
     Run from an autostart entry in every session. Without it a new account
     starts on the bare system defaults - Plank's own dock theme, rofi with no
-    configuration at all - until the user happens to open Appearance. A user
-    who has chosen a theme has the state file, and is left alone.
+    configuration at all - until the user happens to open Appearance.
     """
-    if current() is None:
-        apply(DEFAULT_THEME)
+    brought_up_to = (_read(BROUGHT_UP_TO) or "").strip() or None
+    name = theme_to_apply(current(), brought_up_to, osiris.__version__,
+                          DEFAULT_THEME)
+    if name is not None:
+        apply(name)
+    _write(BROUGHT_UP_TO, osiris.__version__ + "\n")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Apply an Osiris theme.")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--apply", metavar="NAME", help="apply this theme")
-    group.add_argument("--first-login", action="store_true",
-                       help="apply the default theme if none has been chosen")
+    group.add_argument("--login", action="store_true",
+                       help="bring this home up to the installed Osiris")
     args = parser.parse_args()
-    if args.first_login:
-        first_login()
+    if args.login:
+        login()
     else:
         apply(args.apply)
 

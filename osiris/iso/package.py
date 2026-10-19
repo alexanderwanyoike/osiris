@@ -37,6 +37,25 @@ sys.argv[0] = "osiris-setup"
 runpy.run_path("{SOURCE_DIR}/provision/setup.py", run_name="__main__")
 """
 
+#: pacman runs hooks in name order, digits before letters. Setup goes after
+#: every hook that updates the system it re-applies to, mkinitcpio's and the
+#: icon caches' among them, and before snap-pac's closing snapshot
+#: (zz-snap-pac-post.hook), so that snapshot holds what setup did.
+HOOK_PATH = "/usr/share/libalpm/hooks/zz-osiris-setup.hook"
+
+#: Upgrade only: on a first install archinstall runs setup itself, once the
+#: accounts it provisions exist.
+HOOK = f"""[Trigger]
+Operation = Upgrade
+Type = Package
+Target = {NAME}
+
+[Action]
+Description = Re-applying Osiris to this system...
+When = PostTransaction
+Exec = {SETUP}
+"""
+
 #: Packages that are in no official Arch repository, built from the pinned
 #: PKGBUILDs in iso/bundled/<name>/ into Osiris's own repository alongside this
 #: one, so the install can depend on them without the AUR.

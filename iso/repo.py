@@ -24,10 +24,12 @@ REPO = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(REPO, "provision"))
 sys.path.insert(0, REPO)
 
+import osiris  # noqa: E402
 from osiris.iso import package  # noqa: E402
 from run import run, stream  # noqa: E402
 
-VERSION = "0.1.0"
+#: The package's version is the code's, which each home is brought up to.
+VERSION = osiris.__version__
 
 
 def stage(directory: str) -> None:
@@ -47,6 +49,10 @@ def stage(directory: str) -> None:
     with open(launcher, "w") as fh:
         fh.write(package.SETUP_LAUNCHER)
     os.chmod(launcher, 0o755)
+    hook = os.path.join(root, package.HOOK_PATH.lstrip("/"))
+    os.makedirs(os.path.dirname(hook))
+    with open(hook, "w") as fh:
+        fh.write(package.HOOK)
     with open(os.path.join(directory, "PKGBUILD"), "w") as fh:
         fh.write(package.pkgbuild(VERSION))
 
