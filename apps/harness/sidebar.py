@@ -9,7 +9,8 @@ from pathlib import Path
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, Pango  # noqa: E402
+gi.require_version("Adw", "1")
+from gi.repository import Adw, Gtk, Pango  # noqa: E402
 
 from osiris.harness.engine import Past  # noqa: E402
 from osiris.harness.history import Project  # noqa: E402
@@ -34,10 +35,10 @@ class Sidebar(Gtk.Box):
         self.list.connect("row-activated", self._activated)
         self.append(Gtk.ScrolledWindow(child=self.list, vexpand=True,
                                        hscrollbar_policy=Gtk.PolicyType.NEVER))
-        self.show_history([], [], None)
+        self.show_history([], [], None, frozenset())
 
     def show_history(self, projects: list[Project], loose: list[Past],
-                     current: str | None) -> None:
+                     current: str | None, running: frozenset[str]) -> None:
         self.list.remove_all()
         self._row("New conversation", icon="list-add-symbolic", action="new")
         if projects:
@@ -50,11 +51,11 @@ class Sidebar(Gtk.Box):
                 start.connect("clicked", lambda _b, f=project.folder: self._on_new_in(f))
                 row.get_child().append(start)
                 for past in project.conversations:
-                    self._conversation(past, current, indent=INDENT)
+                    self._conversation(past, current, running, indent=INDENT)
         if loose:
             self._heading("Conversations")
             for past in loose:
-                self._conversation(past, current, indent=0)
+                self._conversation(past, current, running, indent=0)
 
     def _row(self, text: str, *, icon: str | None, action: str | None,
              indent: int = 0) -> Gtk.ListBoxRow:
@@ -77,9 +78,14 @@ class Sidebar(Gtk.Box):
         row.add_css_class("harness-sidebar-heading")
         self.list.append(row)
 
-    def _conversation(self, past: Past, current: str | None, *, indent: int) -> None:
+    def _conversation(self, past: Past, current: str | None, running: frozenset[str],
+                      *, indent: int) -> None:
         title = past.title or "Untitled"
         row = self._row(title, icon=None, action=past.session, indent=indent)
+        if past.session in running:
+            spinner = Adw.Spinner(tooltip_text="Osiris is working on this")
+            spinner.add_css_class("harness-running")
+            row.get_child().append(spinner)
         actions = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         for label, act in (("Archive", lambda: self._on_archive(past.session)),
                            ("Delete…", lambda: self._on_delete(past.session, title))):

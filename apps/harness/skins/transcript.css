@@ -115,3 +115,4 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 
 .harness-sidebar { background-color: @harness_raised; }
 .harness-sidebar scrolledwindow, .harness-sidebar viewport, .harness-sidebar list { background-color: transparent; }
+.harness-running { color: @harness_accent; }
