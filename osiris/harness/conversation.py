@@ -95,9 +95,10 @@ class Conversation:
         return turn
 
     @classmethod
-    def restored(cls, past: list[PastTurn]) -> Conversation:
+    def restored(cls, past: list[PastTurn], tokens_spent: int = 0) -> Conversation:
         """A past Conversation as it ended."""
         talk = cls()
+        talk.tokens_spent = tokens_spent
         for turn in past:
             talk.turns.append(Turn(turn.question, turn.answer, State.DONE, turn.model))
             talk.model = turn.model or talk.model
