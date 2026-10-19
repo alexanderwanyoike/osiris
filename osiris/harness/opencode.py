@@ -180,6 +180,11 @@ class OpencodeEngine:
             headers=self._service.headers(),
         )
 
+    def where(self, session: str) -> Path:
+        return Path(
+            self._get(f"/api/session/{session}")["data"]["location"]["directory"]
+        )
+
     def move(self, session: str, directory: Path) -> None:
         self._post(f"/api/session/{session}/move", {"directory": str(directory)})
 

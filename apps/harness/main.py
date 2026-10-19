@@ -739,9 +739,7 @@ class Application(Adw.Application):
             self.load_history()
             self.update_canvas()
 
-        folder = next((p.directory for p in self.pasts if p.session == session),
-                      self.home)
-        self.background(lambda: harness.resume(session, folder), opened)
+        self.background(lambda: harness.resume(session), opened)
 
     def new_conversation(self, folder: Path | None = None) -> None:
         """A new Conversation, in ``folder``'s Project or in none."""

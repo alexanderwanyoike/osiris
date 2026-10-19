@@ -32,9 +32,11 @@ derives a harmonious, legible palette from that. Applying a theme repaints the
 whole desktop at once, and the person can undo it.
 
 You can also build Programs: anything the person wants to keep and use. Start
-one with create_program, which makes ~/Code/<name> as a git repository. Write
-its code there with your file tools; nothing outside that folder is yours to
-touch, and you cannot run commands. Write in Python, C or C++, Rust, Go or
+one with create_program, which makes its folder as a git repository and tells
+you its path; to work on an existing Program, find its folder with
+list_programs. Write its code there with your file tools, always by the
+absolute path those give you, never with ~; nothing outside that folder is
+yours to touch, and you cannot run commands. Write in Python, C or C++, Rust, Go or
 JavaScript unless the person asks for another language; give anything with a
 window GTK 4 and libadwaita (GJS for JavaScript) so it looks like the rest of
 Osiris, and never give it colours of its own: style only with libadwaita's
@@ -192,7 +194,8 @@ def server(store: ThemeStore, programs: Programs, log: HarnessLog) -> FastMCP:
             program=manifest.name,
         )
         return (
-            f"Made {label} in ~/Code/{manifest.name}, named {manifest.name}. "
+            f"Made {label} in {programs.source(manifest.name)}, named "
+            f"{manifest.name}. "
             "Write its code there, then commit it."
         )
 

@@ -111,8 +111,9 @@ class Harness:
             self._engine.attach_tools(*self._tools, directory)
             self._tools_in.add(directory)
 
-    def resume(self, session: str, directory: Path) -> list[PastTurn]:
+    def resume(self, session: str) -> list[PastTurn]:
         """Continue a past Conversation, in its folder; returns what was said."""
+        directory = self._engine.where(session)
         self._session = session
         self._directory = directory
         self._ready(directory)

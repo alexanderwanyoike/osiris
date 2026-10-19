@@ -134,6 +134,10 @@ class Engine(Protocol):
 
     def delete(self, session: str) -> None: ...
 
+    def where(self, session: str) -> Path:
+        """The folder a session runs in."""
+        ...
+
     def move(self, session: str, directory: Path) -> None:
         """Carry on the session in another folder: its Project."""
         ...

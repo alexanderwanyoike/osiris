@@ -148,7 +148,7 @@ class Programs:
 
     # ---- where things are ---------------------------------------------------
 
-    def _source(self, name: str) -> Path:
+    def source(self, name: str) -> Path:
         return self._home / CODE_DIR / name
 
     def _installed(self, name: str) -> Path:
@@ -158,7 +158,7 @@ class Programs:
         return self._home / APPLICATIONS_DIR / f"{APP_ID_PREFIX}{name}.desktop"
 
     def manifest(self, name: str) -> Manifest:
-        path = self._source(name) / MANIFEST_FILE
+        path = self.source(name) / MANIFEST_FILE
         if not self._files.exists(path):
             raise ProgramError(f"There is no Program called {name}")
         try:
@@ -173,7 +173,7 @@ class Programs:
             else ()
         )
         return self._runner.capture(
-            "git", "-C", str(self._source(name)), *identity, *args
+            "git", "-C", str(self.source(name)), *identity, *args
         )
 
     def _build(self, folder: Path, manifest: Manifest) -> None:
@@ -200,7 +200,7 @@ class Programs:
         """Start a Program: its folder, manifest, README and AGENTS.md, and a
         first commit."""
         name = slug(label)
-        source = self._source(name)
+        source = self.source(name)
         if self._files.exists(source):
             raise ProgramError(
                 f"There is already a folder called {name} in ~/{CODE_DIR}; "
@@ -256,7 +256,7 @@ class Programs:
     def check(self, name: str) -> list[str]:
         """Problems found without running anything: Python that does not compile."""
         self.manifest(name)
-        source = self._source(name)
+        source = self.source(name)
         problems = []
         for path in self._python(source):
             try:
@@ -280,7 +280,7 @@ class Programs:
     def files(self, name: str) -> list[Path]:
         """A Program's source files, relative to its folder, for reading."""
         self.manifest(name)
-        source = self._source(name)
+        source = self.source(name)
         return sorted(path.relative_to(source) for path in self._walk(source))
 
     def _walk(self, folder: Path) -> list[Path]:
@@ -332,7 +332,7 @@ class Programs:
     def prepare_try(self, name: str) -> tuple[list[str], Path]:
         """Build the source if it needs it; the argv and folder to run it in."""
         manifest = self.manifest(name)
-        source = self._source(name)
+        source = self.source(name)
         self._build(source, manifest)
         first, *rest = manifest.run
         program = str(source / first) if "/" in first else first
@@ -355,7 +355,7 @@ class Programs:
             "git",
             f"--work-tree={installed}",
             "-C",
-            str(self._source(name)),
+            str(self.source(name)),
             "checkout",
             commit,
             "--",
@@ -380,4 +380,4 @@ class Programs:
     def trash(self, name: str) -> None:
         """Move a Program's source to the Trash, where it can be restored."""
         self.manifest(name)
-        self._runner.run("gio", "trash", str(self._source(name)), quiet=True)
+        self._runner.run("gio", "trash", str(self.source(name)), quiet=True)
