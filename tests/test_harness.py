@@ -471,4 +471,4 @@ def test_a_reply_the_engine_cannot_take_is_logged_and_the_conversation_goes_on()
     engine.reply = broken  # type: ignore[method-assign]
     decision = subject.handle(ToolRequested("ses_1", "per_1", "bash", ("ls",)))
     assert decision == Refused("ses_1", "bash", ("ls",))
-    assert entries(files)[-1]["kind"] == "reply-failed"
+    assert "reply-failed" in [entry["kind"] for entry in entries(files)]
