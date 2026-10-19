@@ -36,7 +36,6 @@ class Turn:
     answer: str = ""
     state: State = State.WAITING
     model: ModelRef | None = None
-    refused: list[str] = field(default_factory=list)
     steps: list[Step] = field(default_factory=list)
     #: What Osiris is doing now, in words.
     doing: str = THINKING
@@ -130,7 +129,6 @@ class Conversation:
                 turn.steps.append(Step(action, resources))
                 turn.doing = turn.steps[-1].doing
             case Refused(_, action, resources):
-                turn.refused.append(f"{action}: {', '.join(resources)}")
                 turn.steps.append(Step(action, resources, allowed=False))
                 turn.doing = THINKING
             case Finished():

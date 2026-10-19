@@ -324,14 +324,6 @@ class TurnView(Gtk.Box):
             self.working.show(turn.doing)
         else:
             self.working.stop()
-        for refused in turn.refused:
-            chip = Gtk.Box(spacing=6, halign=Gtk.Align.START)
-            chip.add_css_class("harness-chip")
-            chip.append(Gtk.Image(icon_name="changes-prevent-symbolic"))
-            chip.append(Gtk.Label(label=f"Not allowed yet · {refused}",
-                                  ellipsize=Pango.EllipsizeMode.END,
-                                  max_width_chars=48))
-            self.extras.append(chip)
         if turn.changes:
             self.extras.append(self._changes(turn))
         for name in turn.programs:
