@@ -55,3 +55,14 @@ def test_only_the_start_of_the_answer_is_told_on_one_line() -> None:
         line
         == "I built Pomodoro, a timer that counts down twenty-five minutes of work…"
     )
+
+
+def test_markdown_at_the_start_of_the_answer_is_not_shown_as_marks() -> None:
+    """Answers are Markdown; a notification shows plain text."""
+    talk = answered(
+        "Make me a calm theme",
+        Text("ses_1", "## **Calm** is applied, with `nord` kept\n\nMore."),
+        Finished("ses_1"),
+    )
+    _, line = notice_of(talk).body.split("\n")
+    assert line == "Calm is applied, with nord kept"
