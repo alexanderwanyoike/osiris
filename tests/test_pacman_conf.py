@@ -13,7 +13,10 @@ from archinstall.lib.models.mirrors import (
     SignOption,
 )
 
-from osiris.provision.pacman_conf import without_local_repository
+from osiris.provision.pacman_conf import (
+    with_hosted_repository,
+    without_local_repository,
+)
 
 STOCK = """[options]
 HoldPkg     = pacman glibc
@@ -67,3 +70,27 @@ def test_both_copies_archinstall_writes_are_removed() -> None:
     cleaned = without_local_repository(STOCK + local + local, "osiris")
     assert "[osiris]" not in cleaned
     assert cleaned.strip() == STOCK.strip()
+
+
+HOSTED = "https://osiris-downloads.alphaneuron.net/repo/$arch"
+
+
+def test_the_install_mediums_repository_is_replaced_by_the_hosted_one() -> None:
+    text = STOCK + appended("file:///usr/share/osiris/repo")
+    updated = with_hosted_repository(text, "osiris", HOSTED)
+    assert "file://" not in updated
+    assert updated == STOCK + (
+        f"\n[osiris]\nSigLevel = Required DatabaseOptional\nServer = {HOSTED}\n"
+    )
+
+
+def test_a_system_without_the_repository_gains_it() -> None:
+    """Machines whose setup only removed the medium's repository."""
+    updated = with_hosted_repository(STOCK, "osiris", HOSTED)
+    assert updated.count("[osiris]") == 1
+    assert f"Server = {HOSTED}" in updated
+
+
+def test_naming_the_hosted_repository_twice_changes_nothing() -> None:
+    once = with_hosted_repository(STOCK, "osiris", HOSTED)
+    assert with_hosted_repository(once, "osiris", HOSTED) == once
