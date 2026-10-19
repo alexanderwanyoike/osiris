@@ -15,3 +15,18 @@ def test_an_answer_ending_off_screen_leaves_its_conversation_unread() -> None:
     heard(stand_in, Text("ses_1", "Calmer now."))
     heard(stand_in, Finished("ses_1"))
     assert stand_in.unread.sessions() == frozenset({"ses_1"})
+
+
+def test_an_answer_ending_on_screen_with_the_drawer_put_away_is_unread() -> None:
+    stand_in, _ = app()
+    asked(stand_in, "make it calm")
+    stand_in.open = False
+    heard(stand_in, Finished("ses_1"))
+    assert stand_in.unread.sessions() == frozenset({"ses_1"})
+
+
+def test_an_answer_the_person_watched_end_in_the_open_drawer_is_read() -> None:
+    stand_in, _ = app()
+    asked(stand_in, "make it calm")
+    heard(stand_in, Finished("ses_1"))
+    assert stand_in.unread.sessions() == frozenset()
