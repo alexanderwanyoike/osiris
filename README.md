@@ -183,3 +183,10 @@ contracts and `pytest` in CI, and the GTK apps are driven headless under Xvfb.
 
 Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) explains the
 branch workflow, the checks a pull request has to pass, and the house rules.
+
+## License
+
+Osiris is free software, licensed under the
+[GNU General Public License, version 3 or later](LICENSE). You may use, study,
+change and share it; if you distribute a changed version, you share your
+changes under the same terms.
