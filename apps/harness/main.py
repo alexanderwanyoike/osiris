@@ -369,7 +369,7 @@ class Drawer(Gtk.ApplicationWindow):
                 seconds, lambda: then() or False),
             default=self.app.models.default,
             on_model_chosen=self.app.choose_model,
-            allows_everything=allows_everything(self.app.files, self.app.home),
+            allows_everything=self.app.everything_allowed,
             on_allow_everything=self.app.set_allow_everything,
         )
         holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
@@ -760,6 +760,10 @@ class Application(Adw.Application):
             self.update_canvas()
 
         self.background(lambda: harness.resume(session), opened)
+
+    @property
+    def everything_allowed(self) -> bool:
+        return allows_everything(self.files, self.home)
 
     def set_allow_everything(self, on: bool) -> None:
         """Keep the person's choice; the tool server tells the model when it

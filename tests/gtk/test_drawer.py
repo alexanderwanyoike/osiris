@@ -18,6 +18,7 @@ class FakeApp(Adw.Application):
         self.conversation = Conversation()
         self.accounts = None
         self.models = Models(None, None)
+        self.everything_allowed = False
 
         class Look:
             style = None
