@@ -204,6 +204,16 @@ class WorkingRow(Gtk.Box):
         if not self._timer:
             self._timer = GLib.timeout_add_seconds(1, self._tick)
 
+    def stop(self) -> None:
+        if self._timer:
+            GLib.source_remove(self._timer)
+            self._timer = 0
+        self.set_visible(False)
+
+    @property
+    def ticking(self) -> bool:
+        return bool(self._timer)
+
     def _tick(self) -> bool:
         self._elapsed.set_text(elapsed(self._clock() - self._since))
         return True
@@ -279,6 +289,8 @@ class TurnView(Gtk.Box):
             child = following
         if turn.state in (State.WAITING, State.ANSWERING):
             self.working.show(turn.doing)
+        else:
+            self.working.stop()
         for refused in turn.refused:
             chip = Gtk.Box(spacing=6, halign=Gtk.Align.START)
             chip.add_css_class("harness-chip")
