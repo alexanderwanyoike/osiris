@@ -126,6 +126,7 @@ class Conversation:
             case Refused(_, action, resources):
                 turn.refused.append(f"{action}: {', '.join(resources)}")
                 turn.steps.append(Step(action, resources, allowed=False))
+                turn.doing = THINKING
             case Finished():
                 turn.state = State.DONE
             case Stopped():
