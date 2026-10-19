@@ -739,18 +739,18 @@ class Application(Adw.Application):
             if response != "delete" or self.harness is None:
                 return
             harness, on_screen = self.harness, session == self.session
-
-            def deleted(_result) -> None:
-                if on_screen:
-                    self.conversation = Conversation()
-                    self.drawer.clear()
-                    self.drawer.refresh()
-                self.load_history()
-
-            self.background(lambda: harness.delete(session), deleted)
+            self.background(lambda: harness.delete(session),
+                            lambda _r: self._deleted(on_screen))
 
         dialog.connect("response", chosen)
         dialog.present(self.drawer)
+
+    def _deleted(self, on_screen: bool) -> None:
+        if on_screen:
+            self.conversation = Conversation()
+            self.drawer.clear()
+            self.drawer.refresh()
+        self.load_history()
 
     def open_past(self, session: str) -> None:
         if self.harness is None or session == self.session or not self._leave():
