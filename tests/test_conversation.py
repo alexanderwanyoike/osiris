@@ -86,7 +86,7 @@ def test_an_allowed_action_is_not_shown_as_refused() -> None:
     talk = Conversation()
     talk.asked("make it calm")
     talk.apply(ToolRequested(S, "per_1", "osiris_apply_theme", ("*",)))
-    talk.apply(Allowed(S, "osiris_apply_theme", Tier.UNDOABLE))
+    talk.apply(Allowed(S, "osiris_apply_theme", Tier.UNDOABLE, ("*",)))
     assert talk.turns[-1].refused == []
 
 

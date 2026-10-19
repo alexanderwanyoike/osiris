@@ -37,6 +37,7 @@ class Allowed:
     session: str
     action: str
     tier: Tier
+    resources: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -218,7 +219,7 @@ class Harness:
                     tier=tier.value,
                     resources=list(resources),
                 )
-                return Allowed(session, action, tier)
+                return Allowed(session, action, tier, resources)
             case ToolRequested(session, request, action, resources):
                 self._reply(session, request, allow=False, message=REFUSED)
                 self._log.write(
