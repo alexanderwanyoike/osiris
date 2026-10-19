@@ -24,10 +24,12 @@ REPO = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(REPO, "provision"))
 sys.path.insert(0, REPO)
 
+import osiris  # noqa: E402
 from osiris.iso import package  # noqa: E402
 from run import run, stream  # noqa: E402
 
-VERSION = "0.1.0"
+#: The package's version is the code's, which each home is brought up to.
+VERSION = osiris.__version__
 
 
 def stage(directory: str) -> None:
