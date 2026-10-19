@@ -420,6 +420,18 @@ def test_the_sessions_still_working_are_known() -> None:
     assert subject.running == {"ses_2"}
 
 
+def test_reopening_a_session_still_working_makes_it_current_and_keeps_it_running() -> (
+    None
+):
+    subject, engine, _ = harness()
+    subject.ask("hello")
+    subject.new_conversation()
+    subject.resume("ses_1")
+    assert subject.running == {"ses_1"}
+    subject.stop()
+    assert engine.stopped == ["ses_1"]
+
+
 def test_a_conversation_with_no_project_takes_its_programs_project() -> None:
     subject, engine, _ = harness()
     subject.ask("build me a timer")
