@@ -20,6 +20,10 @@ Hence this module. Create directories through `makedirs` and write through
 import os
 import pwd
 import shutil
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from osiris.provision.seeding import may_write  # noqa: E402
 
 
 def desktop_users() -> list[pwd.struct_passwd]:
@@ -79,6 +83,20 @@ def copy(source: str, destination: str,
     shutil.copy(source, destination)
     if owner is not None:
         os.chown(destination, owner.pw_uid, owner.pw_gid)
+
+
+def seed(source: str, destination: str,
+         owner: pwd.struct_passwd | None) -> bool:
+    """`copy`, unless the person already has a file there of their own."""
+    try:
+        with open(destination) as fh:
+            existing: str | None = fh.read()
+    except FileNotFoundError:
+        existing = None
+    if not may_write(existing):
+        return False
+    copy(source, destination, owner)
+    return True
 
 
 def chown_tree(path: str, owner: pwd.struct_passwd) -> None:
