@@ -118,10 +118,16 @@ class OpencodeEngine:
         self._post(f"/api/session/{session}/prompt", {"text": text})
 
     def reply(self, session: str, request: str, *, allow: bool, message: str) -> None:
-        self._post(
-            f"/api/session/{session}/permission/{request}/reply",
-            {"decision": "once" if allow else "reject", "message": message},
-        )
+        try:
+            self._post(
+                f"/api/session/{session}/permission/{request}/reply",
+                {"decision": "once" if allow else "reject", "message": message},
+            )
+        except HttpError as error:
+            # Rejecting one of a step's requests withdraws the others, so a reply
+            # can arrive after its request is gone.
+            if error.status != 404:
+                raise
 
     def stop(self, session: str) -> None:
         self._post(f"/api/session/{session}/interrupt")
@@ -172,6 +178,11 @@ class OpencodeEngine:
             "DELETE",
             f"{self._service.url}/api/session/{session}",
             headers=self._service.headers(),
+        )
+
+    def where(self, session: str) -> Path:
+        return Path(
+            self._get(f"/api/session/{session}")["data"]["location"]["directory"]
         )
 
     def move(self, session: str, directory: Path) -> None:

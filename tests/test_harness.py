@@ -86,6 +86,9 @@ class FakeEngine:
     def attach_tools(self, name: str, command: list[str], directory: Path) -> None:
         self.attached.append((name, directory))
 
+    def where(self, session: str) -> Path:
+        return POMODORO
+
     def history(self, session: str) -> list[PastTurn]:
         return self.past
 
@@ -358,7 +361,7 @@ def test_the_first_question_names_the_session() -> None:
 def test_a_past_conversation_is_resumed_in_its_own_session() -> None:
     subject, engine, _ = harness()
     engine.past = [PastTurn("make a timer", "Made it.", GPT)]
-    assert subject.resume("ses_9", HOME) == engine.past
+    assert subject.resume("ses_9") == engine.past
     subject.ask("add a pause button")
     assert engine.started == []
     assert engine.sent == [("ses_9", "add a pause button")]
@@ -450,8 +453,25 @@ def test_the_tools_are_attached_where_the_session_runs_once_each() -> None:
 
 def test_a_resumed_conversation_runs_and_reads_files_in_its_own_folder() -> None:
     subject, engine, _ = harness()
-    subject.resume("ses_9", POMODORO)
+    subject.resume("ses_9")
     assert engine.attached == [("osiris", POMODORO)]
     subject.handle(ToolRequested("ses_9", "per_1", "read", ("main.py",)))
     assert engine.replies[-1][2] is True
     assert subject.directory == POMODORO
+
+
+def test_a_reply_the_engine_cannot_take_is_logged_and_the_conversation_goes_on() -> (
+    None
+):
+    from osiris.platform import HttpError
+
+    subject, engine, files = harness()
+    subject.ask("hello")
+
+    def broken(*_args: object, **_kwargs: object) -> None:
+        raise HttpError(500, "busy")
+
+    engine.reply = broken  # type: ignore[method-assign]
+    decision = subject.handle(ToolRequested("ses_1", "per_1", "bash", ("ls",)))
+    assert decision == Refused("ses_1", "bash", ("ls",))
+    assert "reply-failed" in [entry["kind"] for entry in entries(files)]

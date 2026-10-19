@@ -231,6 +231,12 @@ class TestSessions:
         )
         assert http.requests[-1][0] == "PUT"
 
+    def test_answering_a_request_the_engine_already_withdrew_is_not_an_error(
+        self,
+    ) -> None:
+        """opencode withdraws a step's other requests when one is rejected."""
+        engine(FakeHttpClient()).reply(SESSION, "per_2", allow=False, message="no")
+
     def test_a_tool_servers_requests_name_the_server_and_tool(self) -> None:
         """As opencode 2.0.32 does: ``tools.osiris.apply_theme`` in its code
         mode asks for ``osiris_apply_theme``."""
@@ -487,3 +493,14 @@ class TestHistory:
         http = FakeHttpClient(replies={("DELETE", path): None})
         engine(http).delete(SESSION)
         assert http.requests == [("DELETE", path, None)]
+
+    def test_a_session_says_which_folder_it_runs_in(self) -> None:
+        path = f"{URL}/api/session/{SESSION}"
+        http = FakeHttpClient(
+            replies={
+                ("GET", path): {
+                    "data": {"location": {"directory": "/home/tester/Code/pomodoro"}}
+                }
+            }
+        )
+        assert engine(http).where(SESSION) == Path("/home/tester/Code/pomodoro")

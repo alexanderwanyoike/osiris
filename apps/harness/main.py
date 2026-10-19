@@ -204,9 +204,9 @@ class Drawer(Gtk.ApplicationWindow):
                                transition_type=Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
         self.pages.add_named(body, "chat")
         self.sidebar = Sidebar(
-            on_open=lambda session: self.app.open_past(session),
-            on_new=lambda: self.app.new_conversation(),
-            on_new_in=lambda folder: self.app.new_conversation(folder),
+            on_open=lambda session: self._chosen(self.app.open_past, session),
+            on_new=lambda: self._chosen(self.app.new_conversation),
+            on_new_in=lambda folder: self._chosen(self.app.new_conversation, folder),
             on_archive=lambda session: self.app.archive(session),
             on_delete=lambda session, title: self.app.ask_to_delete(session, title))
         self.split = Adw.OverlaySplitView(sidebar=self.sidebar, content=self.pages,
@@ -220,14 +220,17 @@ class Drawer(Gtk.ApplicationWindow):
         box.append(header)
         box.append(self.split)
         layout = Adw.BreakpointBin(child=box, width_request=320, height_request=360)
+        # Of the breakpoints that match, libadwaita applies only the last added,
+        # so the narrower one comes last and repeats the wider one's setters.
+        no_canvas = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(NO_CANVAS_BELOW))
         compact = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(COMPACT_BELOW))
+        for breakpoint in (no_canvas, compact):
+            breakpoint.add_setter(self.canvas_toggle, "visible", False)
+            breakpoint.add_setter(self.canvas, "visible", False)
         compact.add_setter(self.split, "collapsed", True)
         compact.add_setter(self.sidebar_toggle, "active", False)
-        layout.add_breakpoint(compact)
-        no_canvas = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(NO_CANVAS_BELOW))
-        no_canvas.add_setter(self.canvas_toggle, "visible", False)
-        no_canvas.add_setter(self.canvas, "visible", False)
         layout.add_breakpoint(no_canvas)
+        layout.add_breakpoint(compact)
         # The Skin shapes this surface; the window around it stays transparent,
         # and children are clipped to the surface's rounded corners.
         surface = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
@@ -373,6 +376,12 @@ class Drawer(Gtk.ApplicationWindow):
     def summon(self) -> None:
         self.present()
         self.entry.grab_focus()
+
+    def _chosen(self, act, *args) -> None:
+        """Act on a choice in the sidebar; narrow, the list then folds away."""
+        act(*args)
+        if self.split.get_collapsed():
+            self.sidebar_toggle.set_active(False)
 
     def show_canvas(self, programs) -> None:
         """What the Conversation made; the Canvas opens the first time there is
@@ -730,9 +739,7 @@ class Application(Adw.Application):
             self.load_history()
             self.update_canvas()
 
-        folder = next((p.directory for p in self.pasts if p.session == session),
-                      self.home)
-        self.background(lambda: harness.resume(session, folder), opened)
+        self.background(lambda: harness.resume(session), opened)
 
     def new_conversation(self, folder: Path | None = None) -> None:
         """A new Conversation, in ``folder``'s Project or in none."""

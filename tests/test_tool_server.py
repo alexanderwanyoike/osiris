@@ -263,3 +263,26 @@ def test_undo_trashes_a_program_or_reverts_a_commit() -> None:
 def test_a_program_cannot_be_made_without_an_icon() -> None:
     schema = tools(FakeThemeStore())["create_program"].inputSchema
     assert "icon_svg" in schema["required"]
+
+
+def test_making_a_program_names_its_folder_as_a_path_a_file_tool_takes() -> None:
+    reply = call(
+        FakeThemeStore(),
+        "create_program",
+        {
+            "label": "Pomodoro",
+            "description": "A focus timer.",
+            "run": ["python3", "main.py"],
+            "icon_svg": '<svg xmlns="http://www.w3.org/2000/svg"/>',
+        },
+    )
+    text = reply[0][0].text
+    assert str(POMODORO) in text
+    assert "~" not in text
+
+
+def test_the_model_is_told_windows_are_gtk_and_libadwaita_and_nothing_else() -> None:
+    from osiris.apps.tool_server import INSTRUCTIONS
+
+    assert "tkinter" in INSTRUCTIONS
+    assert "GTK 4 and libadwaita" in INSTRUCTIONS

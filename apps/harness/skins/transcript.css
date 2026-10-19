@@ -86,3 +86,5 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-sidebar row button { opacity: 0; }
 .harness-sidebar row:hover button, .harness-sidebar row:selected button,
 .harness-sidebar row button:checked, .harness-sidebar row button:focus { opacity: 1; }
+/* The Canvas's code sits flush, unlike a code block inside an answer. */
+.harness-canvas .harness-code, .harness-canvas .harness-code text { border: none; border-radius: 0; box-shadow: none; }

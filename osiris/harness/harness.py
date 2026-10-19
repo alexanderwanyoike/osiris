@@ -22,6 +22,7 @@ from osiris.harness.engine import (
 from osiris.harness.log import HarnessLog
 from osiris.harness.tiers import Tier
 from osiris.harness.titles import title_of
+from osiris.platform import HttpError
 
 #: Passed to the model with every rejected tool, so it finds another way.
 REFUSED = (
@@ -110,8 +111,9 @@ class Harness:
             self._engine.attach_tools(*self._tools, directory)
             self._tools_in.add(directory)
 
-    def resume(self, session: str, directory: Path) -> list[PastTurn]:
+    def resume(self, session: str) -> list[PastTurn]:
         """Continue a past Conversation, in its folder; returns what was said."""
+        directory = self._engine.where(session)
         self._session = session
         self._directory = directory
         self._ready(directory)
@@ -170,6 +172,16 @@ class Harness:
         path = posixpath.join(str(self._directory), resource.removesuffix("*"))
         return self._may_touch(Path(posixpath.normpath(path)))
 
+    def _reply(self, session: str, request: str, *, allow: bool, message: str) -> None:
+        """Answer a request; one the Engine cannot take is logged, so a single
+        bad reply never ends the conversation."""
+        try:
+            self._engine.reply(session, request, allow=allow, message=message)
+        except HttpError as error:
+            self._log.write(
+                "reply-failed", session=session, request=request, error=str(error)
+            )
+
     def handle(self, event: Event) -> Event | Decision | None:
         """Log what the Engine reports and apply policy; the event is passed on.
 
@@ -198,7 +210,7 @@ class Harness:
             case ToolRequested(session, request, action, resources) if (
                 tier := self._tier(action, resources)
             ):
-                self._engine.reply(session, request, allow=True, message="")
+                self._reply(session, request, allow=True, message="")
                 self._log.write(
                     "allowed",
                     session=session,
@@ -208,7 +220,7 @@ class Harness:
                 )
                 return Allowed(session, action, tier)
             case ToolRequested(session, request, action, resources):
-                self._engine.reply(session, request, allow=False, message=REFUSED)
+                self._reply(session, request, allow=False, message=REFUSED)
                 self._log.write(
                     "rejected",
                     session=session,

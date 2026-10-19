@@ -255,3 +255,44 @@ def test_the_canvas_draws_code_in_the_themes_colours_from_the_start(
     )
     window.show_canvas([(Program(manifest, tmp_path, "a", None), [Path("main.py")])])
     assert window.canvas.current_view().get_buffer().get_style_scheme() is scheme
+
+
+def test_in_a_narrow_drawer_the_conversation_list_slides_over_the_conversation() -> (
+    None
+):
+    from gi.repository import GLib
+
+    window, _ = drawer()
+    window.set_default_size(440, 800)
+    window.present()
+    context = GLib.MainContext.default()
+    for _ in range(200):
+        context.iteration(False)
+        if window.get_width() == 440:
+            break
+    for _ in range(50):
+        context.iteration(False)
+    window.sidebar_toggle.set_active(True)
+    assert window.split.get_collapsed()
+    assert not window.canvas_toggle.get_visible()
+
+
+def test_in_a_narrow_drawer_choosing_a_conversation_folds_the_list_away() -> None:
+    from pathlib import Path
+
+    from gi.repository import GLib
+
+    from osiris.harness.engine import Past
+
+    window, _ = drawer()
+    window.set_default_size(440, 800)
+    window.present()
+    context = GLib.MainContext.default()
+    for _ in range(250):
+        context.iteration(False)
+    past = Past("ses_theme", "Make me a calm theme", Path("/home/tester"), 1.0)
+    window.show_history([], [past])
+    window.sidebar_toggle.set_active(True)
+    window.sidebar.list.emit("row-activated", window.sidebar.list.get_row_at_index(2))
+    assert window.app.opened == ["ses_theme"]
+    assert not window.split.get_show_sidebar()
