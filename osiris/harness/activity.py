@@ -33,6 +33,8 @@ def _site(address: str) -> str:
 class Phrase:
     doing: str
     done: str
+    #: The verb after "Not allowed to".
+    plain: str
     #: What the action is always done to; empty names its resources instead.
     what: str = ""
     #: How one of its resources reads.
@@ -41,27 +43,38 @@ class Phrase:
     unnamed: str = "something"
 
 
+_COMMAND = Phrase("Running", "Ran", "run", shown=_as_written, unnamed="a command")
+
 #: The Engine's actions, as words.
 PHRASES = {
-    "read": Phrase("Reading", "Read", unnamed="a file"),
-    "edit": Phrase("Editing", "Edited", unnamed="a file"),
-    "list": Phrase("Listing", "Listed", unnamed="a folder"),
-    "external_directory": Phrase("Looking in", "Looked in", unnamed="a folder"),
-    "glob": Phrase("Finding", "Found", shown=_as_written),
-    "grep": Phrase("Searching for", "Searched for", shown=_as_written),
-    "webfetch": Phrase("Fetching", "Fetched", shown=_site),
-    "websearch": Phrase(
-        "Searching the web for", "Searched the web for", shown=_as_written
+    "read": Phrase("Reading", "Read", "read", unnamed="a file"),
+    "edit": Phrase("Editing", "Edited", "edit", unnamed="a file"),
+    "list": Phrase("Listing", "Listed", "list", unnamed="a folder"),
+    "external_directory": Phrase(
+        "Looking in", "Looked in", "look in", unnamed="a folder"
     ),
-    "bash": Phrase("Running", "Ran", shown=_as_written, unnamed="a command"),
-    "shell": Phrase("Running", "Ran", shown=_as_written, unnamed="a command"),
-    "osiris_list_themes": Phrase("Looking at", "Looked at", "the themes"),
-    "osiris_create_theme": Phrase("Making", "Made", "a theme"),
-    "osiris_apply_theme": Phrase("Applying", "Applied", "a theme"),
-    "osiris_list_programs": Phrase("Looking at", "Looked at", "your programs"),
-    "osiris_create_program": Phrase("Starting", "Started", "a program"),
-    "osiris_commit_program": Phrase("Saving", "Saved", "a change"),
-    "osiris_check_program": Phrase("Checking", "Checked", "the program"),
+    "glob": Phrase("Finding", "Found", "find", shown=_as_written),
+    "grep": Phrase("Searching for", "Searched for", "search for", shown=_as_written),
+    "webfetch": Phrase("Fetching", "Fetched", "fetch", shown=_site),
+    "websearch": Phrase(
+        "Searching the web for",
+        "Searched the web for",
+        "search the web for",
+        shown=_as_written,
+    ),
+    "bash": _COMMAND,
+    "shell": _COMMAND,
+    "osiris_list_themes": Phrase(
+        "Looking at", "Looked at", "look at", what="the themes"
+    ),
+    "osiris_create_theme": Phrase("Making", "Made", "make", what="a theme"),
+    "osiris_apply_theme": Phrase("Applying", "Applied", "apply", what="a theme"),
+    "osiris_list_programs": Phrase(
+        "Looking at", "Looked at", "look at", what="your programs"
+    ),
+    "osiris_create_program": Phrase("Starting", "Started", "start", what="a program"),
+    "osiris_commit_program": Phrase("Saving", "Saved", "save", what="a change"),
+    "osiris_check_program": Phrase("Checking", "Checked", "check", what="the program"),
 }
 
 
@@ -71,6 +84,7 @@ class Step:
 
     action: str
     resources: tuple[str, ...]
+    allowed: bool = True
 
     @property
     def doing(self) -> str:
@@ -78,6 +92,8 @@ class Step:
 
     @property
     def record(self) -> str:
+        if not self.allowed:
+            return f"Not allowed to {self._phrase.plain} {self._what}"
         return f"{self._phrase.done} {self._what}"
 
     @property
@@ -85,7 +101,7 @@ class Step:
         if self.action in PHRASES:
             return PHRASES[self.action]
         name = self.action.removeprefix("osiris_").replace("_", " ")
-        return Phrase("Using", "Used", name)
+        return Phrase("Using", "Used", "use", what=name)
 
     @property
     def _what(self) -> str:
