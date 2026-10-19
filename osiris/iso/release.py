@@ -41,5 +41,5 @@ def publish_order(names: list[str]) -> tuple[list[str], list[str]]:
     """A repository's files as two uploads: the packages and their signatures,
     then the databases, so the database never names a package not yet there."""
     packages = sorted(name for name in names if name.endswith(_PACKAGE))
-    databases = sorted(name for name in names if not name.endswith(_PACKAGE))
+    databases = sorted(name for name in names if not name.endswith((*_PACKAGE, ".old")))
     return packages, databases
