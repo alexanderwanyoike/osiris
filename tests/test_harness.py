@@ -380,6 +380,23 @@ def test_a_session_still_working_after_a_new_conversation_is_still_served() -> N
     assert engine.replies == [("ses_1", "per_1", True, "")]
 
 
+def test_moving_away_while_a_question_is_still_being_sent_keeps_it_on_its_session() -> (
+    None
+):
+    """The drawer sends on a thread, and the person may start a new
+    Conversation once the session is open but before the question is sent."""
+    subject, engine, _ = harness()
+
+    def renamed_then_moved_away(session: str, title: str) -> None:
+        engine.renamed.append((session, title))
+        subject.new_conversation()
+
+    engine.rename = renamed_then_moved_away  # type: ignore[method-assign]
+    subject.ask("hello")
+    assert engine.sent == [("ses_1", "hello")]
+    assert subject.running == {"ses_1"}
+
+
 def test_the_first_question_names_the_session() -> None:
     subject, engine, _ = harness()
     subject.ask("Make me a calm theme\nfor working late")
