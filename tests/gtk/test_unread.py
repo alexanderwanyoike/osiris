@@ -79,3 +79,15 @@ def test_opening_an_unread_conversation_takes_its_notification_away() -> None:
     stand_in = answered_off_screen()
     stand_in.open_past("ses_1")
     assert stand_in.withdrawn == ["ses_1"]
+
+
+def test_bringing_the_drawer_back_to_an_unread_conversation_marks_it_read() -> None:
+    """It was answered on screen while the drawer was put away; opening the
+    drawer puts it in front of the person."""
+    stand_in, _ = app()
+    asked(stand_in, "make it calm")
+    stand_in.open = False
+    heard(stand_in, Finished("ses_1"))
+    stand_in.toggle()
+    assert stand_in.unread.sessions() == frozenset()
+    assert stand_in.withdrawn == ["ses_1"]

@@ -30,6 +30,9 @@ class FakeDrawer:
     def refresh(self, restyle: bool = False) -> None:
         self.refreshes += 1
 
+    def summon(self) -> None:
+        pass
+
 
 class App(SimpleNamespace):
     """Stands in for the Application: its own methods, on plain state."""
