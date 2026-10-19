@@ -77,7 +77,7 @@ PHRASES = {
     "osiris_list_programs": Phrase(
         "Looking at", "Looked at", "look at", what="your programs"
     ),
-    "osiris_create_program": Phrase("Starting", "Started", "start", what="a program"),
+    "osiris_create_program": Phrase("Making", "Made", "make", what="a program"),
     "osiris_commit_program": Phrase("Saving", "Saved", "save", what="a change"),
     "osiris_check_program": Phrase("Checking", "Checked", "check", what="the program"),
 }
