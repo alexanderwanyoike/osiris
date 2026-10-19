@@ -112,6 +112,14 @@ def test_a_turn_is_thinking_until_a_step_then_doing_that_step() -> None:
     assert turn.doing == "Editing pomodoro/main.py"
 
 
+def test_once_a_step_is_complete_the_turn_is_thinking_again() -> None:
+    talk = Conversation()
+    turn = talk.asked("add a pause button")
+    talk.apply(Allowed(S, "edit", Tier.UNDOABLE, ("pomodoro/main.py",)))
+    talk.apply(Answered(S, GPT, tokens(10, 2), cost=0.0))
+    assert turn.doing == "Thinking"
+
+
 def test_a_failure_keeps_the_engines_reason() -> None:
     talk = Conversation()
     talk.asked("hello")
