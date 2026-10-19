@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from osiris.harness.engine import Event
+from osiris.harness.engine import Event, Failed, Finished
 from osiris.platform import FileSystem
 
 
@@ -20,7 +20,7 @@ class Unread:
     def ended(self, event: Event, *, looking: bool) -> bool:
         """An answer is over; unread unless the person was looking at it.
         True when it became unread."""
-        if looking:
+        if looking or not isinstance(event, Finished | Failed):
             return False
         self._sessions.add(event.session)
         return True
