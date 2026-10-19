@@ -1,0 +1,7 @@
+/* Crisp: sharp and precise */
+* { border-radius: 0; }
+button, entry, combobox button { padding: 3px 10px; min-height: 24px; border-width: 1px; box-shadow: none; }
+headerbar { padding: 0 4px; min-height: 30px; }
+headerbar button { min-width: 22px; min-height: 22px; padding: 2px; }
+notebook > header tab { padding: 3px 10px; border-width: 1px; }
+scale trough, progressbar trough, progressbar progress { min-height: 4px; }

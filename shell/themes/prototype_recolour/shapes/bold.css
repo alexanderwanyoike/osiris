@@ -1,0 +1,9 @@
+/* Bold: big and clear */
+* { font-size: 1.15em; }
+button, entry, combobox button { border-radius: 8px; border-width: 2px; padding: 12px 22px; min-height: 40px; }
+button:focus, entry:focus { outline: 3px solid @theme_selected_bg_color; outline-offset: 2px; }
+headerbar { padding: 8px 12px; min-height: 56px; }
+headerbar button { min-width: 40px; min-height: 40px; }
+notebook > header tab { padding: 12px 22px; border-width: 2px; }
+scale trough, progressbar trough, progressbar progress { min-height: 12px; border-radius: 6px; }
+switch { min-width: 60px; min-height: 32px; }
