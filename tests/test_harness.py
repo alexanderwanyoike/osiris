@@ -495,6 +495,15 @@ def test_deleting_the_conversation_on_screen_starts_a_new_one() -> None:
     assert engine.sent[-1] == ("ses_2", "again")
 
 
+def test_a_deleted_session_is_no_longer_running() -> None:
+    subject, _, _ = harness()
+    subject.ask("hello")
+    subject.new_conversation()
+    subject.ask("something else")
+    subject.delete("ses_1")
+    assert subject.running == {"ses_2"}
+
+
 def test_the_tools_are_attached_where_the_session_runs_once_each() -> None:
     subject, engine, _ = harness()
     subject.ask("hello")
