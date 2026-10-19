@@ -43,6 +43,8 @@ for candidate in ("/usr/share/osiris/lib", REPO):
 
 import engine  # noqa: E402
 
+from osiris.platform import RealFileSystem  # noqa: E402
+from osiris.provision.upgrade import Upgrade  # noqa: E402
 from osiris.themes.carousel import offset, sequence, slot  # noqa: E402
 from osiris.themes.library import arrange, family_of  # noqa: E402
 
@@ -605,10 +607,15 @@ class Window(Gtk.ApplicationWindow):
         self.carousel.open()
 
 
+#: Seconds between looks at whether Osiris was upgraded under the Switcher.
+UPGRADE_POLL = 10
+
+
 class Application(Adw.Application):
     def __init__(self):
         super().__init__(application_id=APP_ID)
         self.window: Window | None = None
+        self.upgrade = Upgrade(RealFileSystem())
         show = Gio.SimpleAction.new("show", None)
         show.connect("activate", lambda *_: self.show_switcher())
         self.add_action(show)
@@ -627,6 +634,16 @@ class Application(Adw.Application):
         self.window = Window(self)
         # Warm the cards around the current theme before anyone asks.
         self.window.carousel.load()
+        GLib.timeout_add_seconds(UPGRADE_POLL, self._restart_if_upgraded)
+
+    def _restart_if_upgraded(self) -> bool:
+        """Quit once Osiris is upgraded under it and the overlay is put away;
+        D-Bus starts the new code on the next Super+T."""
+        in_use = self.window is not None and self.window.get_visible()
+        if not self.upgrade.restart_due(in_use=in_use):
+            return GLib.SOURCE_CONTINUE
+        self.quit()
+        return GLib.SOURCE_REMOVE
 
     def do_activate(self):
         self.show_switcher()
