@@ -13,6 +13,7 @@ from typing import Any
 from xml.sax.saxutils import quoteattr
 
 from osiris.harness.markdown import InlineStyle
+from osiris.model.colour import Colour
 
 #: One id whatever the Theme, so switching rewrites the scheme in place.
 SCHEME_ID = "osiris"
@@ -37,6 +38,8 @@ VARIABLES = (
     "harness_success",
     "harness_warning",
     "harness_danger",
+    "harness_glass",
+    "harness_glass_edge",
 )
 
 
@@ -66,6 +69,18 @@ def on_accent(theme: Mapping[str, Any]) -> str:
     )
 
 
+#: Glass is the raised surface lifted toward the text colour and tinted with the
+#: accent, so it frosts in the Theme's own colour rather than in white.
+GLASS_LIFT = 0.07
+GLASS_EDGE_LIFT = 0.22
+GLASS_TINT = 0.10
+
+
+def _frosted(c: Mapping[str, str], *, lift: float) -> str:
+    lifted = Colour(c["surfaceMuted"]).mix(Colour(c["foreground"]), lift)
+    return lifted.mix(Colour(c["accent"]), GLASS_TINT).hex
+
+
 def colours_css(theme: Mapping[str, Any]) -> str:
     c = _colours(theme)
     own = {
@@ -80,6 +95,8 @@ def colours_css(theme: Mapping[str, Any]) -> str:
         "harness_success": c["success"],
         "harness_warning": c["warning"],
         "harness_danger": c["danger"],
+        "harness_glass": _frosted(c, lift=GLASS_LIFT),
+        "harness_glass_edge": _frosted(c, lift=GLASS_EDGE_LIFT),
     }
     # libadwaita draws the entry and buttons from its own variables; without
     # these they would keep libadwaita's grey inside an Osiris-coloured drawer.

@@ -64,6 +64,25 @@ class TestColours:
         assert colours["sidebar_fg_color"] == colours["harness_fg"]
 
     @pytest.mark.parametrize("palette", [OBSIDIAN, DAWN])
+    def test_glass_is_the_sidebars_surface_frosted_in_the_themes_own_colour(
+        self, palette: dict[str, object]
+    ) -> None:
+        from osiris.model.colour import Colour, hue_distance
+
+        colours = defined(colours_css(palette))
+        raised, glass = (
+            Colour(colours["harness_raised"]),
+            Colour(colours["harness_glass"]),
+        )
+        accent, edge = (
+            Colour(colours["harness_accent"]),
+            Colour(colours["harness_glass_edge"]),
+        )
+        assert glass != raised
+        assert hue_distance(glass, accent) < hue_distance(raised, accent)
+        assert edge.contrast(raised) > glass.contrast(raised)
+
+    @pytest.mark.parametrize("palette", [OBSIDIAN, DAWN])
     def test_text_on_the_accent_is_whichever_end_of_the_palette_reads(
         self, palette: dict[str, object]
     ) -> None:

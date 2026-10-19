@@ -88,3 +88,6 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-sidebar row button:checked, .harness-sidebar row button:focus { opacity: 1; }
 /* The Canvas's code sits flush, unlike a code block inside an answer. */
 .harness-canvas .harness-code, .harness-canvas .harness-code text { border: none; border-radius: 0; box-shadow: none; }
+
+.harness-sidebar { background-color: @harness_raised; }
+.harness-sidebar scrolledwindow, .harness-sidebar viewport, .harness-sidebar list { background-color: transparent; }

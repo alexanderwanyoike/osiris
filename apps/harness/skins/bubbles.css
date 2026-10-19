@@ -139,3 +139,16 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-sidebar row button:checked, .harness-sidebar row button:focus { opacity: 1; }
 /* The Canvas's code sits flush, unlike a code block inside an answer. */
 .harness-canvas .harness-code, .harness-canvas .harness-code text { border: none; border-radius: 0; box-shadow: none; }
+
+/* Frosted glass, in the Theme's own colour: a sheen from the top and a fine
+   highlight along the edge. Cinnamon cannot blur behind a window, so the
+   frost is drawn, not borrowed from the desktop. */
+.harness-sidebar {
+    background-color: @harness_glass;
+    background-image: linear-gradient(to bottom, alpha(@harness_glass_edge, 0.28), alpha(@harness_glass_edge, 0) 45%);
+    box-shadow: inset -1px 0 alpha(@harness_glass_edge, 0.6), inset 0 1px alpha(@harness_glass_edge, 0.4);
+}
+.harness-sidebar scrolledwindow, .harness-sidebar viewport,
+.harness-sidebar list { background-color: transparent; }
+.harness-sidebar row:selected { background-color: alpha(@harness_glass_edge, 0.32); }
+.harness-sidebar row:hover { background-color: alpha(@harness_glass_edge, 0.18); }
