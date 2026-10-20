@@ -927,11 +927,12 @@ class Window(Adw.ApplicationWindow):
         self.step_label.set_text("Install failed")
         self.bar.add_css_class("error")
         self.retry_bar.set_visible(True)
+        self.details.set_expanded(True)
         dialog = Adw.AlertDialog(
             heading="Install failed",
             body=f"{error}\n\nNothing on the disk is usable yet. Try again, "
-                 "or go back and change the settings. Open Show details for "
-                 "the full output.")
+                 "or go back and change the settings. The full output is "
+                 "under the progress bar.")
         dialog.add_response("close", "Close")
         dialog.present(self)
         return GLib.SOURCE_REMOVE
