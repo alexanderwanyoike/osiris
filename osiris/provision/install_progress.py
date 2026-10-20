@@ -8,7 +8,10 @@ read, its number of the total, and a fraction of the whole install.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
+
+from osiris.provision.archinstall_config import OSIRIS_PACKAGE, SETUP_COMMAND
 
 
 @dataclass(frozen=True)
@@ -17,6 +20,9 @@ class Stage:
     #: Roughly how much of the install's time this stage takes, against the
     #: others. Only the ratios matter.
     weight: int
+    #: The line archinstall prints as the stage begins. None for the first,
+    #: which is under way before archinstall prints anything of note.
+    starts: re.Pattern[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -29,14 +35,27 @@ class Status:
     fraction: float
 
 
+#: The lines are archinstall 4.5's info() messages, in the order its guided
+#: script prints them. A user is created just before the sound, graphics and
+#: greeter packages go in, and that line is the last before them.
 STAGES = (
     Stage("Preparing your disk", 3),
-    Stage("Installing the base system", 22),
-    Stage("Setting up the bootloader", 6),
-    Stage("Installing drivers and sound", 10),
-    Stage("Installing the desktop", 45),
-    Stage("Applying Osiris", 12),
-    Stage("Finishing", 2),
+    Stage(
+        "Installing the base system", 22, re.compile(r"^Installing packages: \['base'")
+    ),
+    Stage("Setting up the bootloader", 6, re.compile(r"^Adding bootloader ")),
+    Stage("Installing drivers and sound", 10, re.compile(r"^Creating user ")),
+    Stage(
+        "Installing the desktop",
+        45,
+        re.compile("^" + re.escape(f"Installing packages: {[OSIRIS_PACKAGE]}") + "$"),
+    ),
+    Stage(
+        "Applying Osiris",
+        12,
+        re.compile("^" + re.escape(f'Executing custom command "{SETUP_COMMAND}"')),
+    ),
+    Stage("Finishing", 2, re.compile(r"^Updating \S*/etc/fstab$")),
 )
 
 
@@ -45,7 +64,25 @@ class Tracker:
 
     def __init__(self, stages: tuple[Stage, ...] = STAGES) -> None:
         self._stages = stages
+        self._current = 0
 
     @property
     def status(self) -> Status:
-        return Status(self._stages[0].title, 1, len(self._stages), 0.0)
+        stage = self._stages[self._current]
+        return Status(
+            stage.title, self._current + 1, len(self._stages), self._fraction()
+        )
+
+    def feed(self, line: str) -> Status | None:
+        """The new status if line moved the install on, else None."""
+        text = line.strip()
+        for index, stage in enumerate(self._stages):
+            starts = stage.starts
+            if starts is not None and starts.search(text):
+                self._current = index
+                return self.status
+        return None
+
+    def _fraction(self) -> float:
+        done = sum(stage.weight for stage in self._stages[: self._current])
+        return done / sum(stage.weight for stage in self._stages)
