@@ -8,7 +8,7 @@ from dataclasses import replace
 
 import pytest
 
-from osiris.harness.admin import Kind, asking_sudo, request_of
+from osiris.harness.admin import Kind, asking_sudo, caller_sudo, request_of
 from osiris.platform.processes import FakeProcesses, Process
 
 ME = 1000
@@ -207,3 +207,42 @@ class TestSudosOwnModes:
         assert request_of(("sudo", "-k", "-A", "-v")).shown == (
             "nothing: sudo only checks the password"
         )
+
+
+class TestTheCallerTheHarnessAnswers:
+    def test_is_the_helper_started_by_a_genuine_sudo(self) -> None:
+        assert caller_sudo(genuine(), HELPER.pid, uid=ME) == SUDO
+
+    def test_attack_a_fake_helper_calling_the_harness(self) -> None:
+        # Its command line can be made to look like the helper's; its parent
+        # cannot be made a root sudo.
+        fake = replace(HELPER, parent=SHELL.pid)
+        assert caller_sudo(table(SHELL, fake), HELPER.pid, uid=ME) is None
+
+    def test_attack_sudo_askpass_pointing_at_another_program(self) -> None:
+        other = replace(
+            HELPER, cmdline=("/home/tester/steal", PROMPT), exe="/home/tester/steal"
+        )
+        assert caller_sudo(table(SHELL, SUDO, other), HELPER.pid, uid=ME) is None
+
+    def test_attack_another_script_that_names_the_helper(self) -> None:
+        script = replace(
+            HELPER,
+            cmdline=("/usr/bin/python3", "/tmp/steal.py", "/usr/lib/osiris/askpass"),
+        )
+        assert caller_sudo(table(SHELL, SUDO, script), HELPER.pid, uid=ME) is None
+
+    def test_attack_another_interpreter_running_the_helpers_command_line(
+        self,
+    ) -> None:
+        copied = replace(HELPER, exe="/home/tester/.local/bin/python3.14")
+        assert caller_sudo(table(SHELL, SUDO, copied), HELPER.pid, uid=ME) is None
+
+    def test_attack_a_helper_of_another_account(self) -> None:
+        theirs = replace(SUDO, uid=1001)
+        helper = replace(HELPER, uid=1001, euid=1001)
+        assert caller_sudo(table(SHELL, theirs, helper), HELPER.pid, uid=ME) is None
+
+    def test_attack_a_helper_whose_sudo_is_not_root(self) -> None:
+        impostor = replace(SUDO, euid=ME)
+        assert caller_sudo(table(SHELL, impostor, HELPER), HELPER.pid, uid=ME) is None
