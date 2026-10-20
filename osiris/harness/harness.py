@@ -8,6 +8,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from osiris.harness.admin import Request
 from osiris.harness.engine import (
     Answered,
     Engine,
@@ -222,6 +223,15 @@ class Harness:
             if sudo and session in self._running
         ]
         return max(asking)[1] if asking else None
+
+    def admin_answered(self, session: str, request: Request, *, approved: bool) -> None:
+        self._log.write(
+            "admin",
+            session=session,
+            command=list(request.command),
+            user=request.user,
+            approved=approved,
+        )
 
     def _allowed_command(self, session: str, resources: tuple[str, ...]) -> None:
         self._commands_allowed += 1
