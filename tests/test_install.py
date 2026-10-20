@@ -58,6 +58,7 @@ def test_archinstall_is_run_once_silently_with_the_written_files(
         "--config", str(tmp_path / "config.json"),
         "--creds", str(tmp_path / "creds.json"),
         "--silent",
+        "--skip-wifi-check",
     )  # fmt: skip
 
 
