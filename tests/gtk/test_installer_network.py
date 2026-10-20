@@ -115,3 +115,9 @@ def test_a_refused_join_is_explained_and_can_be_tried_again() -> None:
     assert refusal in shown(page)
     assert password(page).get_visible()
     assert not find(page, Gtk.Button, "Continue").get_sensitive()
+
+
+def test_with_no_wifi_in_range_the_step_points_to_a_cable() -> None:
+    page, _ = a_page(FakeNetwork())
+    assert "No Wi-Fi networks found" in shown(page)
+    assert "Plug in a network cable, then press Check again." in shown(page)
