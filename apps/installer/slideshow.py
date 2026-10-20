@@ -24,6 +24,11 @@ class Slideshow(Gtk.Stack):
             for slide in json.load(fh):
                 self.add_child(self.slide(folder, slide))
 
+    def advance(self) -> None:
+        """The next slide, or the first after the last."""
+        following = self.get_visible_child().get_next_sibling()
+        self.set_visible_child(following or self.get_first_child())
+
     @staticmethod
     def slide(folder, slide) -> Gtk.Widget:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
