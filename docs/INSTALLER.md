@@ -12,11 +12,15 @@ the screens in front of it and the package installed by it. See
 apps/installer/main.py              the GTK4 wizard
 apps/installer/disks.py             which disks may be installed onto
 apps/installer/network_page.py      the Connect to the internet step
+apps/installer/slideshow.py         the slides on the progress page
+apps/installer/slides/              those slides: slides.json and the pictures
 osiris/provision/network.py         is the medium online; joining Wi-Fi with nmcli
 osiris/model/wifi.py                Wi-Fi networks as nmcli lists them
 osiris/provision/installer.py       detects the hardware, runs archinstall
 osiris/provision/archinstall_outcome.py
                                     whether archinstall really installed anything
+osiris/provision/install_progress.py
+                                    how far the install has got, from its output
 osiris/provision/archinstall_config.py
                                     the wizard's answers as an archinstall config
 osiris/iso/package.py               what the `osiris` package contains and needs
@@ -115,6 +119,71 @@ never prints it. Anything else fails the install with a reason:
 
 The strings are in `osiris/provision/archinstall_outcome.py`, each from
 archinstall's, libalpm's or libcurl's own source.
+
+## The progress page
+
+While archinstall runs, the page shows a slide at a time above a real
+progress bar: the stage's title, "Step N of 7" and a percentage under the
+bar. archinstall's raw output is behind **Show details**, collapsed. If the
+install fails, the slides go, the log opens so the error is the first thing
+seen, and Try again and Change settings appear as before.
+
+**The stages come from archinstall's own output.** archinstall reports no
+fraction complete, but it prints a line as it starts each part of the
+install, and `Installer.install` hands every line it streams to
+`install_progress.Tracker` through the runner's `on_line`. Each stage begins
+at a line from archinstall 4.5's source:
+
+| Stage | Begins at | Weight |
+|---|---|---|
+| Preparing your disk | the start: partitioning, formatting, mounting, the keyring wait | 3 |
+| Installing the base system | `Installing packages: ['base', ...` | 22 |
+| Setting up the bootloader | `Adding bootloader grub to <partition>` | 6 |
+| Installing drivers and sound | `Creating user <name>` | 10 |
+| Installing the desktop | `Installing packages: ['osiris']` | 45 |
+| Applying Osiris | `Executing custom command "osiris-setup" ...` | 12 |
+| Finishing | `Updating /mnt/etc/fstab` | 2 |
+
+The user is created just before archinstall installs Bluetooth, PipeWire,
+Xorg, the graphics driver and the greeter, and that line is the last before
+them, so it starts the drivers stage. NetworkManager goes in with the
+bootloader stage, and `Syncing the system...` with Finishing. A line that
+starts an earlier stage than the current one is ignored.
+
+**The fraction is weighted by time, not by stage.** Each stage owns its
+weight's share of the bar (the weights are rough minutes, out of 100, on a
+typical connection: the package installs are most of an install). Within a
+stage, pacman's own counts move the bar. archinstall runs pacman on a pty, so
+pacman draws its progress lines, and they reach the installer as:
+
+```
+ Total ( 4/20)           9.5 MiB  15.7 MiB/s 00:00 [#########-------------]  43%
+( 5/20) installing glibc                           [######################] 100%
+:: Running post-transaction hooks...
+(1/3) Generating the configured locale...
+```
+
+A pacman run is taken as half downloading (`Total (n/N)`), four tenths
+installing (`(n/N) installing`), and a tenth running hooks (the `(n/N)`
+lines after `:: Running post-transaction hooks...`; before it they are
+pacman's checks, which are not counted). A run starts at `:: Synchronizing
+package databases...`. Where archinstall installs a few packages at a time,
+the bootloader and drivers stages, each run fills half of what is left of
+the stage, so every run moves the bar and none fills it; the number of runs
+varies with the machine. The base system and the desktop are one run each,
+which fills the stage. The bar never goes backwards, and a line that says
+nothing about progress changes nothing. `osiris-setup`'s output is captured
+by archinstall and never printed, so Applying Osiris holds still until the
+fstab is written.
+
+**The slides** are `apps/installer/slides/slides.json`, a list of pictures
+and one sentence each, as data (ADR 0004). The pictures are links to
+`docs/screenshots/`, so a new screenshot reaches the installer too. `docs/`
+is not in the package, but `iso/repo.py` stages the payload with
+`shutil.copytree`, which follows links by default, so the package, and the
+medium that installs it, carry the files themselves; a test fails if that
+ever changes. They crossfade every seven seconds while the page is on
+screen.
 
 ## Building
 
