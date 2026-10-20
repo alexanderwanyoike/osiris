@@ -8,7 +8,13 @@ from dataclasses import replace
 
 import pytest
 
-from osiris.harness.admin import Kind, asking_sudo, caller_sudo, request_of
+from osiris.harness.admin import (
+    Kind,
+    asking_sudo,
+    caller_sudo,
+    descends_from,
+    request_of,
+)
 from osiris.platform.processes import FakeProcesses, Process
 
 ME = 1000
@@ -246,3 +252,33 @@ class TestTheCallerTheHarnessAnswers:
     def test_attack_a_helper_whose_sudo_is_not_root(self) -> None:
         impostor = replace(SUDO, euid=ME)
         assert caller_sudo(table(SHELL, impostor, HELPER), HELPER.pid, uid=ME) is None
+
+
+class TestWhetherTheSudoIsTheAgents:
+    def test_a_sudo_the_engines_shell_started_is(self) -> None:
+        assert descends_from(genuine(), SUDO.pid, ENGINE.pid)
+
+    def test_attack_a_sudo_outside_the_engines_process_tree(self) -> None:
+        terminal = Process(
+            pid=80,
+            parent=1,
+            name="ghostty",
+            uid=ME,
+            euid=ME,
+            cmdline=("ghostty",),
+            exe="/usr/bin/ghostty",
+        )
+        zsh = replace(SHELL, pid=90, parent=80, name="zsh", cmdline=("zsh",))
+        theirs = replace(SUDO, parent=90)
+        processes = table(ENGINE, terminal, zsh, theirs)
+        assert not descends_from(processes, SUDO.pid, ENGINE.pid)
+
+    def test_with_no_engine_none_is(self) -> None:
+        assert not descends_from(genuine(), SUDO.pid, None)
+
+    def test_a_broken_chain_of_parents_ends_the_search(self) -> None:
+        orphan = replace(SUDO, parent=999)
+        assert not descends_from(table(ENGINE, orphan), SUDO.pid, ENGINE.pid)
+
+    def test_a_process_is_not_its_own_descendant(self) -> None:
+        assert not descends_from(genuine(), ENGINE.pid, ENGINE.pid)
