@@ -108,6 +108,12 @@ class NetworkPage(Adw.NavigationPage):
         for row in self.rows:
             self.wifi_group.remove(row)
         self.rows = []
+        if not networks:
+            empty = Adw.ActionRow(
+                title="No Wi-Fi networks found",
+                subtitle="Plug in a network cable, then press Check again.")
+            self.wifi_group.add(empty)
+            self.rows.append(empty)
         for network in networks:
             row = Adw.ActionRow(title=network.ssid, subtitle=network.summary)
             row.add_prefix(Gtk.Image(icon_name=network.icon))
