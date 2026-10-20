@@ -8,6 +8,7 @@ from gi.repository import Adw, Gtk
 from network_page import NetworkPage
 
 from osiris.model.wifi import WifiNetwork
+from osiris.provision.network import JoinFailed
 
 from .conftest import find, now, shown, widgets
 
@@ -20,6 +21,7 @@ class FakeNetwork:
     connected: bool = False
     heard: list[WifiNetwork] = field(default_factory=list)
     joined: list[tuple[str, str]] = field(default_factory=list)
+    refusal: str = ""
 
     def online(self) -> bool:
         return self.connected
@@ -28,6 +30,8 @@ class FakeNetwork:
         return self.heard
 
     def join(self, network: WifiNetwork, password: str = "") -> None:
+        if self.refusal:
+            raise JoinFailed(self.refusal)
         self.joined.append((network.ssid, password))
         self.connected = True
 
@@ -99,3 +103,15 @@ def test_an_open_network_is_joined_as_soon_as_it_is_chosen() -> None:
     row(page, "Cafe").emit("activated")
     assert network.joined == [("Cafe", "")]
     assert not password(page).get_visible()
+
+
+def test_a_refused_join_is_explained_and_can_be_tried_again() -> None:
+    refusal = "Osiris could not join Home. Check the password and try again."
+    network = FakeNetwork(heard=[HOME], refusal=refusal)
+    page, _ = a_page(network)
+    row(page, "Home").emit("activated")
+    password(page).set_text("nope")
+    find(page, Gtk.Button, "Join").emit("clicked")
+    assert refusal in shown(page)
+    assert password(page).get_visible()
+    assert not find(page, Gtk.Button, "Continue").get_sensitive()
