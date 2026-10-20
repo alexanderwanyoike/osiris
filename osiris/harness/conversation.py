@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from osiris.harness.activity import THINKING, WRITING, Step
+from osiris.harness.admin import Request
 from osiris.harness.engine import (
     Answered,
     Event,
@@ -42,6 +43,8 @@ class Turn:
     error: str = ""
     changes: list[Change] = field(default_factory=list)
     undone: bool = False
+    #: A command of this answer's waiting for the administrator password.
+    admin: Request | None = None
 
     @property
     def programs(self) -> list[str]:
@@ -118,6 +121,14 @@ class Conversation:
             answer.changes = made
             answer.undone = bool(made) and tuple(c.summary for c in made) in undid
         return talk
+
+    def needs_password(self, request: Request) -> None:
+        if self.turns:
+            self.turns[-1].admin = request
+
+    def password_answered(self) -> None:
+        for turn in self.turns:
+            turn.admin = None
 
     def changed(self, changes: list[Change]) -> None:
         """Record what the latest question led to, as the Harness log has it."""
