@@ -44,6 +44,11 @@ class FakeApp(Adw.Application):
 
         return Gtk.Label(label=name)
 
+    def admin_card(self, _request: object) -> object:
+        from gi.repository import Gtk
+
+        return Gtk.Box()
+
     def new_conversation(self) -> None:
         self.new_conversations += 1
         self.conversation = Conversation()
