@@ -65,3 +65,42 @@ def test_an_earlier_stages_line_never_takes_the_install_back() -> None:
     before = tracker.status
     assert tracker.feed("Creating user alex") is None
     assert tracker.status == before
+
+
+BASE = STARTS[0][0]
+BOOTLOADER = STARTS[1][0]
+SYNC = ":: Synchronizing package databases..."
+
+
+def fractions(tracker: Tracker, lines: list[str]) -> list[float]:
+    """The fraction after each line, whether or not it changed."""
+    found = []
+    for line in lines:
+        tracker.feed(line)
+        found.append(tracker.status.fraction)
+    return found
+
+
+def bounds_of_the_base_stage() -> tuple[float, float]:
+    tracker = Tracker()
+    start = tracker.feed(BASE)
+    end = tracker.feed(BOOTLOADER)
+    assert start is not None and end is not None
+    return start.fraction, end.fraction
+
+
+def test_pacmans_install_counts_move_the_bar_through_a_stage() -> None:
+    start, end = bounds_of_the_base_stage()
+    tracker = Tracker()
+    moved = fractions(
+        tracker,
+        [
+            BASE,
+            SYNC,
+            "( 1/20) installing iana-etc                        [----------]   0%",
+            "(10/20) installing bash                            [##########] 100%",
+            "(20/20) installing nano                            [##########] 100%",
+        ],
+    )
+    assert moved[0] == moved[1] == start
+    assert start < moved[2] < moved[3] < moved[4] < end
