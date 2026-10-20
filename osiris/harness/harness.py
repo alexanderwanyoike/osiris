@@ -280,9 +280,9 @@ class Harness:
             case ToolRequested(session, request, action, resources) if (
                 tier := self._tier(session, action, resources)
             ):
-                self._reply(session, request, allow=True, message="")
                 if action in COMMAND_ACTIONS:
                     self._allowed_command(session, resources)
+                self._reply(session, request, allow=True, message="")
                 self._log.write(
                     "allowed",
                     session=session,
