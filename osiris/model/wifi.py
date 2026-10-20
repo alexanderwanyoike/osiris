@@ -28,6 +28,18 @@ class WifiNetwork:
 
     @property
     def how(self) -> Security:
+        """How the installer joins it.
+
+        A WPA2/WPA3 transition network takes wpa-psk, which every client
+        that can join it supports.
+        """
+        words = set(self.security.split())
+        if words & {"802.1X", "WEP"}:
+            return Security.UNSUPPORTED
+        if words & {"WPA1", "WPA2"}:
+            return Security.WPA_PSK
+        if "WPA3" in words:
+            return Security.SAE
         return Security.OPEN
 
 
