@@ -32,6 +32,12 @@ The first slice of ROADMAP P3.5:
   (`osiris.harness.trust`) lets the Harness allow any request, logged with the
   tier `anything`, and restarts the tool server so the model is told it may run
   commands and change any file. It is off until the person turns it on.
+- **It asks for the administrator password in the Conversation.** When a
+  command it runs uses `sudo`, an admin password card appears under the
+  answer: "Osiris needs your password to run:" and the exact command, a shell
+  string shown whole and labelled, a script marked as not shown. The password
+  typed there goes to sudo and nowhere else; Deny fails the command. See
+  [Admin passwords](#admin-passwords).
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
@@ -88,12 +94,17 @@ osiris/harness/engine         the Engine port and its events
 osiris/harness/accounts       the Accounts port: Providers, signing in, models
 osiris/harness/settings       the Default and Fallback models, as plain text
 osiris/harness/opencode       the opencode 2.0 adapter
+osiris/harness/admin          admin password requests: who may ask, for what, shown where
+osiris/platform/processes     the Processes port: who a running process is, from /proc
+apps/harness/admin_card.py    the admin password card
+apps/harness/askpass.py       the askpass helper sudo runs, and its own dialog
 osiris/platform/http          the HTTP port the adapter talks through
 osiris/apps/tool_server       the Osiris tools as an MCP server, each with its tier
 osiris/themes/actions         what the tools do with Themes, behind osiris/themes/store
 apps/harness/tool_server.py   runs the tool server on stdio over the theme engine
 apps/harness/theme_store.py   the theme engine as a ThemeStore, for acting and undoing
-provision/harness.py          installs the drawer, extension, applet, D-Bus activation, autostart
+provision/harness.py          installs the drawer, extension, applet, D-Bus activation, autostart,
+                              the askpass helper and the agent's sudo
 ```
 
 The drawer is resident, like the theme switcher: started at login, or by D-Bus
@@ -124,6 +135,35 @@ Each change the tool server makes is written to the Harness log with the step
 that reverses it. When an answer finishes, the drawer reads the changes logged
 since the question and shows them with one Undo, which runs those steps newest
 first; the theme that is applied is never deleted.
+
+### Admin passwords
+
+The decision and its guards are [ADR 0018](adr/0018-the-agents-sudo-asks-in-an-admin-password-card.md).
+sudo asks a helper for the password only when run with `-A`, so the agent's
+commands find a sudo of Osiris's first on their PATH:
+
+```
+/usr/lib/osiris/agent-bin/sudo    runs /usr/bin/sudo -k -A, every command asking
+/usr/lib/osiris/askpass           the helper sudo runs (apps/harness/askpass.py)
+```
+
+The Harness puts `agent-bin` first on PATH and sets `SUDO_ASKPASS` before it
+starts the Engine, which inherits both. The helper refuses unless a root sudo
+started it, reads the command from that sudo's arguments, and calls
+`Ask(command, prompt)` on `dev.osiris.Harness.Admin` at
+`/dev/osiris/Harness/Admin`. The Harness checks the caller from the bus's own
+record of its pid, finds the sudo descending from the Engine's process (the
+`pid` opencode records in `service.json`) and the running Conversation whose
+latest allowed command runs sudo, and shows the card there. Allow answers
+with the password and empties the entry. Deny answers refused, and so does a
+card left unanswered, just before the helper's five-minute wait ends, or one
+whose answer ends first. The Harness
+log records the command and the decision, never the password.
+
+A genuine sudo that is not the agent's, or any sudo when the Harness is not
+running, gets the helper's own dialog instead, naming the program that ran
+it. Only `sudo -A` reaches the helper; in a terminal sudo asks as it always
+has.
 
 ### How answers are drawn
 
