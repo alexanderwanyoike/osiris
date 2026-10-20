@@ -110,6 +110,13 @@ commands and touches any file, and the model is told so. It is the person's
 choice, off until they turn it on.
 _Avoid_: permission level
 
+**Admin password card**:
+Where the **Harness** asks for the administrator password when a command it
+runs uses sudo: the exact command, in the **Conversation** that ran it, with
+Allow and Deny. Any other program's `sudo -A` gets a dialog of the same kind,
+naming that program.
+_Avoid_: sudo prompt, password popup
+
 **Conversation**:
 A run of questions and answers with the **Harness**, held by the **Engine** as one of its sessions; it continues until the person starts a new one.
 _Avoid_: session, thread, chat
@@ -213,6 +220,9 @@ _Avoid_: metadata
   nothing.
 - Nothing reaches a model that the person cannot see first; further reading
   happens only through actions in the **Harness log**.
+- The password typed in an **admin password card** goes to sudo and nowhere
+  else: not to a model, the **Harness log** or any file. Nothing is
+  remembered; every command that needs it asks again.
 - A look just happens; an undoable change happens with an Undo; a change that
   cannot be undone, or is not the person's own, always asks first. Moving files
   to the Trash is undoable; the **Harness** never empties or bypasses the Trash.
