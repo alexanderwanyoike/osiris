@@ -50,6 +50,29 @@ runpy.run_path("/usr/share/osiris/harness/askpass.py", run_name="__main__")
 """
 _SYSTEM_PYTHON = re.compile(r"/usr/bin/python3(?:\.\d+)?")
 
+#: Where the helper asks: an object on the Harness's own bus name.
+BUS_NAME = "dev.osiris.Harness"
+OBJECT_PATH = "/dev/osiris/Harness/Admin"
+INTERFACE = "dev.osiris.Harness.Admin"
+INTERFACE_XML = f"""<node>
+  <interface name="{INTERFACE}">
+    <method name="Ask">
+      <arg name="command" type="as" direction="in"/>
+      <arg name="prompt" type="s" direction="in"/>
+      <arg name="approved" type="b" direction="out"/>
+      <arg name="password" type="s" direction="out"/>
+    </method>
+  </interface>
+</node>
+"""
+#: The Harness's refusal: the caller failed its checks, so nothing is shown.
+REFUSED = f"{INTERFACE}.Refused"
+#: Not a command of the agent's: the helper asks in a dialog of its own.
+NOT_THE_AGENTS = f"{INTERFACE}.NotTheAgents"
+#: How long the helper waits for the person, in seconds.
+ASK_TIMEOUT = 300
+HARNESS_GIVES_UP = ASK_TIMEOUT - 10
+
 #: sudo's options that take a value (sudo 1.9.17, ``sudo -h``), short and long.
 #: ``-h`` takes one only when it is attached, as ``-hhost``.
 _SHORT_WITH_VALUE = frozenset("aCcDgpRrTtUu")
