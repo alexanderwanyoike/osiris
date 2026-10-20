@@ -142,3 +142,27 @@ def test_pacmans_hooks_finish_a_transaction_once_it_says_it_runs_them() -> None:
     )
     assert moved[3] == moved[2]
     assert moved[4] < moved[6] < moved[7] == pytest.approx(end)
+
+
+def test_each_of_several_installs_in_a_stage_moves_the_bar_on() -> None:
+    """archinstall installs the bootloader's packages a few at a time."""
+    tracker = Tracker()
+    tracker.feed(BOOTLOADER)
+    end = Tracker()
+    for line, _ in STARTS[:3]:
+        end.feed(line)
+    moved = fractions(
+        tracker,
+        [
+            "Installing packages: ['plymouth']",
+            SYNC,
+            "(3/3) installing plymouth                          [##########] 100%",
+            ":: Running post-transaction hooks...",
+            "(2/2) Updating linux initcpios...",
+            "Installing packages: ['grub', 'efibootmgr']",
+            SYNC,
+            "(2/2) checking keys in keyring                     [##########] 100%",
+            "(1/2) installing grub                              [##########] 100%",
+        ],
+    )
+    assert moved[4] == moved[7] < moved[8] < end.status.fraction
