@@ -57,7 +57,9 @@ target-version = "py314"
 # the refactor. Nothing new may be added to it.
 extend-exclude = [
     "build",
-    "provision",
+    # A bare name matches that name at any depth; "./" anchors it to this
+    # directory so osiris/provision is still linted.
+    "./provision",
     "shell",
     "apps",
     "iso",
