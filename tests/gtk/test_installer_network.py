@@ -121,3 +121,11 @@ def test_with_no_wifi_in_range_the_step_points_to_a_cable() -> None:
     page, _ = a_page(FakeNetwork())
     assert "No Wi-Fi networks found" in shown(page)
     assert "Plug in a network cable, then press Check again." in shown(page)
+
+
+def test_a_connection_that_arrives_by_itself_is_noticed() -> None:
+    network = FakeNetwork()
+    page, _ = a_page(network)
+    network.connected = True  # a cable, plugged in, and nobody pressed anything
+    page.poll()
+    assert find(page, Gtk.Button, "Continue").get_sensitive()
