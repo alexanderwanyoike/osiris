@@ -37,8 +37,28 @@ class NetworkPage(Adw.NavigationPage):
         intro = Gtk.Label(label=INTRO, xalign=0, wrap=True)
         box.append(intro)
 
+        status = Adw.PreferencesGroup()
+        self.status = Adw.ActionRow(title="Checking the connection")
+        self.status_icon = Gtk.Image(icon_name="network-offline-symbolic")
+        self.status.add_prefix(self.status_icon)
+        status.add(self.status)
+        box.append(status)
+
         self.wifi_group = Adw.PreferencesGroup(title="Wi-Fi")
         box.append(self.wifi_group)
+
+        buttons = Gtk.Box(halign=Gtk.Align.END, spacing=8)
+        buttons.set_margin_top(10)
+        again = Gtk.Button(label="Check again")
+        again.add_css_class("pill")
+        again.connect("clicked", lambda _b: self.refresh())
+        buttons.append(again)
+        self.go = Gtk.Button(label="Continue", sensitive=False)
+        self.go.add_css_class("pill")
+        self.go.add_css_class("suggested-action")
+        self.go.connect("clicked", lambda _b: self.on_online())
+        buttons.append(self.go)
+        box.append(buttons)
 
         toolbar = Adw.ToolbarView()
         toolbar.add_top_bar(Adw.HeaderBar())
@@ -56,7 +76,18 @@ class NetworkPage(Adw.NavigationPage):
             lambda: (self.network.online(), self.network.wifi()), self.show)
 
     def show(self, found) -> None:
-        _online, networks = found
+        online, networks = found
+        self.go.set_sensitive(online)
+        self.status_icon.set_from_icon_name(
+            "network-transmit-receive-symbolic" if online
+            else "network-offline-symbolic")
+        if online:
+            self.status.set_title("Connected to the internet")
+            self.status.set_subtitle("Continue when you are ready.")
+        else:
+            self.status.set_title("Not connected")
+            self.status.set_subtitle("Install stays unavailable until Osiris "
+                                     "can reach the internet.")
         for row in self.rows:
             self.wifi_group.remove(row)
         self.rows = []
