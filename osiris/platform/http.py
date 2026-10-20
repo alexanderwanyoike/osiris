@@ -115,7 +115,10 @@ class FakeHttpClient:
         self.requests.append((method, url, body))
         if (method, url) not in self.replies:
             raise HttpError(404, f"no canned reply for {method} {url}")
-        return self.replies[(method, url)]
+        reply = self.replies[(method, url)]
+        if isinstance(reply, HttpError):
+            raise reply
+        return reply
 
     def lines(
         self,

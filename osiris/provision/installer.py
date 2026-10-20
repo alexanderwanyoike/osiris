@@ -20,7 +20,7 @@ from osiris.model.layout import DiskContents, InstallMode, Layout
 from osiris.model.request import InstallRequest, InvalidRequest
 from osiris.platform.hardware import HardwareProbe, SystemProbe
 from osiris.platform.process import CommandRunner
-from osiris.provision import archinstall_config, disk_contents
+from osiris.provision import archinstall_config, archinstall_outcome, disk_contents
 
 #: fraction completed, what is starting now
 Progress = Callable[[float, str], None]
@@ -31,6 +31,10 @@ CONFIG_DIR = Path("/root/osiris-install")
 
 #: Resolves the disk the user chose to archinstall's view of it.
 Devices = Callable[[str], BDevice | None]
+
+
+class InstallFailed(RuntimeError):
+    """archinstall did not install the system; the message says why."""
 
 
 class Installer:
@@ -129,15 +133,22 @@ class Installer:
         config = archinstall_config.build(request, self.target(request))
         settings, credentials = archinstall_config.write(config, self._config_dir)
         try:
-            self._runner.stream(
+            result = self._runner.stream(
                 "archinstall",
                 "--config", str(settings),
                 "--creds", str(credentials),
                 "--silent",
+                # The wizard connects first; archinstall's own fallback is a
+                # terminal menu nobody behind this window could answer.
+                "--skip-wifi-check",
+                check=False,
             )  # fmt: skip
         finally:
             # The hash is no use to anyone once the user exists, and the live
             # medium may be handed to someone else afterwards.
             credentials.unlink(missing_ok=True)
+        reason = archinstall_outcome.failure(result.returncode, result.stdout)
+        if reason is not None:
+            raise InstallFailed(reason)
         if progress is not None:
             progress(1.0, "Done")

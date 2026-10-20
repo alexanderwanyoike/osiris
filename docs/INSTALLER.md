@@ -11,7 +11,12 @@ the screens in front of it and the package installed by it. See
 ```
 apps/installer/main.py              the GTK4 wizard
 apps/installer/disks.py             which disks may be installed onto
+apps/installer/network_page.py      the Connect to the internet step
+osiris/provision/network.py         is the medium online; joining Wi-Fi with nmcli
+osiris/model/wifi.py                Wi-Fi networks as nmcli lists them
 osiris/provision/installer.py       detects the hardware, runs archinstall
+osiris/provision/archinstall_outcome.py
+                                    whether archinstall really installed anything
 osiris/provision/archinstall_config.py
                                     the wizard's answers as an archinstall config
 osiris/iso/package.py               what the `osiris` package contains and needs
@@ -24,12 +29,14 @@ iso/profile.py                      generates the archiso profile, builds the IS
 
 An install, in order:
 
-1. The wizard collects region, disk, filesystem, encryption and account.
+1. The wizard collects region, then checks the connection and, if the medium
+   is offline, shows the connect step. Then disk, filesystem, encryption and
+   account. Install checks the connection once more.
 2. `Installer` reads the machine's GPUs and Bluetooth, and builds an
    archinstall configuration from archinstall's own objects. The password hash
    and any disk passphrase go in a separate credentials file under `/root`,
    readable by root only, and deleted when archinstall exits.
-3. `archinstall --config --creds --silent` partitions, encrypts if asked,
+3. `archinstall --config --creds --silent --skip-wifi-check` partitions, encrypts if asked,
    formats, installs the base system, microcode and graphics drivers, creates
    the user, installs GRUB (UEFI or BIOS), PipeWire, NetworkManager, LightDM
    with slick-greeter, Plymouth and zram swap.
@@ -39,6 +46,75 @@ An install, in order:
    package cannot ship as plain files: desktop defaults, themes, the boot
    splash, the GRUB theme. It also removes the medium's repository from the new
    system's pacman.conf, or every later update would fail on it.
+
+## The internet connection
+
+**An install needs the internet.** The medium carries only Osiris's own
+packages, in its `file://` repository. archinstall downloads the base system,
+the kernel, the drivers, Cinnamon and everything else from Arch's mirrors,
+the ones in the medium's `/etc/pacman.d/mirrorlist` (Osiris sets no mirror
+regions, so archinstall leaves that file alone).
+
+**The connection is checked before anything is touched.** Leaving the welcome
+page, and again when Install is pressed, `Network.online` sends a HEAD
+request to the first mirror in that mirrorlist, for its `core.db`
+(archlinux.org if the list names none). Any answer, even an error status,
+counts as online; no answer at all does not. The check has a 10 second
+timeout.
+
+**Offline, the connect step comes first.** It says that Osiris downloads most
+of the system while installing, and lists the Wi-Fi networks in range (name,
+signal, open or secured), from
+`nmcli -t -f IN-USE,SIGNAL,SECURITY,SSID device wifi list --rescan yes`. Each
+name is listed once, the joined one first, then by signal. Hidden networks
+are not listed. Continue stays unavailable, and so does everything after it,
+until the check passes. A wired connection needs nothing: NetworkManager
+brings it up when the cable goes in, and the step checks the connection
+every 5 seconds while it is on screen. Check again rescans Wi-Fi as well.
+
+- An open network is joined as soon as it is chosen, with
+  `nmcli device wifi connect <ssid>`.
+- A WPA1/WPA2 or WPA3 network asks for its password, then:
+
+  ```
+  nmcli connection delete id <ssid>
+  nmcli connection add type wifi con-name <ssid> ssid <ssid> wifi-sec.key-mgmt wpa-psk|sae
+  nmcli connection up id <ssid> passwd-file /root/osiris-install/wifi-password
+  ```
+
+  The password never goes on a command line, where any user on the medium
+  could read it in `/proc/<pid>/cmdline`. It goes in a file readable by root
+  alone, as `802-11-wireless-security.psk:<password>`, which is deleted as
+  soon as `connection up` returns. `device wifi connect` has no such option,
+  so the profile is made first, naming its key management itself: wpa-psk for
+  WPA1, WPA2 and WPA2/WPA3 transition networks, sae for WPA3 alone. A
+  refused password deletes the profile again and says so.
+- Enterprise (802.1X) and WEP networks are listed but refused: they need
+  settings this step does not ask for.
+
+**archinstall's own Wi-Fi menu never runs.** Offline, archinstall 4.5 opens a
+terminal menu built on wpa_supplicant, which nobody behind the GTK window
+could see, on a medium that runs NetworkManager. `--skip-wifi-check` turns it
+off.
+
+**An install counts only if archinstall says it finished.** archinstall 4.5
+exits 0 having installed nothing when it finds itself offline, and when it
+rejects the bootloader layout in silent mode. So the install succeeds only if
+archinstall exits 0 **and** its output contains `Installation completed
+without any errors`, which its Installer prints only once every step it
+tracks is done and the custom commands, `osiris-setup` among them, ran
+without raising. `osiris-setup` prints `OSIRIS_SETUP_DONE` last, but that
+line cannot be used: archinstall captures a custom command's output and
+never prints it. Anything else fails the install with a reason:
+
+| What archinstall printed | What the person is told |
+|---|---|
+| a download failure from archinstall, pacman or curl (`Failed to sync Arch Linux package database`, `failed retrieving file`, `Could not resolve host`, ...) | The connection dropped while Osiris was downloading. Check the network, then press Try again. |
+| exit 0 without the completion line | archinstall stopped without installing anything. |
+| any other non-zero exit | archinstall exited N before the install finished. |
+
+The strings are in `osiris/provision/archinstall_outcome.py`, each from
+archinstall's, libalpm's or libcurl's own source.
 
 ## Building
 
@@ -152,6 +228,7 @@ other user to protect it from.
 |---|---|
 | Region | Language (locale), time zone, keyboard layout |
 | Hardware | Software rendering, defaulted on inside a VM |
+| Connect | Only when offline: a Wi-Fi network and its password, or a cable |
 | Disk | Which disk, how (erase, free space, a partition), filesystem, encryption and its passphrase |
 | Account | Computer name, username, password |
 | Confirm | A summary, the destructive warning, and a gate |
@@ -266,7 +343,8 @@ the machine it was installed from. Osiris keeps that default.
 
 ### Retrying
 
-A failed install offers **Try again** and **Change settings**. archinstall
+A failed install offers **Try again** and **Change settings**, under the
+reason (see [the internet connection](#the-internet-connection)). archinstall
 unmounts whatever a previous attempt left mounted on the disk before it
 repartitions, so a second run starts clean.
 

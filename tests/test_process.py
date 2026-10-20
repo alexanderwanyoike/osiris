@@ -99,6 +99,11 @@ class TestSubprocessRunner:
         runner.stream("printf", "\\033[32mgreen\\033[0m\\n")
         assert "    green" in lines
 
+    def test_streaming_returns_what_it_forwarded(self) -> None:
+        runner = SubprocessRunner(sink=lambda _line: None)
+        result = runner.stream("printf", "\\033[32mone\\033[0m\\r\\ntwo\\n")
+        assert result.stdout.splitlines() == ["one", "two"]
+
     def test_a_streamed_failure_raises(self) -> None:
         with pytest.raises(CommandError):
             SubprocessRunner(sink=lambda _line: None).stream("false")

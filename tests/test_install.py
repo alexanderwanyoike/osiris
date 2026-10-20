@@ -14,8 +14,10 @@ from osiris.model.hardware import Gpu, GpuVendor, Hardware
 from osiris.model.request import InstallRequest, InvalidRequest
 from osiris.platform import FakeRunner
 from osiris.platform.hardware import FakeProbe
-from osiris.platform.process import CommandError
-from osiris.provision.installer import Installer
+from osiris.platform.process import CommandError, Result
+from osiris.provision.archinstall_outcome import NETWORK
+from osiris.provision.installer import Installer, InstallFailed
+from tests.conftest import an_archinstall_that_completes
 
 GIB = 1024**3
 RTX_2060 = Gpu(GpuVendor.NVIDIA, 0x1E89)
@@ -48,7 +50,7 @@ def an_installer(
 def test_archinstall_is_run_once_silently_with_the_written_files(
     device: BDevice, tmp_path: Path
 ) -> None:
-    runner = FakeRunner()
+    runner = an_archinstall_that_completes()
     an_installer(runner, device, tmp_path).install(a_request(device))
     (argv,) = runner.arguments_to("archinstall")
     assert argv == (
@@ -56,13 +58,16 @@ def test_archinstall_is_run_once_silently_with_the_written_files(
         "--config", str(tmp_path / "config.json"),
         "--creds", str(tmp_path / "creds.json"),
         "--silent",
+        "--skip-wifi-check",
     )  # fmt: skip
 
 
 def test_the_written_configuration_is_one_archinstall_accepts(
     device: BDevice, tmp_path: Path
 ) -> None:
-    an_installer(FakeRunner(), device, tmp_path).install(a_request(device))
+    an_installer(an_archinstall_that_completes(), device, tmp_path).install(
+        a_request(device)
+    )
     written = json.loads((tmp_path / "config.json").read_text())
     parsed = ArchConfig.from_config(written, Arguments())
     assert parsed.disk_config is not None
@@ -72,7 +77,7 @@ def test_the_written_configuration_is_one_archinstall_accepts(
 def test_the_credentials_do_not_outlive_the_install(
     device: BDevice, tmp_path: Path, succeeds: bool
 ) -> None:
-    runner = FakeRunner()
+    runner = an_archinstall_that_completes()
     if not succeeds:
         runner.results["archinstall"] = CommandError(["archinstall"], 1)
     installer = an_installer(runner, device, tmp_path)
@@ -82,6 +87,25 @@ def test_the_credentials_do_not_outlive_the_install(
         with pytest.raises(CommandError):
             installer.install(a_request(device))
     assert not (tmp_path / "creds.json").exists()
+
+
+@pytest.mark.parametrize(
+    ("returncode", "output", "reason"),
+    [
+        (0, "", "archinstall stopped without installing anything."),
+        (1, "error: failed to retrieve some files\n", NETWORK),
+    ],
+    ids=["exit 0 without finishing", "a dropped connection"],
+)
+def test_an_install_archinstall_did_not_finish_fails_with_the_reason(
+    device: BDevice, tmp_path: Path, returncode: int, output: str, reason: str
+) -> None:
+    runner = FakeRunner(
+        results={"archinstall": Result(("archinstall",), returncode, output)}
+    )
+    with pytest.raises(InstallFailed) as caught:
+        an_installer(runner, device, tmp_path).install(a_request(device))
+    assert str(caught.value) == reason
 
 
 def test_an_invalid_request_is_refused_before_anything_runs(
