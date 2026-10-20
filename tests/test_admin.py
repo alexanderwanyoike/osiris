@@ -352,3 +352,8 @@ class TestTheProgramThatAsked:
 
     def test_is_unknown_when_only_shells_are_left(self) -> None:
         assert asking_program(table(SHELL, SUDO), SUDO) == "an unknown program"
+
+    def test_a_login_shell_is_a_shell_too(self) -> None:
+        terminal = replace(ENGINE, name="ghostty", cmdline=("ghostty",))
+        login = replace(SHELL, name="zsh", cmdline=("-zsh",))
+        assert asking_program(table(terminal, login, SUDO), SUDO) == "ghostty"
