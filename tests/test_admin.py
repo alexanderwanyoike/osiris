@@ -3,12 +3,17 @@ the request is shown (ADR 0018)."""
 
 from __future__ import annotations
 
+import os
 import shlex
+import sys
 from dataclasses import replace
 
 import pytest
 
 from osiris.harness.admin import (
+    AGENT_SUDO_SCRIPT,
+    HELPER_ARGV,
+    HELPER_SCRIPT,
     Kind,
     NotTheAgents,
     Refuse,
@@ -372,3 +377,23 @@ class TestTheAgentsEnvironment:
     def test_is_the_same_when_applied_twice(self) -> None:
         once = agent_environment({"PATH": "/usr/bin"})
         assert agent_environment(once) == once
+
+
+class TestTheInstalledScripts:
+    def test_the_agents_sudo_asks_every_time_through_the_helper(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        run: list[tuple[str, list[str], dict[str, str]]] = []
+        monkeypatch.setattr(
+            os, "execve", lambda path, argv, env: run.append((path, argv, env))
+        )
+        monkeypatch.setattr(sys, "argv", ["sudo", "pacman", "-S", "cowsay"])
+        monkeypatch.setenv("SUDO_ASKPASS", "/home/tester/steal")
+        exec(compile(AGENT_SUDO_SCRIPT, "sudo", "exec"), {"__name__": "__main__"})
+        [(path, argv, env)] = run
+        assert path == "/usr/bin/sudo"
+        assert argv == ["/usr/bin/sudo", "-k", "-A", "pacman", "-S", "cowsay"]
+        assert env["SUDO_ASKPASS"] == "/usr/lib/osiris/askpass"
+
+    def test_the_helper_runs_as_the_harness_checks_that_it_does(self) -> None:
+        assert HELPER_SCRIPT.splitlines()[0] == "#!" + " ".join(HELPER_ARGV[:2])
