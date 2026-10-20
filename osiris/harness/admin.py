@@ -180,6 +180,54 @@ def descends_from(processes: Processes, pid: int, ancestor: int | None) -> bool:
     return False
 
 
+@dataclass(frozen=True)
+class Refuse:
+    """No card and no dialog: the caller is not who it must be."""
+
+    reason: str
+
+
+@dataclass(frozen=True)
+class NotTheAgents:
+    """A genuine request, but not from a Conversation: the helper asks itself."""
+
+    request: Request
+
+
+@dataclass(frozen=True)
+class Show:
+    """An admin password card, in the Conversation ``session``."""
+
+    request: Request
+    session: str
+
+
+Verdict = Refuse | NotTheAgents | Show
+
+
+def judge(
+    processes: Processes,
+    caller: int,
+    sent: Sequence[str],
+    *,
+    uid: int,
+    engine: int | None,
+    session: str | None,
+) -> Verdict:
+    """What the Harness does with a request from the D-Bus caller ``caller``
+    naming the command ``sent``, given the Engine's process and the session
+    whose command runs sudo."""
+    sudo = caller_sudo(processes, caller, uid=uid)
+    if sudo is None:
+        return Refuse("the caller is not the askpass helper of a root sudo")
+    request = request_of(sudo.cmdline)
+    if tuple(sent) != request.command:
+        return Refuse("the command named is not the one sudo runs")
+    if session is None or not descends_from(processes, sudo.pid, engine):
+        return NotTheAgents(request)
+    return Show(request, session)
+
+
 class _Options:
     """sudo's options, read as sudo reads them: up to the first argument that
     is not one, or ``--``."""
