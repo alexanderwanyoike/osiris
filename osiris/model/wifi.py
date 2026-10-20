@@ -53,6 +53,10 @@ class WifiNetwork:
         return Security.OPEN
 
     @property
+    def asks_password(self) -> bool:
+        return False
+
+    @property
     def summary(self) -> str:
         words = ["Connected"] if self.in_use else []
         words.append(_SECURITY_WORDS[self.how])

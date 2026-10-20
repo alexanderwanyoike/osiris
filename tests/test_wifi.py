@@ -81,3 +81,13 @@ def test_a_network_is_described_in_plain_words_and_a_signal_icon(
 ) -> None:
     assert network.summary == summary
     assert network.icon == icon
+
+
+@pytest.mark.parametrize(
+    ("column", "asks"),
+    [("", False), ("WPA2", True), ("WPA3", True), ("WPA2 802.1X", False)],
+)
+def test_only_a_network_the_installer_can_join_with_a_password_asks_for_one(
+    column: str, asks: bool
+) -> None:
+    assert WifiNetwork("x", 50, column).asks_password is asks
