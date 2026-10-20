@@ -67,3 +67,12 @@ def test_the_page_shows_osiris_a_slide_at_a_time_crossfading() -> None:
     assert showing is not None
     assert CAPTIONS[0] in texts(showing)
     assert find(showing, Gtk.Picture).get_paintable() is not None
+
+
+def test_the_slides_take_turns_and_start_again_after_the_last() -> None:
+    window, _ = a_progress_page()
+    seen = []
+    for _ in range(len(CAPTIONS) + 1):
+        seen += texts(window.slides.get_visible_child())
+        window.slides.advance()
+    assert seen == [*CAPTIONS, CAPTIONS[0]]
