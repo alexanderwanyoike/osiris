@@ -162,6 +162,24 @@ def caller_sudo(processes: Processes, caller: int, *, uid: int) -> Process | Non
     return asking_sudo(processes, caller)
 
 
+#: Further up than any real chain of parents, so a cycle cannot hang the search.
+_DEEPEST = 64
+
+
+def descends_from(processes: Processes, pid: int, ancestor: int | None) -> bool:
+    """Whether ``ancestor`` is among ``pid``'s parents."""
+    if ancestor is None:
+        return False
+    found = processes.get(pid)
+    for _ in range(_DEEPEST):
+        if found is None or found.parent <= 1:
+            return False
+        if found.parent == ancestor:
+            return True
+        found = processes.get(found.parent)
+    return False
+
+
 class _Options:
     """sudo's options, read as sudo reads them: up to the first argument that
     is not one, or ``--``."""
