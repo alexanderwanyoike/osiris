@@ -96,22 +96,29 @@ class Network:
     def join(self, network: WifiNetwork, password: str = "") -> None:
         """Join a Wi-Fi network; raises JoinFailed saying why it did not."""
         if network.how is Security.OPEN:
-            self._runner.run(
-                "nmcli", "device", "wifi", "connect", network.ssid, quiet=True
-            )  # fmt: skip
+            try:
+                self._runner.run(
+                    "nmcli", "device", "wifi", "connect", network.ssid, quiet=True
+                )  # fmt: skip
+            except CommandError as error:
+                raise JoinFailed(f"Osiris could not join {network.ssid}.") from error
             return
-        self._join_secured(network, password)
+        try:
+            self._join_secured(network, password)
+        except CommandError as error:
+            self._forget(network.ssid)
+            raise JoinFailed(
+                f"Osiris could not join {network.ssid}. "
+                "Check the password and try again."
+            ) from error
 
     def _join_secured(self, network: WifiNetwork, password: str) -> None:
         """A profile naming its key management, activated with the password
         read from a file, so it never appears in a process's argv.
         """
         name = network.ssid
-        # A profile left by an earlier attempt, or by nm-applet, would make
-        # `id <name>` ambiguous.
-        self._runner.run(
-            "nmcli", "connection", "delete", "id", name, check=False, quiet=True
-        )  # fmt: skip
+        # A profile left by nm-applet would make `id <name>` ambiguous.
+        self._forget(name)
         self._runner.run(
             "nmcli", "connection", "add", "type", "wifi",
             "con-name", name, "ssid", name,
@@ -127,6 +134,11 @@ class Network:
             )  # fmt: skip
         finally:
             secret.unlink(missing_ok=True)
+
+    def _forget(self, name: str) -> None:
+        self._runner.run(
+            "nmcli", "connection", "delete", "id", name, check=False, quiet=True
+        )  # fmt: skip
 
     def _write_secret(self, text: str) -> Path:
         self._secrets.mkdir(parents=True, exist_ok=True)
