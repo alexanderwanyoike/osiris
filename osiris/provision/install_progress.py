@@ -58,6 +58,15 @@ STAGES = (
     Stage("Finishing", 2, re.compile(r"^Updating \S*/etc/fstab$")),
 )
 
+#: pacman's line as it installs each package of a transaction. archinstall
+#: runs pacman on a pty, so pacman draws its progress bars, counts included.
+_INSTALLING = re.compile(r"^\(\s*(\d+)/(\d+)\) installing ")
+
+#: Roughly how a pacman transaction's time divides: downloading the packages,
+#: installing them, and the rest running the hooks that follow. A package
+#: being installed means every download has finished.
+_DOWNLOADING, _INSTALLING_SHARE = 0.5, 0.4
+
 
 class Tracker:
     """Follows one install's output; a new install needs a new Tracker."""
@@ -65,6 +74,8 @@ class Tracker:
     def __init__(self, stages: tuple[Stage, ...] = STAGES) -> None:
         self._stages = stages
         self._current = 0
+        #: How far through the current stage, 0.0 to 1.0.
+        self._within = 0.0
 
     @property
     def status(self) -> Status:
@@ -80,9 +91,16 @@ class Tracker:
             starts = self._stages[index].starts
             if starts is not None and starts.search(text):
                 self._current = index
+                self._within = 0.0
                 return self.status
+        if installing := _INSTALLING.match(text):
+            count, total = (int(group) for group in installing.groups())
+            done = _DOWNLOADING + _INSTALLING_SHARE * count / total
+            self._within = max(self._within, done)
+            return self.status
         return None
 
     def _fraction(self) -> float:
-        done = sum(stage.weight for stage in self._stages[: self._current])
+        before = sum(stage.weight for stage in self._stages[: self._current])
+        done = before + self._stages[self._current].weight * self._within
         return done / sum(stage.weight for stage in self._stages)
