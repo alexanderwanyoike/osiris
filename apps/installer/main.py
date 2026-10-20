@@ -798,6 +798,16 @@ class Window(Adw.ApplicationWindow):
         self.bar.set_show_text(False)
         box.append(self.bar)
 
+        details = Gtk.Box(spacing=12)
+        self.step = Gtk.Label(xalign=0, hexpand=True)
+        self.step.add_css_class("dim-label")
+        details.append(self.step)
+        self.percent = Gtk.Label(xalign=1)
+        self.percent.add_css_class("dim-label")
+        self.percent.add_css_class("numeric")
+        details.append(self.percent)
+        box.append(details)
+
         self.retry_bar = Gtk.Box(halign=Gtk.Align.END, spacing=8)
         self.retry_bar.set_visible(False)
         back = Gtk.Button(label="Change settings")
@@ -850,9 +860,8 @@ class Window(Adw.ApplicationWindow):
         self.bar.remove_css_class("error")
         self.bar.set_fraction(0.0)
         self.step_label.set_text("Starting")
-        # archinstall reports no fraction complete, so the bar says "working"
-        # rather than inventing a percentage. The Details log shows each step.
-        GLib.timeout_add(120, self.pulse)
+        self.step.set_text("")
+        self.percent.set_text("")
         threading.Thread(target=self.worker, daemon=True).start()
 
     def retry(self, to_start: bool = False) -> None:
@@ -894,7 +903,7 @@ class Window(Adw.ApplicationWindow):
         GLib.idle_add(self.append_log, line)
 
     def on_progress(self, status) -> None:
-        GLib.idle_add(self.set_progress, status.fraction, status.title)
+        GLib.idle_add(self.show_status, status)
 
     def append_log(self, line: str) -> bool:
         buffer = self.log.get_buffer()
@@ -903,15 +912,12 @@ class Window(Adw.ApplicationWindow):
         self.log.scroll_to_iter(buffer.get_end_iter(), 0.0, False, 0.0, 0.0)
         return GLib.SOURCE_REMOVE
 
-    def pulse(self) -> bool:
-        if self.installing:
-            self.bar.pulse()
-        return self.installing
-
-    def set_progress(self, fraction: float, message: str) -> bool:
-        if fraction >= 1.0:
-            self.bar.set_fraction(fraction)
-        self.step_label.set_text(message)
+    def show_status(self, status) -> bool:
+        """Draw how far the install has got (osiris.provision.install_progress)."""
+        self.step_label.set_text(status.title)
+        self.step.set_text(f"Step {status.step} of {status.steps}")
+        self.percent.set_text(f"{round(status.fraction * 100)}%")
+        self.bar.set_fraction(status.fraction)
         return GLib.SOURCE_REMOVE
 
     def failed(self, error: BaseException, detail: str) -> bool:
