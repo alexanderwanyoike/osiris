@@ -39,8 +39,24 @@ def parse(terse: str) -> list[WifiNetwork]:
 
 
 def choices(heard: list[WifiNetwork]) -> list[WifiNetwork]:
-    """The networks worth offering, best first."""
-    return heard
+    """The networks worth offering, best first.
+
+    One per name: nmcli lists each access point, and a mesh is several. The
+    one kept is the joined one if any, else the strongest. Hidden networks
+    have no name to offer.
+    """
+    best: dict[str, WifiNetwork] = {}
+    for network in heard:
+        if not network.ssid:
+            continue
+        kept = best.get(network.ssid)
+        if kept is None or _rank(network) > _rank(kept):
+            best[network.ssid] = network
+    return sorted(best.values(), key=_rank, reverse=True)
+
+
+def _rank(network: WifiNetwork) -> tuple[bool, int]:
+    return network.in_use, network.signal
 
 
 def _fields(line: str) -> list[str]:
