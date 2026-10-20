@@ -58,8 +58,10 @@ under your answer; a failed build comes back to you to fix."""
 #: What the model may touch beyond its tools, by the person's choice
 #: (osiris.harness.trust).
 REACH = {
-    False: "nothing outside that folder is\nyours to touch, and you cannot run commands.",
-    True: "the person has allowed you\neverything: you may run commands and read or change any file, though a\nProgram's code still belongs in its own folder.",
+    False: "nothing outside that folder is\nyours to touch, and you cannot run "
+    "commands.",
+    True: "the person has allowed you\neverything: you may run commands and read "
+    "or change any file, though a\nProgram's code still belongs in its own folder.",
 }
 
 
