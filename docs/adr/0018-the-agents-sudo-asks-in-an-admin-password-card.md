@@ -82,5 +82,18 @@ The guards, all in `osiris/harness/admin.py`, with an attack test for each:
   and keep the card truthful. They do not make the password safe from a
   program already running as the person and set on stealing it: one could
   forge the helper's command line, or replace sudo in the person's own shell.
+- The agent's shell is an ancestor of the helper, and with the kernel's
+  default `ptrace_scope` of 1 an ancestor running as the person may trace it
+  and read the password from its memory. The Harness refuses a helper with a
+  tracer (TracerPid in `/proc/<pid>/status`, which the person cannot hide),
+  both when the request arrives and again just before the password leaves,
+  after the person allows. What remains is a race: attaching in the
+  milliseconds between that last check and the helper writing to sudo. The
+  helper cannot make itself untraceable (non-dumpable) without hiding its
+  executable from the Harness's check; a small set-gid launcher would make it
+  untraceable from its first instruction and is the next step if this matters.
+- `LD_PRELOAD`, `LD_LIBRARY_PATH` and `LD_AUDIT` do not reach the helper: the
+  dynamic loader drops them from set-uid sudo's environment, which the helper
+  inherits (checked with sudo 1.9.17 and glibc on Arch).
 - A Python string cannot be wiped; the password is dropped once handed over.
 - Every sudo asks, so a script calling sudo ten times asks ten times.
