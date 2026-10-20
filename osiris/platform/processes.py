@@ -1,11 +1,12 @@
 """Who a running process is, as the kernel reports it in /proc.
 
-``Processes`` is the port; ``ProcFs`` reads /proc.
+``Processes`` is the port; ``ProcFs`` reads /proc and ``FakeProcesses`` holds
+a table a test writes.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
@@ -72,3 +73,11 @@ def _exe(folder: Path) -> str | None:
         return str((folder / "exe").readlink())
     except OSError:
         return None
+
+
+@dataclass
+class FakeProcesses:
+    table: dict[int, Process] = field(default_factory=dict)
+
+    def get(self, pid: int) -> Process | None:
+        return self.table.get(pid)
