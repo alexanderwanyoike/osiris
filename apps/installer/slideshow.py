@@ -9,7 +9,7 @@ import os
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk  # noqa: E402
+from gi.repository import GLib, Gtk  # noqa: E402
 
 SLIDES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "slides")
 
@@ -17,12 +17,29 @@ SLIDES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "slides")
 class Slideshow(Gtk.Stack):
     """Each slide in slides.json: its picture over its sentence."""
 
-    def __init__(self, folder=SLIDES):
+    def __init__(self, folder=SLIDES, every_ms=7000):
         super().__init__(transition_type=Gtk.StackTransitionType.CROSSFADE,
                          transition_duration=800)
         with open(os.path.join(folder, "slides.json")) as fh:
             for slide in json.load(fh):
                 self.add_child(self.slide(folder, slide))
+        self.every_ms = every_ms
+        self.timer = None
+        self.connect("map", lambda _s: self.start())
+        self.connect("unmap", lambda _s: self.stop())
+
+    def start(self) -> None:
+        if self.timer is None:
+            self.timer = GLib.timeout_add(self.every_ms, self.turn)
+
+    def stop(self) -> None:
+        if self.timer is not None:
+            GLib.source_remove(self.timer)
+            self.timer = None
+
+    def turn(self) -> bool:
+        self.advance()
+        return GLib.SOURCE_CONTINUE
 
     def advance(self) -> None:
         """The next slide, or the first after the last."""
