@@ -19,6 +19,13 @@ from pathlib import PurePosixPath
 
 from osiris.platform.processes import Process, Processes
 
+#: The askpass helper, root's file, which the Harness answers.
+HELPER = "/usr/lib/osiris/askpass"
+#: How the helper runs: its interpreter in isolated mode, so nothing in the
+#: person's environment or site folder is loaded into it.
+HELPER_ARGV = ("/usr/bin/python3", "-I", HELPER)
+_SYSTEM_PYTHON = re.compile(r"/usr/bin/python3(?:\.\d+)?")
+
 #: sudo's options that take a value (sudo 1.9.17, ``sudo -h``), short and long.
 #: ``-h`` takes one only when it is attached, as ``-hhost``.
 _SHORT_WITH_VALUE = frozenset("aCcDgpRrTtUu")
@@ -134,6 +141,25 @@ def asking_sudo(processes: Processes, helper: int) -> Process | None:
     if parent is None or not _is_sudo(parent) or parent.uid != found.uid:
         return None
     return parent
+
+
+def caller_sudo(processes: Processes, caller: int, *, uid: int) -> Process | None:
+    """The genuine sudo behind ``caller``, if the caller is the helper it
+    started for the account ``uid``; None means refuse.
+
+    A process can rewrite its own command line, so the check that holds is the
+    parent: only sudo, as root, starts the helper; the rest turns away other
+    programs sudo was pointed at.
+    """
+    found = processes.get(caller)
+    if (
+        found is None
+        or found.uid != uid
+        or found.cmdline[: len(HELPER_ARGV)] != HELPER_ARGV
+        or not _SYSTEM_PYTHON.fullmatch(found.exe or "")
+    ):
+        return None
+    return asking_sudo(processes, caller)
 
 
 class _Options:
