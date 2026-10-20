@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 import shlex
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from itertools import takewhile
@@ -266,6 +266,35 @@ def asking_program(processes: Processes, sudo: Process) -> str:
             return named
         found = processes.get(found.parent)
     return "an unknown program"
+
+
+@dataclass(frozen=True)
+class HarnessAnswer:
+    """What came back when the helper asked the Harness: the password if the
+    person allowed it, or the D-Bus error if the call failed."""
+
+    password: str | None = None
+    error: str | None = None
+
+
+def helper_answer(
+    processes: Processes,
+    helper: int,
+    *,
+    ask_harness: Callable[[Request], HarnessAnswer],
+    ask_person: Callable[[str, Request], str | None],
+) -> str | None:
+    """The password the helper ``helper`` hands to sudo, or None for none."""
+    sudo = asking_sudo(processes, helper)
+    if sudo is None:
+        return None
+    request = request_of(sudo.cmdline)
+    answer = ask_harness(request)
+    if answer.error is None:
+        return answer.password
+    if asks_itself(answer.error):
+        return ask_person(asking_program(processes, sudo), request)
+    return None
 
 
 @dataclass(frozen=True)
