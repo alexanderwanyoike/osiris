@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from osiris.provision.network import mirror_url
+import pytest
+
+from osiris.platform import FakeHttpClient, HttpError
+from osiris.provision.network import mirror_url, reachable
 
 MIRRORLIST = """\
 ##
@@ -14,6 +17,9 @@ MIRRORLIST = """\
 Server = https://fastly.mirror.pkgbuild.com/$repo/os/$arch
 Server = https://mirror.example.org/archlinux/$repo/os/$arch
 """
+
+
+URL = "https://fastly.mirror.pkgbuild.com/core/os/x86_64/core.db"
 
 
 class TestWhereTheCheckLooks:
@@ -28,3 +34,21 @@ class TestWhereTheCheckLooks:
         assert mirror_url("#Server = https://x.org/$repo/os/$arch\n") == (
             "https://archlinux.org/"
         )
+
+
+class TestWhetherItIsReachable:
+    @pytest.mark.parametrize(
+        ("reply", "online"),
+        [
+            (None, True),
+            (HttpError(503, "busy"), True),
+            (HttpError(0, "unreachable"), False),
+        ],
+        ids=["answered", "answered with an error", "no answer"],
+    )
+    def test_online_means_the_mirror_answered_at_all(
+        self, reply: object, online: bool
+    ) -> None:
+        http = FakeHttpClient(replies={("HEAD", URL): reply})
+        assert reachable(http, URL) is online
+        assert http.requests == [("HEAD", URL, None)]

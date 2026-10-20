@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from osiris.platform.http import HttpClient
+
 #: Asked when the medium's mirrorlist names no server at all.
 FALLBACK = "https://archlinux.org/"
 
@@ -19,3 +21,8 @@ def mirror_url(mirrorlist: str) -> str:
             base = value.strip().replace("$repo", "core").replace("$arch", "x86_64")
             return f"{base.rstrip('/')}/core.db"
     return FALLBACK
+
+
+def reachable(http: HttpClient, url: str) -> bool:
+    """Whether anything at url answers."""
+    return False
