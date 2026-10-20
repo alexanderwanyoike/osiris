@@ -6,14 +6,19 @@ from __future__ import annotations
 import os
 import shlex
 import sys
+import xml.etree.ElementTree as ElementTree
 from dataclasses import replace
 
 import pytest
 
 from osiris.harness.admin import (
     AGENT_SUDO_SCRIPT,
+    ASK_TIMEOUT,
+    HARNESS_GIVES_UP,
     HELPER_ARGV,
     HELPER_SCRIPT,
+    INTERFACE,
+    INTERFACE_XML,
     Kind,
     NotTheAgents,
     Refuse,
@@ -397,3 +402,27 @@ class TestTheInstalledScripts:
 
     def test_the_helper_runs_as_the_harness_checks_that_it_does(self) -> None:
         assert HELPER_SCRIPT.splitlines()[0] == "#!" + " ".join(HELPER_ARGV[:2])
+
+
+class TestTheBusInterface:
+    def test_ask_takes_the_command_and_prompt_and_answers_with_the_password(
+        self,
+    ) -> None:
+        node = ElementTree.fromstring(INTERFACE_XML)
+        [interface] = node.findall("interface")
+        assert interface.get("name") == INTERFACE
+        [ask] = interface.findall("method")
+        assert ask.get("name") == "Ask"
+        arguments = [
+            (a.get("name"), a.get("type"), a.get("direction"))
+            for a in ask.findall("arg")
+        ]
+        assert arguments == [
+            ("command", "as", "in"),
+            ("prompt", "s", "in"),
+            ("approved", "b", "out"),
+            ("password", "s", "out"),
+        ]
+
+    def test_the_harness_answers_before_the_helper_stops_waiting(self) -> None:
+        assert 0 < HARNESS_GIVES_UP < ASK_TIMEOUT
