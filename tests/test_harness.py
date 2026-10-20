@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from osiris.harness.admin import Request
 from osiris.harness.engine import (
     Answered,
     Event,
@@ -656,3 +657,17 @@ def test_of_two_sessions_running_sudo_the_latest_to_start_it_asks() -> None:
     subject.handle(ToolRequested("ses_2", "per_1", "bash", ("sudo systemctl stop x",)))
     subject.handle(ToolRequested("ses_1", "per_2", "bash", ("sudo pacman -S cowsay",)))
     assert subject.running_sudo() == "ses_1"
+
+
+def test_an_admin_password_answer_is_logged_without_the_password() -> None:
+    subject, _, files = everything_allowed()
+    subject.ask("install cowsay")
+    subject.admin_answered("ses_1", Request(("pacman", "-S", "cowsay")), approved=True)
+    assert entries(files)[-1] == {
+        "time": NOON.isoformat(),
+        "kind": "admin",
+        "session": "ses_1",
+        "command": ["pacman", "-S", "cowsay"],
+        "user": "root",
+        "approved": True,
+    }
