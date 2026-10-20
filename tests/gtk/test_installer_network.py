@@ -154,3 +154,17 @@ class TestWhereTheStepSits:
         window = installer.Window(None, network=FakeNetwork(), background=now)
         window.leave_welcome()
         assert window.nav.get_visible_page().get_tag() == "network"
+
+    def test_install_waits_for_a_connection_lost_since(self) -> None:
+        network = FakeNetwork()
+        window = installer.Window(None, network=network, background=now)
+        window.disk_choice = None
+        window.nav.push(window.confirm_page())
+        window.start()
+        assert window.nav.get_visible_page().get_tag() == "network"
+        assert not window.installing
+        network.connected = True
+        connect = window.nav.get_visible_page()
+        find(connect, Gtk.Button, "Check again").emit("clicked")
+        find(connect, Gtk.Button, "Continue").emit("clicked")
+        assert window.nav.get_visible_page().get_tag() == "confirm"
