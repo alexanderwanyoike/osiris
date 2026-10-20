@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
-from osiris.platform import FakeHttpClient, HttpError
-from osiris.provision.network import mirror_url, reachable
+from osiris.model.wifi import WifiNetwork
+from osiris.platform import FakeHttpClient, FakeRunner, HttpError
+from osiris.platform.process import Result
+from osiris.provision.network import Network, mirror_url, reachable
 
 MIRRORLIST = """\
 ##
@@ -52,3 +56,22 @@ class TestWhetherItIsReachable:
         http = FakeHttpClient(replies={("HEAD", URL): reply})
         assert reachable(http, URL) is online
         assert http.requests == [("HEAD", URL, None)]
+
+
+SCAN = "nmcli -t -f IN-USE,SIGNAL,SECURITY,SSID device wifi list --rescan yes"
+
+
+def a_network(runner: FakeRunner, tmp_path: Path) -> Network:
+    return Network(runner, FakeHttpClient(), URL, secrets=tmp_path)
+
+
+class TestWifi:
+    def test_networks_are_listed_from_a_fresh_scan_best_first(
+        self, tmp_path: Path
+    ) -> None:
+        heard = " :40:WPA2:Office\n*:70:WPA2:Home\n :20:WPA2:Home\n"
+        runner = FakeRunner(results={SCAN: Result(("nmcli",), 0, heard)})
+        assert a_network(runner, tmp_path).wifi() == [
+            WifiNetwork("Home", 70, "WPA2", in_use=True),
+            WifiNetwork("Office", 40, "WPA2"),
+        ]

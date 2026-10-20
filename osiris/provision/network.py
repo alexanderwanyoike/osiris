@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from osiris.model.wifi import WifiNetwork
 from osiris.platform.http import HttpClient, HttpError
+from osiris.platform.process import CommandRunner
+
+#: Where a Wi-Fi password is written for nmcli to read, and deleted after.
+SECRETS = Path("/root/osiris-install")
 
 #: Asked when the medium's mirrorlist names no server at all.
 FALLBACK = "https://archlinux.org/"
@@ -34,3 +41,22 @@ def reachable(http: HttpClient, url: str) -> bool:
     except HttpError as error:
         return error.status != 0
     return True
+
+
+class Network:
+    """The live medium's connection: whether it is online, and joining Wi-Fi."""
+
+    def __init__(
+        self,
+        runner: CommandRunner,
+        http: HttpClient,
+        url: str,
+        secrets: Path = SECRETS,
+    ) -> None:
+        self._runner = runner
+        self._http = http
+        self._url = url
+        self._secrets = secrets
+
+    def wifi(self) -> list[WifiNetwork]:
+        return []
