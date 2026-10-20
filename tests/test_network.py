@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
@@ -93,8 +94,41 @@ class TestWifi:
         assert a_network(runner, tmp_path).wifi() == []
 
 
+@dataclass
+class ReadsPasswordFiles(FakeRunner):
+    """Records what each passwd-file held at the moment nmcli was given it."""
+
+    password_files: list[str] = field(default_factory=list)
+
+    def run(self, *argv: str, check: bool = True, quiet: bool = False) -> Result:
+        if "passwd-file" in argv:
+            path = Path(argv[argv.index("passwd-file") + 1])
+            self.password_files.append(path.read_text())
+        return super().run(*argv, check=check, quiet=quiet)
+
+
 class TestJoining:
     def test_an_open_network_is_joined_by_name(self, tmp_path: Path) -> None:
         runner = FakeRunner()
         a_network(runner, tmp_path).join(WifiNetwork("Cafe", 50, ""))
         assert runner.commands == ["nmcli device wifi connect Cafe"]
+
+    @pytest.mark.parametrize(
+        ("security", "key_mgmt"), [("WPA1 WPA2", "wpa-psk"), ("WPA3", "sae")]
+    )
+    def test_a_secured_network_gets_its_password_from_a_file_never_argv(
+        self, tmp_path: Path, security: str, key_mgmt: str
+    ) -> None:
+        runner = ReadsPasswordFiles()
+        network = a_network(runner, tmp_path)
+        network.join(WifiNetwork("Home", 70, security), "hunter22")
+        secret = tmp_path / "wifi-password"
+        assert runner.commands == [
+            "nmcli connection delete id Home",
+            f"nmcli connection add type wifi con-name Home ssid Home "
+            f"wifi-sec.key-mgmt {key_mgmt}",
+            f"nmcli connection up id Home passwd-file {secret}",
+        ]
+        assert runner.password_files == ["802-11-wireless-security.psk:hunter22\n"]
+        assert not any("hunter22" in command for command in runner.commands)
+        assert not secret.exists()
