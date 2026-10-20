@@ -1,0 +1,61 @@
+"""The processes port: who a running process is, read from /proc."""
+
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess
+import time
+from collections.abc import Iterator
+from pathlib import Path
+
+import pytest
+
+from osiris.platform.processes import ProcFs
+
+
+@pytest.fixture
+def sleeper() -> Iterator[subprocess.Popen[bytes]]:
+    sleep = shutil.which("sleep")
+    assert sleep is not None
+    child = subprocess.Popen([sleep, "30"])
+    # Popen can return before the child has exec'd; until then /proc shows
+    # the forked parent's empty command line.
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        if Path(f"/proc/{child.pid}/cmdline").read_bytes():
+            break
+        time.sleep(0.01)
+    yield child
+    child.kill()
+    child.wait()
+
+
+def test_proc_reads_a_running_process(sleeper: subprocess.Popen[bytes]) -> None:
+    found = ProcFs().get(sleeper.pid)
+    assert found is not None
+    assert found.pid == sleeper.pid
+    assert found.parent == os.getpid()
+    assert (found.uid, found.euid) == (os.getuid(), os.geteuid())
+    assert found.name == "sleep"
+    assert found.cmdline == (str(sleeper.args[0]), "30")
+    assert found.exe == str(Path(str(sleeper.args[0])).resolve())
+
+
+def test_a_process_that_is_gone_is_none() -> None:
+    # Above the kernel's highest possible pid, so it never exists.
+    assert ProcFs().get(2**23) is None
+
+
+def test_proc_says_which_process_is_tracing_one(tmp_path: Path) -> None:
+    """A debugger attached to a process can read its memory; the kernel names
+    it in TracerPid, which the person cannot hide."""
+    folder = tmp_path / "42"
+    folder.mkdir()
+    (folder / "status").write_text(
+        "Name:\taskpass\nPPid:\t41\nTracerPid:\t7\nUid:\t1000\t1000\t1000\t1000\n"
+    )
+    (folder / "cmdline").write_bytes(b"/usr/bin/python3\0")
+    found = ProcFs(tmp_path).get(42)
+    assert found is not None
+    assert found.tracer == 7

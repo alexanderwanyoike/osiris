@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from osiris.harness.admin import Request
 from osiris.harness.engine import (
     Answered,
     Event,
@@ -612,3 +613,72 @@ def test_restarting_the_tools_attaches_them_again_where_they_run() -> None:
     subject.new_conversation(POMODORO)
     subject.ask("add a pause button")
     assert engine.attached == [("osiris", HOME), ("osiris", HOME), ("osiris", POMODORO)]
+
+
+def everything_allowed() -> tuple[Harness, FakeEngine, FakeFileSystem]:
+    return harness(allowed=[True])
+
+
+def test_an_admin_request_belongs_to_the_session_whose_last_command_ran_sudo() -> None:
+    subject, _, _ = everything_allowed()
+    subject.ask("install cowsay")
+    subject.handle(ToolRequested("ses_1", "per_1", "shell", ("sudo pacman -S cowsay",)))
+    assert subject.running_sudo() == "ses_1"
+
+
+def test_a_session_whose_last_command_did_not_run_sudo_has_no_admin_request() -> None:
+    subject, _, _ = everything_allowed()
+    subject.ask("install cowsay")
+    subject.handle(ToolRequested("ses_1", "per_1", "bash", ("sudo pacman -S cowsay",)))
+    subject.handle(ToolRequested("ses_1", "per_2", "bash", ("pseudocode --help",)))
+    assert subject.running_sudo() is None
+
+
+def test_a_refused_sudo_is_no_sessions_admin_request() -> None:
+    subject, _, _ = harness()
+    subject.ask("install cowsay")
+    subject.handle(ToolRequested("ses_1", "per_1", "bash", ("sudo pacman -S cowsay",)))
+    assert subject.running_sudo() is None
+
+
+def test_a_session_that_has_finished_has_no_admin_request() -> None:
+    subject, _, _ = everything_allowed()
+    subject.ask("install cowsay")
+    subject.handle(ToolRequested("ses_1", "per_1", "bash", ("sudo pacman -S cowsay",)))
+    subject.handle(Finished("ses_1"))
+    assert subject.running_sudo() is None
+
+
+def test_of_two_sessions_running_sudo_the_latest_to_start_it_asks() -> None:
+    subject, _, _ = everything_allowed()
+    subject.ask("install cowsay")
+    subject.new_conversation()
+    subject.ask("restart sshd")
+    subject.handle(ToolRequested("ses_2", "per_1", "bash", ("sudo systemctl stop x",)))
+    subject.handle(ToolRequested("ses_1", "per_2", "bash", ("sudo pacman -S cowsay",)))
+    assert subject.running_sudo() == "ses_1"
+
+
+def test_an_admin_password_answer_is_logged_without_the_password() -> None:
+    subject, _, files = everything_allowed()
+    subject.ask("install cowsay")
+    subject.admin_answered("ses_1", Request(("pacman", "-S", "cowsay")), approved=True)
+    assert entries(files)[-1] == {
+        "time": NOON.isoformat(),
+        "kind": "admin",
+        "session": "ses_1",
+        "command": ["pacman", "-S", "cowsay"],
+        "user": "root",
+        "approved": True,
+    }
+
+
+def test_a_sudo_command_is_known_before_the_engine_is_told_to_run_it() -> None:
+    """The helper can ask as soon as the command starts, which is as soon as
+    the Engine has the reply."""
+    subject, engine, _ = everything_allowed()
+    subject.ask("install cowsay")
+    seen: list[str | None] = []
+    engine.reply = lambda *_args, **_kwargs: seen.append(subject.running_sudo())  # type: ignore[method-assign]
+    subject.handle(ToolRequested("ses_1", "per_1", "shell", ("sudo pacman -S cowsay",)))
+    assert seen == ["ses_1"]

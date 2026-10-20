@@ -27,6 +27,7 @@ that supersedes it and say so in both.
 | [0015](0015-harness-owns-tools-rents-engine.md) | The harness owns its tools and surfaces and rents its engine | Accepted |
 | [0016](0016-the-canvas-shows-code-and-code-oss-edits-it.md) | The Canvas shows code; the code editor edits it | Accepted |
 | [0017](0017-a-program-is-a-git-project-installed-from-a-commit.md) | A Program is a git Project, installed as a copy of one commit | Accepted |
+| [0018](0018-the-agents-sudo-asks-in-an-admin-password-card.md) | The agent's sudo asks in an admin password card | Accepted |
 
 ## Format
 

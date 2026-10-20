@@ -55,6 +55,8 @@ ASK_EVERYTHING = [{"action": "*", "resource": "*", "effect": "ask"}]
 class Service:
     url: str
     password: str
+    #: The service's process, which the agent's commands descend from.
+    pid: int | None = None
 
     def headers(self) -> dict[str, str]:
         token = base64.b64encode(f"opencode:{self.password}".encode()).decode()
@@ -70,7 +72,7 @@ def locate(files: FileSystem, identity: Identity, runner: CommandRunner) -> Serv
     """
     runner.run("opencode", "service", "start", quiet=True)
     state = json.loads(files.read(identity.home / SERVICE_FILE))
-    return Service(state["url"], state["password"])
+    return Service(state["url"], state["password"], state.get("pid"))
 
 
 #: Characters a URL query carries as they are; everything else is escaped.

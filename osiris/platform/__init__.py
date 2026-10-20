@@ -20,6 +20,7 @@ from osiris.platform.process import (
     RecordedCall,
     SubprocessRunner,
 )
+from osiris.platform.processes import Process, Processes, ProcFs
 
 __all__ = [
     "CommandError",
@@ -32,6 +33,9 @@ __all__ = [
     "HttpClient",
     "HttpError",
     "Identity",
+    "ProcFs",
+    "Process",
+    "Processes",
     "RealFileSystem",
     "RecordedCall",
     "SubprocessRunner",

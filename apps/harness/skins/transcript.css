@@ -93,6 +93,9 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-connected { color: @harness_success; font-size: 0.85em; }
 .harness-program { padding: 8px 0; border-top: 1px solid @harness_border; }
 
+.harness-admin { padding: 8px 0 8px 10px; border-left: 3px solid @harness_warning; }
+.harness-admin-command { color: @harness_fg; padding: 4px 0; }
+
 .harness-canvas { background-color: @harness_sunken; border-left: 1px solid alpha(@harness_border, 0.6); }
 .harness-canvas tabbar, .harness-canvas tabbar .box,
 .harness-canvas scrolledwindow, .harness-canvas viewport, .harness-canvas list,

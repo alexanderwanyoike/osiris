@@ -9,6 +9,7 @@ from gi.repository import GLib, Gtk
 from render import TurnView
 
 from osiris.harness.activity import Step
+from osiris.harness.admin import Request
 from osiris.harness.conversation import State, Turn
 from osiris.harness.log import Change
 from osiris.harness.markdown import InlineStyle
@@ -135,3 +136,25 @@ def test_what_osiris_did_is_kept_folded_under_the_answer() -> None:
 def test_an_answer_that_took_no_steps_keeps_no_record() -> None:
     view = drawn(finished())
     assert not any(text.startswith("Used") for text in shown(view))
+
+
+def test_a_command_waiting_for_the_password_shows_its_card_under_the_answer() -> None:
+    asked: list[Request] = []
+    card = Gtk.Label(label="admin card")
+
+    def admin_card(request: Request) -> Gtk.Widget:
+        asked.append(request)
+        return card
+
+    turn = Turn("install cowsay", "Installing.", State.ANSWERING)
+    turn.admin = Request(("pacman", "-S", "cowsay"))
+    view = TurnView(
+        turn, on_undo=lambda _t: None, program_card=Gtk.Label, admin_card=admin_card
+    )
+    view.update(turn, STYLE, None)
+    view.update(turn, STYLE, None)
+    assert asked[-1] == turn.admin
+    assert card.get_parent() is view.extras
+    turn.admin = None
+    view.update(turn, STYLE, None)
+    assert "admin card" not in texts(view)

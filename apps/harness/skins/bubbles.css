@@ -144,6 +144,21 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
     padding: 10px 12px;
 }
 
+/* The admin password card stands apart from the answer: it waits on the
+   person, and the command in it runs as root. */
+.harness-admin {
+    background-color: alpha(@harness_warning, 0.10);
+    border: 1px solid alpha(@harness_warning, 0.45);
+    border-radius: 14px;
+    padding: 10px 12px;
+}
+.harness-admin-command {
+    background-color: @harness_sunken;
+    color: @harness_fg;
+    border-radius: 8px;
+    padding: 6px 8px;
+}
+
 .harness-canvas { background-color: @harness_sunken; border-left: 1px solid alpha(@harness_border, 0.6); }
 .harness-canvas tabbar, .harness-canvas tabbar .box,
 .harness-canvas scrolledwindow, .harness-canvas viewport, .harness-canvas list,
