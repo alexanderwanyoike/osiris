@@ -505,6 +505,9 @@ class Application(Adw.Application):
         # Resident: closing keeps the conversation and the Engine connection.
         self.hold()
         self.look = Look(SystemIdentity().home, self._restyle)
+        # Before the Engine is started, which inherits it, so the agent's sudo
+        # asks here.
+        os.environ.update(admin.agent_environment(os.environ))
         self.drawer = Drawer(self)
         self.drawer.refresh()
         threading.Thread(target=self._listen, daemon=True).start()
