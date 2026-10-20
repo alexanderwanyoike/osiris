@@ -49,3 +49,35 @@ def test_how_a_network_is_joined_follows_its_security_column(
     column: str, security: Security
 ) -> None:
     assert WifiNetwork("x", 50, column).how == security
+
+
+@pytest.mark.parametrize(
+    ("network", "summary", "icon"),
+    [
+        (
+            WifiNetwork("Home", 80, "WPA2", in_use=True),
+            "Connected, secured, signal 80%",
+            "network-wireless-signal-excellent-symbolic",
+        ),
+        (
+            WifiNetwork("Cafe", 55, ""),
+            "Open, signal 55%",
+            "network-wireless-signal-good-symbolic",
+        ),
+        (
+            WifiNetwork("Work", 30, "WPA2 802.1X"),
+            "Enterprise or WEP, which the installer cannot join, signal 30%",
+            "network-wireless-signal-ok-symbolic",
+        ),
+        (
+            WifiNetwork("Far", 10, "WPA3"),
+            "Secured, signal 10%",
+            "network-wireless-signal-weak-symbolic",
+        ),
+    ],
+)
+def test_a_network_is_described_in_plain_words_and_a_signal_icon(
+    network: WifiNetwork, summary: str, icon: str
+) -> None:
+    assert network.summary == summary
+    assert network.icon == icon

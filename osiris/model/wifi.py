@@ -42,6 +42,14 @@ class WifiNetwork:
             return Security.SAE
         return Security.OPEN
 
+    @property
+    def summary(self) -> str:
+        return ""
+
+    @property
+    def icon(self) -> str:
+        return ""
+
 
 def parse(terse: str) -> list[WifiNetwork]:
     """`nmcli -t -f IN-USE,SIGNAL,SECURITY,SSID device wifi list` output."""
