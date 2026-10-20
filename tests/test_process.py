@@ -42,6 +42,16 @@ class TestFakeRunner:
         )
         assert runner.capture("blkid", "-s", "UUID") == "right"
 
+    def test_a_streamed_command_replays_its_planned_output_line_by_line(
+        self,
+    ) -> None:
+        heard: list[str] = []
+        runner = FakeRunner(
+            results={"archinstall": Result(("archinstall",), 0, "one\ntwo\n")}
+        )
+        runner.stream("archinstall", on_line=heard.append)
+        assert heard == ["one", "two"]
+
     def test_counts_and_arguments_are_available_to_assertions(self) -> None:
         runner = FakeRunner()
         runner.run("grub-install", "--removable")
