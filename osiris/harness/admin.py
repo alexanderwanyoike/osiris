@@ -26,6 +26,28 @@ HELPER = "/usr/lib/osiris/askpass"
 HELPER_ARGV = ("/usr/bin/python3", "-I", HELPER)
 #: Where the agent's sudo is, put first on the Engine's PATH.
 AGENT_BIN = "/usr/lib/osiris/agent-bin"
+AGENT_SUDO = f"{AGENT_BIN}/sudo"
+
+#: The agent's sudo: the system's, with -A so it asks through the helper even
+#: with no terminal, and -k so no earlier approval is reused and nothing is
+#: kept for the next command (sudo's manual, -k).
+AGENT_SUDO_SCRIPT = f"""#!{" ".join(HELPER_ARGV[:2])}
+import os
+import sys
+
+os.execve(
+    "/usr/bin/sudo",
+    ["/usr/bin/sudo", "-k", "-A", *sys.argv[1:]],
+    {{**os.environ, "SUDO_ASKPASS": "{HELPER}"}},
+)
+"""
+
+#: The helper as installed; what it does is apps/harness/askpass.py.
+HELPER_SCRIPT = f"""#!{" ".join(HELPER_ARGV[:2])}
+import runpy
+
+runpy.run_path("/usr/share/osiris/harness/askpass.py", run_name="__main__")
+"""
 _SYSTEM_PYTHON = re.compile(r"/usr/bin/python3(?:\.\d+)?")
 
 #: sudo's options that take a value (sudo 1.9.17, ``sudo -h``), short and long.
