@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import posixpath
+import re
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -56,6 +57,11 @@ FILE_TIERS = {
     "edit": Tier.UNDOABLE,
 }
 
+#: The Engine's tool for running a command: opencode 2.0 names it shell, and
+#: 1.x named it bash.
+COMMAND_ACTIONS = frozenset({"shell", "bash"})
+_SUDO = re.compile(r"\bsudo\b")
+
 #: What the Harness decided about a ``ToolRequested``, passed on in its place.
 Decision = Allowed | Refused
 
@@ -92,6 +98,10 @@ class Harness:
         #: and the folder each runs in.
         self._running: dict[str, Path] = {}
         self._allow_everything = allow_everything
+        #: Each session's latest allowed command: when it was allowed, counted
+        #: across sessions, and whether it runs sudo.
+        self._last_command: dict[str, tuple[int, bool]] = {}
+        self._commands_allowed = 0
 
     def ask(self, text: str) -> None:
         directory, session = self._directory, self._session
@@ -203,6 +213,23 @@ class Harness:
         path = posixpath.join(str(folder), resource.removesuffix("*"))
         return self._may_touch(Path(posixpath.normpath(path)))
 
+    def running_sudo(self) -> str | None:
+        """The session an admin request is for: of those running, the one
+        whose latest allowed command runs sudo, the latest to allow it first."""
+        asking = [
+            (allowed, session)
+            for session, (allowed, sudo) in self._last_command.items()
+            if sudo and session in self._running
+        ]
+        return max(asking)[1] if asking else None
+
+    def _allowed_command(self, session: str, resources: tuple[str, ...]) -> None:
+        self._commands_allowed += 1
+        self._last_command[session] = (
+            self._commands_allowed,
+            any(_SUDO.search(resource) for resource in resources),
+        )
+
     def _reply(self, session: str, request: str, *, allow: bool, message: str) -> None:
         """Answer a request; one the Engine cannot take is logged, so a single
         bad reply never ends the conversation."""
@@ -244,6 +271,8 @@ class Harness:
                 tier := self._tier(session, action, resources)
             ):
                 self._reply(session, request, allow=True, message="")
+                if action in COMMAND_ACTIONS:
+                    self._allowed_command(session, resources)
                 self._log.write(
                     "allowed",
                     session=session,
