@@ -830,6 +830,13 @@ class Window(Adw.ApplicationWindow):
         return page("progress", "Installing", box, header=False)
 
     def start(self) -> None:
+        self.background(self.network.online, self.start_if_online)
+
+    def start_if_online(self, online: bool) -> None:
+        """Install, or the connect step first if the connection went since."""
+        if not online:
+            self.nav.push(self.network_page(lambda: self.nav.pop()))
+            return
         self.installing = True
         self.nav.push(self.progress_page())
         self.run_install()
