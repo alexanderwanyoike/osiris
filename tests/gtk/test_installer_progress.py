@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -9,8 +11,13 @@ from gi.repository import Gtk
 
 from osiris.provision.install_progress import Status
 
-from .conftest import find, now, shown
+from .conftest import find, now, shown, texts
 from .test_installer_network import FakeNetwork, installer
+
+SLIDES = Path(__file__).resolve().parents[2] / "apps" / "installer" / "slides"
+CAPTIONS = [
+    slide["caption"] for slide in json.loads((SLIDES / "slides.json").read_text())
+]
 
 
 def a_progress_page() -> tuple[Any, Gtk.Widget]:
@@ -49,3 +56,14 @@ def test_a_failed_install_opens_the_log_so_the_error_shows() -> None:
     assert isinstance(details, Gtk.Expander)
     assert details.get_expanded()
     assert "Install failed" in shown(page)
+
+
+def test_the_page_shows_osiris_a_slide_at_a_time_crossfading() -> None:
+    _, page = a_progress_page()
+    slides = find(page, Gtk.Stack)
+    assert isinstance(slides, Gtk.Stack)
+    assert slides.get_transition_type() == Gtk.StackTransitionType.CROSSFADE
+    showing = slides.get_visible_child()
+    assert showing is not None
+    assert CAPTIONS[0] in texts(showing)
+    assert find(showing, Gtk.Picture).get_paintable() is not None
