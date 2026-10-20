@@ -10,9 +10,13 @@ import pytest
 
 from osiris.harness.admin import (
     Kind,
+    NotTheAgents,
+    Refuse,
+    Show,
     asking_sudo,
     caller_sudo,
     descends_from,
+    judge,
     request_of,
 )
 from osiris.platform.processes import FakeProcesses, Process
@@ -282,3 +286,51 @@ class TestWhetherTheSudoIsTheAgents:
 
     def test_a_process_is_not_its_own_descendant(self) -> None:
         assert not descends_from(genuine(), ENGINE.pid, ENGINE.pid)
+
+
+COMMAND = ("pacman", "-S", "cowsay")
+
+
+class TestWhatTheHarnessDoesWithARequest:
+    def test_the_agents_sudo_is_shown_in_its_conversation(self) -> None:
+        verdict = judge(
+            genuine(), HELPER.pid, COMMAND, uid=ME, engine=ENGINE.pid, session="ses_1"
+        )
+        assert verdict == Show(request_of(SUDO.cmdline), "ses_1")
+
+    def test_a_caller_that_is_not_the_helper_is_refused(self) -> None:
+        fake = replace(HELPER, parent=SHELL.pid)
+        verdict = judge(
+            table(ENGINE, SHELL, fake),
+            HELPER.pid,
+            COMMAND,
+            uid=ME,
+            engine=ENGINE.pid,
+            session="ses_1",
+        )
+        assert isinstance(verdict, Refuse)
+
+    def test_attack_a_command_other_than_the_one_sudo_runs_is_refused(self) -> None:
+        verdict = judge(
+            genuine(),
+            HELPER.pid,
+            ("ls",),
+            uid=ME,
+            engine=ENGINE.pid,
+            session="ses_1",
+        )
+        assert isinstance(verdict, Refuse)
+
+    def test_a_sudo_outside_the_engine_is_not_the_agents(self) -> None:
+        verdict = judge(
+            genuine(), HELPER.pid, COMMAND, uid=ME, engine=999, session="ses_1"
+        )
+        assert verdict == NotTheAgents(request_of(SUDO.cmdline))
+
+    def test_the_engines_sudo_with_no_conversation_running_it_is_not_the_agents(
+        self,
+    ) -> None:
+        verdict = judge(
+            genuine(), HELPER.pid, COMMAND, uid=ME, engine=ENGINE.pid, session=None
+        )
+        assert verdict == NotTheAgents(request_of(SUDO.cmdline))
