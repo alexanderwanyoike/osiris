@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from osiris.model.wifi import WifiNetwork, choices, parse
+from osiris.model.wifi import Security, WifiNetwork, choices, parse
 from osiris.platform.http import HttpClient, HttpError
 from osiris.platform.process import CommandError, CommandRunner
 
@@ -91,4 +91,44 @@ class Network:
 
     def join(self, network: WifiNetwork, password: str = "") -> None:
         """Join a Wi-Fi network; raises JoinFailed saying why it did not."""
-        self._runner.run("nmcli", "device", "wifi", "connect", network.ssid, quiet=True)
+        if network.how is Security.OPEN:
+            self._runner.run(
+                "nmcli", "device", "wifi", "connect", network.ssid, quiet=True
+            )  # fmt: skip
+            return
+        self._join_secured(network, password)
+
+    def _join_secured(self, network: WifiNetwork, password: str) -> None:
+        """A profile naming its key management, activated with the password
+        read from a file, so it never appears in a process's argv.
+        """
+        name = network.ssid
+        # A profile left by an earlier attempt, or by nm-applet, would make
+        # `id <name>` ambiguous.
+        self._runner.run(
+            "nmcli", "connection", "delete", "id", name, check=False, quiet=True
+        )  # fmt: skip
+        self._runner.run(
+            "nmcli", "connection", "add", "type", "wifi",
+            "con-name", name, "ssid", name,
+            "wifi-sec.key-mgmt", network.how.value,
+            quiet=True,
+        )  # fmt: skip
+        secret = self._write_secret(f"802-11-wireless-security.psk:{password}\n")
+        try:
+            self._runner.run(
+                "nmcli", "connection", "up", "id", name,
+                "passwd-file", str(secret),
+                quiet=True,
+            )  # fmt: skip
+        finally:
+            secret.unlink(missing_ok=True)
+
+    def _write_secret(self, text: str) -> Path:
+        self._secrets.mkdir(parents=True, exist_ok=True)
+        secret = self._secrets / "wifi-password"
+        # Readable by root alone before the password goes in.
+        secret.touch(mode=0o600)
+        secret.chmod(0o600)
+        secret.write_text(text)
+        return secret
