@@ -21,9 +21,11 @@ from osiris.harness.admin import (
     INTERFACE_XML,
     NOT_THE_AGENTS,
     REFUSED,
+    HarnessAnswer,
     Kind,
     NotTheAgents,
     Refuse,
+    Request,
     Show,
     agent_environment,
     asking_program,
@@ -31,6 +33,7 @@ from osiris.harness.admin import (
     asks_itself,
     caller_sudo,
     descends_from,
+    helper_answer,
     judge,
     request_of,
 )
@@ -454,3 +457,55 @@ class TestWhenTheHelperAsksItself:
         self, error: str | None
     ) -> None:
         assert not asks_itself(error)
+
+
+class Asked:
+    def __init__(self, harness: HarnessAnswer, person: str | None = None) -> None:
+        self.harness_answer = harness
+        self.person_answer = person
+        self.harness: list[Request] = []
+        self.person: list[tuple[str, Request]] = []
+
+    def ask_harness(self, request: Request) -> HarnessAnswer:
+        self.harness.append(request)
+        return self.harness_answer
+
+    def ask_person(self, program: str, request: Request) -> str | None:
+        self.person.append((program, request))
+        return self.person_answer
+
+
+def helped(processes: FakeProcesses, asked: Asked) -> str | None:
+    return helper_answer(
+        processes,
+        HELPER.pid,
+        ask_harness=asked.ask_harness,
+        ask_person=asked.ask_person,
+    )
+
+
+class TestTheHelpersAnswer:
+    def test_is_the_password_the_harness_was_given(self) -> None:
+        asked = Asked(HarnessAnswer(password="hunter2"))
+        assert helped(genuine(), asked) == "hunter2"
+        assert asked.harness == [request_of(SUDO.cmdline)]
+        assert asked.person == []
+
+    def test_attack_run_directly_it_asks_no_one_and_answers_nothing(self) -> None:
+        asked = Asked(HarnessAnswer(password="hunter2"), person="hunter2")
+        direct = replace(HELPER, parent=SHELL.pid)
+        assert helped(table(ENGINE, SHELL, direct), asked) is None
+        assert (asked.harness, asked.person) == ([], [])
+
+    def test_when_it_is_not_the_agents_it_asks_the_person_itself(self) -> None:
+        asked = Asked(HarnessAnswer(error=NOT_THE_AGENTS), person="hunter2")
+        assert helped(genuine(), asked) == "hunter2"
+        assert asked.person == [("opencode", request_of(SUDO.cmdline))]
+
+    def test_after_a_refusal_it_asks_no_one_else(self) -> None:
+        asked = Asked(HarnessAnswer(error=REFUSED), person="hunter2")
+        assert helped(genuine(), asked) is None
+        assert asked.person == []
+
+    def test_denied_in_the_harness_it_answers_nothing(self) -> None:
+        assert helped(genuine(), Asked(HarnessAnswer())) is None
