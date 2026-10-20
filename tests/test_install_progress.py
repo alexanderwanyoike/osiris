@@ -166,3 +166,45 @@ def test_each_of_several_installs_in_a_stage_moves_the_bar_on() -> None:
         ],
     )
     assert moved[4] == moved[7] < moved[8] < end.status.fraction
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "",
+        "Starting installation...",
+        "Creating partitions: /dev/vda",
+        "Optional dependencies for glibc",
+        "    gd: for memusagestat",
+        ":: Processing package changes...",
+        "(20/20) checking package integrity                 [##########] 100%",
+        "Installation completed without any errors.",
+    ],
+)
+def test_lines_that_say_nothing_about_progress_change_nothing(line: str) -> None:
+    tracker = Tracker()
+    tracker.feed(BASE)
+    tracker.feed(SYNC)
+    before = tracker.status
+    assert tracker.feed(line) is None
+    assert tracker.status == before
+
+
+def test_a_whole_install_only_ever_moves_the_bar_forward() -> None:
+    transaction = [
+        SYNC,
+        " Total ( 3/20)           9.5 MiB  15.7 MiB/s 00:00 [###-------]  30%",
+        " Total (20/20)          21.6 MiB  43.3 MiB/s 00:01 [##########] 100%",
+        "( 7/20) checking keys in keyring                   [###-------]  35%",
+        "(12/20) installing pcre2                           [##########] 100%",
+        "(20/20) installing nano                            [##########] 100%",
+        ":: Running post-transaction hooks...",
+        "(3/3) Creating iconv module configuration cache...",
+    ]
+    lines = [BASE, *transaction]
+    for line, _ in STARTS[1:4]:
+        lines += [line, *transaction, *transaction]
+    lines += [line for line, _ in STARTS[4:]]
+    moved = fractions(Tracker(), lines)
+    assert moved == sorted(moved)
+    assert 0.0 < moved[-1] < 1.0
