@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 import shlex
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from itertools import takewhile
@@ -24,6 +24,8 @@ HELPER = "/usr/lib/osiris/askpass"
 #: How the helper runs: its interpreter in isolated mode, so nothing in the
 #: person's environment or site folder is loaded into it.
 HELPER_ARGV = ("/usr/bin/python3", "-I", HELPER)
+#: Where the agent's sudo is, put first on the Engine's PATH.
+AGENT_BIN = "/usr/lib/osiris/agent-bin"
 _SYSTEM_PYTHON = re.compile(r"/usr/bin/python3(?:\.\d+)?")
 
 #: sudo's options that take a value (sudo 1.9.17, ``sudo -h``), short and long.
@@ -121,6 +123,13 @@ class Request:
         if self.kind is Kind.SCRIPT:
             return "Runs a script; its contents are not shown."
         return None
+
+
+def agent_environment(env: Mapping[str, str]) -> dict[str, str]:
+    """``env`` as the Engine is to inherit it: the agent's sudo found first,
+    and any other ``sudo -A`` in its commands asking through the helper."""
+    folders = [f for f in env.get("PATH", "").split(":") if f and f != AGENT_BIN]
+    return {**env, "PATH": ":".join([AGENT_BIN, *folders]), "SUDO_ASKPASS": HELPER}
 
 
 def _is_sudo(process: Process) -> bool:
