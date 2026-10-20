@@ -25,6 +25,8 @@ class Process:
     #: None where the kernel will not say, as for a set-uid program run by
     #: someone else.
     exe: str | None
+    #: The process tracing this one, 0 for none.
+    tracer: int = 0
 
 
 @runtime_checkable
@@ -58,6 +60,7 @@ class ProcFs:
             euid=int(uids[1]),
             cmdline=_arguments(raw),
             exe=_exe(folder),
+            tracer=int(status.get("TracerPid", "0")),
         )
 
 
