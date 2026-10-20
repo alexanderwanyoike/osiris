@@ -88,3 +88,6 @@ class Network:
         except CommandError:
             return []
         return choices(parse(heard))
+
+    def join(self, network: WifiNetwork, password: str = "") -> None:
+        """Join a Wi-Fi network; raises JoinFailed saying why it did not."""

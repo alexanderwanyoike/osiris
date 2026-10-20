@@ -91,3 +91,10 @@ class TestWifi:
     def test_a_machine_without_wifi_lists_none(self, tmp_path: Path) -> None:
         runner = FakeRunner(results={SCAN: Result(("nmcli",), 10, "")})
         assert a_network(runner, tmp_path).wifi() == []
+
+
+class TestJoining:
+    def test_an_open_network_is_joined_by_name(self, tmp_path: Path) -> None:
+        runner = FakeRunner()
+        a_network(runner, tmp_path).join(WifiNetwork("Cafe", 50, ""))
+        assert runner.commands == ["nmcli device wifi connect Cafe"]
