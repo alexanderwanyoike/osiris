@@ -13,6 +13,7 @@ from osiris.harness.admin import (
     NotTheAgents,
     Refuse,
     Show,
+    asking_program,
     asking_sudo,
     caller_sudo,
     descends_from,
@@ -334,3 +335,20 @@ class TestWhatTheHarnessDoesWithARequest:
             genuine(), HELPER.pid, COMMAND, uid=ME, engine=ENGINE.pid, session=None
         )
         assert verdict == NotTheAgents(request_of(SUDO.cmdline))
+
+
+class TestTheProgramThatAsked:
+    def test_is_the_nearest_parent_that_is_not_a_shell(self) -> None:
+        claude = replace(ENGINE, pid=60, name="node", cmdline=("claude",))
+        zsh = replace(SHELL, pid=70, parent=60, name="zsh", cmdline=("/bin/zsh",))
+        bash = replace(SHELL, parent=70)
+        processes = table(claude, zsh, bash, SUDO)
+        assert asking_program(processes, SUDO) == "claude"
+
+    def test_is_named_by_its_command_or_else_by_the_kernel(self) -> None:
+        nameless = replace(ENGINE, cmdline=())
+        assert asking_program(table(nameless, SHELL, SUDO), SUDO) == "opencode"
+        assert asking_program(genuine(), SUDO) == "opencode"
+
+    def test_is_unknown_when_only_shells_are_left(self) -> None:
+        assert asking_program(table(SHELL, SUDO), SUDO) == "an unknown program"
