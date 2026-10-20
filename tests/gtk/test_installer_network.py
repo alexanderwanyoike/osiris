@@ -168,3 +168,18 @@ class TestWhereTheStepSits:
         find(connect, Gtk.Button, "Check again").emit("clicked")
         find(connect, Gtk.Button, "Continue").emit("clicked")
         assert window.nav.get_visible_page().get_tag() == "confirm"
+
+    def test_install_cannot_be_pressed_twice_while_the_check_runs(self) -> None:
+        pending: list[object] = []
+        window = installer.Window(
+            None,
+            network=FakeNetwork(connected=True),
+            background=lambda work, done: pending.append((work, done)),
+        )
+        window.disk_choice = None
+        confirm = window.confirm_page()
+        window.nav.push(confirm)
+        window.understood.set_active(True)
+        install = find(confirm, Gtk.Button, "Install")
+        install.emit("clicked")
+        assert not install.get_sensitive()
