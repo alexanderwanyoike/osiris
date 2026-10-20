@@ -13,6 +13,7 @@ from osiris.harness.admin import (
     NotTheAgents,
     Refuse,
     Show,
+    agent_environment,
     asking_program,
     asking_sudo,
     caller_sudo,
@@ -357,3 +358,17 @@ class TestTheProgramThatAsked:
         terminal = replace(ENGINE, name="ghostty", cmdline=("ghostty",))
         login = replace(SHELL, name="zsh", cmdline=("-zsh",))
         assert asking_program(table(terminal, login, SUDO), SUDO) == "ghostty"
+
+
+class TestTheAgentsEnvironment:
+    def test_puts_the_agents_sudo_first_and_names_the_helper(self) -> None:
+        env = agent_environment({"PATH": "/usr/bin:/bin", "LANG": "C"})
+        assert env == {
+            "PATH": "/usr/lib/osiris/agent-bin:/usr/bin:/bin",
+            "LANG": "C",
+            "SUDO_ASKPASS": "/usr/lib/osiris/askpass",
+        }
+
+    def test_is_the_same_when_applied_twice(self) -> None:
+        once = agent_environment({"PATH": "/usr/bin"})
+        assert agent_environment(once) == once
