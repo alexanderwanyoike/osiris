@@ -33,6 +33,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))
 
 import disks  # noqa: E402
 from network_page import NetworkPage  # noqa: E402
+from slideshow import Slideshow  # noqa: E402
 
 from osiris.model.disk import Disk, Filesystem, human  # noqa: E402
 from osiris.model.layout import InstallMode, Layout  # noqa: E402
@@ -102,6 +103,7 @@ CSS = b"""
     padding: 10px;
 }
 .danger-note { color: @error_color; font-weight: 600; }
+.slide { border-radius: 12px; }
 """
 
 
@@ -790,6 +792,10 @@ class Window(Adw.ApplicationWindow):
         box = column(14)
         box.set_size_request(640, -1)
 
+        self.slides = Slideshow()
+        self.slides.set_margin_bottom(12)
+        box.append(self.slides)
+
         self.step_label = Gtk.Label(label="Starting", xalign=0)
         self.step_label.add_css_class("title-2")
         box.append(self.step_label)
@@ -835,10 +841,13 @@ class Window(Adw.ApplicationWindow):
         self.details.set_vexpand(True)
         box.append(self.details)
 
+        # The slides are 1600 pixels wide, and the column would grow to the
+        # whole screen to fit them at their natural size.
+        clamp = Adw.Clamp(maximum_size=720, child=box)
         # No header bar: there is nothing to go back to once the disk has been
         # partitioned, and offering a back arrow that does nothing is worse
         # than offering none.
-        return page("progress", "Installing", box, header=False)
+        return page("progress", "Installing", clamp, header=False)
 
     def start(self) -> None:
         self.install_button.set_sensitive(False)
