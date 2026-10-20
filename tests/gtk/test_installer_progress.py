@@ -104,3 +104,9 @@ def test_the_slides_move_on_by_themselves_while_they_are_on_screen() -> None:
     hidden = slides.get_visible_child()
     spin(0.3)
     assert slides.get_visible_child() is hidden
+
+
+def test_a_failed_install_puts_the_slides_away() -> None:
+    window, page = a_progress_page()
+    window.failed(RuntimeError("archinstall exited 1."), "")
+    assert not any(caption in shown(page) for caption in CAPTIONS)
