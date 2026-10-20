@@ -85,6 +85,9 @@ def spin(seconds: float) -> None:
     end = time.monotonic() + seconds
     while time.monotonic() < end:
         context.iteration(False)
+        # Each iteration costs a DeprecationWarning from gi; a busy loop
+        # turns that into tens of thousands of them.
+        time.sleep(0.005)
 
 
 def test_the_slides_move_on_by_themselves_while_they_are_on_screen() -> None:
