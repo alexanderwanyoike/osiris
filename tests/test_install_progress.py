@@ -7,6 +7,8 @@ own pty, as the installer runs it.
 
 from __future__ import annotations
 
+import pytest
+
 from osiris.provision.install_progress import Status, Tracker
 
 
@@ -121,3 +123,22 @@ def test_pacmans_download_counts_move_the_bar_before_it_installs() -> None:
     )
     assert moved[2] == start
     assert start < moved[3] < moved[4] < moved[5]
+
+
+def test_pacmans_hooks_finish_a_transaction_once_it_says_it_runs_them() -> None:
+    _, end = bounds_of_the_base_stage()
+    moved = fractions(
+        Tracker(),
+        [
+            BASE,
+            SYNC,
+            " Total (20/20)          21.6 MiB  43.3 MiB/s 00:01 [##########] 100%",
+            "(20/20) checking keys in keyring                   [##########] 100%",
+            "(20/20) installing nano                            [##########] 100%",
+            ":: Running post-transaction hooks...",
+            "(1/3) Generating the configured locale...",
+            "(3/3) Creating iconv module configuration cache...",
+        ],
+    )
+    assert moved[3] == moved[2]
+    assert moved[4] < moved[6] < moved[7] == pytest.approx(end)
