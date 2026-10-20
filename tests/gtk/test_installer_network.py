@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import importlib.util
 from dataclasses import dataclass, field
+from pathlib import Path
+from types import ModuleType
 
 from gi.repository import Adw, Gtk
 from network_page import NetworkPage
@@ -11,6 +14,19 @@ from osiris.model.wifi import WifiNetwork
 from osiris.provision.network import JoinFailed
 
 from .conftest import find, now, shown, widgets
+
+
+def load_installer() -> ModuleType:
+    """apps/installer/main.py under another name: the harness has a main too."""
+    path = Path(__file__).resolve().parents[2] / "apps" / "installer" / "main.py"
+    spec = importlib.util.spec_from_file_location("installer_main", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+installer = load_installer()
 
 HOME = WifiNetwork("Home", 80, "WPA2")
 CAFE = WifiNetwork("Cafe", 40, "")
@@ -129,3 +145,12 @@ def test_a_connection_that_arrives_by_itself_is_noticed() -> None:
     network.connected = True  # a cable, plugged in, and nobody pressed anything
     page.poll()
     assert find(page, Gtk.Button, "Continue").get_sensitive()
+
+
+class TestWhereTheStepSits:
+    def test_leaving_the_welcome_page_offline_leads_to_the_connect_step(
+        self,
+    ) -> None:
+        window = installer.Window(None, network=FakeNetwork(), background=now)
+        window.leave_welcome()
+        assert window.nav.get_visible_page().get_tag() == "network"
