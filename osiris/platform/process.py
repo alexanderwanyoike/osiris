@@ -209,8 +209,14 @@ class FakeRunner:
             self.emit("  $ " + " ".join(argv))
         return self._answer(argv, check, streamed=False)
 
-    def stream(self, *argv: str, check: bool = True) -> Result:
-        return self._answer(argv, check, streamed=True)
+    def stream(
+        self, *argv: str, check: bool = True, on_line: Sink | None = None
+    ) -> Result:
+        result = self._answer(argv, check, streamed=True)
+        if on_line is not None:
+            for line in result.stdout.splitlines():
+                on_line(line)
+        return result
 
     def capture(self, *argv: str) -> str:
         return self._answer(argv, check=True, streamed=False).stdout.strip()
