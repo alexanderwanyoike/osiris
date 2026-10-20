@@ -26,6 +26,7 @@ class NetworkPage(Adw.NavigationPage):
         self.on_online = on_online
         self.background = background
         self.rows = []
+        self.chosen = None
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
         for side in ("top", "bottom"):
@@ -46,6 +47,16 @@ class NetworkPage(Adw.NavigationPage):
 
         self.wifi_group = Adw.PreferencesGroup(title="Wi-Fi")
         box.append(self.wifi_group)
+
+        secret = Adw.PreferencesGroup()
+        self.password = Adw.PasswordEntryRow(visible=False)
+        join = Gtk.Button(label="Join", valign=Gtk.Align.CENTER)
+        join.add_css_class("suggested-action")
+        join.connect("clicked", lambda _b: self.join())
+        self.password.add_suffix(join)
+        self.password.connect("entry-activated", lambda _r: self.join())
+        secret.add(self.password)
+        box.append(secret)
 
         buttons = Gtk.Box(halign=Gtk.Align.END, spacing=8)
         buttons.set_margin_top(10)
@@ -94,5 +105,32 @@ class NetworkPage(Adw.NavigationPage):
         for network in networks:
             row = Adw.ActionRow(title=network.ssid, subtitle=network.summary)
             row.add_prefix(Gtk.Image(icon_name=network.icon))
+            if network.asks_password:
+                row.add_suffix(Gtk.Image(
+                    icon_name="network-wireless-encrypted-symbolic"))
+            row.set_activatable(True)
+            row.connect("activated", lambda _r, chosen=network: self.choose(chosen))
             self.wifi_group.add(row)
             self.rows.append(row)
+
+    def choose(self, network) -> None:
+        self.chosen = network
+        self.password.set_text("")
+        self.password.set_title(f"Password for {network.ssid}")
+        self.password.set_visible(True)
+        self.password.grab_focus()
+
+    def join(self) -> None:
+        network, secret = self.chosen, self.password.get_text()
+        if network is None:
+            return
+
+        def work():
+            self.network.join(network, secret)
+            return self.network.online(), self.network.wifi()
+
+        self.background(work, self.joined)
+
+    def joined(self, found) -> None:
+        self.password.set_visible(False)
+        self.show(found)
