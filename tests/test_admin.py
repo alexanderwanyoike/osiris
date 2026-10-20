@@ -176,3 +176,34 @@ class TestWhatKindOfCommandItIs:
     def test_the_note_names_the_user_it_runs_as(self) -> None:
         request = request_of(("sudo", "-u", "http", "sh", "-c", "id"))
         assert request.note == "A shell command, shown in full: all of it runs as http."
+
+
+class TestSudosOwnModes:
+    @pytest.mark.parametrize("option", ["-s", "-i", "--shell", "--login"])
+    def test_a_shell_with_no_command_is_an_interactive_shell(self, option: str) -> None:
+        request = request_of(("sudo", "-A", option))
+        assert request.kind is Kind.SHELL
+        assert request.shown == "an interactive shell"
+
+    def test_a_command_given_to_sudos_shell_runs_as_a_shell_string(self) -> None:
+        request = request_of(("sudo", "-A", "-s", "pacman -Syu; reboot"))
+        assert request.kind is Kind.SHELL
+        assert request.shown == "'pacman -Syu; reboot'"
+
+    @pytest.mark.parametrize(
+        "cmdline",
+        [
+            ("sudo", "-A", "-e", "/etc/hosts"),
+            ("sudo", "--edit", "/etc/hosts"),
+            ("sudoedit", "/etc/hosts"),
+        ],
+    )
+    def test_editing_is_shown_as_sudoedit(self, cmdline: tuple[str, ...]) -> None:
+        request = request_of(cmdline)
+        assert request.kind is Kind.COMMAND
+        assert request.shown == "sudoedit /etc/hosts"
+
+    def test_no_command_at_all_only_checks_the_password(self) -> None:
+        assert request_of(("sudo", "-k", "-A", "-v")).shown == (
+            "nothing: sudo only checks the password"
+        )
