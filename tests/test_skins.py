@@ -49,6 +49,8 @@ CLASSES = (
     "harness-elapsed",
     "harness-activity",
     "harness-step",
+    "harness-admin",
+    "harness-admin-command",
 )
 
 
