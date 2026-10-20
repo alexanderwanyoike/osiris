@@ -228,6 +228,7 @@ def caller_sudo(processes: Processes, caller: int, *, uid: int) -> Process | Non
     found = processes.get(caller)
     if (
         found is None
+        or found.tracer != 0
         or found.uid != uid
         or found.cmdline[: len(HELPER_ARGV)] != HELPER_ARGV
         or not _SYSTEM_PYTHON.fullmatch(found.exe or "")
