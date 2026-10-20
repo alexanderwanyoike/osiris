@@ -87,3 +87,13 @@ def test_deny_refuses() -> None:
     assert answers.denied == 1
     assert answers.allowed == []
     assert entry(widget).get_text() == ""
+
+
+def test_the_card_can_name_another_program_asking() -> None:
+    widget = AdminCard(
+        request_of(("sudo", "-A", "true")),
+        asker="claude",
+        on_allow=lambda _p: None,
+        on_deny=lambda: None,
+    )
+    assert "claude needs your password to run:" in texts(widget)
