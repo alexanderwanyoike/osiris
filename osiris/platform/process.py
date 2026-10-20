@@ -105,14 +105,19 @@ class SubprocessRunner:
         terminal and block-buffers when it is not, so through a pipe it prints
         "Retrieving packages..." and then nothing at all for the fifteen
         minutes it takes to install a desktop.
+
+        With a sink, the lines forwarded come back as the result's stdout.
+        Without one the child writes straight to this terminal and there is
+        nothing to return.
         """
         self.emit("  $ " + " ".join(argv))
-        returncode = (
-            self._run_inheriting(argv) if self._sink is None else self._run_on_pty(argv)
-        )
+        if self._sink is None:
+            returncode, output = self._run_inheriting(argv), ""
+        else:
+            returncode, output = self._run_on_pty(argv)
         if check and returncode != 0:
             raise CommandError(argv, returncode)
-        return Result(tuple(argv), returncode)
+        return Result(tuple(argv), returncode, output)
 
     def capture(self, *argv: str) -> str:
         completed = subprocess.run(argv, check=False, text=True, capture_output=True)
@@ -126,7 +131,7 @@ class SubprocessRunner:
     def _run_inheriting(argv: Sequence[str]) -> int:
         return subprocess.run(argv, check=False).returncode
 
-    def _run_on_pty(self, argv: Sequence[str]) -> int:
+    def _run_on_pty(self, argv: Sequence[str]) -> tuple[int, str]:
         master, slave = pty.openpty()
         try:
             process = subprocess.Popen(
@@ -141,14 +146,16 @@ class SubprocessRunner:
             os.close(slave)
             raise
         os.close(slave)
+        forwarded: list[str] = []
         try:
             for line in self._read_lines(master):
                 text = _ANSI.sub("", line).rstrip()
                 if text:
                     self.emit("    " + text)
+                    forwarded.append(text)
         finally:
             os.close(master)
-        return process.wait()
+        return process.wait(), "".join(f"{text}\n" for text in forwarded)
 
     @staticmethod
     def _read_lines(master: int) -> Iterator[str]:
