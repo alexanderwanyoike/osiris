@@ -866,6 +866,7 @@ class Window(Adw.ApplicationWindow):
     def run_install(self) -> None:
         self.installing = True
         self.retry_bar.set_visible(False)
+        self.slides.set_visible(True)
         self.bar.remove_css_class("error")
         self.bar.set_fraction(0.0)
         self.step_label.set_text("Starting")
@@ -937,6 +938,7 @@ class Window(Adw.ApplicationWindow):
         self.bar.add_css_class("error")
         self.retry_bar.set_visible(True)
         self.details.set_expanded(True)
+        self.slides.set_visible(False)
         dialog = Adw.AlertDialog(
             heading="Install failed",
             body=f"{error}\n\nNothing on the disk is usable yet. Try again, "
