@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from osiris.platform.http import HttpClient
+from osiris.platform.http import HttpClient, HttpError
 
 #: Asked when the medium's mirrorlist names no server at all.
 FALLBACK = "https://archlinux.org/"
@@ -24,5 +24,13 @@ def mirror_url(mirrorlist: str) -> str:
 
 
 def reachable(http: HttpClient, url: str) -> bool:
-    """Whether anything at url answers."""
-    return False
+    """Whether anything at url answers.
+
+    Any status counts: a mirror that answers 503 is still proof the network
+    works. HttpError's status 0 is the adapter's "no answer at all".
+    """
+    try:
+        http.request("HEAD", url)
+    except HttpError as error:
+        return error.status != 0
+    return True
