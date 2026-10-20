@@ -115,6 +115,9 @@ class NetworkPage(Adw.NavigationPage):
 
     def choose(self, network) -> None:
         self.chosen = network
+        if not network.asks_password:
+            self.join()
+            return
         self.password.set_text("")
         self.password.set_title(f"Password for {network.ssid}")
         self.password.set_visible(True)
