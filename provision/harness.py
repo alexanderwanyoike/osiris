@@ -10,6 +10,8 @@ Lays down:
     /usr/share/cinnamon/extensions/harness-drawer@osiris   placement and slide
     /usr/share/cinnamon/applets/harness@osiris             the panel button
     /usr/share/icons/hicolor/scalable/apps/osiris-provider-*  Provider logos
+    /usr/lib/osiris/askpass                 the askpass helper (ADR 0018)
+    /usr/lib/osiris/agent-bin/sudo          the agent's sudo
 
 The bar imports the osiris package that provision/themes.py installs into
 /usr/share/osiris/lib, so it runs after that. The Engine, opencode, is a
@@ -22,7 +24,14 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import homes  # noqa: E402
+from osiris.harness.admin import (  # noqa: E402
+    AGENT_SUDO,
+    AGENT_SUDO_SCRIPT,
+    HELPER,
+    HELPER_SCRIPT,
+)
 
 HARNESS_DIR = "/usr/share/osiris/harness"
 LAUNCHER_PATH = "/usr/bin/osiris-harness"
@@ -61,6 +70,19 @@ def write(path: str, text: str, mode: int = 0o644) -> None:
         fh.write(text)
     os.chmod(path, mode)
     print(f"  {path}")
+
+
+def install_admin_scripts() -> None:
+    """The helper hands a password to sudo and the agent's sudo picks the
+    helper, so both, and the folders they sit in, are root's alone: a file the
+    person could change would let anything they run read the password."""
+    for folder in sorted({os.path.dirname(HELPER), os.path.dirname(AGENT_SUDO)}):
+        os.makedirs(folder, exist_ok=True)
+        os.chown(folder, 0, 0)
+        os.chmod(folder, 0o755)
+    for path, text in ((HELPER, HELPER_SCRIPT), (AGENT_SUDO, AGENT_SUDO_SCRIPT)):
+        write(path, text, 0o755)
+        os.chown(path, 0, 0)
 
 
 def make_programs_menu_folder() -> None:
@@ -106,6 +128,7 @@ def main() -> None:
     run_quietly = ["gtk-update-icon-cache", "-q", "-f", "-t", "/usr/share/icons/hicolor"]
     subprocess.run(run_quietly, check=False)
     print(f"  logos -> {icons}")
+    install_admin_scripts()
     make_programs_menu_folder()
     print("HARNESS_INSTALLED")
 
