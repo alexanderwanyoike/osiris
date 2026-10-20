@@ -17,13 +17,13 @@ from osiris.harness.admin import Request  # noqa: E402
 
 class AdminCard(Gtk.Box):
     def __init__(self, request: Request, *, on_allow: Callable[[str], None],
-                 on_deny: Callable[[], None]):
+                 on_deny: Callable[[], None], asker: str = "Osiris"):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-admin")
         self._on_allow = on_allow
         self._on_deny = on_deny
         whom = "" if request.user == "root" else f" as {request.user}"
-        heading = Gtk.Label(label=f"Osiris needs your password to run{whom}:",
+        heading = Gtk.Label(label=f"{asker} needs your password to run{whom}:",
                             xalign=0, wrap=True)
         heading.add_css_class("heading")
         self.append(heading)
