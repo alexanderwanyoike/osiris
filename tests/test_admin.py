@@ -114,6 +114,7 @@ class TestTheCommandSudoWasAskedToRun:
                 "root",
             ),
             (("sudo", "-A", "ls", "-u", "x"), ("ls", "-u", "x"), "root"),
+            (("sudo", "-hhost", "-u", "eve", "ls"), ("ls",), "eve"),
         ],
     )
     def test_is_what_follows_sudos_own_options(
