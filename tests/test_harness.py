@@ -671,3 +671,14 @@ def test_an_admin_password_answer_is_logged_without_the_password() -> None:
         "user": "root",
         "approved": True,
     }
+
+
+def test_a_sudo_command_is_known_before_the_engine_is_told_to_run_it() -> None:
+    """The helper can ask as soon as the command starts, which is as soon as
+    the Engine has the reply."""
+    subject, engine, _ = everything_allowed()
+    subject.ask("install cowsay")
+    seen: list[str | None] = []
+    engine.reply = lambda *_args, **_kwargs: seen.append(subject.running_sudo())  # type: ignore[method-assign]
+    subject.handle(ToolRequested("ses_1", "per_1", "shell", ("sudo pacman -S cowsay",)))
+    assert seen == ["ses_1"]
