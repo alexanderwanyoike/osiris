@@ -52,6 +52,10 @@ def reachable(http: HttpClient, url: str) -> bool:
     return True
 
 
+class JoinFailed(RuntimeError):
+    """A Wi-Fi network was not joined; the message is for the person."""
+
+
 class Network:
     """The live medium's connection: whether it is online, and joining Wi-Fi."""
 

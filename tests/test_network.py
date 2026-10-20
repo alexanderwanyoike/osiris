@@ -10,7 +10,7 @@ import pytest
 from osiris.model.wifi import WifiNetwork
 from osiris.platform import FakeHttpClient, FakeRunner, HttpError
 from osiris.platform.process import Result
-from osiris.provision.network import Network, mirror_url, reachable
+from osiris.provision.network import JoinFailed, Network, mirror_url, reachable
 
 MIRRORLIST = """\
 ##
@@ -132,3 +132,22 @@ class TestJoining:
         assert runner.password_files == ["802-11-wireless-security.psk:hunter22\n"]
         assert not any("hunter22" in command for command in runner.commands)
         assert not secret.exists()
+
+    def test_a_refused_password_is_said_plainly_and_leaves_no_profile(
+        self, tmp_path: Path
+    ) -> None:
+        secret = tmp_path / "wifi-password"
+        up = f"nmcli connection up id Home passwd-file {secret}"
+        runner = FakeRunner(results={up: Result(("nmcli",), 4)})
+        with pytest.raises(JoinFailed) as caught:
+            a_network(runner, tmp_path).join(WifiNetwork("Home", 70, "WPA2"), "nope")
+        assert str(caught.value) == (
+            "Osiris could not join Home. Check the password and try again."
+        )
+        assert runner.commands[-1] == "nmcli connection delete id Home"
+        assert not secret.exists()
+
+    def test_an_open_network_that_will_not_join_says_so(self, tmp_path: Path) -> None:
+        runner = FakeRunner(results={"nmcli": Result(("nmcli",), 4)})
+        with pytest.raises(JoinFailed, match="could not join Cafe"):
+            a_network(runner, tmp_path).join(WifiNetwork("Cafe", 50, ""))
