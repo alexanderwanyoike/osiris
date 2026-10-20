@@ -104,6 +104,12 @@ class TestSubprocessRunner:
         result = runner.stream("printf", "\\033[32mone\\033[0m\\r\\ntwo\\n")
         assert result.stdout.splitlines() == ["one", "two"]
 
+    def test_streaming_hands_each_line_to_the_caller_as_it_arrives(self) -> None:
+        heard: list[str] = []
+        runner = SubprocessRunner(sink=lambda _line: None)
+        runner.stream("printf", "\\033[32mone\\033[0m\\rtwo\\n", on_line=heard.append)
+        assert heard == ["one", "two"]
+
     def test_a_streamed_failure_raises(self) -> None:
         with pytest.raises(CommandError):
             SubprocessRunner(sink=lambda _line: None).stream("false")
