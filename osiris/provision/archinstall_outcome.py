@@ -14,6 +14,8 @@ from __future__ import annotations
 #: archinstall captures custom commands' output without printing it.
 COMPLETED = "Installation completed without any errors"
 
+NETWORK = ""
+
 
 def failure(returncode: int, output: str) -> str | None:
     """Why the install did not happen, or None when it did."""
