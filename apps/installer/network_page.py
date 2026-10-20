@@ -6,7 +6,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gtk  # noqa: E402
+from gi.repository import Adw, GLib, Gtk  # noqa: E402
 
 from osiris.provision.network import JoinFailed  # noqa: E402
 
@@ -29,6 +29,9 @@ class NetworkPage(Adw.NavigationPage):
         self.background = background
         self.rows = []
         self.chosen = None
+        self.checking = False
+        self.poll_seconds = poll_seconds
+        self.timer = None
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
         for side in ("top", "bottom"):
@@ -85,15 +88,46 @@ class NetworkPage(Adw.NavigationPage):
         toolbar.set_content(scroller)
         self.set_child(toolbar)
 
+        if poll_seconds:
+            self.connect("map", lambda _p: self.start_polling())
+            self.connect("unmap", lambda _p: self.stop_polling())
         self.refresh()
 
     def refresh(self) -> None:
         """Ask again whether the medium is online, and what Wi-Fi is near."""
+        if self.checking:
+            return
+        self.checking = True
         self.background(
             lambda: (self.network.online(), self.network.wifi()), self.show)
 
+    def start_polling(self) -> None:
+        if self.timer is None:
+            self.timer = GLib.timeout_add_seconds(self.poll_seconds, self.poll)
+
+    def stop_polling(self) -> None:
+        if self.timer is not None:
+            GLib.source_remove(self.timer)
+            self.timer = None
+
+    def poll(self) -> bool:
+        """Notice a cable plugged in, which NetworkManager brings up alone.
+
+        Only the connection: rescanning Wi-Fi this often would reorder the
+        list under the person reading it.
+        """
+        if not self.checking:
+            self.checking = True
+            self.background(self.network.online, self.show_status)
+        return GLib.SOURCE_CONTINUE
+
     def show(self, found) -> None:
         online, networks = found
+        self.show_status(online)
+        self.show_networks(networks)
+
+    def show_status(self, online) -> None:
+        self.checking = False
         self.go.set_sensitive(online)
         self.status_icon.set_from_icon_name(
             "network-transmit-receive-symbolic" if online
@@ -105,6 +139,8 @@ class NetworkPage(Adw.NavigationPage):
             self.status.set_title("Not connected")
             self.status.set_subtitle("Install stays unavailable until Osiris "
                                      "can reach the internet.")
+
+    def show_networks(self, networks) -> None:
         for row in self.rows:
             self.wifi_group.remove(row)
         self.rows = []
