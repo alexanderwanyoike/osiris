@@ -19,6 +19,7 @@ only draws it. The Engine's events arrive on a thread and are handed to the
 main loop one at a time.
 """
 import os
+from dataclasses import dataclass
 from pathlib import Path
 import sys
 import threading
@@ -41,6 +42,7 @@ for candidate in ("/usr/share/osiris/lib", REPO):
 # render.py and look.py sit beside this file.
 sys.path.insert(0, HERE)
 
+from admin_card import AdminCard  # noqa: E402
 from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
 from canvas import Canvas, open_in_code  # noqa: E402
@@ -51,6 +53,7 @@ from theme_store import EngineStore, user_wallpapers  # noqa: E402
 
 from osiris.apps.tool_server import NAME as TOOLS, TIERS, undo  # noqa: E402
 
+from osiris.harness import admin  # noqa: E402
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
 from osiris.harness.harness import Harness  # noqa: E402
 from osiris.harness.history import (  # noqa: E402
@@ -60,14 +63,17 @@ from osiris.harness.history import (  # noqa: E402
     project_program,
 )
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
+from osiris.harness.notice import notice_of  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.harness.trust import allow_everything, allows_everything  # noqa: E402
+from osiris.harness.unread import Unread  # noqa: E402
 from osiris.programs.programs import Programs  # noqa: E402
 from osiris.provision.upgrade import Upgrade  # noqa: E402
 from osiris.platform import (  # noqa: E402
     HttpError,
+    ProcFs,
     RealFileSystem,
     SubprocessRunner,
     SystemIdentity,
@@ -97,6 +103,19 @@ TOOL_SERVER = os.path.join(HERE, "tool_server.py")
 
 DRAWER_BUS = "dev.osiris.HarnessDrawer"
 DRAWER_PATH = "/dev/osiris/HarnessDrawer"
+
+
+@dataclass
+class AdminPending:
+    """An admin password request waiting on the person: the D-Bus call to
+    answer, what it asks, its card and the timer that lets it lapse."""
+    invocation: Gio.DBusMethodInvocation
+    request: admin.Request
+    card: AdminCard
+    lapse: int
+    #: The helper's process, checked again before the password leaves.
+    caller: int
+
 
 class Drawer(Gtk.ApplicationWindow):
     def __init__(self, app: "Application"):
@@ -408,7 +427,8 @@ class Drawer(Gtk.ApplicationWindow):
 
     def show_history(self, projects, loose) -> None:
         self.sidebar.show_history(projects, loose, getattr(self.app, "session", None),
-                                  getattr(self.app, "running", frozenset()))
+                                  getattr(self.app, "running", frozenset()),
+                                  getattr(self.app, "unread_sessions", frozenset()))
 
     def clear(self) -> None:
         for view in self.views:
@@ -421,7 +441,8 @@ class Drawer(Gtk.ApplicationWindow):
         while len(self.views) < len(conversation.turns):
             view = TurnView(conversation.turns[len(self.views)],
                             on_undo=self.app.undo,
-                            program_card=self.app.program_card)
+                            program_card=self.app.program_card,
+                            admin_card=self.app.admin_card)
             self.views.append(view)
             self.turns.append(view)
         newest = len(self.views) - 1
@@ -467,21 +488,36 @@ class Application(Adw.Application):
         self.files = RealFileSystem()
         self.home = SystemIdentity().home
         self.models: Models = load_models(self.files, self.home)
+        self.unread = Unread(self.files, self.home)
         self.problem = "Starting the Engine..."
         #: What each Program's card is waiting on, or what went wrong, by name.
         self.program_busy: dict[str, str] = {}
         self.program_problem: dict[str, str] = {}
         self.open = False
         self.upgrade = Upgrade(self.files)
+        self.processes = ProcFs()
+        self.uid = os.getuid()
+        #: The Engine's process, which the agent's commands descend from.
+        self.engine_pid: int | None = None
+        #: Admin password requests waiting on the person, by session.
+        self.admin_pending: dict[str, AdminPending] = {}
+        self._admin_object = 0
         show = Gio.SimpleAction.new("show", None)
         show.connect("activate", lambda *_: self.toggle())
         self.add_action(show)
+        opening = Gio.SimpleAction.new("open-conversation", GLib.VariantType.new("s"))
+        opening.connect("activate", lambda _action, session:
+                        self.open_conversation(session.get_string()))
+        self.add_action(opening)
 
     def do_startup(self):
         Adw.Application.do_startup(self)
         # Resident: closing keeps the conversation and the Engine connection.
         self.hold()
         self.look = Look(SystemIdentity().home, self._restyle)
+        # Before the Engine is started, which inherits it, so the agent's sudo
+        # asks here.
+        os.environ.update(admin.agent_environment(os.environ))
         self.drawer = Drawer(self)
         self.drawer.refresh()
         threading.Thread(target=self._listen, daemon=True).start()
@@ -500,14 +536,125 @@ class Application(Adw.Application):
     def do_activate(self):
         self.toggle()
 
+    def do_dbus_register(self, connection, object_path):
+        if not Adw.Application.do_dbus_register(self, connection, object_path):
+            return False
+        interface = Gio.DBusNodeInfo.new_for_xml(admin.INTERFACE_XML).interfaces[0]
+        self._admin_object = connection.register_object(
+            admin.OBJECT_PATH, interface, self._admin_call, None, None)
+        return True
+
+    def do_dbus_unregister(self, connection, object_path):
+        if self._admin_object:
+            connection.unregister_object(self._admin_object)
+            self._admin_object = 0
+        Adw.Application.do_dbus_unregister(self, connection, object_path)
+
+    def _admin_call(self, connection, sender, _path, _interface, _method,
+                    parameters, invocation) -> None:
+        """The helper asks; who it is comes from the bus, never from what it
+        says about itself."""
+        command, _prompt = parameters.unpack()
+
+        def identified(bus, result) -> None:
+            try:
+                (pid,) = bus.call_finish(result).unpack()
+            except GLib.Error:
+                invocation.return_dbus_error(admin.REFUSED, "the caller is unknown")
+                return
+            self.admin_asked(pid, command, invocation)
+
+        connection.call(
+            "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
+            "GetConnectionUnixProcessID", GLib.Variant("(s)", (sender,)),
+            GLib.VariantType("(u)"), Gio.DBusCallFlags.NONE, -1, None, identified)
+
+    def admin_asked(self, caller: int, command, invocation) -> None:
+        """Judge a request from the process ``caller``; show its card, or answer
+        at once."""
+        session = self.harness.running_sudo() if self.harness is not None else None
+        verdict = admin.judge(self.processes, caller, command, uid=self.uid,
+                              engine=self.engine_pid, session=session)
+        if isinstance(verdict, admin.Refuse):
+            invocation.return_dbus_error(admin.REFUSED, verdict.reason)
+            return
+        conversation = (self._conversation_of(verdict.session)
+                        if isinstance(verdict, admin.Show) else None)
+        if conversation is None:
+            invocation.return_dbus_error(admin.NOT_THE_AGENTS,
+                                         "not a command Osiris is running")
+        elif verdict.session in self.admin_pending:
+            invocation.return_value(GLib.Variant("(bs)", (False, "")))
+        else:
+            self._show_admin_card(verdict, conversation, invocation, caller)
+
+    def _show_admin_card(self, shown, conversation: Conversation, invocation,
+                         caller: int) -> None:
+        session, request = shown.session, shown.request
+        card = AdminCard(request,
+                         on_allow=lambda password: self.admin_answer(session, password),
+                         on_deny=lambda: self.admin_answer(session, None))
+        lapse = GLib.timeout_add_seconds(
+            admin.HARNESS_GIVES_UP, lambda: self.admin_answer(session, None) or False)
+        self.admin_pending[session] = AdminPending(invocation, request, card, lapse,
+                                                   caller)
+        conversation.needs_password(request)
+        if session != self.session:
+            self.open_past(session)
+        if not self.open:
+            self.toggle()
+        self.drawer.refresh()
+        card.entry.grab_focus()
+
+    def admin_card(self, request: admin.Request) -> Gtk.Widget:
+        """The card for a waiting request, the same one each time it is drawn,
+        so what is typed in it survives a redraw."""
+        for pending in self.admin_pending.values():
+            if pending.request is request:
+                return pending.card
+        return Gtk.Box()
+
+    def admin_answer(self, session: str, password: str | None) -> None:
+        """Answer a waiting request once: with the password, or refused when
+        it is None. The password goes to the helper and is not kept."""
+        pending = self.admin_pending.pop(session, None)
+        if pending is None:
+            return
+        GLib.source_remove(pending.lapse)
+        # The helper may have been attached to while the card waited.
+        if admin.caller_sudo(self.processes, pending.caller, uid=self.uid) is None:
+            password = None
+        pending.invocation.return_value(
+            GLib.Variant("(bs)", (password is not None, password or "")))
+        if self.harness is not None:
+            self.harness.admin_answered(session, pending.request,
+                                        approved=password is not None)
+        conversation = self._conversation_of(session)
+        if conversation is not None:
+            conversation.password_answered()
+        self.drawer.refresh()
+
     def toggle(self) -> None:
         if self.drawer is None:
             return
         if self.open:
             self.close_drawer()
         else:
-            self.open = True
-            self.drawer.summon()
+            self.summon()
+
+    def open_conversation(self, session: str) -> None:
+        """What a notification opens when clicked: the drawer, on its
+        Conversation."""
+        if not self.open:
+            self.summon()
+        self.open_past(session)
+
+    def summon(self) -> None:
+        self.open = True
+        self.drawer.summon()
+        if self.session in self.unread_sessions:
+            self._mark_read(self.session)
+            self.load_history()
 
     def close_drawer(self) -> None:
         """Ask the extension to slide the drawer away; minimise if it cannot."""
@@ -684,6 +831,10 @@ class Application(Adw.Application):
     def running(self) -> frozenset[str]:
         return self.harness.running if self.harness is not None else frozenset()
 
+    @property
+    def unread_sessions(self) -> frozenset[str]:
+        return self.unread.sessions()
+
     def load_history(self) -> None:
         if self.harness is None:
             return
@@ -725,7 +876,12 @@ class Application(Adw.Application):
         if self.harness is None:
             return
         harness = self.harness
-        self.background(lambda: harness.archive(session), lambda _r: self.load_history())
+
+        def archived(_result) -> None:
+            self._mark_read(session)
+            self.load_history()
+
+        self.background(lambda: harness.archive(session), archived)
 
     def ask_to_delete(self, session: str, title: str) -> None:
         dialog = Adw.AlertDialog(
@@ -750,6 +906,7 @@ class Application(Adw.Application):
 
     def _deleted(self, session: str, *, on_screen: bool) -> None:
         self.backgrounded.pop(session, None)
+        self._mark_read(session)
         if on_screen:
             self.conversation = Conversation()
             self.drawer.clear()
@@ -759,6 +916,7 @@ class Application(Adw.Application):
     def open_past(self, session: str) -> None:
         if self.harness is None or session == self.session or not self._leave():
             return
+        self._mark_read(session)
         harness = self.harness
         # Shown at once and kept by its session until the Harness has made it
         # current, so its events reach it while resume is under way.
@@ -861,6 +1019,7 @@ class Application(Adw.Application):
         while True:
             try:
                 service = locate(files, me, SubprocessRunner(sink=lambda _l: None))
+                self.engine_pid = service.pid
                 engine = OpencodeEngine(UrllibClient(), service)
                 tiers = {engine.action(TOOLS, tool): tier for tool, tier in TIERS.items()}
                 # A restarted service has a new password, so the Harness is
@@ -898,13 +1057,29 @@ class Application(Adw.Application):
             return False
         conversation.apply(event)
         if isinstance(event, Finished | Stopped | Failed):
+            looking = self.open and conversation is self.conversation
+            if self.unread.ended(event, looking=looking):
+                self._notify(event.session, conversation)
             self._ended(event.session, conversation)
         self.drawer.refresh()
         return False
 
+    def _mark_read(self, session: str) -> None:
+        self.unread.read(session)
+        self.withdraw_notification(session)
+
+    def _notify(self, session: str, conversation: Conversation) -> None:
+        notice = notice_of(conversation)
+        notification = Gio.Notification.new(notice.title)
+        notification.set_body(notice.body)
+        notification.set_default_action_and_target(
+            "app.open-conversation", GLib.Variant("s", session))
+        self.send_notification(session, notification)
+
     def _ended(self, session: str, conversation: Conversation) -> None:
         """An answer is over. One that ended off screen is let go, for the
         history to show; the changes and the Canvas are the screen's."""
+        self.admin_answer(session, None)
         self.backgrounded.pop(session, None)
         if conversation is self.conversation and self.log is not None:
             changes = self.log.last_changes()

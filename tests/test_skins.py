@@ -43,12 +43,16 @@ CLASSES = (
     "harness-path",
     "harness-sidebar",
     "harness-running",
+    "harness-unread",
+    "harness-unread-dot",
     "harness-working",
     "harness-dot",
     "harness-doing",
     "harness-elapsed",
     "harness-activity",
     "harness-step",
+    "harness-admin",
+    "harness-admin-command",
 )
 
 
