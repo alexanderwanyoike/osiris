@@ -16,6 +16,16 @@ class Security(StrEnum):
     UNSUPPORTED = "unsupported"
 
 
+_SECURITY_WORDS = {
+    Security.OPEN: "open",
+    Security.WPA_PSK: "secured",
+    Security.SAE: "secured",
+    Security.UNSUPPORTED: "enterprise or WEP, which the installer cannot join",
+}
+
+_SIGNAL_ICONS = ((75, "excellent"), (50, "good"), (25, "ok"), (0, "weak"))
+
+
 @dataclass(frozen=True)
 class WifiNetwork:
     ssid: str
@@ -44,11 +54,16 @@ class WifiNetwork:
 
     @property
     def summary(self) -> str:
-        return ""
+        words = ["Connected"] if self.in_use else []
+        words.append(_SECURITY_WORDS[self.how])
+        words.append(f"signal {self.signal}%")
+        sentence = ", ".join(words)
+        return sentence[0].upper() + sentence[1:]
 
     @property
     def icon(self) -> str:
-        return ""
+        strength = next(name for floor, name in _SIGNAL_ICONS if self.signal >= floor)
+        return f"network-wireless-signal-{strength}-symbolic"
 
 
 def parse(terse: str) -> list[WifiNetwork]:
