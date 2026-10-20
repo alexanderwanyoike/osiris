@@ -23,6 +23,10 @@ class Stage:
     #: The line archinstall prints as the stage begins. None for the first,
     #: which is under way before archinstall prints anything of note.
     starts: re.Pattern[str] | None = None
+    #: How much of what is left of the stage each pacman run in it fills.
+    #: 1.0 where one run installs everything; less where archinstall installs
+    #: a few packages at a time, so the first run does not fill the stage.
+    per_run: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -43,8 +47,8 @@ STAGES = (
     Stage(
         "Installing the base system", 22, re.compile(r"^Installing packages: \['base'")
     ),
-    Stage("Setting up the bootloader", 6, re.compile(r"^Adding bootloader ")),
-    Stage("Installing drivers and sound", 10, re.compile(r"^Creating user ")),
+    Stage("Setting up the bootloader", 6, re.compile(r"^Adding bootloader "), 0.5),
+    Stage("Installing drivers and sound", 10, re.compile(r"^Creating user "), 0.5),
     Stage(
         "Installing the desktop",
         45,
@@ -67,6 +71,8 @@ _INSTALLING = re.compile(r"^\(\s*(\d+)/(\d+)\) installing ")
 #: After this, pacman's (n/N) counts are its hooks. Before it they are its
 #: checks: keys, integrity, conflicts, disk space.
 _RUNNING_HOOKS = ":: Running post-transaction hooks..."
+#: The first thing each pacman run prints, so where a new transaction starts.
+_SYNCHRONIZING = ":: Synchronizing package databases..."
 _COUNTED = re.compile(r"^\(\s*(\d+)/(\d+)\) ")
 
 #: Roughly how a pacman transaction's time divides: downloads up to the
@@ -83,6 +89,8 @@ class Tracker:
         self._current = 0
         #: How far through the current stage, 0.0 to 1.0.
         self._within = 0.0
+        #: How far through the stage the current transaction started.
+        self._floor = 0.0
         self._transaction = _Transaction()
 
     @property
@@ -99,11 +107,22 @@ class Tracker:
             starts = self._stages[index].starts
             if starts is not None and starts.search(text):
                 self._current = index
-                self._within = 0.0
+                self._within = self._floor = 0.0
                 self._transaction = _Transaction()
                 return self.status
-        within = self._transaction.read(text)
-        if within is None or within <= self._within:
+        if text == _SYNCHRONIZING:
+            self._floor = self._within
+            self._transaction = _Transaction()
+            return None
+        return self._reach(self._transaction.read(text))
+
+    def _reach(self, through: float | None) -> Status | None:
+        """The new status if the transaction got through further, else None."""
+        if through is None:
+            return None
+        per_run = self._stages[self._current].per_run
+        within = self._floor + (1.0 - self._floor) * per_run * through
+        if within <= self._within:
             return None
         self._within = within
         return self.status
