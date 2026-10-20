@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from osiris.harness.activity import Step
+from osiris.harness.admin import Request
 from osiris.harness.conversation import Conversation, State
 from osiris.harness.engine import (
     Answered,
@@ -330,3 +331,29 @@ def test_an_answer_whose_changes_were_undone_stays_undone() -> None:
     )
     assert talk.turns[0].undone
     assert not talk.turns[0].undoable
+
+
+PACMAN = Request(("pacman", "-S", "cowsay"))
+
+
+def test_an_admin_password_request_is_shown_under_the_answer_asking() -> None:
+    talk = Conversation()
+    talk.asked("install cowsay")
+    talk.asked("and fortune")
+    talk.needs_password(PACMAN)
+    assert talk.turns[-1].admin == PACMAN
+    assert talk.turns[0].admin is None
+
+
+def test_an_answered_admin_password_request_goes_away() -> None:
+    talk = Conversation()
+    talk.asked("install cowsay")
+    talk.needs_password(PACMAN)
+    talk.password_answered()
+    assert talk.turns[-1].admin is None
+
+
+def test_a_conversation_with_no_question_shows_no_admin_request() -> None:
+    talk = Conversation()
+    talk.needs_password(PACMAN)
+    assert talk.turns == []
