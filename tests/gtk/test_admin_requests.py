@@ -149,3 +149,20 @@ def test_an_answer_that_ends_lets_its_card_lapse() -> None:
     main.Application.admin_asked(state, 300, COMMAND, call)
     main.Application._ended(state, "ses_1", Conversation())
     assert call.values == [(False, "")]
+
+
+def test_attack_a_debugger_attached_while_the_card_waits_gets_no_password() -> None:
+    """Checked again when the person allows: the helper waits for minutes, and
+    the agent's shell, its ancestor, may attach to it meanwhile."""
+    state, call = app(), Invocation()
+    state.processes = FakeProcesses(dict(PROCESSES.table))
+    main.Application.admin_asked(state, 300, COMMAND, call)
+    helper = state.processes.table[300]
+    state.processes.table[300] = Process(
+        helper.pid, helper.parent, helper.name, helper.uid, helper.euid,
+        helper.cmdline, helper.exe, tracer=100,
+    )  # fmt: skip
+    card = state.admin_card(state.conversation.turns[-1].admin)
+    find(card, Gtk.PasswordEntry).set_text("hunter2")
+    find(card, Gtk.Button, "Allow").emit("clicked")
+    assert call.values == [(False, "")]
