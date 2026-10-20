@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from osiris.model.wifi import WifiNetwork, choices, parse
+import pytest
+
+from osiris.model.wifi import Security, WifiNetwork, choices, parse
 
 
 def test_each_line_of_nmcli_terse_output_is_a_network() -> None:
@@ -29,3 +31,21 @@ def test_each_name_is_offered_once_connected_first_then_strongest() -> None:
         WifiNetwork("Cafe", 65, ""),
         WifiNetwork("Office", 55, "WPA2"),
     ]
+
+
+@pytest.mark.parametrize(
+    ("column", "security"),
+    [
+        ("", Security.OPEN),
+        ("WPA2", Security.WPA_PSK),
+        ("WPA1 WPA2", Security.WPA_PSK),
+        ("WPA2 WPA3", Security.WPA_PSK),
+        ("WPA3", Security.SAE),
+        ("WPA2 802.1X", Security.UNSUPPORTED),
+        ("WEP", Security.UNSUPPORTED),
+    ],
+)
+def test_how_a_network_is_joined_follows_its_security_column(
+    column: str, security: Security
+) -> None:
+    assert WifiNetwork("x", 50, column).how == security
