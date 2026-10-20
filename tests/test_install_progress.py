@@ -38,3 +38,22 @@ def test_each_stage_starts_at_the_line_archinstall_prints_for_it() -> None:
         assert status is not None
         seen.append((status.title, status.step))
     assert seen == [(title, step) for step, (_, title) in enumerate(STARTS, 2)]
+
+
+def test_the_package_installs_take_most_of_the_bar() -> None:
+    tracker = Tracker()
+    starts = [tracker.status.fraction]
+    for line, _ in STARTS:
+        status = tracker.feed(line)
+        assert status is not None
+        starts.append(status.fraction)
+    shares = [
+        end - start for start, end in zip(starts, [*starts[1:], 1.0], strict=True)
+    ]
+    assert all(share > 0 for share in shares)
+    titles = ["Preparing your disk"] + [title for _, title in STARTS]
+    largest = sorted(zip(shares, titles, strict=True), reverse=True)[:2]
+    assert {title for _, title in largest} == {
+        "Installing the desktop",
+        "Installing the base system",
+    }
