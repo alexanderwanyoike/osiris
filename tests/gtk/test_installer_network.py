@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from gi.repository import Gtk
+from gi.repository import Adw, Gtk
 from network_page import NetworkPage
 
 from osiris.model.wifi import WifiNetwork
 
-from .conftest import find, now, shown
+from .conftest import find, now, shown, widgets
 
 HOME = WifiNetwork("Home", 80, "WPA2")
 CAFE = WifiNetwork("Cafe", 40, "")
@@ -43,6 +43,20 @@ def a_page(network: FakeNetwork) -> tuple[NetworkPage, list[str]]:
     return page, continued
 
 
+def row(page: NetworkPage, ssid: str) -> Adw.ActionRow:
+    return next(
+        w
+        for w in widgets(page)
+        if isinstance(w, Adw.ActionRow) and w.get_title() == ssid
+    )
+
+
+def password(page: NetworkPage) -> Adw.PasswordEntryRow:
+    found = find(page, Adw.PasswordEntryRow)
+    assert isinstance(found, Adw.PasswordEntryRow)
+    return found
+
+
 def test_the_step_says_why_and_lists_the_networks_in_range() -> None:
     page, _ = a_page(FakeNetwork(heard=[HOME, CAFE]))
     seen = shown(page)
@@ -64,3 +78,16 @@ def test_continue_waits_for_a_connection_that_check_again_finds() -> None:
     assert "Connected to the internet" in shown(page)
     go.emit("clicked")
     assert continued == ["on"]
+
+
+def test_a_secured_network_asks_for_its_password_then_joins() -> None:
+    network = FakeNetwork(heard=[HOME])
+    page, _ = a_page(network)
+    assert not password(page).get_visible()
+    row(page, "Home").emit("activated")
+    assert password(page).get_visible()
+    assert password(page).get_title() == "Password for Home"
+    password(page).set_text("hunter22")
+    find(page, Gtk.Button, "Join").emit("clicked")
+    assert network.joined == [("Home", "hunter22")]
+    assert find(page, Gtk.Button, "Continue").get_sensitive()
