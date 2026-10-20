@@ -107,7 +107,9 @@ class Installer:
             return None
         contents = disk_contents.read(device)
         if request.mode not in contents.modes(self._uefi):
-            raise InvalidRequest(f"{request.mode} is not possible on {request.disk.path}")
+            raise InvalidRequest(
+                f"{request.mode} is not possible on {request.disk.path}"
+            )
         root = next(
             (p for p in contents.partitions if p.path == request.root_partition),
             None,
