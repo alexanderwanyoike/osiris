@@ -61,6 +61,8 @@ STAGES = (
 #: pacman's line as it installs each package of a transaction. archinstall
 #: runs pacman on a pty, so pacman draws its progress bars, counts included.
 _INSTALLING = re.compile(r"^\(\s*(\d+)/(\d+)\) installing ")
+#: pacman's running total as it downloads a transaction's packages.
+_DOWNLOADED = re.compile(r"^Total \(\s*(\d+)/(\d+)\)")
 
 #: Roughly how a pacman transaction's time divides: downloading the packages,
 #: installing them, and the rest running the hooks that follow. A package
@@ -93,14 +95,25 @@ class Tracker:
                 self._current = index
                 self._within = 0.0
                 return self.status
+        if downloaded := _DOWNLOADED.match(text):
+            return self._reach(_DOWNLOADING * _share(downloaded))
         if installing := _INSTALLING.match(text):
-            count, total = (int(group) for group in installing.groups())
-            done = _DOWNLOADING + _INSTALLING_SHARE * count / total
-            self._within = max(self._within, done)
-            return self.status
+            return self._reach(_DOWNLOADING + _INSTALLING_SHARE * _share(installing))
         return None
+
+    def _reach(self, within: float) -> Status | None:
+        if within <= self._within:
+            return None
+        self._within = within
+        return self.status
 
     def _fraction(self) -> float:
         before = sum(stage.weight for stage in self._stages[: self._current])
         done = before + self._stages[self._current].weight * self._within
         return done / sum(stage.weight for stage in self._stages)
+
+
+def _share(counted: re.Match[str]) -> float:
+    """n/N from one of pacman's (n/N) counts."""
+    count, total = (int(group) for group in counted.groups())
+    return count / total
