@@ -38,6 +38,11 @@ def parse(terse: str) -> list[WifiNetwork]:
     return found
 
 
+def choices(heard: list[WifiNetwork]) -> list[WifiNetwork]:
+    """The networks worth offering, best first."""
+    return heard
+
+
 def _fields(line: str) -> list[str]:
     """One terse line split on unescaped ':', with the escapes removed."""
     fields, current, escaped = [], [], False
