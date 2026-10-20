@@ -6,7 +6,7 @@ from pathlib import Path
 
 from osiris.model.wifi import WifiNetwork, choices, parse
 from osiris.platform.http import HttpClient, HttpError
-from osiris.platform.process import CommandRunner
+from osiris.platform.process import CommandError, CommandRunner
 
 #: nmcli's format for programs; see osiris.model.wifi.parse.
 SCAN = (
@@ -65,5 +65,9 @@ class Network:
         self._secrets = secrets
 
     def wifi(self) -> list[WifiNetwork]:
-        """The Wi-Fi networks in range, best first."""
-        return choices(parse(self._runner.capture(*SCAN)))
+        """The Wi-Fi networks in range, best first; none without a Wi-Fi device."""
+        try:
+            heard = self._runner.capture(*SCAN)
+        except CommandError:
+            return []
+        return choices(parse(heard))
