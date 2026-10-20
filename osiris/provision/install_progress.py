@@ -76,8 +76,8 @@ class Tracker:
     def feed(self, line: str) -> Status | None:
         """The new status if line moved the install on, else None."""
         text = line.strip()
-        for index, stage in enumerate(self._stages):
-            starts = stage.starts
+        for index in range(self._current + 1, len(self._stages)):
+            starts = self._stages[index].starts
             if starts is not None and starts.search(text):
                 self._current = index
                 return self.status
