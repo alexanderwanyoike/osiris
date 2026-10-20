@@ -91,3 +91,4 @@ class Network:
 
     def join(self, network: WifiNetwork, password: str = "") -> None:
         """Join a Wi-Fi network; raises JoinFailed saying why it did not."""
+        self._runner.run("nmcli", "device", "wifi", "connect", network.ssid, quiet=True)
