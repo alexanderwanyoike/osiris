@@ -111,6 +111,8 @@ class AdminPending:
     request: admin.Request
     card: AdminCard
     lapse: int
+    #: The helper's process, checked again before the password leaves.
+    caller: int
 
 
 class Drawer(Gtk.ApplicationWindow):
@@ -576,16 +578,18 @@ class Application(Adw.Application):
         elif verdict.session in self.admin_pending:
             invocation.return_value(GLib.Variant("(bs)", (False, "")))
         else:
-            self._show_admin_card(verdict, conversation, invocation)
+            self._show_admin_card(verdict, conversation, invocation, caller)
 
-    def _show_admin_card(self, shown, conversation: Conversation, invocation) -> None:
+    def _show_admin_card(self, shown, conversation: Conversation, invocation,
+                         caller: int) -> None:
         session, request = shown.session, shown.request
         card = AdminCard(request,
                          on_allow=lambda password: self.admin_answer(session, password),
                          on_deny=lambda: self.admin_answer(session, None))
         lapse = GLib.timeout_add_seconds(
             admin.HARNESS_GIVES_UP, lambda: self.admin_answer(session, None) or False)
-        self.admin_pending[session] = AdminPending(invocation, request, card, lapse)
+        self.admin_pending[session] = AdminPending(invocation, request, card, lapse,
+                                                   caller)
         conversation.needs_password(request)
         if session != self.session:
             self.open_past(session)
@@ -609,6 +613,9 @@ class Application(Adw.Application):
         if pending is None:
             return
         GLib.source_remove(pending.lapse)
+        # The helper may have been attached to while the card waited.
+        if admin.caller_sudo(self.processes, pending.caller, uid=self.uid) is None:
+            password = None
         pending.invocation.return_value(
             GLib.Variant("(bs)", (password is not None, password or "")))
         if self.harness is not None:
