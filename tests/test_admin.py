@@ -3,11 +3,12 @@ the request is shown (ADR 0018)."""
 
 from __future__ import annotations
 
+import shlex
 from dataclasses import replace
 
 import pytest
 
-from osiris.harness.admin import asking_sudo, request_of
+from osiris.harness.admin import Kind, asking_sudo, request_of
 from osiris.platform.processes import FakeProcesses, Process
 
 ME = 1000
@@ -122,3 +123,56 @@ class TestTheCommandSudoWasAskedToRun:
     ) -> None:
         request = request_of(cmdline)
         assert (request.command, request.user) == (command, user)
+
+
+class TestWhatKindOfCommandItIs:
+    @pytest.mark.parametrize(
+        "command",
+        [
+            ("pacman", "-S", "cowsay"),
+            ("/usr/bin/systemctl", "restart", "sshd"),
+            ("/usr/local/bin/tool",),
+            ("LANG=C", "pacman", "-Syu"),
+        ],
+    )
+    def test_a_system_command_is_shown_as_it_is(self, command: tuple[str, ...]) -> None:
+        request = request_of(("sudo", "-A", *command))
+        assert request.kind is Kind.COMMAND
+        assert request.note is None
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            ("sh", "-c", "pacman -Syu && rm -rf /var/cache"),
+            ("/usr/bin/bash", "-lc", "echo hi > /etc/motd"),
+            ("zsh", "-e", "-c", "true"),
+            ("FOO=1", "dash", "-c", "true"),
+        ],
+    )
+    def test_a_shell_string_is_shown_in_full_and_labelled(
+        self, command: tuple[str, ...]
+    ) -> None:
+        request = request_of(("sudo", "-A", *command))
+        assert request.kind is Kind.SHELL
+        assert request.shown == shlex.join(command)
+        assert request.note == "A shell command, shown in full: all of it runs as root."
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            ("./install.sh",),
+            ("/home/tester/Code/tool/setup", "--all"),
+            ("bash", "install.sh"),
+            ("python3", "-u", "/tmp/fix.py"),
+        ],
+    )
+    def test_a_script_says_its_contents_are_not_shown(
+        self, command: tuple[str, ...]
+    ) -> None:
+        request = request_of(("sudo", "-A", *command))
+        assert request.kind is Kind.SCRIPT
+        assert request.note == "Runs a script; its contents are not shown."
+
+    def test_the_note_names_the_user_it_runs_as(self) -> None:
+        request = request_of(("sudo", "-u", "http", "sh", "-c", "id"))
+        assert request.note == "A shell command, shown in full: all of it runs as http."
