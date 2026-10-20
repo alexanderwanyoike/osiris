@@ -37,3 +37,15 @@ def test_archinstalls_log_waits_behind_show_details() -> None:
     details = find(page, Gtk.Expander, "Show details")
     assert isinstance(details, Gtk.Expander)
     assert not details.get_expanded()
+
+
+def test_a_failed_install_opens_the_log_so_the_error_shows() -> None:
+    window, page = a_progress_page()
+    window.failed(
+        RuntimeError("archinstall exited 1 before the install finished."),
+        "Traceback (most recent call last):\n",
+    )
+    details = find(page, Gtk.Expander, "Show details")
+    assert isinstance(details, Gtk.Expander)
+    assert details.get_expanded()
+    assert "Install failed" in shown(page)
