@@ -777,6 +777,7 @@ class Window(Adw.ApplicationWindow):
 
         bar = footer("Install", lambda _b: self.start(), "destructive-action")
         bar.button.set_sensitive(False)
+        self.install_button = bar.button
         self.understood.connect(
             "toggled", lambda c: bar.button.set_sensitive(c.get_active()))
         bar.set_margin_top(10)
@@ -830,11 +831,13 @@ class Window(Adw.ApplicationWindow):
         return page("progress", "Installing", box, header=False)
 
     def start(self) -> None:
+        self.install_button.set_sensitive(False)
         self.background(self.network.online, self.start_if_online)
 
     def start_if_online(self, online: bool) -> None:
         """Install, or the connect step first if the connection went since."""
         if not online:
+            self.install_button.set_sensitive(self.understood.get_active())
             self.nav.push(self.network_page(lambda: self.nav.pop()))
             return
         self.installing = True
