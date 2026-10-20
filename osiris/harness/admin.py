@@ -36,6 +36,7 @@ _LONG_WITH_VALUE = {
     "other-user": "U",
     "user": "u",
 }
+_LONG_FLAGS = {"shell": "s", "login": "i", "edit": "e"}
 
 
 #: Programs whose ``-c`` runs a string of shell.
@@ -90,14 +91,20 @@ class Request:
 
     command: tuple[str, ...]
     user: str = "root"
+    #: Run through the target user's shell, as ``sudo -s`` and ``-i`` do.
+    shell: bool = False
 
     @property
     def kind(self) -> Kind:
-        return _kind(self.command)
+        return Kind.SHELL if self.shell else _kind(self.command)
 
     @property
     def shown(self) -> str:
-        return shlex.join(self.command)
+        if self.command:
+            return shlex.join(self.command)
+        if self.shell:
+            return "an interactive shell"
+        return "nothing: sudo only checks the password"
 
     @property
     def note(self) -> str | None:
@@ -161,6 +168,8 @@ class _Options:
         name, given, value = option.partition("=")
         if name in _LONG_WITH_VALUE:
             self.values[_LONG_WITH_VALUE[name]] = value if given else self._next()
+        elif name in _LONG_FLAGS:
+            self.values.setdefault(_LONG_FLAGS[name], "")
 
     def _short(self, bundle: str) -> None:
         for index, flag in enumerate(bundle):
@@ -176,7 +185,11 @@ def request_of(cmdline: Sequence[str]) -> Request:
     arguments = list(cmdline[1:])
     options = _Options(arguments)
     options.read()
+    command = tuple(arguments[options.at :])
+    if "e" in options.values or PurePosixPath(cmdline[0]).name == "sudoedit":
+        command = ("sudoedit", *command)
     return Request(
-        command=tuple(arguments[options.at :]),
+        command=command,
         user=options.values.get("u") or "root",
+        shell=bool({"s", "i"} & options.values.keys()),
     )
