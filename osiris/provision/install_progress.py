@@ -58,16 +58,21 @@ STAGES = (
     Stage("Finishing", 2, re.compile(r"^Updating \S*/etc/fstab$")),
 )
 
-#: pacman's line as it installs each package of a transaction. archinstall
-#: runs pacman on a pty, so pacman draws its progress bars, counts included.
-_INSTALLING = re.compile(r"^\(\s*(\d+)/(\d+)\) installing ")
 #: pacman's running total as it downloads a transaction's packages.
+#: archinstall runs pacman on a pty, so pacman draws its progress bars,
+#: counts included.
 _DOWNLOADED = re.compile(r"^Total \(\s*(\d+)/(\d+)\)")
+#: pacman's line as it installs each package of a transaction.
+_INSTALLING = re.compile(r"^\(\s*(\d+)/(\d+)\) installing ")
+#: After this, pacman's (n/N) counts are its hooks. Before it they are its
+#: checks: keys, integrity, conflicts, disk space.
+_RUNNING_HOOKS = ":: Running post-transaction hooks..."
+_COUNTED = re.compile(r"^\(\s*(\d+)/(\d+)\) ")
 
-#: Roughly how a pacman transaction's time divides: downloading the packages,
-#: installing them, and the rest running the hooks that follow. A package
+#: Roughly how a pacman transaction's time divides: downloads up to the
+#: first mark, installs up to the second, hooks for the rest. A package
 #: being installed means every download has finished.
-_DOWNLOADING, _INSTALLING_SHARE = 0.5, 0.4
+_DOWNLOADS_END, _INSTALLS_END = 0.5, 0.9
 
 
 class Tracker:
@@ -78,6 +83,7 @@ class Tracker:
         self._current = 0
         #: How far through the current stage, 0.0 to 1.0.
         self._within = 0.0
+        self._transaction = _Transaction()
 
     @property
     def status(self) -> Status:
@@ -94,15 +100,10 @@ class Tracker:
             if starts is not None and starts.search(text):
                 self._current = index
                 self._within = 0.0
+                self._transaction = _Transaction()
                 return self.status
-        if downloaded := _DOWNLOADED.match(text):
-            return self._reach(_DOWNLOADING * _share(downloaded))
-        if installing := _INSTALLING.match(text):
-            return self._reach(_DOWNLOADING + _INSTALLING_SHARE * _share(installing))
-        return None
-
-    def _reach(self, within: float) -> Status | None:
-        if within <= self._within:
+        within = self._transaction.read(text)
+        if within is None or within <= self._within:
             return None
         self._within = within
         return self.status
@@ -113,7 +114,27 @@ class Tracker:
         return done / sum(stage.weight for stage in self._stages)
 
 
-def _share(counted: re.Match[str]) -> float:
-    """n/N from one of pacman's (n/N) counts."""
+class _Transaction:
+    """How far pacman has got through one transaction, from what it prints."""
+
+    def __init__(self) -> None:
+        self._hooks = False
+
+    def read(self, text: str) -> float | None:
+        """How far through, 0.0 to 1.0, if text says; None if it does not."""
+        if text == _RUNNING_HOOKS:
+            self._hooks = True
+            return None
+        if self._hooks:
+            return _between(_INSTALLS_END, 1.0, _COUNTED.match(text))
+        if downloaded := _DOWNLOADED.match(text):
+            return _between(0.0, _DOWNLOADS_END, downloaded)
+        return _between(_DOWNLOADS_END, _INSTALLS_END, _INSTALLING.match(text))
+
+
+def _between(low: float, high: float, counted: re.Match[str] | None) -> float | None:
+    """Where pacman's n/N count puts a phase that runs from low to high."""
+    if counted is None:
+        return None
     count, total = (int(group) for group in counted.groups())
-    return count / total
+    return low + (high - low) * count / total
