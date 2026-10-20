@@ -9,8 +9,13 @@ Harness only draw and carry the answer.
 
 from __future__ import annotations
 
+import re
+import shlex
 from collections.abc import Sequence
 from dataclasses import dataclass
+from enum import Enum
+from itertools import takewhile
+from pathlib import PurePosixPath
 
 from osiris.platform.processes import Process, Processes
 
@@ -33,12 +38,75 @@ _LONG_WITH_VALUE = {
 }
 
 
+#: Programs whose ``-c`` runs a string of shell.
+SHELLS = frozenset({"sh", "bash", "zsh", "dash", "ksh", "fish"})
+_INTERPRETER = re.compile(r"(?:sh|bash|zsh|dash|ksh|fish|python[\d.]*|perl|ruby|node)")
+#: Where the system's own programs are, root's to change. A program named with
+#: no folder is found in these too: Arch's sudoers sets secure_path to them.
+SYSTEM_FOLDERS = (
+    "/usr/bin/",
+    "/usr/sbin/",
+    "/bin/",
+    "/sbin/",
+    "/usr/local/bin/",
+    "/usr/local/sbin/",
+)
+_ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=.*")
+
+
+class Kind(Enum):
+    COMMAND = "command"
+    #: A string of shell, which can do anything, so it is shown in full.
+    SHELL = "shell"
+    #: A program of the person's own or an interpreter given a file: what it
+    #: does is in a file the card does not show.
+    SCRIPT = "script"
+
+
+def _kind(command: Sequence[str]) -> Kind:
+    words = list(command)
+    while words and _ASSIGNMENT.fullmatch(words[0]):
+        words.pop(0)
+    if not words:
+        return Kind.COMMAND
+    name = PurePosixPath(words[0]).name
+    options = list(takewhile(lambda word: word.startswith("-"), words[1:]))
+    runs_a_string = any(
+        not option.startswith("--") and "c" in option for option in options
+    )
+    if name in SHELLS and runs_a_string:
+        return Kind.SHELL
+    if "/" in words[0] and not words[0].startswith(SYSTEM_FOLDERS):
+        return Kind.SCRIPT
+    given_a_file = len(words) > 1 + len(options)
+    if _INTERPRETER.fullmatch(name) and given_a_file and not runs_a_string:
+        return Kind.SCRIPT
+    return Kind.COMMAND
+
+
 @dataclass(frozen=True)
 class Request:
     """What an asking sudo will run, and as whom."""
 
     command: tuple[str, ...]
     user: str = "root"
+
+    @property
+    def kind(self) -> Kind:
+        return _kind(self.command)
+
+    @property
+    def shown(self) -> str:
+        return shlex.join(self.command)
+
+    @property
+    def note(self) -> str | None:
+        """What the person should know beyond the command itself."""
+        if self.kind is Kind.SHELL:
+            return f"A shell command, shown in full: all of it runs as {self.user}."
+        if self.kind is Kind.SCRIPT:
+            return "Runs a script; its contents are not shown."
+        return None
 
 
 def _is_sudo(process: Process) -> bool:
