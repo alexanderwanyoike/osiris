@@ -188,7 +188,7 @@ def asking_program(processes: Processes, sudo: Process) -> str:
         if found is None:
             break
         named = PurePosixPath(found.cmdline[0]).name if found.cmdline else found.name
-        if named not in SHELLS:
+        if named.lstrip("-") not in SHELLS:
             return named
         found = processes.get(found.parent)
     return "an unknown program"
