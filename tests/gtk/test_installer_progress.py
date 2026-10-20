@@ -30,3 +30,10 @@ def test_the_page_shows_the_stage_its_step_and_how_far() -> None:
     bar = find(page, Gtk.ProgressBar)
     assert isinstance(bar, Gtk.ProgressBar)
     assert bar.get_fraction() == pytest.approx(0.42)
+
+
+def test_archinstalls_log_waits_behind_show_details() -> None:
+    _, page = a_progress_page()
+    details = find(page, Gtk.Expander, "Show details")
+    assert isinstance(details, Gtk.Expander)
+    assert not details.get_expanded()
