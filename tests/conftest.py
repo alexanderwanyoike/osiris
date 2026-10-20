@@ -17,10 +17,19 @@ from archinstall.lib.models.device import (
     _PartitionInfo,
 )
 
+from osiris.platform import FakeRunner
+from osiris.platform.process import Result
+
 GIB = 1024**3
 
 #: Console keymaps, as `localectl list-keymaps` prints them on Arch.
 KEYMAPS = ["de", "fr", "uk", "us"]
+
+
+def an_archinstall_that_completes() -> FakeRunner:
+    """A runner whose archinstall exits as a finished install does."""
+    output = "Installation completed without any errors.\nYou may reboot when ready.\n"
+    return FakeRunner(results={"archinstall": Result(("archinstall",), 0, output)})
 
 
 @pytest.fixture(autouse=True)

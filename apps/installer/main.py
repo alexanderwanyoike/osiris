@@ -32,11 +32,14 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))
 
 import disks  # noqa: E402
+from network_page import NetworkPage  # noqa: E402
 
 from osiris.model.disk import Disk, Filesystem, human  # noqa: E402
 from osiris.model.layout import InstallMode, Layout  # noqa: E402
 from osiris.model.request import InstallRequest, passphrase_problem  # noqa: E402
+from osiris.platform.http import UrllibClient  # noqa: E402
 from osiris.platform.process import SubprocessRunner  # noqa: E402
+from osiris.provision.network import Network  # noqa: E402
 
 LOGO_PATHS = ("/usr/share/osiris/logo-dark.png",
               os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
@@ -237,11 +240,16 @@ def footer(label: str, handler, style: str = "suggested-action") -> Gtk.Box:
 
 
 class Window(Adw.ApplicationWindow):
-    def __init__(self, app):
+    def __init__(self, app, network=None, background=None):
         super().__init__(application=app, title="Install Osiris")
         self.set_default_size(*screen_size())
         self.options = Choices()
         self.installing = False
+        # A short timeout: offline, the check should fail in seconds, not
+        # leave Next looking dead for half a minute.
+        self.network = network or Network.for_this_machine(
+            SubprocessRunner(), UrllibClient(timeout=10))
+        self.background = background or self.in_background
         # archinstall's view of this machine's disks and firmware. Made when
         # the disk page is first shown: importing archinstall reads every
         # disk, which is not something the welcome page should wait on.
@@ -249,7 +257,8 @@ class Window(Adw.ApplicationWindow):
         self.contents = None
 
         self.nav = Adw.NavigationView()
-        self.nav.add(self.welcome_page())
+        self.welcome = self.welcome_page()
+        self.nav.add(self.welcome)
         self.set_content(self.nav)
 
         # Closing mid-install leaves a half-written disk and a running
@@ -296,6 +305,7 @@ class Window(Adw.ApplicationWindow):
         box.append(hardware)
 
         bar = footer("Next", lambda _b: self.leave_welcome())
+        self.welcome_next = bar.button
         bar.set_margin_top(10)
         box.append(bar)
         return page("welcome", "Welcome", box, header=False)
@@ -305,7 +315,31 @@ class Window(Adw.ApplicationWindow):
         self.options.timezone = self.timezone.get_selected_item().get_string()
         self.options.keymap = self.keymap.get_selected_item().get_string()
         self.options.software_rendering = self.software_rendering.get_active()
-        self.nav.push(self.disk_page())
+        self.welcome_next.set_sensitive(False)
+        self.background(self.network.online, self.after_connection_check)
+
+    def after_connection_check(self, online: bool) -> None:
+        """The disk page if the install can download, the connect step if not."""
+        self.welcome_next.set_sensitive(True)
+        if online:
+            self.nav.push(self.disk_page())
+            return
+        self.nav.push(self.network_page(
+            lambda: self.nav.replace([self.welcome, self.disk_page()])))
+
+    def network_page(self, on_online) -> NetworkPage:
+        return NetworkPage(self.network, on_online, self.background)
+
+    def in_background(self, work, done) -> None:
+        """Run work off the main loop and hand its result back to it."""
+        def run():
+            try:
+                result = work()
+            except Exception:                               # noqa: BLE001
+                traceback.print_exc()
+                return
+            GLib.idle_add(lambda: done(result) or False)
+        threading.Thread(target=run, daemon=True).start()
 
     # ---------------------------------------------------------------- 2 disk
 
@@ -743,6 +777,7 @@ class Window(Adw.ApplicationWindow):
 
         bar = footer("Install", lambda _b: self.start(), "destructive-action")
         bar.button.set_sensitive(False)
+        self.install_button = bar.button
         self.understood.connect(
             "toggled", lambda c: bar.button.set_sensitive(c.get_active()))
         bar.set_margin_top(10)
@@ -796,6 +831,15 @@ class Window(Adw.ApplicationWindow):
         return page("progress", "Installing", box, header=False)
 
     def start(self) -> None:
+        self.install_button.set_sensitive(False)
+        self.background(self.network.online, self.start_if_online)
+
+    def start_if_online(self, online: bool) -> None:
+        """Install, or the connect step first if the connection went since."""
+        if not online:
+            self.install_button.set_sensitive(self.understood.get_active())
+            self.nav.push(self.network_page(lambda: self.nav.pop()))
+            return
         self.installing = True
         self.nav.push(self.progress_page())
         self.run_install()
