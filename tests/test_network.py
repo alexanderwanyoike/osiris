@@ -151,3 +151,11 @@ class TestJoining:
         runner = FakeRunner(results={"nmcli": Result(("nmcli",), 4)})
         with pytest.raises(JoinFailed, match="could not join Cafe"):
             a_network(runner, tmp_path).join(WifiNetwork("Cafe", 50, ""))
+
+    def test_an_enterprise_network_is_refused_before_anything_runs(
+        self, tmp_path: Path
+    ) -> None:
+        runner = FakeRunner()
+        with pytest.raises(JoinFailed, match="network cable"):
+            a_network(runner, tmp_path).join(WifiNetwork("Work", 70, "WPA2 802.1X"))
+        assert runner.calls == []
