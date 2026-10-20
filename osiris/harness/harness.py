@@ -217,10 +217,13 @@ class Harness:
     def running_sudo(self) -> str | None:
         """The session an admin request is for: of those running, the one
         whose latest allowed command runs sudo, the latest to allow it first."""
+        # Asked on the main loop while handle() runs on the Engine's thread:
+        # copied first, so neither changes under the loop.
+        commands, running = dict(self._last_command), set(self._running)
         asking = [
             (allowed, session)
-            for session, (allowed, sudo) in self._last_command.items()
-            if sudo and session in self._running
+            for session, (allowed, sudo) in commands.items()
+            if sudo and session in running
         ]
         return max(asking)[1] if asking else None
 
