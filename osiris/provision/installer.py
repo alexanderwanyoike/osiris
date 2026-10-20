@@ -20,7 +20,7 @@ from osiris.model.layout import DiskContents, InstallMode, Layout
 from osiris.model.request import InstallRequest, InvalidRequest
 from osiris.platform.hardware import HardwareProbe, SystemProbe
 from osiris.platform.process import CommandRunner
-from osiris.provision import archinstall_config, disk_contents
+from osiris.provision import archinstall_config, archinstall_outcome, disk_contents
 
 #: fraction completed, what is starting now
 Progress = Callable[[float, str], None]
@@ -133,15 +133,19 @@ class Installer:
         config = archinstall_config.build(request, self.target(request))
         settings, credentials = archinstall_config.write(config, self._config_dir)
         try:
-            self._runner.stream(
+            result = self._runner.stream(
                 "archinstall",
                 "--config", str(settings),
                 "--creds", str(credentials),
                 "--silent",
+                check=False,
             )  # fmt: skip
         finally:
             # The hash is no use to anyone once the user exists, and the live
             # medium may be handed to someone else afterwards.
             credentials.unlink(missing_ok=True)
+        reason = archinstall_outcome.failure(result.returncode, result.stdout)
+        if reason is not None:
+            raise InstallFailed(reason)
         if progress is not None:
             progress(1.0, "Done")
