@@ -5,7 +5,9 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from osiris.harness.admin import asking_sudo
+import pytest
+
+from osiris.harness.admin import asking_sudo, request_of
 from osiris.platform.processes import FakeProcesses, Process
 
 ME = 1000
@@ -87,3 +89,35 @@ class TestTheHelpersParent:
 
     def test_a_helper_that_is_gone_has_no_parent(self) -> None:
         assert asking_sudo(table(SUDO), HELPER.pid) is None
+
+
+class TestTheCommandSudoWasAskedToRun:
+    @pytest.mark.parametrize(
+        ("cmdline", "command", "user"),
+        [
+            (SUDO.cmdline, ("pacman", "-S", "cowsay"), "root"),
+            (
+                ("sudo", "-kAuhttp", "systemctl", "restart", "nginx"),
+                ("systemctl", "restart", "nginx"),
+                "http",
+            ),
+            (
+                ("sudo", "--user=alice", "--chdir", "/tmp", "--", "ls", "-l"),
+                ("ls", "-l"),
+                "alice",
+            ),
+            (("sudo", "-u", "bob", "-E", "id"), ("id",), "bob"),
+            (("sudo", "-p", "Password:", "-C", "5", "true"), ("true",), "root"),
+            (
+                ("sudo", "-A", "LD_PRELOAD=/tmp/x.so", "ls"),
+                ("LD_PRELOAD=/tmp/x.so", "ls"),
+                "root",
+            ),
+            (("sudo", "-A", "ls", "-u", "x"), ("ls", "-u", "x"), "root"),
+        ],
+    )
+    def test_is_what_follows_sudos_own_options(
+        self, cmdline: tuple[str, ...], command: tuple[str, ...], user: str
+    ) -> None:
+        request = request_of(cmdline)
+        assert (request.command, request.user) == (command, user)
