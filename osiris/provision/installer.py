@@ -138,6 +138,9 @@ class Installer:
                 "--config", str(settings),
                 "--creds", str(credentials),
                 "--silent",
+                # The wizard connects first; archinstall's own fallback is a
+                # terminal menu nobody behind this window could answer.
+                "--skip-wifi-check",
                 check=False,
             )  # fmt: skip
         finally:
