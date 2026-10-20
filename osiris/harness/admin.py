@@ -96,8 +96,9 @@ class _Options:
 
     def _short(self, bundle: str) -> None:
         for index, flag in enumerate(bundle):
-            if flag in _SHORT_WITH_VALUE:
-                self.values[flag] = bundle[index + 1 :] or self._next()
+            attached = bundle[index + 1 :]
+            if flag in _SHORT_WITH_VALUE or (flag == "h" and attached):
+                self.values[flag] = attached or self._next()
                 return
             self.values.setdefault(flag, "")
 
