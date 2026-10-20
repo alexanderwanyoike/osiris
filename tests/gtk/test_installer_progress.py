@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Any
 
 import pytest
-from gi.repository import Gtk
+from gi.repository import GLib, Gtk
+from slideshow import Slideshow
 
 from osiris.provision.install_progress import Status
 
@@ -76,3 +78,26 @@ def test_the_slides_take_turns_and_start_again_after_the_last() -> None:
         seen += texts(window.slides.get_visible_child())
         window.slides.advance()
     assert seen == [*CAPTIONS, CAPTIONS[0]]
+
+
+def spin(seconds: float) -> None:
+    context = GLib.MainContext.default()
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        context.iteration(False)
+
+
+def test_the_slides_move_on_by_themselves_while_they_are_on_screen() -> None:
+    slides = Slideshow(every_ms=50)
+    window = Gtk.Window(child=slides)
+    first = slides.get_visible_child()
+    spin(0.3)
+    assert slides.get_visible_child() is first
+    window.present()
+    spin(0.3)
+    assert slides.get_visible_child() is not first
+    window.close()
+    spin(0.1)
+    hidden = slides.get_visible_child()
+    spin(0.3)
+    assert slides.get_visible_child() is hidden
