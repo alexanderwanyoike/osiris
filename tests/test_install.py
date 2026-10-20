@@ -14,8 +14,9 @@ from osiris.model.hardware import Gpu, GpuVendor, Hardware
 from osiris.model.request import InstallRequest, InvalidRequest
 from osiris.platform import FakeRunner
 from osiris.platform.hardware import FakeProbe
-from osiris.platform.process import CommandError
-from osiris.provision.installer import Installer
+from osiris.platform.process import CommandError, Result
+from osiris.provision.archinstall_outcome import NETWORK
+from osiris.provision.installer import Installer, InstallFailed
 from tests.conftest import an_archinstall_that_completes
 
 GIB = 1024**3
@@ -85,6 +86,25 @@ def test_the_credentials_do_not_outlive_the_install(
         with pytest.raises(CommandError):
             installer.install(a_request(device))
     assert not (tmp_path / "creds.json").exists()
+
+
+@pytest.mark.parametrize(
+    ("returncode", "output", "reason"),
+    [
+        (0, "", "archinstall stopped without installing anything."),
+        (1, "error: failed to retrieve some files\n", NETWORK),
+    ],
+    ids=["exit 0 without finishing", "a dropped connection"],
+)
+def test_an_install_archinstall_did_not_finish_fails_with_the_reason(
+    device: BDevice, tmp_path: Path, returncode: int, output: str, reason: str
+) -> None:
+    runner = FakeRunner(
+        results={"archinstall": Result(("archinstall",), returncode, output)}
+    )
+    with pytest.raises(InstallFailed) as caught:
+        an_installer(runner, device, tmp_path).install(a_request(device))
+    assert str(caught.value) == reason
 
 
 def test_an_invalid_request_is_refused_before_anything_runs(

@@ -33,6 +33,10 @@ CONFIG_DIR = Path("/root/osiris-install")
 Devices = Callable[[str], BDevice | None]
 
 
+class InstallFailed(RuntimeError):
+    """archinstall did not install the system; the message says why."""
+
+
 class Installer:
     """Runs one install. Everything it touches is handed to it."""
 
