@@ -57,3 +57,11 @@ def test_the_package_installs_take_most_of_the_bar() -> None:
         "Installing the desktop",
         "Installing the base system",
     }
+
+
+def test_an_earlier_stages_line_never_takes_the_install_back() -> None:
+    tracker = Tracker()
+    tracker.feed("Installing packages: ['osiris']")
+    before = tracker.status
+    assert tracker.feed("Creating user alex") is None
+    assert tracker.status == before
