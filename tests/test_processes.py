@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import time
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -18,6 +19,13 @@ def sleeper() -> Iterator[subprocess.Popen[bytes]]:
     sleep = shutil.which("sleep")
     assert sleep is not None
     child = subprocess.Popen([sleep, "30"])
+    # Popen can return before the child has exec'd; until then /proc shows
+    # the forked parent's empty command line.
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        if Path(f"/proc/{child.pid}/cmdline").read_bytes():
+            break
+        time.sleep(0.01)
     yield child
     child.kill()
     child.wait()
