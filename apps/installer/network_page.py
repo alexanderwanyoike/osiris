@@ -8,6 +8,8 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
+from osiris.provision.network import JoinFailed  # noqa: E402
+
 INTRO = ("Osiris downloads most of the system while it installs, so it needs "
          "an internet connection. Plug in a network cable, or join a Wi-Fi "
          "network below.")
@@ -57,6 +59,10 @@ class NetworkPage(Adw.NavigationPage):
         self.password.connect("entry-activated", lambda _r: self.join())
         secret.add(self.password)
         box.append(secret)
+
+        self.problem = Gtk.Label(xalign=0, wrap=True, visible=False)
+        self.problem.add_css_class("danger-note")
+        box.append(self.problem)
 
         buttons = Gtk.Box(halign=Gtk.Align.END, spacing=8)
         buttons.set_margin_top(10)
@@ -129,11 +135,19 @@ class NetworkPage(Adw.NavigationPage):
             return
 
         def work():
-            self.network.join(network, secret)
+            try:
+                self.network.join(network, secret)
+            except JoinFailed as refusal:
+                return str(refusal)
             return self.network.online(), self.network.wifi()
 
         self.background(work, self.joined)
 
-    def joined(self, found) -> None:
+    def joined(self, outcome) -> None:
+        if isinstance(outcome, str):
+            self.problem.set_text(outcome)
+            self.problem.set_visible(True)
+            return
+        self.problem.set_visible(False)
         self.password.set_visible(False)
-        self.show(found)
+        self.show(outcome)
