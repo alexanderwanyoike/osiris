@@ -54,15 +54,14 @@ target-version = "py314"
 
 # The legacy tree, excluded while it is migrated into osiris/. Each entry is
 # deleted as that area moves across, so the list shrinking is the measure of
-# the refactor. Nothing new may be added to it.
+# the refactor. Nothing new may be added to it. A bare name would match at any
+# depth, osiris/ included; "./" anchors each entry to this directory.
 extend-exclude = [
-    "build",
-    # A bare name matches that name at any depth; "./" anchors it to this
-    # directory so osiris/provision is still linted.
+    "./build",
     "./provision",
-    "shell",
-    "apps",
-    "iso",
+    "./shell",
+    "./apps",
+    "./iso",
     "branding/scripts",
 ]
 
