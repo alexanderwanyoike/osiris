@@ -19,6 +19,8 @@ from osiris.harness.admin import (
     HELPER_SCRIPT,
     INTERFACE,
     INTERFACE_XML,
+    NOT_THE_AGENTS,
+    REFUSED,
     Kind,
     NotTheAgents,
     Refuse,
@@ -26,6 +28,7 @@ from osiris.harness.admin import (
     agent_environment,
     asking_program,
     asking_sudo,
+    asks_itself,
     caller_sudo,
     descends_from,
     judge,
@@ -426,3 +429,28 @@ class TestTheBusInterface:
 
     def test_the_harness_answers_before_the_helper_stops_waiting(self) -> None:
         assert 0 < HARNESS_GIVES_UP < ASK_TIMEOUT
+
+
+class TestWhenTheHelperAsksItself:
+    @pytest.mark.parametrize(
+        "error",
+        [
+            NOT_THE_AGENTS,
+            "org.freedesktop.DBus.Error.ServiceUnknown",
+            "org.freedesktop.DBus.Error.NameHasNoOwner",
+            "org.freedesktop.DBus.Error.UnknownObject",
+            "org.freedesktop.DBus.Error.UnknownMethod",
+        ],
+    )
+    def test_when_the_harness_is_not_there_or_it_is_not_the_agents(
+        self, error: str
+    ) -> None:
+        assert asks_itself(error)
+
+    @pytest.mark.parametrize(
+        "error", [REFUSED, "org.freedesktop.DBus.Error.NoReply", None]
+    )
+    def test_never_after_a_refusal_or_when_the_person_did_not_answer(
+        self, error: str | None
+    ) -> None:
+        assert not asks_itself(error)
