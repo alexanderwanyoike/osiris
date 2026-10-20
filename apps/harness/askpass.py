@@ -25,7 +25,8 @@ import gi  # noqa: E402
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
+gi.require_version("Gdk", "4.0")
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from admin_card import AdminCard  # noqa: E402
 
@@ -76,7 +77,8 @@ def ask_harness(request: admin.Request, prompt: str) -> admin.HarnessAnswer:
 
 
 def ask_person(program: str, request: admin.Request) -> str | None:
-    if not Gtk.init_check():
+    # Gtk.init_check() succeeds with no display; the display is what counts.
+    if not Gtk.init_check() or Gdk.Display.get_default() is None:
         return None
     Adw.init()
     answers: list[str | None] = []
