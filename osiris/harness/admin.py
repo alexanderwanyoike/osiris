@@ -69,6 +69,26 @@ INTERFACE_XML = f"""<node>
 REFUSED = f"{INTERFACE}.Refused"
 #: Not a command of the agent's: the helper asks in a dialog of its own.
 NOT_THE_AGENTS = f"{INTERFACE}.NotTheAgents"
+#: D-Bus errors after which the helper asks in a dialog of its own: the
+#: Harness is not running, is too old to have the interface, or says the
+#: command is not its agent's.
+_ASK_ITSELF_AFTER = frozenset(
+    {
+        NOT_THE_AGENTS,
+        "org.freedesktop.DBus.Error.ServiceUnknown",
+        "org.freedesktop.DBus.Error.NameHasNoOwner",
+        "org.freedesktop.DBus.Error.UnknownObject",
+        "org.freedesktop.DBus.Error.UnknownMethod",
+    }
+)
+
+
+def asks_itself(error: str | None) -> bool:
+    """Whether the helper, having asked the Harness and got the D-Bus error
+    ``error``, asks the person itself."""
+    return error in _ASK_ITSELF_AFTER
+
+
 #: How long the helper waits for the person, in seconds.
 ASK_TIMEOUT = 300
 HARNESS_GIVES_UP = ASK_TIMEOUT - 10
