@@ -241,6 +241,14 @@ class TestTheCallerTheHarnessAnswers:
     def test_is_the_helper_started_by_a_genuine_sudo(self) -> None:
         assert caller_sudo(genuine(), HELPER.pid, uid=ME) == SUDO
 
+    def test_attack_a_debugger_attached_to_the_helper(self) -> None:
+        # The agent's shell is the helper's ancestor, which the kernel lets
+        # trace it; traced, the password could be read from its memory.
+        traced = replace(HELPER, tracer=SHELL.pid)
+        assert (
+            caller_sudo(table(ENGINE, SHELL, SUDO, traced), HELPER.pid, uid=ME) is None
+        )
+
     def test_attack_a_fake_helper_calling_the_harness(self) -> None:
         # Its command line can be made to look like the helper's; its parent
         # cannot be made a root sudo.
