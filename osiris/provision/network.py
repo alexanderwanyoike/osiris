@@ -95,6 +95,11 @@ class Network:
 
     def join(self, network: WifiNetwork, password: str = "") -> None:
         """Join a Wi-Fi network; raises JoinFailed saying why it did not."""
+        if network.how is Security.UNSUPPORTED:
+            raise JoinFailed(
+                f"{network.ssid} needs settings the installer does not ask for. "
+                "Connect a network cable, or choose another network."
+            )
         if network.how is Security.OPEN:
             try:
                 self._runner.run(
