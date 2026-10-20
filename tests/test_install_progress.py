@@ -104,3 +104,20 @@ def test_pacmans_install_counts_move_the_bar_through_a_stage() -> None:
     )
     assert moved[0] == moved[1] == start
     assert start < moved[2] < moved[3] < moved[4] < end
+
+
+def test_pacmans_download_counts_move_the_bar_before_it_installs() -> None:
+    start, _ = bounds_of_the_base_stage()
+    moved = fractions(
+        Tracker(),
+        [
+            BASE,
+            SYNC,
+            " Total ( 0/20)           0.0   B  0.00   B/s 00:00 [----------]   0%",
+            " Total ( 4/20)           9.5 MiB  15.7 MiB/s 00:00 [####------]  43%",
+            " Total (20/20)          21.6 MiB  43.3 MiB/s 00:01 [##########] 100%",
+            "( 1/20) installing iana-etc                        [----------]   0%",
+        ],
+    )
+    assert moved[2] == start
+    assert start < moved[3] < moved[4] < moved[5]
