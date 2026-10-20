@@ -893,8 +893,8 @@ class Window(Adw.ApplicationWindow):
     def log_line(self, line: str) -> None:
         GLib.idle_add(self.append_log, line)
 
-    def on_progress(self, fraction: float, message: str) -> None:
-        GLib.idle_add(self.set_progress, fraction, message)
+    def on_progress(self, status) -> None:
+        GLib.idle_add(self.set_progress, status.fraction, status.title)
 
     def append_log(self, line: str) -> bool:
         buffer = self.log.get_buffer()
