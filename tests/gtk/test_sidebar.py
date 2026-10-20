@@ -28,7 +28,9 @@ class Opened:
 
 
 def sidebar(
-    current: str | None = None, running: frozenset[str] = frozenset()
+    current: str | None = None,
+    running: frozenset[str] = frozenset(),
+    unread: frozenset[str] = frozenset(),
 ) -> tuple[Sidebar, Opened]:
     opened = Opened()
     widget = Sidebar(
@@ -38,7 +40,7 @@ def sidebar(
         on_archive=opened.archived.append,
         on_delete=lambda session, title: opened.deleted.append((session, title)),
     )
-    widget.show_history([PROJECT], [THEME], current, running)
+    widget.show_history([PROJECT], [THEME], current, running, unread)
     return widget, opened
 
 
@@ -138,3 +140,28 @@ def test_a_conversation_still_working_says_so() -> None:
     widget, _ = sidebar(running=frozenset({"ses_timer"}))
     assert working(row_with(widget, "Build a pomodoro timer"))
     assert not working(row_with(widget, "Make me a calm theme"))
+
+
+def unread(row: Gtk.Widget) -> bool:
+    """Its title stands out and a dot sits at its end."""
+    title = next(w for w in widgets(row) if isinstance(w, Gtk.Label))
+    return title.has_css_class("harness-unread") and any(
+        w.has_css_class("harness-unread-dot") for w in widgets(row)
+    )
+
+
+def test_a_conversation_with_an_answer_not_yet_seen_says_so() -> None:
+    widget, _ = sidebar(unread=frozenset({"ses_theme"}))
+    assert unread(row_with(widget, "Make me a calm theme"))
+    assert not unread(row_with(widget, "Build a pomodoro timer"))
+
+
+def test_a_conversation_working_again_shows_its_spinner_rather_than_its_dot() -> None:
+    """Asked again before the last answer was seen: what it is doing now
+    matters more, and the row has room for one sign."""
+    widget, _ = sidebar(
+        running=frozenset({"ses_theme"}), unread=frozenset({"ses_theme"})
+    )
+    row = row_with(widget, "Make me a calm theme")
+    assert working(row)
+    assert not any(w.has_css_class("harness-unread-dot") for w in widgets(row))

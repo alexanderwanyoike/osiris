@@ -12,6 +12,7 @@ from osiris.harness.conversation import Conversation
 from osiris.harness.engine import Event, Finished, PastTurn, Text
 from osiris.harness.harness import Harness
 from osiris.harness.log import LOG_FILE, HarnessLog
+from osiris.harness.unread import Unread
 from osiris.platform import FakeFileSystem
 from tests.test_harness import GPT, HOME, FakeEngine
 
@@ -28,6 +29,9 @@ class FakeDrawer:
 
     def refresh(self, restyle: bool = False) -> None:
         self.refreshes += 1
+
+    def summon(self) -> None:
+        pass
 
 
 class App(SimpleNamespace):
@@ -54,7 +58,15 @@ def app() -> tuple[App, FakeEngine]:
         background=now,
         histories=0,
         canvases=0,
+        open=True,
+        unread=Unread(files, HOME),
+        sent=[],
+        withdrawn=[],
     )
+    stand_in.send_notification = lambda session, notification: stand_in.sent.append(
+        (session, notification)
+    )
+    stand_in.withdraw_notification = stand_in.withdrawn.append
     stand_in.load_history = lambda: setattr(
         stand_in, "histories", stand_in.histories + 1
     )

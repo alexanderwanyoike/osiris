@@ -192,3 +192,5 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-sidebar row:selected { background-color: alpha(@harness_glass_edge, 0.32); }
 .harness-sidebar row:hover { background-color: alpha(@harness_glass_edge, 0.18); }
 .harness-running { color: @harness_accent; }
+.harness-unread { font-weight: 700; }
+.harness-unread-dot { min-width: 8px; min-height: 8px; margin: 0 4px; border-radius: 999px; background-color: @harness_accent; }
