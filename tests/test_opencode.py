@@ -134,13 +134,13 @@ class TestLocate:
         files = FakeFileSystem()
         files.write(
             home / SERVICE_FILE,
-            json.dumps({"url": URL, "password": "secret", "pid": 1}),
+            json.dumps({"url": URL, "password": "secret", "pid": 4242}),
         )
         runner = FakeRunner()
 
         service = locate(files, FakeIdentity(home=home), runner)
 
-        assert service == Service(URL, "secret")
+        assert service == Service(URL, "secret", pid=4242)
         assert runner.commands == ["opencode service start"]
 
     def test_the_password_is_sent_as_basic_auth_for_the_opencode_user(self) -> None:
