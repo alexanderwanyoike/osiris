@@ -16,6 +16,7 @@ from osiris.platform import FakeRunner
 from osiris.platform.hardware import FakeProbe
 from osiris.platform.process import CommandError
 from osiris.provision.installer import Installer
+from tests.conftest import an_archinstall_that_completes
 
 GIB = 1024**3
 RTX_2060 = Gpu(GpuVendor.NVIDIA, 0x1E89)
@@ -48,7 +49,7 @@ def an_installer(
 def test_archinstall_is_run_once_silently_with_the_written_files(
     device: BDevice, tmp_path: Path
 ) -> None:
-    runner = FakeRunner()
+    runner = an_archinstall_that_completes()
     an_installer(runner, device, tmp_path).install(a_request(device))
     (argv,) = runner.arguments_to("archinstall")
     assert argv == (
@@ -62,7 +63,9 @@ def test_archinstall_is_run_once_silently_with_the_written_files(
 def test_the_written_configuration_is_one_archinstall_accepts(
     device: BDevice, tmp_path: Path
 ) -> None:
-    an_installer(FakeRunner(), device, tmp_path).install(a_request(device))
+    an_installer(an_archinstall_that_completes(), device, tmp_path).install(
+        a_request(device)
+    )
     written = json.loads((tmp_path / "config.json").read_text())
     parsed = ArchConfig.from_config(written, Arguments())
     assert parsed.disk_config is not None
@@ -72,7 +75,7 @@ def test_the_written_configuration_is_one_archinstall_accepts(
 def test_the_credentials_do_not_outlive_the_install(
     device: BDevice, tmp_path: Path, succeeds: bool
 ) -> None:
-    runner = FakeRunner()
+    runner = an_archinstall_that_completes()
     if not succeeds:
         runner.results["archinstall"] = CommandError(["archinstall"], 1)
     installer = an_installer(runner, device, tmp_path)

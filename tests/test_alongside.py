@@ -32,7 +32,7 @@ from osiris.platform.hardware import FakeProbe
 from osiris.provision import archinstall_config as config
 from osiris.provision import disk_contents
 from osiris.provision.installer import Installer
-from tests.conftest import GIB, a_disk_with
+from tests.conftest import GIB, a_disk_with, an_archinstall_that_completes
 
 MIB = 1024**2
 
@@ -51,7 +51,7 @@ def installed(
 ) -> ArchConfig:
     """Run the installer against the image and parse what it wrote."""
     Installer(
-        FakeRunner(),
+        an_archinstall_that_completes(),
         FakeProbe(Hardware()),
         devices=lambda _path: device,
         using_gpt=True,
