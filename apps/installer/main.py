@@ -830,10 +830,10 @@ class Window(Adw.ApplicationWindow):
         log_window.set_child(self.log)
         log_window.add_css_class("card")
 
-        details = Gtk.Expander(label="Details")
-        details.set_child(log_window)
-        details.set_vexpand(True)
-        box.append(details)
+        self.details = Gtk.Expander(label="Show details")
+        self.details.set_child(log_window)
+        self.details.set_vexpand(True)
+        box.append(self.details)
 
         # No header bar: there is nothing to go back to once the disk has been
         # partitioned, and offering a back arrow that does nothing is worse
@@ -930,8 +930,8 @@ class Window(Adw.ApplicationWindow):
         dialog = Adw.AlertDialog(
             heading="Install failed",
             body=f"{error}\n\nNothing on the disk is usable yet. Try again, "
-                 "or go back and change the settings. Open Details for the "
-                 "full output.")
+                 "or go back and change the settings. Open Show details for "
+                 "the full output.")
         dialog.add_response("close", "Close")
         dialog.present(self)
         return GLib.SOURCE_REMOVE
