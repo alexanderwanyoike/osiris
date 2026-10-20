@@ -212,3 +212,14 @@ def unchanged_prefix(before: Sequence[Block], after: Sequence[Block]) -> int:
             break
         count += 1
     return count
+
+
+def first_line(text: str) -> str:
+    """The first block of text in an answer, plain and on one line."""
+    for token in _PARSER.parse(text):
+        if token.type == "inline":
+            return "".join(
+                " " if child.type in ("softbreak", "hardbreak") else child.content
+                for child in token.children or []
+            ).strip()
+    return ""

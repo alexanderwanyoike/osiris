@@ -82,6 +82,8 @@ osiris/harness/activity       each step of an answer in plain words, and time sp
 osiris/harness/markdown       answers as blocks, inline text as escaped Pango markup
 osiris/harness/style          colour variables and code scheme from a Theme; Skin choice
 osiris/harness/harness        its sessions: the log, and actions allowed by tier
+osiris/harness/unread         the Conversations with an answer not yet seen, kept
+osiris/harness/notice         what the desktop is told when an answer ends unread
 osiris/harness/tiers          Action tiers: a look, an undoable change
 osiris/harness/log            the Harness log
 osiris/harness/engine         the Engine port and its events
@@ -199,6 +201,31 @@ one on screen, and any still working on a question. The person can move to
 another Conversation while Osiris answers; the one left keeps being answered,
 its file requests judged against its own folder, and the sidebar shows a
 spinner beside it until it ends.
+
+### Unread and notifications
+
+An answer that ends, finished or failed, while the person is not looking at
+it leaves its Conversation unread: the drawer was put away, or another
+Conversation was on screen. One the person stopped is not. The sidebar sets an
+unread title in bold with a dot in the Theme's accent at the end of its row (a
+running one keeps its spinner), and the desktop gets a notification, "Osiris
+replied" or "Osiris could not finish", with the Conversation's title and the
+first line of the answer. Clicking it activates `app.open-conversation` with
+the session, which brings the drawer in on that Conversation.
+
+Opening a Conversation, or bringing the drawer back to it, marks it read and
+withdraws its notification; so do archiving and deleting it. Each notification
+is sent under its session, so a newer answer replaces the older one. Unread
+sessions are kept one per line, so they survive a restart of the Harness:
+
+```
+~/.local/state/osiris/harness/unread
+```
+
+On Cinnamon, GLib sends the notification to `org.freedesktop.Notifications`
+(nothing owns `org.gtk.Notifications` there) and routes the click back to the
+running Harness itself, which is why the action works only while it runs; it
+is resident, so it does.
 
 ## Trying it in development
 

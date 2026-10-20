@@ -60,10 +60,12 @@ from osiris.harness.history import (  # noqa: E402
     project_program,
 )
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
+from osiris.harness.notice import notice_of  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.harness.trust import allow_everything, allows_everything  # noqa: E402
+from osiris.harness.unread import Unread  # noqa: E402
 from osiris.programs.programs import Programs  # noqa: E402
 from osiris.provision.upgrade import Upgrade  # noqa: E402
 from osiris.platform import (  # noqa: E402
@@ -408,7 +410,8 @@ class Drawer(Gtk.ApplicationWindow):
 
     def show_history(self, projects, loose) -> None:
         self.sidebar.show_history(projects, loose, getattr(self.app, "session", None),
-                                  getattr(self.app, "running", frozenset()))
+                                  getattr(self.app, "running", frozenset()),
+                                  getattr(self.app, "unread_sessions", frozenset()))
 
     def clear(self) -> None:
         for view in self.views:
@@ -467,6 +470,7 @@ class Application(Adw.Application):
         self.files = RealFileSystem()
         self.home = SystemIdentity().home
         self.models: Models = load_models(self.files, self.home)
+        self.unread = Unread(self.files, self.home)
         self.problem = "Starting the Engine..."
         #: What each Program's card is waiting on, or what went wrong, by name.
         self.program_busy: dict[str, str] = {}
@@ -476,6 +480,10 @@ class Application(Adw.Application):
         show = Gio.SimpleAction.new("show", None)
         show.connect("activate", lambda *_: self.toggle())
         self.add_action(show)
+        opening = Gio.SimpleAction.new("open-conversation", GLib.VariantType.new("s"))
+        opening.connect("activate", lambda _action, session:
+                        self.open_conversation(session.get_string()))
+        self.add_action(opening)
 
     def do_startup(self):
         Adw.Application.do_startup(self)
@@ -506,8 +514,21 @@ class Application(Adw.Application):
         if self.open:
             self.close_drawer()
         else:
-            self.open = True
-            self.drawer.summon()
+            self.summon()
+
+    def open_conversation(self, session: str) -> None:
+        """What a notification opens when clicked: the drawer, on its
+        Conversation."""
+        if not self.open:
+            self.summon()
+        self.open_past(session)
+
+    def summon(self) -> None:
+        self.open = True
+        self.drawer.summon()
+        if self.session in self.unread_sessions:
+            self._mark_read(self.session)
+            self.load_history()
 
     def close_drawer(self) -> None:
         """Ask the extension to slide the drawer away; minimise if it cannot."""
@@ -684,6 +705,10 @@ class Application(Adw.Application):
     def running(self) -> frozenset[str]:
         return self.harness.running if self.harness is not None else frozenset()
 
+    @property
+    def unread_sessions(self) -> frozenset[str]:
+        return self.unread.sessions()
+
     def load_history(self) -> None:
         if self.harness is None:
             return
@@ -725,7 +750,12 @@ class Application(Adw.Application):
         if self.harness is None:
             return
         harness = self.harness
-        self.background(lambda: harness.archive(session), lambda _r: self.load_history())
+
+        def archived(_result) -> None:
+            self._mark_read(session)
+            self.load_history()
+
+        self.background(lambda: harness.archive(session), archived)
 
     def ask_to_delete(self, session: str, title: str) -> None:
         dialog = Adw.AlertDialog(
@@ -750,6 +780,7 @@ class Application(Adw.Application):
 
     def _deleted(self, session: str, *, on_screen: bool) -> None:
         self.backgrounded.pop(session, None)
+        self._mark_read(session)
         if on_screen:
             self.conversation = Conversation()
             self.drawer.clear()
@@ -759,6 +790,7 @@ class Application(Adw.Application):
     def open_past(self, session: str) -> None:
         if self.harness is None or session == self.session or not self._leave():
             return
+        self._mark_read(session)
         harness = self.harness
         # Shown at once and kept by its session until the Harness has made it
         # current, so its events reach it while resume is under way.
@@ -898,9 +930,24 @@ class Application(Adw.Application):
             return False
         conversation.apply(event)
         if isinstance(event, Finished | Stopped | Failed):
+            looking = self.open and conversation is self.conversation
+            if self.unread.ended(event, looking=looking):
+                self._notify(event.session, conversation)
             self._ended(event.session, conversation)
         self.drawer.refresh()
         return False
+
+    def _mark_read(self, session: str) -> None:
+        self.unread.read(session)
+        self.withdraw_notification(session)
+
+    def _notify(self, session: str, conversation: Conversation) -> None:
+        notice = notice_of(conversation)
+        notification = Gio.Notification.new(notice.title)
+        notification.set_body(notice.body)
+        notification.set_default_action_and_target(
+            "app.open-conversation", GLib.Variant("s", session))
+        self.send_notification(session, notification)
 
     def _ended(self, session: str, conversation: Conversation) -> None:
         """An answer is over. One that ended off screen is let go, for the
