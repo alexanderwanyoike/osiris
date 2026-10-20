@@ -91,3 +91,11 @@ def test_a_secured_network_asks_for_its_password_then_joins() -> None:
     find(page, Gtk.Button, "Join").emit("clicked")
     assert network.joined == [("Home", "hunter22")]
     assert find(page, Gtk.Button, "Continue").get_sensitive()
+
+
+def test_an_open_network_is_joined_as_soon_as_it_is_chosen() -> None:
+    network = FakeNetwork(heard=[CAFE])
+    page, _ = a_page(network)
+    row(page, "Cafe").emit("activated")
+    assert network.joined == [("Cafe", "")]
+    assert not password(page).get_visible()
