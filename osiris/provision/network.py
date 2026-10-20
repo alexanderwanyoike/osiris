@@ -4,9 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from osiris.model.wifi import WifiNetwork
+from osiris.model.wifi import WifiNetwork, choices, parse
 from osiris.platform.http import HttpClient, HttpError
 from osiris.platform.process import CommandRunner
+
+#: nmcli's format for programs; see osiris.model.wifi.parse.
+SCAN = (
+    "nmcli", "-t", "-f", "IN-USE,SIGNAL,SECURITY,SSID",
+    "device", "wifi", "list", "--rescan", "yes",
+)  # fmt: skip
 
 #: Where a Wi-Fi password is written for nmcli to read, and deleted after.
 SECRETS = Path("/root/osiris-install")
@@ -59,4 +65,5 @@ class Network:
         self._secrets = secrets
 
     def wifi(self) -> list[WifiNetwork]:
-        return []
+        """The Wi-Fi networks in range, best first."""
+        return choices(parse(self._runner.capture(*SCAN)))
