@@ -180,6 +180,20 @@ def descends_from(processes: Processes, pid: int, ancestor: int | None) -> bool:
     return False
 
 
+def asking_program(processes: Processes, sudo: Process) -> str:
+    """What to call the program that ran ``sudo``: the nearest of its parents
+    that is not a shell."""
+    found = processes.get(sudo.parent)
+    for _ in range(_DEEPEST):
+        if found is None:
+            break
+        named = PurePosixPath(found.cmdline[0]).name if found.cmdline else found.name
+        if named not in SHELLS:
+            return named
+        found = processes.get(found.parent)
+    return "an unknown program"
+
+
 @dataclass(frozen=True)
 class Refuse:
     """No card and no dialog: the caller is not who it must be."""
