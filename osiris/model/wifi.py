@@ -54,7 +54,7 @@ class WifiNetwork:
 
     @property
     def asks_password(self) -> bool:
-        return False
+        return self.how in {Security.WPA_PSK, Security.SAE}
 
     @property
     def summary(self) -> str:
