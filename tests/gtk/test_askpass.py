@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import askpass
+import pytest
 from askpass import AdminDialog
 from gi.repository import Gtk
 
@@ -48,3 +50,12 @@ def test_the_dialog_answers_once() -> None:
     find(window, Gtk.Button, "Allow").emit("clicked")
     window.emit("close-request")
     assert answers == ["hunter2"]
+
+
+def test_with_no_display_there_is_no_dialog_and_no_password(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Gtk.init_check() reports success with no display at all; only the
+    # display says whether a window can be shown.
+    monkeypatch.setattr(askpass.Gdk.Display, "get_default", lambda: None)
+    assert askpass.ask_person("claude", PACMAN) is None
