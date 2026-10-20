@@ -58,6 +58,18 @@ class TestWhetherItIsReachable:
         assert http.requests == [("HEAD", URL, None)]
 
 
+class TestOnline:
+    def test_the_check_asks_the_first_mirror_in_the_medium_s_mirrorlist(
+        self, tmp_path: Path
+    ) -> None:
+        mirrorlist = tmp_path / "mirrorlist"
+        mirrorlist.write_text(MIRRORLIST)
+        http = FakeHttpClient(replies={("HEAD", URL): None})
+        network = Network.for_this_machine(FakeRunner(), http, mirrorlist)
+        assert network.online()
+        assert http.requests == [("HEAD", URL, None)]
+
+
 SCAN = "nmcli -t -f IN-USE,SIGNAL,SECURITY,SSID device wifi list --rescan yes"
 
 
