@@ -17,6 +17,9 @@ SCAN = (
 #: Where a Wi-Fi password is written for nmcli to read, and deleted after.
 SECRETS = Path("/root/osiris-install")
 
+#: The live medium's mirrorlist, which archinstall installs from.
+MIRRORLIST = Path("/etc/pacman.d/mirrorlist")
+
 #: Asked when the medium's mirrorlist names no server at all.
 FALLBACK = "https://archlinux.org/"
 
@@ -63,6 +66,20 @@ class Network:
         self._http = http
         self._url = url
         self._secrets = secrets
+
+    @classmethod
+    def for_this_machine(
+        cls, runner: CommandRunner, http: HttpClient, mirrorlist: Path = MIRRORLIST
+    ) -> Network:
+        try:
+            listed = mirrorlist.read_text()
+        except OSError:
+            listed = ""
+        return cls(runner, http, mirror_url(listed))
+
+    def online(self) -> bool:
+        """Whether the install's downloads would work right now."""
+        return reachable(self._http, self._url)
 
     def wifi(self) -> list[WifiNetwork]:
         """The Wi-Fi networks in range, best first; none without a Wi-Fi device."""
