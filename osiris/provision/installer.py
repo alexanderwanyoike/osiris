@@ -20,10 +20,15 @@ from osiris.model.layout import DiskContents, InstallMode, Layout
 from osiris.model.request import InstallRequest, InvalidRequest
 from osiris.platform.hardware import HardwareProbe, SystemProbe
 from osiris.platform.process import CommandRunner
-from osiris.provision import archinstall_config, archinstall_outcome, disk_contents
+from osiris.provision import (
+    archinstall_config,
+    archinstall_outcome,
+    disk_contents,
+    install_progress,
+)
 
-#: fraction completed, what is starting now
-Progress = Callable[[float, str], None]
+#: Called with each change in how far the install has got.
+Progress = Callable[[install_progress.Status], None]
 
 #: Where the configuration is written for archinstall to read. Under /root,
 #: because the credentials file carries the password hash.
@@ -130,8 +135,14 @@ class Installer:
     ) -> None:
         """Run the install. Raises on failure; never calls sys.exit."""
         request.validate()
-        if progress is not None:
-            progress(0.0, "Installing Osiris")
+        tracker = install_progress.Tracker()
+        report = progress or (lambda _status: None)
+        report(tracker.status)
+
+        def follow(line: str) -> None:
+            if (status := tracker.feed(line)) is not None:
+                report(status)
+
         config = archinstall_config.build(request, self.target(request))
         settings, credentials = archinstall_config.write(config, self._config_dir)
         try:
@@ -144,6 +155,7 @@ class Installer:
                 # terminal menu nobody behind this window could answer.
                 "--skip-wifi-check",
                 check=False,
+                on_line=follow,
             )  # fmt: skip
         finally:
             # The hash is no use to anyone once the user exists, and the live
@@ -152,5 +164,3 @@ class Installer:
         reason = archinstall_outcome.failure(result.returncode, result.stdout)
         if reason is not None:
             raise InstallFailed(reason)
-        if progress is not None:
-            progress(1.0, "Done")

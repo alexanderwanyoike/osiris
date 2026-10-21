@@ -1,0 +1,22 @@
+[
+  {
+    "image": "harness.png",
+    "caption": "Ask Osiris for an app and it builds one."
+  },
+  {
+    "image": "switcher.png",
+    "caption": "Press Super+T to change the whole desktop's colours."
+  },
+  {
+    "image": "desktop.png",
+    "caption": "Wallpapers move, slowly, in your theme's colours."
+  },
+  {
+    "image": "light.png",
+    "caption": "Pick a light theme or a dark one, or ask Osiris for a new one."
+  },
+  {
+    "image": "greeter.png",
+    "caption": "From the boot menu to the sign-in screen, it is all one system."
+  }
+]

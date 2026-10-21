@@ -33,6 +33,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))
 
 import disks  # noqa: E402
 from network_page import NetworkPage  # noqa: E402
+from slideshow import Slideshow  # noqa: E402
 
 from osiris.model.disk import Disk, Filesystem, human  # noqa: E402
 from osiris.model.layout import InstallMode, Layout  # noqa: E402
@@ -102,6 +103,7 @@ CSS = b"""
     padding: 10px;
 }
 .danger-note { color: @error_color; font-weight: 600; }
+.slide { border-radius: 12px; }
 """
 
 
@@ -790,6 +792,10 @@ class Window(Adw.ApplicationWindow):
         box = column(14)
         box.set_size_request(640, -1)
 
+        self.slides = Slideshow()
+        self.slides.set_margin_bottom(12)
+        box.append(self.slides)
+
         self.step_label = Gtk.Label(label="Starting", xalign=0)
         self.step_label.add_css_class("title-2")
         box.append(self.step_label)
@@ -797,6 +803,16 @@ class Window(Adw.ApplicationWindow):
         self.bar = Gtk.ProgressBar()
         self.bar.set_show_text(False)
         box.append(self.bar)
+
+        under_bar = Gtk.Box(spacing=12)
+        self.step = Gtk.Label(xalign=0, hexpand=True)
+        self.step.add_css_class("dim-label")
+        under_bar.append(self.step)
+        self.percent = Gtk.Label(xalign=1)
+        self.percent.add_css_class("dim-label")
+        self.percent.add_css_class("numeric")
+        under_bar.append(self.percent)
+        box.append(under_bar)
 
         self.retry_bar = Gtk.Box(halign=Gtk.Align.END, spacing=8)
         self.retry_bar.set_visible(False)
@@ -820,15 +836,18 @@ class Window(Adw.ApplicationWindow):
         log_window.set_child(self.log)
         log_window.add_css_class("card")
 
-        details = Gtk.Expander(label="Details")
-        details.set_child(log_window)
-        details.set_vexpand(True)
-        box.append(details)
+        self.details = Gtk.Expander(label="Show details")
+        self.details.set_child(log_window)
+        self.details.set_vexpand(True)
+        box.append(self.details)
 
+        # The slides are 1600 pixels wide, and the column would grow to the
+        # whole screen to fit them at their natural size.
+        clamp = Adw.Clamp(maximum_size=720, child=box)
         # No header bar: there is nothing to go back to once the disk has been
         # partitioned, and offering a back arrow that does nothing is worse
         # than offering none.
-        return page("progress", "Installing", box, header=False)
+        return page("progress", "Installing", clamp, header=False)
 
     def start(self) -> None:
         self.install_button.set_sensitive(False)
@@ -847,12 +866,12 @@ class Window(Adw.ApplicationWindow):
     def run_install(self) -> None:
         self.installing = True
         self.retry_bar.set_visible(False)
+        self.slides.set_visible(True)
         self.bar.remove_css_class("error")
         self.bar.set_fraction(0.0)
         self.step_label.set_text("Starting")
-        # archinstall reports no fraction complete, so the bar says "working"
-        # rather than inventing a percentage. The Details log shows each step.
-        GLib.timeout_add(120, self.pulse)
+        self.step.set_text("")
+        self.percent.set_text("")
         threading.Thread(target=self.worker, daemon=True).start()
 
     def retry(self, to_start: bool = False) -> None:
@@ -893,8 +912,8 @@ class Window(Adw.ApplicationWindow):
     def log_line(self, line: str) -> None:
         GLib.idle_add(self.append_log, line)
 
-    def on_progress(self, fraction: float, message: str) -> None:
-        GLib.idle_add(self.set_progress, fraction, message)
+    def on_progress(self, status) -> None:
+        GLib.idle_add(self.show_status, status)
 
     def append_log(self, line: str) -> bool:
         buffer = self.log.get_buffer()
@@ -903,15 +922,12 @@ class Window(Adw.ApplicationWindow):
         self.log.scroll_to_iter(buffer.get_end_iter(), 0.0, False, 0.0, 0.0)
         return GLib.SOURCE_REMOVE
 
-    def pulse(self) -> bool:
-        if self.installing:
-            self.bar.pulse()
-        return self.installing
-
-    def set_progress(self, fraction: float, message: str) -> bool:
-        if fraction >= 1.0:
-            self.bar.set_fraction(fraction)
-        self.step_label.set_text(message)
+    def show_status(self, status) -> bool:
+        """Draw how far the install has got (osiris.provision.install_progress)."""
+        self.step_label.set_text(status.title)
+        self.step.set_text(f"Step {status.step} of {status.steps}")
+        self.percent.set_text(f"{round(status.fraction * 100)}%")
+        self.bar.set_fraction(status.fraction)
         return GLib.SOURCE_REMOVE
 
     def failed(self, error: BaseException, detail: str) -> bool:
@@ -921,11 +937,13 @@ class Window(Adw.ApplicationWindow):
         self.step_label.set_text("Install failed")
         self.bar.add_css_class("error")
         self.retry_bar.set_visible(True)
+        self.details.set_expanded(True)
+        self.slides.set_visible(False)
         dialog = Adw.AlertDialog(
             heading="Install failed",
             body=f"{error}\n\nNothing on the disk is usable yet. Try again, "
-                 "or go back and change the settings. Open Details for the "
-                 "full output.")
+                 "or go back and change the settings. The full output is "
+                 "under the progress bar.")
         dialog.add_response("close", "Close")
         dialog.present(self)
         return GLib.SOURCE_REMOVE
