@@ -6,6 +6,7 @@ Covers the parts that are configuration rather than packages:
   * oh-my-zsh installed system-wide and zsh made the default login shell
   * ghostty: a config naming the theme the engine writes
   * fastfetch configured to show the Osiris logo
+  * Chromium named the default browser
 
 oh-my-zsh is not packaged in any official repository, so it is cloned to
 /usr/share/oh-my-zsh and owned by us - the same shape as shipping it in an
@@ -22,6 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import homes  # noqa: E402
 from run import run  # noqa: E402
 
+from osiris.provision import default_apps  # noqa: E402
 from osiris.provision.seeding import moves_to_zsh  # noqa: E402
 from osiris.themes import terminal  # noqa: E402
 
@@ -130,6 +132,7 @@ def configure_apps() -> None:
     for user in desktop_users():
         if homes.seed(f"/etc/skel/{rel}", f"{user.pw_dir}/{rel}", user):
             print(f"  configured fastfetch for {user.pw_name}")
+    write("/etc/xdg/mimeapps.list", default_apps.MIMEAPPS)
 
 
 def install_branding_assets(repo: str) -> None:
