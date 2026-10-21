@@ -57,8 +57,10 @@ class CommandRunner(Protocol):
         """Run to completion and capture stdout."""
         ...
 
-    def stream(self, *argv: str, check: bool = True) -> Result:
-        """Run with output forwarded as it arrives."""
+    def stream(
+        self, *argv: str, check: bool = True, on_line: Sink | None = None
+    ) -> Result:
+        """Run with output forwarded as it arrives, and each line to on_line."""
         ...
 
     def capture(self, *argv: str) -> str:
@@ -97,7 +99,9 @@ class SubprocessRunner:
             )
         return Result(tuple(argv), completed.returncode, completed.stdout)
 
-    def stream(self, *argv: str, check: bool = True) -> Result:
+    def stream(
+        self, *argv: str, check: bool = True, on_line: Sink | None = None
+    ) -> Result:
         """Run with output forwarded to the sink as it arrives.
 
         With a sink attached the child is given a pseudo-terminal rather than a
@@ -106,15 +110,16 @@ class SubprocessRunner:
         "Retrieving packages..." and then nothing at all for the fifteen
         minutes it takes to install a desktop.
 
-        With a sink, the lines forwarded come back as the result's stdout.
-        Without one the child writes straight to this terminal and there is
-        nothing to return.
+        With a sink or an on_line, the lines forwarded come back as the
+        result's stdout, and on_line hears each one, unprefixed, as it
+        arrives. With neither the child writes straight to this terminal and
+        there is nothing to return.
         """
         self.emit("  $ " + " ".join(argv))
-        if self._sink is None:
+        if self._sink is None and on_line is None:
             returncode, output = self._run_inheriting(argv), ""
         else:
-            returncode, output = self._run_on_pty(argv)
+            returncode, output = self._run_on_pty(argv, on_line)
         if check and returncode != 0:
             raise CommandError(argv, returncode)
         return Result(tuple(argv), returncode, output)
@@ -131,7 +136,7 @@ class SubprocessRunner:
     def _run_inheriting(argv: Sequence[str]) -> int:
         return subprocess.run(argv, check=False).returncode
 
-    def _run_on_pty(self, argv: Sequence[str]) -> tuple[int, str]:
+    def _run_on_pty(self, argv: Sequence[str], on_line: Sink | None) -> tuple[int, str]:
         master, slave = pty.openpty()
         try:
             process = subprocess.Popen(
@@ -153,6 +158,8 @@ class SubprocessRunner:
                 if text:
                     self.emit("    " + text)
                     forwarded.append(text)
+                    if on_line is not None:
+                        on_line(text)
         finally:
             os.close(master)
         return process.wait(), "".join(f"{text}\n" for text in forwarded)
@@ -202,8 +209,14 @@ class FakeRunner:
             self.emit("  $ " + " ".join(argv))
         return self._answer(argv, check, streamed=False)
 
-    def stream(self, *argv: str, check: bool = True) -> Result:
-        return self._answer(argv, check, streamed=True)
+    def stream(
+        self, *argv: str, check: bool = True, on_line: Sink | None = None
+    ) -> Result:
+        result = self._answer(argv, check, streamed=True)
+        if on_line is not None:
+            for line in result.stdout.splitlines():
+                on_line(line)
+        return result
 
     def capture(self, *argv: str) -> str:
         return self._answer(argv, check=True, streamed=False).stdout.strip()

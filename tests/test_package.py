@@ -158,3 +158,11 @@ def test_the_shipped_keyring_holds_the_signing_key() -> None:
         line.split(":")[9] for line in shown.splitlines() if line.startswith("fpr")
     ]
     assert package.SIGNING_KEY in fingerprints
+
+
+def test_wifi_passwords_are_kept_by_a_secrets_service() -> None:
+    """Cinnamon's network menu saves passwords through libsecret, which needs
+    a Secret Service; Cinnamon lists gnome-keyring only as optional. Without
+    it a Wi-Fi network is saved with no password and every later connection
+    fails. LightDM's PAM unlocks it at login when it is installed."""
+    assert "gnome-keyring" in package.depends()

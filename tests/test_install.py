@@ -16,6 +16,7 @@ from osiris.platform import FakeRunner
 from osiris.platform.hardware import FakeProbe
 from osiris.platform.process import CommandError, Result
 from osiris.provision.archinstall_outcome import NETWORK
+from osiris.provision.install_progress import Status
 from osiris.provision.installer import Installer, InstallFailed
 from tests.conftest import an_archinstall_that_completes
 
@@ -106,6 +107,27 @@ def test_an_install_archinstall_did_not_finish_fails_with_the_reason(
     with pytest.raises(InstallFailed) as caught:
         an_installer(runner, device, tmp_path).install(a_request(device))
     assert str(caught.value) == reason
+
+
+def test_each_stage_is_reported_as_archinstall_reaches_it(
+    device: BDevice, tmp_path: Path
+) -> None:
+    output = (
+        "Installing packages: ['osiris']\n"
+        "(170/340) installing cinnamon       [##########] 100%\n"
+        "Installation completed without any errors.\n"
+    )
+    runner = FakeRunner(results={"archinstall": Result(("archinstall",), 0, output)})
+    reports: list[Status] = []
+    an_installer(runner, device, tmp_path).install(
+        a_request(device), progress=reports.append
+    )
+    assert [(report.title, report.step) for report in reports] == [
+        ("Preparing your disk", 1),
+        ("Installing the desktop", 5),
+        ("Installing the desktop", 5),
+    ]
+    assert reports[-1].fraction > reports[-2].fraction
 
 
 def test_an_invalid_request_is_refused_before_anything_runs(

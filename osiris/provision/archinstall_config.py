@@ -23,6 +23,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from archinstall.default_profiles.profile import GreeterType
 from archinstall.lib.args import ArchConfig
 from archinstall.lib.disk.default_layouts import (
     _boot_partition,
@@ -68,7 +69,6 @@ from archinstall.lib.models.mirrors import (
 from archinstall.lib.models.network import NetworkConfiguration, NicType
 from archinstall.lib.models.profile import ProfileConfiguration
 from archinstall.lib.models.users import Password, User
-from archinstall.default_profiles.profile import GreeterType
 from archinstall.lib.profile.profiles_handler import profile_handler
 
 from osiris.model.disk import Filesystem

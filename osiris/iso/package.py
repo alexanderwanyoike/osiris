@@ -92,6 +92,9 @@ DESKTOP = (
     "xed", "gnome-screenshot",
     "adw-gtk-theme", "papirus-icon-theme",
     "polkit", "upower", "brightnessctl",
+    # Cinnamon saves Wi-Fi and other passwords through libsecret but lists the
+    # service behind it as optional; without one, nothing is kept.
+    "gnome-keyring",
 )  # fmt: skip
 
 # ghostty: GTK4-native and shaped through harfbuzz, so it is the only terminal

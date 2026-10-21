@@ -120,18 +120,18 @@ try it in a virtual machine before trusting it with a disk you care about.
 
 Download the ISO, about 2.8 GB, and its checksum:
 
-- [osiris-0.1.4-x86_64.iso](https://osiris-downloads.alphaneuron.net/osiris/0.1.4/osiris-0.1.4-x86_64.iso)
-- [osiris-0.1.4-x86_64.iso.sha256](https://osiris-downloads.alphaneuron.net/osiris/0.1.4/osiris-0.1.4-x86_64.iso.sha256)
+- [osiris-0.1.5-x86_64.iso](https://osiris-downloads.alphaneuron.net/osiris/0.1.5/osiris-0.1.5-x86_64.iso)
+- [osiris-0.1.5-x86_64.iso.sha256](https://osiris-downloads.alphaneuron.net/osiris/0.1.5/osiris-0.1.5-x86_64.iso.sha256)
 
 Check the download, then write it to a USB stick (replace `/dev/sdX` with your
 stick; everything on it is erased):
 
 ```bash
-sha256sum -c osiris-0.1.4-x86_64.iso.sha256
+sha256sum -c osiris-0.1.5-x86_64.iso.sha256
 ```
 
 ```bash
-sudo dd if=osiris-0.1.4-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
+sudo dd if=osiris-0.1.5-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
 ### Building it yourself
