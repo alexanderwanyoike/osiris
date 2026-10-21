@@ -1,3 +1,3 @@
 """Osiris: a Linux distribution built on Arch."""
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
