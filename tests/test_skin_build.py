@@ -92,3 +92,17 @@ def test_building_prints_nothing_of_its_own(tmp_path: Path) -> None:
     runner = FakeRunner()
     build_rose_pine(tmp_path, runner)
     assert runner.lines == []
+
+
+def test_a_pack_with_a_launcher_gets_it_in_the_themes_colours(tmp_path: Path) -> None:
+    root = make_pack(tmp_path / "colloid")
+    (root / "rofi").mkdir()
+    (root / "rofi" / "launcher.rasi").write_text("* { accent: {{accent}}; }")
+    built = build(
+        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
+    )
+    assert built.launcher == "* { accent: #c4a7e7; }"
+
+
+def test_a_pack_without_a_launcher_leaves_osiris_own(tmp_path: Path) -> None:
+    assert build_rose_pine(tmp_path, FakeRunner()).launcher is None
