@@ -52,3 +52,41 @@ def test_choosing_a_skin_asks_to_wear_it() -> None:
 def test_the_section_says_what_a_skin_is() -> None:
     page = SkinsPage(SKINS, chosen="osiris", on_pick=lambda _name: None)
     assert any("colours" in text for text in texts(page) if text)
+
+
+def buttons(root: Gtk.Widget, tooltip: str) -> list[Gtk.Button]:
+    return [
+        w
+        for w in widgets(root)
+        if isinstance(w, Gtk.Button) and w.get_tooltip_text() == tooltip
+    ]
+
+
+def test_a_skinpack_can_be_opened_from_the_section() -> None:
+    opened: list[bool] = []
+    page = SkinsPage(
+        SKINS, "osiris", lambda _n: None, on_open=lambda: opened.append(True)
+    )
+    buttons(page, "Open a skinpack")[0].emit("clicked")
+    assert opened == [True]
+
+
+def test_every_pack_can_be_exported_but_not_osiris_own() -> None:
+    exported: list[str] = []
+    page = SkinsPage(SKINS, "osiris", lambda _n: None, on_export=exported.append)
+    export = buttons(page, "Export")
+    assert len(export) == 1
+    export[0].emit("clicked")
+    assert exported == ["colloid"]
+
+
+def test_only_a_persons_own_skins_can_be_deleted() -> None:
+    deleted: list[str] = []
+    skins = [*SKINS, ("mine", "Mine", "You, GPL-3.0")]
+    page = SkinsPage(
+        skins, "osiris", lambda _n: None, mine={"mine"}, on_delete=deleted.append
+    )
+    delete = buttons(page, "Delete")
+    assert len(delete) == 1
+    delete[0].emit("clicked")
+    assert deleted == ["mine"]
