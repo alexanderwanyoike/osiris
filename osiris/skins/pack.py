@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 LABEL_FILE = "skin.json"
 LABEL_FIELDS = ("label", "author", "version", "licence", "source")
@@ -41,4 +44,48 @@ def read(root: Path) -> Skinpack:
         licence=label["licence"],
         source=label["source"],
         root=root,
+    )
+
+
+GAP = re.compile(r"\{\{(\w+)\}\}")
+ROLES = (
+    "background",
+    "surface",
+    "foreground",
+    "accent",
+    "success",
+    "warning",
+    "danger",
+)
+
+
+def gaps(theme: Mapping[str, Any]) -> dict[str, str]:
+    """The Theme's colours by the names a skinpack's gaps use."""
+    colours = theme["colors"]
+    found = {"variant": "dark" if theme.get("dark", True) else "light"}
+    for role in ROLES:
+        found[role] = colours[role]
+        red, green, blue = (int(colours[role][i : i + 2], 16) for i in (1, 3, 5))
+        found[f"{role}_plank"] = f"{red};;{green};;{blue};;255"
+    return found
+
+
+def fill(text: str, filled: Mapping[str, str]) -> str:
+    def value(match: re.Match[str]) -> str:
+        try:
+            return filled[match[1]]
+        except KeyError:
+            raise SkinpackError(f"unknown gap {{{{{match[1]}}}}}") from None
+
+    return GAP.sub(value, text)
+
+
+def sass_gaps(filled: Mapping[str, str]) -> str:
+    """The gaps as the Sass variables a skinpack's palette reads."""
+    return "".join(
+        f"$gap-{name}: {value!r};\n"
+        if name == "variant"
+        else f"$gap-{name}: {value};\n"
+        for name, value in filled.items()
+        if not name.endswith("_plank")
     )
