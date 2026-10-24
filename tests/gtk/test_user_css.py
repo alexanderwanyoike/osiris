@@ -8,6 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from gi.repository import GLib, Gtk
+
 from osiris.apps.user_css import UserCss
 
 
