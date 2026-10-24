@@ -45,7 +45,7 @@ use_osiris_package()
 import osiris  # noqa: E402
 from osiris.platform.process import CommandError, SubprocessRunner  # noqa: E402
 from osiris.provision.seeding import may_write  # noqa: E402
-from osiris.skins import carried, library as skins  # noqa: E402
+from osiris.skins import carried, library as skins, share  # noqa: E402
 from osiris.skins.build import Built, build as build_skin_pack  # noqa: E402
 from osiris.skins.pack import Look, SkinpackError  # noqa: E402
 from osiris.themes import terminal  # noqa: E402
@@ -772,6 +772,34 @@ def skin_choices() -> list[tuple[str, str, str]]:
 
 def chosen_skin() -> str:
     return skins.chosen(Path(SKIN_CHOICE))
+
+
+def own_skins() -> set[str]:
+    """The Skins the person opened or made, which they may delete."""
+    return {pack.name for pack in skins.available([Path(SKIN_DIRS[0])])}
+
+
+def _pack(name: str):
+    pack = skins.find([Path(folder) for folder in SKIN_DIRS], name)
+    if pack is None:
+        raise SkinpackError(f"no Skin called {name}")
+    return pack
+
+
+def export_skin(name: str, folder: str) -> str:
+    return str(share.export(_pack(name), Path(folder)))
+
+
+def open_skin(path: str) -> str:
+    """Add a shared Skin to the person's own; returns its name."""
+    return share.open_file(Path(path), Path(SKIN_DIRS[0])).name
+
+
+def delete_skin(name: str) -> None:
+    """Delete one of the person's Skins, back to Osiris's look if it was worn."""
+    share.delete(_pack(name), Path(SKIN_DIRS[0]))
+    if chosen_skin() == name:
+        set_skin(skins.OSIRIS)
 
 
 def set_skin(name: str) -> list[str]:
