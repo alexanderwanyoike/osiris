@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +18,15 @@ class SkinpackError(ValueError):
 
 
 @dataclass(frozen=True)
+class Look:
+    """What a Skin sets beyond its style sheets; None leaves the Theme's choice."""
+
+    icons: str | None
+    cursor: str | None
+    font: str | None
+
+
+@dataclass(frozen=True)
 class Skinpack:
     name: str
     label: str
@@ -26,6 +35,13 @@ class Skinpack:
     licence: str
     source: str
     root: Path
+    choices: Mapping[str, Any] = field(default_factory=dict)
+
+    def look(self, variant: str) -> Look:
+        icons = self.choices.get("icons")
+        if isinstance(icons, Mapping):
+            icons = icons.get(variant)
+        return Look(icons, self.choices.get("cursor"), self.choices.get("font"))
 
 
 def read(root: Path) -> Skinpack:
@@ -44,6 +60,7 @@ def read(root: Path) -> Skinpack:
         licence=label["licence"],
         source=label["source"],
         root=root,
+        choices=label.get("look", {}),
     )
 
 
