@@ -86,3 +86,9 @@ def test_the_result_names_the_theme_and_carries_the_dock(tmp_path: Path) -> None
     assert built.dock == "FillStartColor=25;;23;;36;;255\n"
     assert built.adwaita == theme / "libadwaita.css"
     assert "GtkTheme=Osiris-colloid-rose-pine" in (theme / "index.theme").read_text()
+
+
+def test_building_prints_nothing_of_its_own(tmp_path: Path) -> None:
+    runner = FakeRunner()
+    build_rose_pine(tmp_path, runner)
+    assert runner.lines == []
