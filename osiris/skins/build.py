@@ -9,6 +9,7 @@ A skinpack is laid out by surface, one Sass entry per variant:
     libadwaita/libadwaita-<variant>.scss
     files/common/, files/<variant>/   copied into the theme, SVG gaps filled
     plank/dock-<variant>.theme
+    rofi/launcher.rasi          optional; Osiris's own launcher theme otherwise
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ class Built:
     theme: str
     dock: str
     adwaita: Path
+    launcher: str | None = None
 
 
 def build(
@@ -76,4 +78,8 @@ def build(
         f"MetacityTheme={name}\n"
     )
     dock = fill((work / "plank" / f"dock-{variant}.theme").read_text(), filled)
-    return Built(theme=name, dock=dock, adwaita=target / "libadwaita.css")
+    rofi = work / "rofi" / "launcher.rasi"
+    launcher = fill(rofi.read_text(), filled) if rofi.is_file() else None
+    return Built(
+        theme=name, dock=dock, adwaita=target / "libadwaita.css", launcher=launcher
+    )
