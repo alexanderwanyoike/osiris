@@ -468,8 +468,76 @@ class Window(Adw.ApplicationWindow):
         self.reload()
 
     def _show_skins(self) -> None:
-        self.skins.set_child(SkinsPage(engine.skin_choices(),
-                                       engine.chosen_skin(), self.wear))
+        self.skins.set_child(SkinsPage(
+            engine.skin_choices(), engine.chosen_skin(), self.wear,
+            mine=engine.own_skins(), on_open=self.open_skin,
+            on_export=self.export_skin, on_delete=self.confirm_delete_skin))
+
+    def _skinpacks(self) -> Gio.ListStore:
+        only = Gtk.FileFilter(name="Skinpacks")
+        only.add_pattern("*.skinpack")
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        filters.append(only)
+        return filters
+
+    def open_skin(self) -> None:
+        dialog = Gtk.FileDialog(title="Open a skinpack", filters=self._skinpacks())
+
+        def chosen(_dialog, result) -> None:
+            try:
+                path = dialog.open_finish(result).get_path()
+                name = engine.open_skin(path)
+            except GLib.Error:
+                return
+            except Exception as error:                  # noqa: BLE001
+                self.toasts.add_toast(Adw.Toast(title=f"Not opened: {error}",
+                                                timeout=6))
+                return
+            self._show_skins()
+            self.toasts.add_toast(Adw.Toast(title=f"Added {name}", timeout=3))
+
+        dialog.open(self, None, chosen)
+
+    def export_skin(self, name: str) -> None:
+        dialog = Gtk.FileDialog(title="Export Skin")
+
+        def chosen(_dialog, result) -> None:
+            try:
+                folder = dialog.select_folder_finish(result).get_path()
+                shared = engine.export_skin(name, folder)
+            except GLib.Error:
+                return
+            except Exception as error:                  # noqa: BLE001
+                self.toasts.add_toast(Adw.Toast(title=f"Not exported: {error}",
+                                                timeout=6))
+                return
+            self.toasts.add_toast(Adw.Toast(
+                title=f"Saved {os.path.basename(shared)}", timeout=4))
+
+        dialog.select_folder(self, None, chosen)
+
+    def confirm_delete_skin(self, name: str) -> None:
+        dialog = Adw.AlertDialog(heading="Delete this Skin?",
+                                 body="It is removed from this computer.")
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("delete", "Delete")
+        dialog.set_response_appearance("delete",
+                                       Adw.ResponseAppearance.DESTRUCTIVE)
+
+        def answered(_dialog, response: str) -> None:
+            if response != "delete":
+                return
+            try:
+                engine.delete_skin(name)
+            except Exception as error:                  # noqa: BLE001
+                self.toasts.add_toast(Adw.Toast(title=f"Not deleted: {error}",
+                                                timeout=6))
+                return
+            self.get_application().reload_user_css()
+            self._show_skins()
+
+        dialog.connect("response", answered)
+        dialog.present(self)
 
     def wear(self, name: str) -> None:
         try:
