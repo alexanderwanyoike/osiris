@@ -5,9 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from osiris.skins.build import Built, build
-
 from osiris.platform.process import FakeRunner
+from osiris.skins.build import Built, build
 from osiris.skins.pack import read
 
 ROSE_PINE = {
