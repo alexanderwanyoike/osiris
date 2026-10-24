@@ -752,6 +752,18 @@ def _link_adwaita_assets(skin: Built | None) -> None:
         os.symlink(pictures, link)
 
 
+def skin_choices() -> list[tuple[str, str, str]]:
+    """Every Skin as (name, label, who made it), Osiris's own first."""
+    packs = skins.available([Path(folder) for folder in SKIN_DIRS])
+    return [(skins.OSIRIS, "Osiris", "Osiris's own look")] + [
+        (pack.name, pack.label, f"{pack.author}, {pack.licence}") for pack in packs
+    ]
+
+
+def chosen_skin() -> str:
+    return skins.chosen(Path(SKIN_CHOICE))
+
+
 def set_skin(name: str) -> list[str]:
     """Choose a Skin and wear it in the current Theme."""
     skins.choose(Path(SKIN_CHOICE), name)
