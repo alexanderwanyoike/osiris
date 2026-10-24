@@ -1,6 +1,6 @@
 # 13. GTK skins are shape layers on recolourable bases
 
-**Status:** Accepted
+**Status:** Superseded by [0019](0019-a-skin-is-a-skinpack-compiled-with-the-themes-colours.md)
 
 ## Context
 
