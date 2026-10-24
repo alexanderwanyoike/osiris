@@ -696,11 +696,15 @@ def build_theme(theme: dict) -> str | None:
         print(f"osiris-theme: building {name}: {error}", file=sys.stderr)
         return None
 
-    # Drop themes from other palettes so ~/.themes does not accumulate.
+    _drop_themes_but(name)
+    return name
+
+
+def _drop_themes_but(name: str) -> None:
+    """Drop Osiris's other generated themes so ~/.themes does not accumulate."""
     for entry in os.listdir(THEMES_DIR):
         if entry.startswith(THEME_PREFIX) and entry != name:
             shutil.rmtree(os.path.join(THEMES_DIR, entry), ignore_errors=True)
-    return name
 
 
 def apply(name: str) -> list[str]:
