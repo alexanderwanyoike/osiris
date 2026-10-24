@@ -64,7 +64,9 @@ def build(
     for entry, out in SURFACES:
         (target / out).parent.mkdir(parents=True, exist_ok=True)
         source = work / f"{entry}-{variant}.scss"
-        runner.run("sassc", "-M", "-t", "expanded", str(source), str(target / out))
+        runner.run(
+            "sassc", "-M", "-t", "expanded", str(source), str(target / out), quiet=True
+        )
     (target / "index.theme").write_text(
         "[X-GNOME-Metatheme]\n"
         f"Name={name}\n"
