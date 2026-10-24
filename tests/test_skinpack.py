@@ -59,7 +59,9 @@ ROSE_PINE = {
 
 
 def test_a_themes_roles_fill_the_gaps() -> None:
-    filled = fill("a { color: {{accent}}; background: {{background}}; }", gaps(ROSE_PINE))
+    filled = fill(
+        "a { color: {{accent}}; background: {{background}}; }", gaps(ROSE_PINE)
+    )
     assert filled == "a { color: #c4a7e7; background: #191724; }"
 
 
