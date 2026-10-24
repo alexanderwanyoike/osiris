@@ -1,0 +1,44 @@
+"""A skinpack: a Skin's label and style sheets, with gaps for the Theme's colours."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from osiris.skins.pack import SkinpackError, read
+
+LABEL = {
+    "label": "Colloid",
+    "author": "Vince Liuice",
+    "version": "2026-08-23",
+    "licence": "GPL-3.0",
+    "source": "https://github.com/vinceliuice/Colloid-gtk-theme",
+}
+
+
+def make_pack(root: Path, label: dict[str, str]) -> Path:
+    root.mkdir()
+    (root / "skin.json").write_text(json.dumps(label))
+    return root
+
+
+def test_reads_the_label_and_takes_its_name_from_the_folder(tmp_path: Path) -> None:
+    pack = read(make_pack(tmp_path / "colloid", LABEL))
+    assert pack.name == "colloid"
+    assert pack.label == "Colloid"
+    assert pack.licence == "GPL-3.0"
+    assert pack.root == tmp_path / "colloid"
+
+
+def test_a_folder_without_a_label_is_not_a_skinpack(tmp_path: Path) -> None:
+    (tmp_path / "empty").mkdir()
+    with pytest.raises(SkinpackError, match="skin.json"):
+        read(tmp_path / "empty")
+
+
+def test_a_label_missing_a_field_says_which(tmp_path: Path) -> None:
+    label = {k: v for k, v in LABEL.items() if k != "licence"}
+    with pytest.raises(SkinpackError, match="licence"):
+        read(make_pack(tmp_path / "colloid", label))
