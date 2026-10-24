@@ -51,6 +51,7 @@ from render import TurnView  # noqa: E402
 from sidebar import Sidebar  # noqa: E402
 from theme_store import EngineStore, user_wallpapers  # noqa: E402
 
+from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.apps.tool_server import NAME as TOOLS, TIERS, undo  # noqa: E402
 
 from osiris.harness import admin  # noqa: E402
@@ -515,6 +516,7 @@ class Application(Adw.Application):
         # Resident: closing keeps the conversation and the Engine connection.
         self.hold()
         self.look = Look(SystemIdentity().home, self._restyle)
+        self.user_css = UserCss(SystemIdentity().home / ".config" / "gtk-4.0" / "gtk.css")
         # Before the Engine is started, which inherits it, so the agent's sudo
         # asks here.
         os.environ.update(admin.agent_environment(os.environ))
