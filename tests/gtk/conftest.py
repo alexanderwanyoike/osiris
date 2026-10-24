@@ -26,6 +26,7 @@ sys.path.insert(0, str(APPS / "harness"))
 # Appended, not inserted: both apps have a main.py, and the harness tests
 # import the harness's.
 sys.path.append(str(APPS / "installer"))
+sys.path.append(str(APPS / "appearance"))
 
 
 def widgets(root: Gtk.Widget) -> Iterator[Gtk.Widget]:
