@@ -27,7 +27,7 @@ def test_the_sheet_is_loaded_when_followed(tmp_path: Path) -> None:
     sheet = tmp_path / "gtk.css"
     sheet.write_text("window { color: #c4a7e7; }")
     css = UserCss(sheet)
-    assert "#c4a7e7" in css.provider.to_string()
+    assert "rgb(196,167,231)" in css.provider.to_string()
 
 
 def test_a_rewritten_sheet_is_loaded_again(tmp_path: Path) -> None:
@@ -35,7 +35,7 @@ def test_a_rewritten_sheet_is_loaded_again(tmp_path: Path) -> None:
     sheet.write_text("window { color: #c4a7e7; }")
     css = UserCss(sheet)
     sheet.write_text("window { color: #907aa9; }")
-    assert settle(lambda: "#907aa9" in css.provider.to_string())
+    assert settle(lambda: "rgb(144,122,169)" in css.provider.to_string())
 
 
 def test_it_outranks_the_copy_gtk_read_at_startup() -> None:
