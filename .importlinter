@@ -12,7 +12,7 @@ name = Layers point downwards only
 type = layers
 layers =
     osiris.apps
-    osiris.iso | osiris.provision | osiris.themes | osiris.harness | osiris.programs
+    osiris.iso | osiris.provision | osiris.themes | osiris.skins | osiris.harness | osiris.programs
     osiris.resources
     osiris.platform
     osiris.model
@@ -27,6 +27,7 @@ forbidden_modules =
     osiris.resources
     osiris.provision
     osiris.themes
+    osiris.skins
     osiris.harness
     osiris.iso
     osiris.apps
@@ -40,6 +41,7 @@ source_modules =
     osiris.model
     osiris.resources
     osiris.themes
+    osiris.skins
     osiris.harness
     osiris.programs
     osiris.provision
@@ -58,6 +60,7 @@ source_modules =
     osiris.platform
     osiris.resources
     osiris.themes
+    osiris.skins
     osiris.harness
     osiris.programs
     osiris.provision
@@ -72,6 +75,7 @@ source_modules =
     osiris.model
     osiris.resources
     osiris.themes
+    osiris.skins
     osiris.harness
     osiris.programs
     osiris.provision
@@ -91,6 +95,7 @@ source_modules =
     osiris.platform
     osiris.resources
     osiris.themes
+    osiris.skins
     osiris.harness
     osiris.programs
     osiris.provision
