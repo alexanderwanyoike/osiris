@@ -39,6 +39,7 @@ import drift  # noqa: E402
 import engine  # noqa: E402
 
 from creator import Creator  # noqa: E402
+from skins_page import SkinsPage  # noqa: E402
 
 # creator has put the osiris package on sys.path.
 from osiris.model.names import slug  # noqa: E402
@@ -246,8 +247,9 @@ class Window(Adw.ApplicationWindow):
 
         toolbar = Adw.ToolbarView()
         header = Adw.HeaderBar()
-        header.set_title_widget(Adw.WindowTitle(title="Appearance",
-                                                subtitle="Osiris themes"))
+        self.views = Adw.ViewStack()
+        header.set_title_widget(Adw.ViewSwitcher(
+            stack=self.views, policy=Adw.ViewSwitcherPolicy.WIDE))
         new_button = Gtk.Button(icon_name="list-add-symbolic",
                                 tooltip_text="New theme")
         new_button.connect("clicked", lambda _b: self.create())
@@ -323,7 +325,19 @@ class Window(Adw.ApplicationWindow):
         self.stack.add_named(self.empty, "empty")
         self.stack.set_vexpand(True)
 
-        self.toasts.set_child(self.stack)
+        self.views.add_titled_with_icon(self.stack, "themes", "Themes",
+                                        "applications-graphics-symbolic")
+        self.skins = Adw.Bin()
+        self.views.add_titled_with_icon(self.skins, "skins", "Skins",
+                                        "preferences-desktop-appearance-symbolic")
+        # Search, filters and New belong to Themes.
+        for themes_only in (new_button, search_button, search_bar, filters):
+            self.views.bind_property(
+                "visible-child-name", themes_only, "visible",
+                GObject.BindingFlags.SYNC_CREATE,
+                lambda _binding, page: page == "themes")
+        self.toasts.set_child(self.views)
+        self._show_skins()
         toolbar.set_content(self.toasts)
         self.set_content(toolbar)
         self.reload()
@@ -450,6 +464,20 @@ class Window(Adw.ApplicationWindow):
             if remaining:
                 self.pick(remaining[0])
         self.reload()
+
+    def _show_skins(self) -> None:
+        self.skins.set_child(SkinsPage(engine.skin_choices(),
+                                       engine.chosen_skin(), self.wear))
+
+    def wear(self, name: str) -> None:
+        try:
+            engine.set_skin(name)
+        except Exception as error:                      # noqa: BLE001
+            self.toasts.add_toast(Adw.Toast(title=f"Failed: {error}",
+                                            timeout=6))
+            return
+        self.get_application().reload_user_css()
+        self._show_skins()
 
     def pick(self, theme: dict) -> None:
         absent = engine.missing_packages(theme)
