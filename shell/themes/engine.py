@@ -45,9 +45,9 @@ use_osiris_package()
 import osiris  # noqa: E402
 from osiris.platform.process import CommandError, SubprocessRunner  # noqa: E402
 from osiris.provision.seeding import may_write  # noqa: E402
-from osiris.skins import library as skins  # noqa: E402
+from osiris.skins import carried, library as skins  # noqa: E402
 from osiris.skins.build import Built, build as build_skin_pack  # noqa: E402
-from osiris.skins.pack import SkinpackError  # noqa: E402
+from osiris.skins.pack import Look, SkinpackError  # noqa: E402
 from osiris.themes import terminal  # noqa: E402
 from osiris.themes.at_login import theme_to_apply  # noqa: E402
 from osiris.themes.adwaita import adwaita_css  # noqa: E402
@@ -89,6 +89,9 @@ SKIN_DIRS = [
     os.path.join(os.path.dirname(REPO_THEMES), "skins"),
 ]
 SKIN_CHOICE = os.path.join(HOME, ".config", "osiris", "skin")
+# Where a Skin's carried icon sets, cursors and fonts are installed, once each.
+ICONS_DIR = os.path.join(HOME, ".local", "share", "icons")
+FONTS_DIR = os.path.join(HOME, ".local", "share", "fonts", "osiris-skins")
 SKIN_WORK = os.path.join(HOME, ".cache", "osiris", "skins")
 THEME_PREFIX = "Osiris-"
 CINNAMON_BASE = "/usr/share/cinnamon/theme"
@@ -720,21 +723,28 @@ def _drop_themes_but(name: str) -> None:
             shutil.rmtree(os.path.join(THEMES_DIR, entry), ignore_errors=True)
 
 
-def build_skin(theme: dict) -> Built | None:
-    """Build the chosen Skin in this Theme's colours; None for Osiris's own look."""
+def build_skin(theme: dict) -> tuple[Built, Look] | None:
+    """Build the chosen Skin in this Theme's colours; None for Osiris's own look.
+
+    What the pack carries (icon sets, cursors, fonts) is installed first, so the
+    look it names exists by the time the settings point at it.
+    """
     folders = [Path(folder) for folder in SKIN_DIRS]
     pack = skins.find(folders, skins.chosen(Path(SKIN_CHOICE)))
     if pack is None:
         return None
+    runner = SubprocessRunner()
     try:
+        if carried.install(pack, Path(ICONS_DIR), Path(FONTS_DIR)):
+            runner.run("fc-cache", "-f", FONTS_DIR, check=False, quiet=True)
         built = build_skin_pack(pack, theme, Path(THEMES_DIR), Path(SKIN_WORK),
-                                SubprocessRunner())
+                                runner)
     except (CommandError, SkinpackError, OSError) as error:
         # Osiris's own look rather than a half-built Skin.
         print(f"osiris-theme: Skin {pack.name}: {error}", file=sys.stderr)
         return None
     _drop_themes_but(built.theme)
-    return built
+    return built, pack.look("dark" if theme.get("dark", True) else "light")
 
 
 def _link_adwaita_assets(skin: Built | None) -> None:
@@ -787,19 +797,20 @@ def apply(name: str) -> list[str]:
     # One theme name for every surface. Because the name differs per palette
     # this is an ordinary theme change, which GTK applications, Muffin's window
     # decorations and the Cinnamon shell all already reload on.
-    skin = build_skin(theme)
+    worn = build_skin(theme)
+    skin, look = worn if worn else (None, Look(None, None, None))
     applied = skin.theme if skin else build_theme(theme) or ui["gtk"]
     # Folders tinted to the accent, over the theme's declared icon set. Falls
     # back to that set when Papirus is absent rather than naming a theme that
     # does not exist.
-    icon_theme = icons.build(theme, ui["icons"]) or ui["icons"]
+    icon_theme = look.icons or icons.build(theme, ui["icons"]) or ui["icons"]
     wallpaper = wallpaper_for(theme)
     # Plank reads its theme when the setting changes, so the name carries the
     # palette - the same reason the GTK theme does.
     dock = plank.install(skin.theme, skin.dock) if skin else plank.build(theme)
 
     _write(os.path.join(HOME, ".config", "rofi", "themes", "osiris.rasi"),
-           rofi_theme(theme))
+           skin.launcher if skin and skin.launcher else rofi_theme(theme))
     _seed(os.path.join(HOME, ".config", "rofi", "config.rasi"), ROFI_CONFIG)
     _write(os.path.join(HOME, terminal.THEME_FILE),
            terminal.theme_file(theme, mono=ui["mono"]))
@@ -808,8 +819,8 @@ def apply(name: str) -> list[str]:
     _load(keyfile(Switch(
         theme=applied,
         icons=icon_theme,
-        cursor=ui["cursor"],
-        font=ui["font"],
+        cursor=look.cursor or ui["cursor"],
+        font=look.font or ui["font"],
         dark=theme.get("dark", True),
         wallpaper=wallpaper if os.path.exists(wallpaper) else None,
         dock=dock,
