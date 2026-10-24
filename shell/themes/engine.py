@@ -34,6 +34,7 @@ import shutil
 import signal
 import subprocess
 import sys
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import icons  # noqa: E402
@@ -42,7 +43,11 @@ from paths import home, use_osiris_package  # noqa: E402
 
 use_osiris_package()
 import osiris  # noqa: E402
+from osiris.platform.process import CommandError, SubprocessRunner  # noqa: E402
 from osiris.provision.seeding import may_write  # noqa: E402
+from osiris.skins import library as skins  # noqa: E402
+from osiris.skins.build import Built, build as build_skin_pack  # noqa: E402
+from osiris.skins.pack import SkinpackError  # noqa: E402
 from osiris.themes import terminal  # noqa: E402
 from osiris.themes.at_login import theme_to_apply  # noqa: E402
 from osiris.themes.adwaita import adwaita_css  # noqa: E402
@@ -77,6 +82,14 @@ BROUGHT_UP_TO = os.path.join(HOME, ".config", "osiris", "version")
 WALLPAPERS = "/usr/share/backgrounds/osiris"
 
 THEMES_DIR = os.path.join(HOME, ".themes")
+# Skins, first match wins by name: the person's, shipped, development checkout.
+SKIN_DIRS = [
+    os.path.join(USER_ASSETS, "skins"),
+    "/usr/share/osiris/skins",
+    os.path.join(os.path.dirname(REPO_THEMES), "skins"),
+]
+SKIN_CHOICE = os.path.join(HOME, ".config", "osiris", "skin")
+SKIN_WORK = os.path.join(HOME, ".cache", "osiris", "skins")
 THEME_PREFIX = "Osiris-"
 CINNAMON_BASE = "/usr/share/cinnamon/theme"
 
@@ -707,6 +720,29 @@ def _drop_themes_but(name: str) -> None:
             shutil.rmtree(os.path.join(THEMES_DIR, entry), ignore_errors=True)
 
 
+def build_skin(theme: dict) -> Built | None:
+    """Build the chosen Skin in this Theme's colours; None for Osiris's own look."""
+    folders = [Path(folder) for folder in SKIN_DIRS]
+    pack = skins.find(folders, skins.chosen(Path(SKIN_CHOICE)))
+    if pack is None:
+        return None
+    try:
+        built = build_skin_pack(pack, theme, Path(THEMES_DIR), Path(SKIN_WORK),
+                                SubprocessRunner())
+    except (CommandError, SkinpackError, OSError) as error:
+        # Osiris's own look rather than a half-built Skin.
+        print(f"osiris-theme: Skin {pack.name}: {error}", file=sys.stderr)
+        return None
+    _drop_themes_but(built.theme)
+    return built
+
+
+def set_skin(name: str) -> list[str]:
+    """Choose a Skin and wear it in the current Theme."""
+    skins.choose(Path(SKIN_CHOICE), name)
+    return apply(current() or DEFAULT_THEME)
+
+
 def apply(name: str) -> list[str]:
     """Apply a theme to the current user.
 
@@ -724,7 +760,8 @@ def apply(name: str) -> list[str]:
     # One theme name for every surface. Because the name differs per palette
     # this is an ordinary theme change, which GTK applications, Muffin's window
     # decorations and the Cinnamon shell all already reload on.
-    applied = build_theme(theme) or ui["gtk"]
+    skin = build_skin(theme)
+    applied = skin.theme if skin else build_theme(theme) or ui["gtk"]
     # Folders tinted to the accent, over the theme's declared icon set. Falls
     # back to that set when Papirus is absent rather than naming a theme that
     # does not exist.
@@ -732,7 +769,7 @@ def apply(name: str) -> list[str]:
     wallpaper = wallpaper_for(theme)
     # Plank reads its theme when the setting changes, so the name carries the
     # palette - the same reason the GTK theme does.
-    dock = plank.build(theme)
+    dock = plank.install(skin.theme, skin.dock) if skin else plank.build(theme)
 
     _write(os.path.join(HOME, ".config", "rofi", "themes", "osiris.rasi"),
            rofi_theme(theme))
@@ -757,8 +794,12 @@ def apply(name: str) -> list[str]:
     stale = os.path.join(HOME, ".config", "gtk-3.0", "gtk.css")
     if os.path.exists(stale):
         os.remove(stale)
-    # libadwaita ignores the generated theme and reads only this.
-    _write(os.path.join(HOME, ".config", "gtk-4.0", "gtk.css"), adwaita_css(theme))
+    # libadwaita ignores the generated theme and reads only this. A Skin's sheet
+    # gives shape; the Theme's follows it because libadwaita 1.6+ takes its
+    # accent only from the variables adwaita_css sets (ADR 0019).
+    shape = _read(str(skin.adwaita)) if skin else None
+    _write(os.path.join(HOME, ".config", "gtk-4.0", "gtk.css"),
+           (shape + "\n" if shape else "") + adwaita_css(theme))
 
     _write(STATE, name + "\n")
     _drift(theme)
@@ -786,11 +827,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Apply an Osiris theme.")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--apply", metavar="NAME", help="apply this theme")
+    group.add_argument("--skin", metavar="NAME",
+                       help="wear this Skin (osiris for Osiris's own look)")
     group.add_argument("--login", action="store_true",
                        help="bring this home up to the installed Osiris")
     args = parser.parse_args()
     if args.login:
         login()
+    elif args.skin:
+        set_skin(args.skin)
     else:
         apply(args.apply)
 
