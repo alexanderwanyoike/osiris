@@ -34,7 +34,7 @@ def test_reads_the_label_and_takes_its_name_from_the_folder(tmp_path: Path) -> N
 
 def test_a_folder_without_a_label_is_not_a_skinpack(tmp_path: Path) -> None:
     (tmp_path / "empty").mkdir()
-    with pytest.raises(SkinpackError, match="skin.json"):
+    with pytest.raises(SkinpackError, match=r"skin\.json"):
         read(tmp_path / "empty")
 
 
