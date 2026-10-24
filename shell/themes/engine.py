@@ -737,6 +737,21 @@ def build_skin(theme: dict) -> Built | None:
     return built
 
 
+def _link_adwaita_assets(skin: Built | None) -> None:
+    """Point ~/.config/gtk-4.0/assets at the Skin's pictures, or remove our link.
+
+    A Skin's libadwaita sheet names its pictures relative to itself, and it is
+    installed as ~/.config/gtk-4.0/gtk.css. Only a link is ever removed, never a
+    folder the person made.
+    """
+    link = os.path.join(HOME, ".config", "gtk-4.0", "assets")
+    if os.path.islink(link):
+        os.remove(link)
+    pictures = os.path.join(THEMES_DIR, skin.theme, "gtk-4.0", "assets") if skin else ""
+    if pictures and os.path.isdir(pictures) and not os.path.exists(link):
+        os.symlink(pictures, link)
+
+
 def set_skin(name: str) -> list[str]:
     """Choose a Skin and wear it in the current Theme."""
     skins.choose(Path(SKIN_CHOICE), name)
@@ -800,6 +815,7 @@ def apply(name: str) -> list[str]:
     shape = _read(str(skin.adwaita)) if skin else None
     _write(os.path.join(HOME, ".config", "gtk-4.0", "gtk.css"),
            (shape + "\n" if shape else "") + adwaita_css(theme))
+    _link_adwaita_assets(skin)
 
     _write(STATE, name + "\n")
     _drift(theme)
