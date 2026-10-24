@@ -68,6 +68,35 @@ $default-light: $gap-accent;
 $default-dark: $gap-accent;
 """
 
+# Colloid ships no launcher theme; this one follows its rounded, flat panels.
+LAUNCHER = """\
+/* Colloid, in the Theme's colours. Made by shell/skins/make_colloid.py. */
+* {
+    bg:     {{background}};
+    panel:  {{surface}};
+    fg:     {{foreground}};
+    accent: {{accent}};
+    font:   "Sans 11";
+}
+window { transparency: "real"; background-color: @bg; border: 0px;
+    border-radius: 12px; width: 600px; padding: 12px; }
+mainbox { background-color: transparent; children: [ inputbar, listview ];
+    spacing: 10px; }
+inputbar { background-color: @panel; border-radius: 999px; padding: 10px 16px;
+    spacing: 10px; children: [ prompt, entry ]; }
+prompt { background-color: transparent; text-color: @accent; }
+entry { background-color: transparent; text-color: @fg; placeholder: "Search";
+    placeholder-color: @fg; }
+listview { background-color: transparent; lines: 8; scrollbar: false;
+    spacing: 4px; fixed-height: false; }
+element { background-color: transparent; text-color: @fg; border-radius: 8px;
+    padding: 8px 12px; spacing: 10px; children: [ element-icon, element-text ]; }
+element-icon { background-color: transparent; size: 22px; vertical-align: 0.5; }
+element-text { background-color: transparent; text-color: inherit;
+    vertical-align: 0.5; }
+element selected { background-color: @accent; text-color: @bg; }
+"""
+
 # The colours Colloid's own installer swaps in its pictures (assets.sh).
 SVG_GAPS = {
     "#5b9bf8": "{{accent}}",
@@ -151,6 +180,9 @@ def main() -> None:
     for variant in ("Light", "Dark"):
         dock = plank(src / "main" / "plank" / f"theme-{variant}" / "dock.theme")
         (PACK / "plank" / f"dock-{variant.lower()}.theme").write_text(dock)
+
+    (PACK / "rofi").mkdir()
+    (PACK / "rofi" / "launcher.rasi").write_text(LAUNCHER)
 
     label = {
         "label": "Colloid",
