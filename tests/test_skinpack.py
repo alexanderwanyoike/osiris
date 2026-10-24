@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from osiris.skins.pack import SkinpackError, fill, gaps, read, sass_gaps
+from osiris.skins.pack import Look, SkinpackError, fill, gaps, read, sass_gaps
 
 LABEL = {
     "label": "Colloid",
@@ -78,3 +78,26 @@ def test_sass_reads_the_gaps_as_variables() -> None:
     sass = sass_gaps(gaps(ROSE_PINE))
     assert "$gap-accent: #c4a7e7;" in sass
     assert "$gap-variant: 'dark';" in sass
+
+
+def test_a_pack_may_name_its_icons_cursor_and_font(tmp_path: Path) -> None:
+    look = {
+        "icons": {"light": "Colloid-Light", "dark": "Colloid-Dark"},
+        "cursor": "Colloid-cursors",
+        "font": "Inter 10",
+    }
+    pack = read(make_pack(tmp_path / "colloid", {**LABEL, "look": look}))
+    assert pack.look("dark") == Look("Colloid-Dark", "Colloid-cursors", "Inter 10")
+    assert pack.look("light").icons == "Colloid-Light"
+
+
+def test_a_pack_that_names_nothing_keeps_the_themes_choices(tmp_path: Path) -> None:
+    pack = read(make_pack(tmp_path / "colloid", LABEL))
+    assert pack.look("dark") == Look(None, None, None)
+
+
+def test_one_icon_set_may_serve_both_variants(tmp_path: Path) -> None:
+    pack = read(
+        make_pack(tmp_path / "colloid", {**LABEL, "look": {"icons": "Papirus"}})
+    )
+    assert pack.look("light").icons == pack.look("dark").icons == "Papirus"
