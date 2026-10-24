@@ -11,6 +11,7 @@ Run directly, or install the .desktop file alongside it.
 """
 import os
 import sys
+from pathlib import Path
 
 import gi
 
@@ -42,6 +43,7 @@ from creator import Creator  # noqa: E402
 from skins_page import SkinsPage  # noqa: E402
 
 # creator has put the osiris package on sys.path.
+from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.model.names import slug  # noqa: E402
 from osiris.themes.library import Filter, arrange  # noqa: E402
 
@@ -508,20 +510,12 @@ class Window(Adw.ApplicationWindow):
 class Application(Adw.Application):
     def __init__(self):
         super().__init__(application_id="dev.osiris.Appearance")
-        # GTK reads ~/.config/gtk-4.0/gtk.css once at startup. The app rewrites
-        # that file when a theme is applied, so without an explicit provider it
-        # would keep its old palette - including its own header bar - until
-        # restarted. Holding our own provider lets us reload it in place.
-        self.user_css = Gtk.CssProvider()
+        self.user_css: UserCss | None = None
 
     def reload_user_css(self):
-        path = os.path.join(engine.HOME, ".config", "gtk-4.0", "gtk.css")
-        if not os.path.exists(path):
-            return
-        try:
-            self.user_css.load_from_path(path)
-        except GLib.Error:
-            pass
+        # The file monitor would catch the rewrite too, a moment later.
+        if self.user_css is not None:
+            self.user_css.reload()
 
     def do_activate(self):
         # libadwaita normally takes light/dark from the XDG settings portal.
@@ -538,17 +532,14 @@ class Application(Adw.Application):
             Adw.ColorScheme.FORCE_DARK if dark else Adw.ColorScheme.FORCE_LIGHT)
 
         display = Gdk.Display.get_default()
+        self.user_css = UserCss(
+            Path(engine.HOME) / ".config" / "gtk-4.0" / "gtk.css")
         if display is not None:
-            # User palette first, then our widget styling on top.
-            Gtk.StyleContext.add_provider_for_display(
-                display, self.user_css,
-                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+            # Our widget styling above the user palette.
             provider = Gtk.CssProvider()
             provider.load_from_data(CSS)
             Gtk.StyleContext.add_provider_for_display(
-                display, provider,
-                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1)
-        self.reload_user_css()
+                display, provider, UserCss.PRIORITY + 1)
         Window(self).present()
 
 
