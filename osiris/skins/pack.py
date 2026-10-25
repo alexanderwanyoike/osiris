@@ -36,6 +36,8 @@ class Skinpack:
     source: str
     root: Path
     choices: Mapping[str, Any] = field(default_factory=dict)
+    #: The shipped Skin a person's own was started from, if known.
+    style: str | None = None
 
     def look(self, variant: str) -> Look:
         icons = self.choices.get("icons")
@@ -61,6 +63,7 @@ def read(root: Path) -> Skinpack:
         source=label["source"],
         root=root,
         choices=label.get("look", {}),
+        style=label.get("style"),
     )
 
 

@@ -76,6 +76,7 @@ def duplicate(
     shutil.copytree(pack.root, copy, ignore=shutil.ignore_patterns(".git"))
     label_of = json.loads((copy / LABEL_FILE).read_text())
     label_of["label"] = label or f"{pack.label} (copy)"
+    label_of["style"] = pack.style or pack.name
     (copy / LABEL_FILE).write_text(json.dumps(label_of, indent=2) + "\n")
     (copy / "AGENTS.md").write_text(AGENTS.read_text().replace("SKIN_NAME", name))
     for step in (("init", "-q"), ("add", "-A")):
