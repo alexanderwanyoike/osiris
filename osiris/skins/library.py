@@ -41,3 +41,8 @@ def available(folders: Sequence[Path]) -> list[Skinpack]:
 
 def find(folders: Sequence[Path], name: str) -> Skinpack | None:
     return next((pack for pack in available(folders) if pack.name == name), None)
+
+
+def styles(folders: Sequence[Path], editing: str) -> list[Skinpack]:
+    """The Skins a Skin can take its style from: every one but itself."""
+    return [pack for pack in available(folders) if pack.name != editing]
