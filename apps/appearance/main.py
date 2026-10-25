@@ -475,7 +475,51 @@ class Window(Adw.ApplicationWindow):
             engine.skin_choices(), engine.chosen_skin(), self.wear,
             mine=engine.own_skins(), on_open=self.open_skin,
             on_export=self.export_skin, on_delete=self.confirm_delete_skin,
-            on_duplicate=self.duplicate_skin, on_change=self.change_skin))
+            on_duplicate=self.duplicate_skin, on_change=self.change_skin,
+            on_edit=self.edit_skin, on_create=self.create_skin))
+
+    def edit_skin(self, name: str) -> None:
+        """Open the Skin's folder in the code editor Osiris ships (ADR 0016)."""
+        try:
+            Gio.Subprocess.new(["code", engine.skin_folder(name)],
+                               Gio.SubprocessFlags.NONE)
+        except Exception as error:                      # noqa: BLE001
+            self.toasts.add_toast(Adw.Toast(title=f"Not opened: {error}",
+                                            timeout=6))
+
+    def create_skin(self) -> None:
+        bases = [skin for skin in engine.skin_choices() if skin[0] != "osiris"]
+        name = Gtk.Entry(placeholder_text="Name", activates_default=True)
+        base = Gtk.DropDown.new_from_strings([label for _n, label, _c in bases])
+        form = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        form.append(name)
+        form.append(Gtk.Label(label="Start from", xalign=0))
+        form.append(base)
+        dialog = Adw.AlertDialog(
+            heading="New Skin",
+            body="Name it and pick a Skin to start from; then tell Osiris "
+                 "how it should look.",
+            extra_child=form)
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("create", "Create")
+        dialog.set_response_appearance("create", Adw.ResponseAppearance.SUGGESTED)
+        dialog.set_default_response("create")
+
+        def answered(_dialog, response: str) -> None:
+            label = name.get_text().strip()
+            if response != "create" or not label:
+                return
+            try:
+                made = engine.create_skin(label, bases[base.get_selected()][0])
+            except Exception as error:                  # noqa: BLE001
+                self.toasts.add_toast(Adw.Toast(title=f"Not created: {error}",
+                                                timeout=6))
+                return
+            self._show_skins()
+            self.change_skin(made)
+
+        dialog.connect("response", answered)
+        dialog.present(self)
 
     def duplicate_skin(self, name: str) -> None:
         try:
