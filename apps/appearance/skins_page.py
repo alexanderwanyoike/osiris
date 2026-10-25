@@ -34,7 +34,9 @@ class SkinsPage(Adw.PreferencesPage):
                  on_export: Callable[[str], None] = _nothing,
                  on_delete: Callable[[str], None] = _nothing,
                  on_duplicate: Callable[[str], None] = _nothing,
-                 on_change: Callable[[str], None] = _nothing):
+                 on_change: Callable[[str], None] = _nothing,
+                 on_edit: Callable[[str], None] = _nothing,
+                 on_create: Callable[[], None] = _nothing):
         super().__init__()
         group = Adw.PreferencesGroup(
             title="Skins",
@@ -46,9 +48,11 @@ class SkinsPage(Adw.PreferencesPage):
             mark = Gtk.Image(icon_name="object-select-symbolic",
                              visible=name == chosen)
             if name in mine:
-                row.add_suffix(_button("document-edit-symbolic",
+                row.add_suffix(_button("osiris-ask-symbolic",
                                        "Ask Osiris to change it",
                                        lambda skin=name: on_change(skin)))
+                row.add_suffix(_button("document-edit-symbolic", "Edit",
+                                       lambda skin=name: on_edit(skin)))
                 row.add_suffix(_button("user-trash-symbolic", "Delete",
                                        lambda skin=name: on_delete(skin)))
             if name != OSIRIS:
@@ -59,6 +63,9 @@ class SkinsPage(Adw.PreferencesPage):
             row.add_suffix(mark)
             row.connect("activated", lambda _row, skin=name: on_pick(skin))
             group.add(row)
-        group.set_header_suffix(_button("document-open-symbolic",
-                                        "Open a skinpack", on_open))
+        header = Gtk.Box(spacing=6)
+        header.append(_button("list-add-symbolic", "New Skin", on_create))
+        header.append(_button("document-open-symbolic", "Open a skinpack",
+                              on_open))
+        group.set_header_suffix(header)
         self.add(group)
