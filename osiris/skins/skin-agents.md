@@ -17,10 +17,23 @@ Change it when they ask; never touch Skins outside this folder.
   `gtk-4.0/gtk-<variant>.scss`, `cinnamon/cinnamon-<variant>.scss`,
   `libadwaita/libadwaita-<variant>.scss`. Every entry but GTK 3 is optional.
 - `files/common/` and `files/<variant>/` are copied into the installed theme.
-  In SVGs, `{{accent}}`, `{{background}}` and the other role names are gaps.
+  In SVG and CSS files there, `{{accent}}`, `{{background}}` and the other
+  role names are gaps.
 - `plank/dock-<variant>.theme` is the dock; colours there are gaps like
   `{{background_plank}}`.
 - `rofi/launcher.rasi`, if present, is the launcher, with `{{gap}}` markers.
+
+## An imported theme
+
+If `skin.json` says the author is "Imported", this Skin came from a GTK theme
+the person downloaded: compiled CSS in `files/` with its colours written in.
+Converting it means finding the colours its window backgrounds, header bars
+and sidebars, text, selection and accent, and success, warning and error
+states use, in `gtk-3.0/gtk.css`, `gtk-4.0/gtk.css` and
+`cinnamon/cinnamon.css` of each variant, and replacing them with the matching
+gaps. Keep a colour's transparency with GTK's own function, for example
+`alpha({{accent}}, 0.5)`; Cinnamon's stylesheet takes plain colours only.
+Leave colours that are part of the look whatever the Theme.
 
 ## Rules
 
