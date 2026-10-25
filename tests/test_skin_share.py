@@ -9,8 +9,9 @@ from pathlib import Path
 
 import pytest
 
+from osiris.platform.process import FakeRunner
 from osiris.skins.pack import SkinpackError, read
-from osiris.skins.share import EXTENSION, delete, export, open_file
+from osiris.skins.share import EXTENSION, delete, duplicate, export, open_file
 
 FIELDS = {"author": "a", "version": "1", "licence": "GPL-3.0", "source": "s"}
 
@@ -60,3 +61,36 @@ def test_a_shipped_skin_cannot_be_deleted(tmp_path: Path) -> None:
     with pytest.raises(SkinpackError, match="ships with Osiris"):
         delete(pack, tmp_path / "mine")
     assert (tmp_path / "shipped" / "colloid").exists()
+
+
+def test_a_duplicate_is_a_persons_own_copy_under_a_new_name(tmp_path: Path) -> None:
+    pack = read(make_pack(tmp_path / "shipped" / "colloid"))
+    copy = duplicate(pack, tmp_path / "mine", FakeRunner())
+    assert copy.name == "colloid-copy"
+    assert copy.label == "Colloid (copy)"
+    assert copy.root == tmp_path / "mine" / "colloid-copy"
+    assert (copy.root / "sass" / "_palette.scss").is_file()
+
+
+def test_duplicating_twice_finds_a_free_name(tmp_path: Path) -> None:
+    pack = read(make_pack(tmp_path / "shipped" / "colloid"))
+    duplicate(pack, tmp_path / "mine", FakeRunner())
+    assert duplicate(pack, tmp_path / "mine", FakeRunner()).name == "colloid-copy-2"
+
+
+def test_a_duplicate_tells_osiris_how_to_change_it(tmp_path: Path) -> None:
+    pack = read(make_pack(tmp_path / "shipped" / "colloid"))
+    copy = duplicate(pack, tmp_path / "mine", FakeRunner())
+    agents = (copy.root / "AGENTS.md").read_text()
+    assert "--skin colloid-copy" in agents
+    assert "$gap-accent" in agents
+
+
+def test_a_duplicate_keeps_its_history_so_changes_can_be_undone(tmp_path: Path) -> None:
+    runner = FakeRunner()
+    copy = duplicate(
+        read(make_pack(tmp_path / "shipped" / "colloid")), tmp_path / "mine", runner
+    )
+    assert runner.ran("git", "-C", str(copy.root), "init", "-q")
+    assert runner.ran("git", "-C", str(copy.root), "add", "-A")
+    assert runner.ran("git", "-C", str(copy.root), "commit", "-q")
