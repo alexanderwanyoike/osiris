@@ -507,7 +507,7 @@ class Window(Adw.ApplicationWindow):
             return add
 
         editor = SkinEditor(
-            label=details["label"], styles=engine.skin_styles(),
+            label=details["label"], styles=engine.skin_styles(name),
             style=details["style"], icon_sets=engine.icon_sets(),
             icons=details["icons"], cursor_sets=cursors,
             cursor_pictures=engine.cursor_pictures(cursors),
