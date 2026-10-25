@@ -749,6 +749,8 @@ def build_skin(theme: dict) -> tuple[Built, Look] | None:
         # Osiris's own look rather than a half-built Skin.
         print(f"osiris-theme: Skin {pack.name}: {error}", file=sys.stderr)
         return None
+    if not built.cinnamon:
+        _osiris_cinnamon(theme, os.path.join(THEMES_DIR, built.theme))
     _drop_themes_but(built.theme)
     return built, pack.look("dark" if theme.get("dark", True) else "light")
 
@@ -841,7 +843,8 @@ def apply(name: str) -> list[str]:
     wallpaper = wallpaper_for(theme)
     # Plank reads its theme when the setting changes, so the name carries the
     # palette - the same reason the GTK theme does.
-    dock = plank.install(skin.theme, skin.dock) if skin else plank.build(theme)
+    dock = (plank.install(skin.theme, skin.dock) if skin and skin.dock
+            else plank.build(theme))
 
     _write(os.path.join(HOME, ".config", "rofi", "themes", "osiris.rasi"),
            skin.launcher if skin and skin.launcher else rofi_theme(theme))
@@ -869,7 +872,7 @@ def apply(name: str) -> list[str]:
     # libadwaita ignores the generated theme and reads only this. A Skin's sheet
     # gives shape; the Theme's follows it because libadwaita 1.6+ takes its
     # accent only from the variables adwaita_css sets (ADR 0019).
-    shape = _read(str(skin.adwaita)) if skin else None
+    shape = _read(str(skin.adwaita)) if skin and skin.adwaita else None
     _write(os.path.join(HOME, ".config", "gtk-4.0", "gtk.css"),
            (shape + "\n" if shape else "") + adwaita_css(theme))
     _link_adwaita_assets(skin)
