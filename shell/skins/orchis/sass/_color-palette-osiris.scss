@@ -1,0 +1,59 @@
+// Orchis's palette, rebuilt from the Theme's colours ($gap-* from _gaps.scss).
+@import 'gaps';
+
+$red-light: $gap-danger;     $red-dark: $gap-danger;
+$pink-light: #F06292;        $pink-dark: #EC407A;
+$purple-light: #BA68C8;      $purple-dark: #AB47BC;
+$blue-light: $gap-accent;    $blue-dark: $gap-accent;
+$teal-light: #4DB6AC;        $teal-dark: #009688;
+$green-light: #66BB6A;       $green-dark: #4CAF50;
+$sea-light: $gap-success;    $sea-dark: $gap-success;
+$yellow-light: $gap-warning; $yellow-dark: $gap-warning;
+$orange-light: #FB8C00;      $orange-dark: #F57C00;
+
+// Orchis paints windows from background(a..h) in _colors.scss. Light Themes
+// use a..d ($white, grey-050, grey-100, grey-250) with the window on grey-100
+// and header bars, views and popovers on white; dark Themes use e..h
+// (grey-800 to grey-650) with the window on grey-800 and header bars and views
+// on grey-700. Those slots are anchored to the Theme's background and surface;
+// the rest of the ramp runs towards the foreground.
+@function g($if-light, $if-dark) {
+  @return if($gap-variant == 'light', $if-light, $if-dark);
+}
+@function fg($weight, $over: $gap-background) {
+  @return mix($gap-foreground, $over, $weight);
+}
+
+$white:    g($gap-surface, $gap-foreground);
+$grey-050: g(mix($gap-surface, $gap-background, 50%), fg(96%));
+$grey-100: g($gap-background, fg(92%));
+$grey-150: g(fg(4%), fg(88%));
+$grey-200: g(fg(9%), fg(82%));
+$grey-250: g(fg(15%), fg(75%));
+$grey-300: g(fg(22%), fg(70%));
+$grey-350: g(fg(35%), fg(57%));
+$grey-400: g(fg(37%), fg(55%));
+$grey-450: g(fg(47%), fg(45%));
+$grey-500: g(fg(57%), fg(35%));
+$grey-550: g(fg(70%), fg(22%));
+$grey-600: g(fg(78%), fg(15%));
+$grey-650: g(fg(88%), fg(8%, $gap-surface));
+$grey-700: g($gap-foreground, $gap-surface);
+$grey-750: g(mix(#000, $gap-foreground, 12%), mix($gap-surface, $gap-background, 50%));
+$grey-800: g(mix(#000, $gap-foreground, 22%), $gap-background);
+$grey-850: g(mix(#000, $gap-foreground, 35%), mix(#000, $gap-background, 20%));
+$grey-900: g(mix(#000, $gap-foreground, 45%), mix(#000, $gap-background, 35%));
+$grey-950: g(mix(#000, $gap-foreground, 60%), mix(#000, $gap-background, 60%));
+
+$black: #000000;
+
+// Orchis's round window buttons keep their own colours.
+$button-close: #fd5f51;
+$button-max: #38c76a;
+$button-min: #fdbe04;
+
+// Text on a colour is drawn in whichever of the Theme's background and
+// foreground is darker (on light colours) or lighter (on dark colours).
+$fg-darker: lightness($gap-foreground) < lightness($gap-background);
+$ink-dark: if($fg-darker, $gap-foreground, $gap-background);
+$ink-light: if($fg-darker, $gap-background, $gap-foreground);

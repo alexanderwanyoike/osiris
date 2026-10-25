@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24" height="24" viewBox="40 8 24 24"><defs id="defs84">
+    <linearGradient id="color-on-primary-dark" x1="6.2124" x2="29.25" y1="11.894" y2="11.894" gradientTransform="scale(1.1453 .87314)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="{{background}}" offset="1" id="stop2" />
+    </linearGradient>
+    <linearGradient id="color-on-primary-light" x1="6.2124" x2="29.25" y1="11.894" y2="11.894" gradientTransform="scale(1.1453 .87314)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="{{background}}" offset="1" id="stop5" />
+    </linearGradient>
+    <linearGradient id="color-text-secondary-disabled">
+      <stop stop-color="{{foreground}}" stop-opacity=".26" offset="1" id="stop8" />
+    </linearGradient>
+    <linearGradient id="color-text-secondary-disabled-dark">
+      <stop stop-color="{{foreground}}" stop-opacity=".3" offset="1" id="stop11" />
+    </linearGradient>
+    <linearGradient id="color-primary-dark">
+      <stop stop-color="{{accent}}" offset="1" id="stop14" />
+    </linearGradient>
+    <linearGradient id="color-primary-light">
+      <stop stop-color="{{accent}}" offset="1" id="stop17" />
+    </linearGradient>
+    <linearGradient id="color-background">
+      <stop stop-color="{{background}}" offset="1" id="stop20" />
+    </linearGradient>
+    <linearGradient id="color-background-dark">
+      <stop stop-color="{{background}}" offset="1" id="stop23" />
+    </linearGradient>
+    <linearGradient id="color-surface" x2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="{{surface}}" offset="1" id="stop26" />
+    </linearGradient>
+    <linearGradient id="color-surface-dark" x2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="{{surface}}" offset="1" id="stop29" />
+    </linearGradient>
+    <g id="base-scale-slider">
+      <rect width="24" height="24" fill="none" id="rect32" />
+      <circle cx="12" cy="12" r="6" id="circle34" />
+    </g>
+    <g id="base-scale-horz-marks-before-slider">
+      <rect width="24" height="24" fill="none" id="rect37" />
+      <path transform="rotate(45 12 12)" d="m6 6h6a6 6 0 1 1-6 6z" id="path39" />
+    </g>
+    <g id="base-scale-vert-marks-after-slider">
+      <use transform="rotate(90 12 12)" xlink:href="#base-scale-horz-marks-before-slider" id="use42" />
+    </g>
+    <g id="base-scale-horz-marks-after-slider">
+      <use transform="rotate(180 12 12)" xlink:href="#base-scale-horz-marks-before-slider" id="use45" />
+    </g>
+    <g id="base-scale-vert-marks-before-slider">
+      <use transform="rotate(270 12 12)" xlink:href="#base-scale-horz-marks-before-slider" id="use48" />
+    </g>
+    <g id="base-selectionmode-checkbox">
+      <rect width="40" height="40" fill="none" id="rect51" />
+      <rect x="2" y="2" width="36" height="36" rx="4" id="rect53" />
+    </g>
+    <g id="base-selectionmode-checkmark">
+      <path transform="matrix(1.5 0 0 1.5 2 2)" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" id="path56" />
+    </g>
+    <linearGradient id="linearGradient976" x2="200" gradientUnits="userSpaceOnUse" xlink:href="#color-background" />
+    <linearGradient id="linearGradient978" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-primary-dark" />
+    <linearGradient id="linearGradient980" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-background" />
+    <linearGradient id="linearGradient982" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-text-secondary-disabled" />
+    <linearGradient id="linearGradient990" x1="-3.5527e-15" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-primary-dark" />
+    <linearGradient id="linearGradient992" x1="-3.5527e-15" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-background" />
+    <linearGradient id="linearGradient994" x1="-3.5527e-15" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-text-secondary-disabled" />
+    <linearGradient id="linearGradient996" x1="-2.6324e-15" x2="24" y1="-3.5527e-15" y2="-3.5527e-15" gradientUnits="userSpaceOnUse" xlink:href="#color-primary-dark" />
+    <linearGradient id="linearGradient998" x1="-2.6324e-15" x2="24" y1="-3.5527e-15" y2="-3.5527e-15" gradientUnits="userSpaceOnUse" xlink:href="#color-background" />
+    <linearGradient id="linearGradient1000" x1="-2.6324e-15" x2="24" y1="-3.5527e-15" y2="-3.5527e-15" gradientUnits="userSpaceOnUse" xlink:href="#color-text-secondary-disabled" />
+    <linearGradient id="linearGradient1008" x2="40" gradientUnits="userSpaceOnUse" xlink:href="#color-primary-dark" />
+    <linearGradient id="linearGradient1041" x2="200" gradientTransform="translate(200)" gradientUnits="userSpaceOnUse" xlink:href="#color-background-dark" />
+    <linearGradient id="linearGradient1043" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-primary-light" />
+    <linearGradient id="linearGradient1045" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-background-dark" />
+    <linearGradient id="linearGradient1047" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-text-secondary-disabled-dark" />
+    <linearGradient id="linearGradient1055" x1="-3.5527e-15" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-primary-light" />
+    <linearGradient id="linearGradient1057" x1="-3.5527e-15" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-background-dark" />
+    <linearGradient id="linearGradient1059" x1="-3.5527e-15" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-text-secondary-disabled-dark" />
+    <linearGradient id="linearGradient1061" x1="-2.6324e-15" x2="24" y1="-3.5527e-15" y2="-3.5527e-15" gradientUnits="userSpaceOnUse" xlink:href="#color-primary-light" />
+    <linearGradient id="linearGradient1063" x1="-2.6324e-15" x2="24" y1="-3.5527e-15" y2="-3.5527e-15" gradientUnits="userSpaceOnUse" xlink:href="#color-background-dark" />
+    <linearGradient id="linearGradient1065" x1="-2.6324e-15" x2="24" y1="-3.5527e-15" y2="-3.5527e-15" gradientUnits="userSpaceOnUse" xlink:href="#color-text-secondary-disabled-dark" />
+    <linearGradient id="linearGradient1073" x2="40" gradientUnits="userSpaceOnUse" xlink:href="#color-primary-light" />
+    <linearGradient id="linearGradient1064" x1="72" x2="192" y1="260" y2="260" gradientTransform="matrix(1.2,0,0,1,-14.4,0)" gradientUnits="userSpaceOnUse" xlink:href="#color-primary-light" />
+    <linearGradient id="linearGradient1066" x1="72" x2="192" y1="260" y2="260" gradientTransform="matrix(1.2,0,0,1,-42.4,0)" gradientUnits="userSpaceOnUse" xlink:href="#color-primary-dark" />
+    <linearGradient id="linearGradient210" x1="72" x2="192" y1="260" y2="260" gradientTransform="matrix(1.2 0 0 1 -14.489 0)" gradientUnits="userSpaceOnUse" xlink:href="#color-primary-light" />
+  </defs>
+  <g id="scale-horz-marks-before-slider" transform="translate(40,8)">
+    <use width="100%" height="100%" fill="url(#linearGradient978)" xlink:href="#base-scale-horz-marks-before-slider" id="use96" />
+  </g>
+  </svg>

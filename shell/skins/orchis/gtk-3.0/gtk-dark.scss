@@ -1,0 +1,10 @@
+$variant: 'dark';
+$topbar: 'dark';
+$compact: 'false';
+
+@import '../sass/variables';
+@import '../sass/colors';
+@import '../sass/gtk/drawing-3.20';
+@import '../sass/gtk/common-3.20';
+@import '../sass/gtk/apps-3.22';
+@import '../sass/gtk/colors-public';
