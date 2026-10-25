@@ -280,6 +280,11 @@ class Drawer(Gtk.ApplicationWindow):
         self.add_controller(keys)
         self.connect("close-request", self._close_request)
 
+
+    def draft(self, text: str) -> None:
+        """Write a request in the input, for the person to read and send."""
+        self.entry.get_buffer().set_text(text)
+        self.entry.grab_focus()
     def _begin_resize(self, gesture, _presses, x, y) -> None:
         surface = self.get_surface()
         if surface is None:
@@ -515,6 +520,11 @@ class Application(Adw.Application):
         starting.connect("activate", lambda _action, folder:
                          self.start_in(Path(folder.get_string())))
         self.add_action(starting)
+        drafting = Gio.SimpleAction.new("new-conversation-in-with",
+                                        GLib.VariantType.new("(ss)"))
+        drafting.connect("activate", lambda _action, given:
+                         self.start_in(Path(given[0]), given[1]))
+        self.add_action(drafting)
 
     def do_startup(self):
         Adw.Application.do_startup(self)
@@ -656,11 +666,14 @@ class Application(Adw.Application):
             self.summon()
         self.open_past(session)
 
-    def start_in(self, folder: Path) -> None:
-        """An Entry point: the drawer, on a new Conversation in folder's Project."""
+    def start_in(self, folder: Path, draft: str | None = None) -> None:
+        """An Entry point: the drawer, on a new Conversation in folder's Project,
+        with a request written in the input but not sent."""
         if not self.open:
             self.summon()
         self.new_conversation(folder)
+        if draft:
+            self.drawer.draft(draft)
 
     def summon(self) -> None:
         self.open = True
