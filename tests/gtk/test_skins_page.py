@@ -90,3 +90,24 @@ def test_only_a_persons_own_skins_can_be_deleted() -> None:
     assert len(delete) == 1
     delete[0].emit("clicked")
     assert deleted == ["mine"]
+
+
+def test_every_pack_can_be_duplicated_but_not_osiris_own() -> None:
+    copied: list[str] = []
+    page = SkinsPage(SKINS, "osiris", lambda _n: None, on_duplicate=copied.append)
+    duplicate = buttons(page, "Duplicate")
+    assert len(duplicate) == 1
+    duplicate[0].emit("clicked")
+    assert copied == ["colloid"]
+
+
+def test_only_a_persons_own_skins_offer_asking_osiris_to_change_them() -> None:
+    asked: list[str] = []
+    skins = [*SKINS, ("mine", "Mine", "You, GPL-3.0")]
+    page = SkinsPage(
+        skins, "osiris", lambda _n: None, mine={"mine"}, on_change=asked.append
+    )
+    change = buttons(page, "Ask Osiris to change it")
+    assert len(change) == 1
+    change[0].emit("clicked")
+    assert asked == ["mine"]
