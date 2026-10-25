@@ -155,3 +155,16 @@ def test_the_skin_can_still_be_opened_in_the_code_editor() -> None:
         if isinstance(w, Gtk.Button) and w.get_label() == "Open in Code"
     ).emit("clicked")
     assert opened == [True]
+
+
+def test_the_themes_choice_shows_the_themes_own_cursor(tmp_path: Path) -> None:
+    """Pictures under the empty name are the Theme's cursor."""
+    pointer = tmp_path / "theme-pointer.png"
+    dialog = editor([], cursor_pictures={"": [str(pointer)]})
+    first = section(dialog, "Cursor").get_child_at_index(0)
+    files = [
+        w.get_file().get_path()
+        for w in widgets(first)
+        if isinstance(w, Gtk.Picture) and w.get_file() is not None
+    ]
+    assert files == [str(pointer)]
