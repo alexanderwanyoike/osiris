@@ -4,11 +4,11 @@ A skinpack is laid out by surface, one Sass entry per variant:
 
     sass/                       its partials; Osiris adds _gaps.scss
     gtk-3.0/gtk-<variant>.scss
-    gtk-4.0/gtk-<variant>.scss
-    cinnamon/cinnamon-<variant>.scss
+    gtk-4.0/gtk-<variant>.scss          optional, like every entry below
+    cinnamon/cinnamon-<variant>.scss    Osiris's own panel otherwise
     libadwaita/libadwaita-<variant>.scss
     files/common/, files/<variant>/   copied into the theme, SVG gaps filled
-    plank/dock-<variant>.theme
+    plank/dock-<variant>.theme          Osiris's own dock otherwise
     rofi/launcher.rasi          optional; Osiris's own launcher theme otherwise
 """
 
@@ -34,8 +34,9 @@ SURFACES = (
 @dataclass(frozen=True)
 class Built:
     theme: str
-    dock: str
-    adwaita: Path
+    dock: str | None
+    adwaita: Path | None
+    cinnamon: bool
     launcher: str | None = None
 
 
@@ -64,8 +65,10 @@ def build(
     for svg in target.rglob("*.svg"):
         svg.write_text(fill(svg.read_text(), filled))
     for entry, out in SURFACES:
-        (target / out).parent.mkdir(parents=True, exist_ok=True)
         source = work / f"{entry}-{variant}.scss"
+        if not source.is_file():
+            continue
+        (target / out).parent.mkdir(parents=True, exist_ok=True)
         runner.run(
             "sassc", "-M", "-t", "expanded", str(source), str(target / out), quiet=True
         )
@@ -77,9 +80,17 @@ def build(
         f"GtkTheme={name}\n"
         f"MetacityTheme={name}\n"
     )
-    dock = fill((work / "plank" / f"dock-{variant}.theme").read_text(), filled)
+    plank = work / "plank" / f"dock-{variant}.theme"
+    dock = fill(plank.read_text(), filled) if plank.is_file() else None
     rofi = work / "rofi" / "launcher.rasi"
     launcher = fill(rofi.read_text(), filled) if rofi.is_file() else None
+    adwaita = target / "libadwaita.css"
     return Built(
-        theme=name, dock=dock, adwaita=target / "libadwaita.css", launcher=launcher
+        theme=name,
+        dock=dock,
+        adwaita=adwaita
+        if (work / f"libadwaita/libadwaita-{variant}.scss").is_file()
+        else None,
+        cinnamon=(work / f"cinnamon/cinnamon-{variant}.scss").is_file(),
+        launcher=launcher,
     )
