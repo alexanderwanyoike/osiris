@@ -38,17 +38,17 @@ def _button(icon: str, tooltip: str, clicked: Callable[[], None]) -> Gtk.Button:
 def _picture(preview: str | None) -> Gtk.Widget:
     if preview is None:
         blank = Gtk.Image(icon_name="preferences-desktop-appearance-symbolic",
-                          pixel_size=48, height_request=170)
+                          pixel_size=48, height_request=230)
         blank.add_css_class("skin-blank")
         blank.add_css_class("dim-label")
         return blank
     picture = Gtk.Picture.new_for_filename(preview)
     picture.set_content_fit(Gtk.ContentFit.COVER)
-    picture.set_size_request(280, 170)
+    picture.set_size_request(320, 230)
     return picture
 
 
-class SkinsPage(Adw.PreferencesPage):
+class SkinsPage(Gtk.ScrolledWindow):
     def __init__(self, skins: Sequence[Skin], chosen: str,
                  on_pick: Callable[[str], None],
                  mine: frozenset[str] | set[str] = frozenset(),
@@ -60,14 +60,9 @@ class SkinsPage(Adw.PreferencesPage):
                  on_change: Callable[[str], None] = _nothing,
                  on_edit: Callable[[str], None] = _nothing,
                  on_create: Callable[[], None] = _nothing):
-        super().__init__()
+        super().__init__(hscrollbar_policy=Gtk.PolicyType.NEVER)
         previews = previews or {}
-        group = Adw.PreferencesGroup(
-            title="Skins",
-            description="The shape of everything on the desktop: windows, "
-                        "panel, dock, fonts and icons. Your Theme gives it "
-                        "its colours.")
-        flow = Gtk.FlowBox(homogeneous=True, min_children_per_line=2,
+        flow = Gtk.FlowBox(homogeneous=True, min_children_per_line=1,
                            max_children_per_line=3, column_spacing=12,
                            row_spacing=12,
                            selection_mode=Gtk.SelectionMode.NONE)
@@ -91,13 +86,29 @@ class SkinsPage(Adw.PreferencesPage):
                                        lambda skin=name: on_export(skin)))
             flow.append(self._card(name == chosen, label, credit,
                                    previews.get(name), buttons))
-        group.add(flow)
-        header = Gtk.Box(spacing=6)
-        header.append(_button("list-add-symbolic", "New Skin", on_create))
-        header.append(_button("document-open-symbolic", "Open a skinpack",
-                              on_open))
-        group.set_header_suffix(header)
-        self.add(group)
+        heading = Gtk.Box(spacing=6)
+        words = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True,
+                        spacing=4)
+        title = Gtk.Label(label="Skins", xalign=0)
+        title.add_css_class("title-4")
+        about = Gtk.Label(
+            label="The shape of everything on the desktop: windows, panel, "
+                  "dock, fonts and icons. Your Theme gives it its colours.",
+            xalign=0, wrap=True)
+        about.add_css_class("dim-label")
+        words.append(title)
+        words.append(about)
+        heading.append(words)
+        heading.append(_button("list-add-symbolic", "New Skin", on_create))
+        heading.append(_button("document-open-symbolic", "Open a skinpack",
+                               on_open))
+        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
+                       margin_top=18, margin_bottom=18, margin_start=18,
+                       margin_end=18)
+        page.append(heading)
+        page.append(flow)
+        self.set_child(Adw.Clamp(child=page, maximum_size=1280,
+                                 tightening_threshold=1000))
 
     @staticmethod
     def _card(chosen: bool, label: str, credit: str, preview: str | None,
