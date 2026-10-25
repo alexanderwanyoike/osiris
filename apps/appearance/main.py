@@ -41,6 +41,7 @@ import drift  # noqa: E402
 import engine  # noqa: E402
 
 from creator import Creator  # noqa: E402
+from skin_editor import CSS as EDITOR_CSS, SkinEditor  # noqa: E402
 from skins_page import CSS as SKINS_CSS, SkinsPage  # noqa: E402
 
 # creator has put the osiris package on sys.path.
@@ -476,7 +477,33 @@ class Window(Adw.ApplicationWindow):
         self._draw_pictures()
 
     def edit_skin(self, name: str) -> None:
-        """Open the Skin's folder in the code editor Osiris ships (ADR 0016)."""
+        """Rename a Skin and choose its style, icons, cursor and font."""
+        details = engine.skin_details(name)
+        cursors = engine.cursor_sets()
+
+        def saved(choice) -> None:
+            try:
+                engine.save_skin(name, choice.label or details["label"],
+                                 choice.style, choice.icons, choice.cursor,
+                                 choice.font)
+            except Exception as error:                  # noqa: BLE001
+                self.toasts.add_toast(Adw.Toast(title=f"Not saved: {error}",
+                                                timeout=6))
+                return
+            self.get_application().reload_user_css()
+            self._show_skins()
+
+        SkinEditor(
+            label=details["label"], styles=engine.skin_styles(),
+            style=details["style"], icon_sets=engine.icon_sets(),
+            icons=details["icons"], cursor_sets=cursors,
+            cursor_pictures=engine.cursor_pictures(cursors),
+            cursor=details["cursor"], font=details["font"], on_save=saved,
+            on_code=lambda: self.open_in_code(name),
+        ).present(self)
+
+    def open_in_code(self, name: str) -> None:
+        """For those who would rather write the style sheets (ADR 0016)."""
         try:
             Gio.Subprocess.new(["code", engine.skin_folder(name)],
                                Gio.SubprocessFlags.NONE)
@@ -711,7 +738,7 @@ class Application(Adw.Application):
         if display is not None:
             # Our widget styling above the user palette.
             provider = Gtk.CssProvider()
-            provider.load_from_data(CSS + SKINS_CSS)
+            provider.load_from_data(CSS + SKINS_CSS + EDITOR_CSS)
             Gtk.StyleContext.add_provider_for_display(
                 display, provider, UserCss.PRIORITY + 1)
         Window(self).present()
