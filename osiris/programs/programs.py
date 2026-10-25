@@ -14,6 +14,7 @@ from enum import Enum
 from pathlib import Path
 from xml.etree import ElementTree
 
+from osiris.model.author import OSIRIS, as_osiris
 from osiris.model.names import slug
 from osiris.platform import CommandRunner, FileSystem
 from osiris.platform.process import CommandError
@@ -33,7 +34,7 @@ APPLICATIONS_DIR = ".local/share/applications"
 #: Inside an installed copy: the commit it was made from.
 COMMIT_FILE = ".osiris-commit"
 #: Who the Harness's commits are by, so its changes are told from the person's.
-HARNESS = ("Osiris", "osiris@osiris.invalid")
+HARNESS = OSIRIS
 
 #: Folders that hold what git, builds and package managers keep, not source.
 _NOT_SOURCE = {
@@ -167,11 +168,7 @@ class Programs:
             raise ProgramError(f"{name}'s manifest: {error}") from error
 
     def _git(self, name: str, *args: str, harness: bool = False) -> str:
-        identity = (
-            ("-c", f"user.name={HARNESS[0]}", "-c", f"user.email={HARNESS[1]}")
-            if harness
-            else ()
-        )
+        identity = as_osiris() if harness else ()
         return self._runner.capture(
             "git", "-C", str(self.source(name)), *identity, *args
         )
