@@ -803,6 +803,16 @@ def open_skin(path: str) -> str:
     return share.open_file(Path(path), Path(SKIN_DIRS[0])).name
 
 
+def duplicate_skin(name: str) -> str:
+    """Copy a Skin into the person's own; returns the copy's name."""
+    copy = share.duplicate(_pack(name), Path(SKIN_DIRS[0]), SubprocessRunner())
+    return copy.name
+
+
+def skin_folder(name: str) -> str:
+    return str(_pack(name).root)
+
+
 def delete_skin(name: str) -> None:
     """Delete one of the person's Skins, back to Osiris's look if it was worn."""
     share.delete(_pack(name), Path(SKIN_DIRS[0]))
