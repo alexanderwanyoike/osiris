@@ -34,6 +34,16 @@ def make_pack(root: Path) -> Path:
         "files/light/cinnamon/assets/panel.svg": '<svg fill="{{background}}"/>',
         "plank/dock-dark.theme": "FillStartColor={{background_plank}}\n",
         "plank/dock-light.theme": "FillStartColor=0;;0;;0;;0\n",
+        **{
+            f"{folder}/{stem}-{variant}.scss": ""
+            for folder, stem in (
+                ("gtk-3.0", "gtk"),
+                ("gtk-4.0", "gtk"),
+                ("cinnamon", "cinnamon"),
+                ("libadwaita", "libadwaita"),
+            )
+            for variant in ("light", "dark")
+        },
     }
     for path, text in files.items():
         (root / path).parent.mkdir(parents=True, exist_ok=True)
