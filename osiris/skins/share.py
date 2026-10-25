@@ -9,6 +9,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 from osiris.model.author import as_osiris
+from osiris.model.names import slug
 from osiris.platform.process import CommandRunner
 from osiris.skins.pack import LABEL_FILE, Skinpack, SkinpackError, read
 
@@ -62,16 +63,20 @@ def delete(pack: Skinpack, mine: Path) -> None:
 AGENTS = Path(__file__).with_name("skin-agents.md")
 
 
-def duplicate(pack: Skinpack, mine: Path, runner: CommandRunner) -> Skinpack:
-    """A person's own copy of a Skin, with history and instructions for Osiris."""
-    name, number = f"{pack.name}-copy", 2
+def duplicate(
+    pack: Skinpack, mine: Path, runner: CommandRunner, label: str | None = None
+) -> Skinpack:
+    """A person's own copy of a Skin, with history and instructions for Osiris;
+    a label makes it a new Skin of that name rather than a copy."""
+    base = slug(label) if label else f"{pack.name}-copy"
+    name, number = base, 2
     while (mine / name).exists():
-        name, number = f"{pack.name}-copy-{number}", number + 1
+        name, number = f"{base}-{number}", number + 1
     copy = mine / name
     shutil.copytree(pack.root, copy, ignore=shutil.ignore_patterns(".git"))
-    label = json.loads((copy / LABEL_FILE).read_text())
-    label["label"] = f"{pack.label} (copy)"
-    (copy / LABEL_FILE).write_text(json.dumps(label, indent=2) + "\n")
+    label_of = json.loads((copy / LABEL_FILE).read_text())
+    label_of["label"] = label or f"{pack.label} (copy)"
+    (copy / LABEL_FILE).write_text(json.dumps(label_of, indent=2) + "\n")
     (copy / "AGENTS.md").write_text(AGENTS.read_text().replace("SKIN_NAME", name))
     for step in (("init", "-q"), ("add", "-A")):
         runner.run("git", "-C", str(copy), *step, quiet=True)
