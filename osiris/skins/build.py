@@ -7,7 +7,7 @@ A skinpack is laid out by surface, one Sass entry per variant:
     gtk-4.0/gtk-<variant>.scss          optional, like every entry below
     cinnamon/cinnamon-<variant>.scss    Osiris's own panel otherwise
     libadwaita/libadwaita-<variant>.scss
-    files/common/, files/<variant>/   copied into the theme, SVG gaps filled
+    files/common/, files/<variant>/   copied into the theme, SVG and CSS gaps filled
     plank/dock-<variant>.theme          Osiris's own dock otherwise
     rofi/launcher.rasi          optional; Osiris's own launcher theme otherwise
 """
@@ -54,6 +54,7 @@ def build(
     work = work_dir / pack.name
     shutil.rmtree(work, ignore_errors=True)
     shutil.copytree(pack.root, work)
+    (work / "sass").mkdir(exist_ok=True)
     (work / "sass" / "_gaps.scss").write_text(sass_gaps(filled))
 
     name = f"Osiris-{pack.name}-{theme['name']}"
@@ -63,8 +64,8 @@ def build(
     for files in (work / "files" / "common", work / "files" / variant):
         if files.is_dir():
             shutil.copytree(files, target, dirs_exist_ok=True)
-    for svg in target.rglob("*.svg"):
-        svg.write_text(fill(svg.read_text(), filled))
+    for picture in (*target.rglob("*.svg"), *target.rglob("*.css")):
+        picture.write_text(fill(picture.read_text(), filled))
     for entry, out in SURFACES:
         source = work / f"{entry}-{variant}.scss"
         if not source.is_file() or (only and entry.split("/")[0] not in only):
