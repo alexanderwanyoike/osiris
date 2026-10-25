@@ -10,7 +10,14 @@ from pathlib import Path
 
 import pytest
 
-from osiris.skins.imports import UnusableDownload, install_fonts, install_sets, unpack
+from osiris.platform.process import FakeRunner
+from osiris.skins.imports import (
+    UnusableDownload,
+    import_gtk_theme,
+    install_fonts,
+    install_sets,
+    unpack,
+)
 
 
 def make_zip(path: Path, files: dict[str, str]) -> Path:
@@ -120,3 +127,51 @@ def test_a_download_with_no_font_in_it_is_refused(tmp_path: Path) -> None:
     notes.write_text("no fonts")
     with pytest.raises(UnusableDownload, match="no font"):
         install_fonts([notes], tmp_path / "fonts")
+
+
+def test_a_gtk_theme_with_light_and_dark_becomes_a_skin_of_both(tmp_path: Path) -> None:
+    download = make_tar(
+        tmp_path / "Neon.tar.xz",
+        {
+            "Neon/gtk-3.0/gtk.css": "window { background: #ffffff; }",
+            "Neon/gtk-4.0/gtk.css": "window { background: #ffffff; }",
+            "Neon/cinnamon/cinnamon.css": "#panel { background: #eeeeee; }",
+            "Neon/xfwm4/themerc": "skipped",
+            "Neon-Dark/gtk-3.0/gtk.css": "window { background: #111111; }",
+            "Neon-Dark/plank/dock.theme": "[PlankTheme]\n",
+        },
+        "w:xz",
+    )
+    skin = import_gtk_theme(download, tmp_path / "mine", FakeRunner())
+    assert (skin.name, skin.label) == ("neon", "Neon")
+    files = skin.root / "files"
+    assert (
+        files / "light" / "gtk-3.0" / "gtk.css"
+    ).read_text() == "window { background: #ffffff; }"
+    assert (files / "light" / "cinnamon" / "cinnamon.css").is_file()
+    assert (
+        files / "dark" / "gtk-3.0" / "gtk.css"
+    ).read_text() == "window { background: #111111; }"
+    assert not (files / "light" / "xfwm4").exists()
+    assert (skin.root / "plank" / "dock-dark.theme").is_file()
+
+
+def test_a_theme_with_one_variant_serves_both(tmp_path: Path) -> None:
+    download = make_zip(tmp_path / "plain.zip", {"Plain/gtk-3.0/gtk.css": "window {}"})
+    skin = import_gtk_theme(download, tmp_path / "mine", FakeRunner())
+    assert (skin.root / "files" / "common" / "gtk-3.0" / "gtk.css").is_file()
+
+
+def test_an_imported_theme_is_ready_to_be_converted(tmp_path: Path) -> None:
+    runner = FakeRunner()
+    download = make_zip(tmp_path / "plain.zip", {"Plain/gtk-3.0/gtk.css": "window {}"})
+    skin = import_gtk_theme(download, tmp_path / "mine", runner)
+    assert "--skin plain" in (skin.root / "AGENTS.md").read_text()
+    assert runner.ran("git", "-C", str(skin.root), "init", "-q")
+    assert skin.source == "plain.zip"
+
+
+def test_a_download_without_a_gtk_theme_is_refused(tmp_path: Path) -> None:
+    download = make_zip(tmp_path / "icons.zip", {"Neon/index.theme": ICON_INDEX})
+    with pytest.raises(UnusableDownload, match="no GTK theme"):
+        import_gtk_theme(download, tmp_path / "mine", FakeRunner())
