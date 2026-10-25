@@ -101,20 +101,3 @@ def test_one_icon_set_may_serve_both_variants(tmp_path: Path) -> None:
         make_pack(tmp_path / "colloid", {**LABEL, "look": {"icons": "Papirus"}})
     )
     assert pack.look("light").icons == pack.look("dark").icons == "Papirus"
-
-
-def test_a_pack_shows_the_picture_for_the_themes_variant(tmp_path: Path) -> None:
-    root = make_pack(tmp_path / "colloid", LABEL)
-    (root / "preview-dark.png").write_bytes(b"png")
-    (root / "preview-light.png").write_bytes(b"png")
-    assert read(root).preview("dark") == root / "preview-dark.png"
-
-
-def test_one_picture_may_serve_both_variants(tmp_path: Path) -> None:
-    root = make_pack(tmp_path / "colloid", LABEL)
-    (root / "preview.png").write_bytes(b"png")
-    assert read(root).preview("light") == root / "preview.png"
-
-
-def test_a_pack_without_a_picture_has_none(tmp_path: Path) -> None:
-    assert read(make_pack(tmp_path / "colloid", LABEL)).preview("dark") is None

@@ -37,12 +37,6 @@ class Skinpack:
     root: Path
     choices: Mapping[str, Any] = field(default_factory=dict)
 
-    def preview(self, variant: str) -> Path | None:
-        for name in (f"preview-{variant}.png", "preview.png"):
-            if (self.root / name).is_file():
-                return self.root / name
-        return None
-
     def look(self, variant: str) -> Look:
         icons = self.choices.get("icons")
         if isinstance(icons, Mapping):
