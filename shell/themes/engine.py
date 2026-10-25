@@ -45,7 +45,7 @@ use_osiris_package()
 import osiris  # noqa: E402
 from osiris.platform.process import CommandError, SubprocessRunner  # noqa: E402
 from osiris.provision.seeding import may_write  # noqa: E402
-from osiris.skins import carried, library as skins, pictures, share  # noqa: E402
+from osiris.skins import carried, library as skins, pictures, share, xcursor  # noqa: E402
 from osiris.skins.build import Built, build as build_skin_pack  # noqa: E402
 from osiris.skins.pack import Look, SkinpackError  # noqa: E402
 from osiris.themes import terminal  # noqa: E402
@@ -833,11 +833,46 @@ def draw_skin_picture(name: str) -> str:
         built = build_skin_pack(_pack(name), theme, themes, cache / "work",
                                 SubprocessRunner(), only=("gtk-3.0",)).theme
     picture = pictures.picture_for(cache, name, theme["name"])
+    look = _look_of(name, theme)
+    extra = ["--icons", look.icons, "--font", look.font]
+    pointer = _pointer(look.cursor or "", cache)
+    if pointer:
+        extra += ["--cursor", pointer]
     # GTK finds the theme by name under $XDG_DATA_HOME/themes.
-    subprocess.run([sys.executable, _sampler(), built, str(picture)],
+    subprocess.run([sys.executable, _sampler(), built, str(picture), *extra],
                    env={**os.environ, "XDG_DATA_HOME": str(cache)},
                    check=True, capture_output=True, timeout=60)
     return str(picture)
+
+
+def _look_of(name: str, theme: dict) -> Look:
+    """The icons, cursor and font a Skin wears in this Theme."""
+    ui = _ui(theme)
+    variant = "dark" if theme.get("dark", True) else "light"
+    pack = None if name == skins.OSIRIS else _pack(name)
+    look = pack.look(variant) if pack else Look(None, None, None)
+    return Look(look.icons or ui["icons"], look.cursor or ui["cursor"],
+                look.font or ui["font"])
+
+
+def _pointer(cursor: str, cache: Path) -> str | None:
+    """The cursor theme's pointer as a picture, or None if it cannot be found."""
+    for folder in (os.path.join(HOME, ".local", "share", "icons"),
+                   os.path.join(HOME, ".icons"), "/usr/share/icons"):
+        for shape in ("left_ptr", "default"):
+            path = os.path.join(folder, cursor, "cursors", shape)
+            if not os.path.isfile(path):
+                continue
+            try:
+                with open(path, "rb") as fh:
+                    pointer = xcursor.read(fh.read(), 32)
+            except (OSError, xcursor.XcursorError):
+                continue
+            out = cache / f"pointer-{cursor}.png"
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_bytes(xcursor.png(pointer))
+            return str(out)
+    return None
 
 
 def own_skins() -> set[str]:
