@@ -27,7 +27,7 @@ def test_starting_in_a_folder_brings_the_drawer_out(tmp_path: Path) -> None:
 def test_a_folder_entry_point_may_bring_a_request_left_unsent(tmp_path: Path) -> None:
     """Nothing reaches a model that the person has not seen: the request waits
     in the input until they send it."""
-    stand_in, engine = app()
+    stand_in, _ = app()
     stand_in.start_in(tmp_path, "Convert this theme to my Theme's colours")
     assert stand_in.drawer.drafts == ["Convert this theme to my Theme's colours"]
     assert stand_in.harness.session is None
