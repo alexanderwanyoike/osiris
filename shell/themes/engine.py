@@ -944,11 +944,12 @@ def cursor_pictures(names: list[str]) -> dict[str, list[str]]:
     return found
 
 
-def skin_styles() -> list[tuple[str, str, str | None]]:
-    """The shipped Skins a person's Skin can take its style from."""
+def skin_styles(editing: str) -> list[tuple[str, str, str | None]]:
+    """The Skins the one being edited can take its style from, the person's
+    own included."""
     drawn = skin_pictures()
-    shipped = skins.available([Path(folder) for folder in SKIN_DIRS[1:]])
-    return [(pack.name, pack.label, drawn.get(pack.name)) for pack in shipped]
+    offered = skins.styles([Path(folder) for folder in SKIN_DIRS], editing)
+    return [(pack.name, pack.label, drawn.get(pack.name)) for pack in offered]
 
 
 def skin_details(name: str) -> dict:
