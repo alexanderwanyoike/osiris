@@ -45,7 +45,8 @@ use_osiris_package()
 import osiris  # noqa: E402
 from osiris.platform.process import CommandError, SubprocessRunner  # noqa: E402
 from osiris.provision.seeding import may_write  # noqa: E402
-from osiris.skins import carried, edit, library as skins, looks, pictures, share, xcursor  # noqa: E402
+from osiris.skins import (  # noqa: E402
+    carried, edit, imports, library as skins, looks, pictures, share, xcursor)
 from osiris.skins.build import Built, build as build_skin_pack  # noqa: E402
 from osiris.skins.pack import Look, SkinpackError  # noqa: E402
 from osiris.themes import terminal  # noqa: E402
@@ -92,6 +93,7 @@ SKIN_CHOICE = os.path.join(HOME, ".config", "osiris", "skin")
 # Where a Skin's carried icon sets, cursors and fonts are installed, once each.
 ICONS_DIR = os.path.join(HOME, ".local", "share", "icons")
 FONTS_DIR = os.path.join(HOME, ".local", "share", "fonts", "osiris-skins")
+IMPORTED_FONTS = os.path.join(HOME, ".local", "share", "fonts", "imported")
 SKIN_WORK = os.path.join(HOME, ".cache", "osiris", "skins")
 SKIN_PICTURES = os.path.join(HOME, ".cache", "osiris", "skin-pictures")
 SAMPLER = "/usr/share/osiris/appearance/sampler.py"
@@ -970,6 +972,26 @@ def save_skin(name: str, label: str, style: str | None, icons: str | None,
 
 def _variant_of(theme: dict) -> str:
     return "dark" if theme.get("dark", True) else "light"
+
+
+def import_icon_sets(path: str) -> list[str]:
+    """Install the icon and cursor sets inside a download; their names."""
+    return imports.install_sets(Path(path), Path(ICONS_DIR))
+
+
+def import_fonts(paths: list[str]) -> list[str]:
+    """Install fonts, given or inside archives; their file names."""
+    names = imports.install_fonts([Path(path) for path in paths],
+                                  Path(IMPORTED_FONTS))
+    SubprocessRunner().run("fc-cache", "-f", IMPORTED_FONTS, check=False,
+                           quiet=True)
+    return names
+
+
+def import_gtk_theme(path: str) -> str:
+    """A downloaded GTK theme as a new Skin of the person's; its name."""
+    return imports.import_gtk_theme(Path(path), Path(SKIN_DIRS[0]),
+                                    SubprocessRunner()).name
 
 
 def delete_skin(name: str) -> None:
