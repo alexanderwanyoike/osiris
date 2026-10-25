@@ -45,7 +45,7 @@ use_osiris_package()
 import osiris  # noqa: E402
 from osiris.platform.process import CommandError, SubprocessRunner  # noqa: E402
 from osiris.provision.seeding import may_write  # noqa: E402
-from osiris.skins import carried, library as skins, share  # noqa: E402
+from osiris.skins import carried, library as skins, pictures, share  # noqa: E402
 from osiris.skins.build import Built, build as build_skin_pack  # noqa: E402
 from osiris.skins.pack import Look, SkinpackError  # noqa: E402
 from osiris.themes import terminal  # noqa: E402
@@ -93,6 +93,8 @@ SKIN_CHOICE = os.path.join(HOME, ".config", "osiris", "skin")
 ICONS_DIR = os.path.join(HOME, ".local", "share", "icons")
 FONTS_DIR = os.path.join(HOME, ".local", "share", "fonts", "osiris-skins")
 SKIN_WORK = os.path.join(HOME, ".cache", "osiris", "skins")
+SKIN_PICTURES = os.path.join(HOME, ".cache", "osiris", "skin-pictures")
+SAMPLER = "/usr/share/osiris/appearance/sampler.py"
 THEME_PREFIX = "Osiris-"
 CINNAMON_BASE = "/usr/share/cinnamon/theme"
 
@@ -782,41 +784,60 @@ def chosen_skin() -> str:
     return skins.chosen(Path(SKIN_CHOICE))
 
 
-def _variant() -> str:
-    try:
-        return "dark" if load(current() or DEFAULT_THEME).get("dark", True) else "light"
-    except (KeyError, OSError, ValueError):
-        return "dark"
+def _sampler() -> str:
+    """The sampler beside Appearance, in the checkout or installed."""
+    checkout = os.path.join(os.path.dirname(os.path.dirname(REPO_THEMES)),
+                            "apps", "appearance", "sampler.py")
+    return checkout if os.path.exists(checkout) else SAMPLER
 
 
-def _shipped_preview(name: str, variant: str) -> Path | None:
-    for folder in SKIN_DIRS[1:]:
-        picture = Path(folder) / "previews" / f"{name}-{variant}.png"
-        if picture.is_file():
-            return picture
-    return None
+def _picture_sources(name: str, theme: dict) -> list[Path]:
+    pack = skins.find([Path(folder) for folder in SKIN_DIRS], name)
+    found = _files().get(theme["name"])
+    return [Path(_sampler())] + ([pack.root] if pack else []) + (
+        [Path(found)] if found else [])
 
 
-def skin_previews() -> dict[str, str]:
-    """A picture of each Skin for the current Theme's variant, where one exists."""
-    variant = _variant()
+def _current_theme() -> dict:
+    return load(current() or DEFAULT_THEME)
+
+
+def skin_pictures() -> dict[str, str]:
+    """The pictures already drawn for the current Theme, by Skin."""
+    theme = _current_theme()
     found = {}
     for name, _label, _credit in skin_choices():
-        pack = skins.find([Path(folder) for folder in SKIN_DIRS], name)
-        picture = (pack.preview(variant) if pack else None) or _shipped_preview(
-            name, variant)
-        if picture is not None:
+        picture = pictures.picture_for(Path(SKIN_PICTURES), name, theme["name"])
+        if pictures.is_fresh(picture, _picture_sources(name, theme)):
             found[name] = str(picture)
     return found
 
 
-def _give_previews(base: str, made: str) -> None:
-    """A new Skin starts with the pictures of the Skin it came from."""
-    pack = _pack(base)
-    for variant in ("dark", "light"):
-        picture = pack.preview(variant) or _shipped_preview(base, variant)
-        if picture is not None:
-            shutil.copy(picture, Path(skin_folder(made)) / f"preview-{variant}.png")
+def stale_skin_pictures() -> list[str]:
+    """The Skins whose picture for the current Theme is missing or out of date."""
+    drawn = skin_pictures()
+    return [name for name, _label, _credit in skin_choices() if name not in drawn]
+
+
+def draw_skin_picture(name: str) -> str:
+    """Draw a Skin's picture in the current Theme: its GTK 3 sheet built in the
+    Theme's colours, shown by the sampler off-screen."""
+    theme = _current_theme()
+    cache = Path(SKIN_PICTURES)
+    themes = cache / "themes"
+    if name == skins.OSIRIS:
+        built = f"Osiris-osiris-{theme['name']}"
+        base = f"/usr/share/themes/{_ui(theme)['gtk']}/gtk-3.0/gtk.css"
+        _write(str(themes / built / "gtk-3.0" / "gtk.css"), palette_css(theme, base))
+    else:
+        built = build_skin_pack(_pack(name), theme, themes, cache / "work",
+                                SubprocessRunner(), only=("gtk-3.0",)).theme
+    picture = pictures.picture_for(cache, name, theme["name"])
+    # GTK finds the theme by name under $XDG_DATA_HOME/themes.
+    subprocess.run([sys.executable, _sampler(), built, str(picture)],
+                   env={**os.environ, "XDG_DATA_HOME": str(cache)},
+                   check=True, capture_output=True, timeout=60)
+    return str(picture)
 
 
 def own_skins() -> set[str]:
@@ -843,7 +864,6 @@ def open_skin(path: str) -> str:
 def duplicate_skin(name: str) -> str:
     """Copy a Skin into the person's own; returns the copy's name."""
     copy = share.duplicate(_pack(name), Path(SKIN_DIRS[0]), SubprocessRunner())
-    _give_previews(name, copy.name)
     return copy.name
 
 
@@ -851,7 +871,6 @@ def create_skin(label: str, base: str) -> str:
     """A new Skin of the person's, named label, started from base."""
     made = share.duplicate(_pack(base), Path(SKIN_DIRS[0]), SubprocessRunner(),
                            label=label)
-    _give_previews(base, made.name)
     return made.name
 
 
