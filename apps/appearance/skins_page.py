@@ -32,7 +32,9 @@ class SkinsPage(Adw.PreferencesPage):
                  on_pick: Callable[[str], None], mine: frozenset[str] | set[str] = frozenset(),
                  on_open: Callable[[], None] = _nothing,
                  on_export: Callable[[str], None] = _nothing,
-                 on_delete: Callable[[str], None] = _nothing):
+                 on_delete: Callable[[str], None] = _nothing,
+                 on_duplicate: Callable[[str], None] = _nothing,
+                 on_change: Callable[[str], None] = _nothing):
         super().__init__()
         group = Adw.PreferencesGroup(
             title="Skins",
@@ -44,9 +46,14 @@ class SkinsPage(Adw.PreferencesPage):
             mark = Gtk.Image(icon_name="object-select-symbolic",
                              visible=name == chosen)
             if name in mine:
+                row.add_suffix(_button("document-edit-symbolic",
+                                       "Ask Osiris to change it",
+                                       lambda skin=name: on_change(skin)))
                 row.add_suffix(_button("user-trash-symbolic", "Delete",
                                        lambda skin=name: on_delete(skin)))
             if name != OSIRIS:
+                row.add_suffix(_button("edit-copy-symbolic", "Duplicate",
+                                       lambda skin=name: on_duplicate(skin)))
                 row.add_suffix(_button("document-save-symbolic", "Export",
                                        lambda skin=name: on_export(skin)))
             row.add_suffix(mark)
