@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="40" viewBox="255 -120 50 20"><defs><linearGradient id="selected_fg_color" inkscape:swatch="solid">
+      <stop stop-color="#ffffffgit" offset="0" id="stop11" />
+    </linearGradient>
+    <linearGradient id="aj" x1="-117" x2="-117" y1="33" y2="13" gradientUnits="userSpaceOnUse" xlink:href="#selected_fg_color" />
+    <linearGradient id="ai" x1="-102" x2="-102" y1="30" y2="16" gradientUnits="userSpaceOnUse" xlink:href="#selected_fg_color" />
+    <linearGradient id="ah" x1="-110" x2="-110" y1="-255.64" y2="-269.64001" gradientUnits="userSpaceOnUse" xlink:href="#selected_fg_color" />
+    </defs><g transform="matrix(1 0 0 1 0 -76)"><g id="switch-active-selected" transform="translate(405,228.64)">
+      <path transform="translate(-8,-285.64)" d="m -132,13 c -5.54,0 -10,4.46 -10,10 0,5.54 4.46,10 10,10 h 30 c 5.54,0 10,-4.46 10,-10 0,-5.54 -4.46,-10 -10,-10 z m 0,1 h 30 c 4.986,0 9,4.014 9,9 0,4.986 -4.014,9 -9,9 h -30 c -4.986,0 -9,-4.014 -9,-9 0,-4.986 4.014,-9 9,-9 z" style="opacity:0.75;fill:url(#aj);paint-order:stroke fill markers" id="path234" inkscape:connector-curvature="0" />
+      <circle cx="-110" cy="-262.64001" r="7" style="opacity:0.75;fill:url(#ah);paint-order:stroke fill markers" id="circle236" />
+      <path transform="translate(-8,-285.64)" d="m -102,16 a 7,7 0 0 0 -7,7 7,7 0 0 0 7,7 7,7 0 0 0 7,-7 7,7 0 0 0 -7,-7 z m 0,1 a 6,6 0 0 1 6,6 6,6 0 0 1 -6,6 6,6 0 0 1 -6,-6 6,6 0 0 1 6,-6 z" style="opacity:0.75;fill:url(#ai);paint-order:stroke fill markers" id="path238" inkscape:connector-curvature="0" />
+    </g>
+    </g></svg>

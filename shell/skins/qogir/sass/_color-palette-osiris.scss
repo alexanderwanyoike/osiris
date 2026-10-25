@@ -1,0 +1,57 @@
+// Qogir's palette, rebuilt from the Theme's colours ($gap-* from _gaps.scss).
+// _colors.scss derives everything else from these, as it does upstream.
+@import 'gaps';
+
+$_light: $variant == 'light';
+$_light_with_dark_titlebar: $_light and $titlebar == 'dark';
+
+@function readable-on($fill) {
+  $luma: (0.299 * red($fill) + 0.587 * green($fill) + 0.114 * blue($fill)) / 255;
+  $dark-end: if($_light, $gap-foreground, $gap-background);
+  $light-end: if($_light, $gap-background, $gap-foreground);
+  @return if($luma > 0.6, $dark-end, $light-end);
+}
+
+$base_color: if($_light, mix(#ffffff, $gap-background, 50%),
+                 mix(#000000, $gap-background, 12%));
+$text_color: $gap-foreground;
+$bg_color: $gap-background;
+$fg_color: $gap-foreground;
+
+$selected_bg_color: $gap-accent;
+$selected_fg_color: readable-on($gap-accent);
+
+$warning_color: $gap-warning;
+$error_color: $gap-danger;
+$warning_fg_color: readable-on($gap-warning);
+$error_fg_color: readable-on($gap-danger);
+$success_color: $gap-success;
+$destructive_color: $gap-danger;
+$destructive_fg_color: readable-on($gap-danger);
+$suggested_fg_color: $selected_fg_color;
+$drop_target_color: $gap-warning;
+
+// Qogir keeps its panel, OSDs and dark title bars dark on light Themes too;
+// there they take the Theme's foreground, darkened, as its dark tone.
+$osd_bg_color: if($_light, mix(#000000, $gap-foreground, 35%), $gap-surface);
+$osd_fg_color: if($_light, $gap-background, $gap-foreground);
+$panel_bg: mix(#000000, $osd_bg_color, 15%);
+
+$_header: if($_light_with_dark_titlebar, $osd_bg_color, $gap-surface);
+$header_bg: if($trans == 'true', rgba($_header, 0.95), $_header);
+$header_fg: if($_light_with_dark_titlebar, $osd_fg_color, $gap-foreground);
+
+$dark_sidebar_bg: $header_bg;
+$dark_sidebar_fg: $header_fg;
+$dark_sidebar_icon_bg: $osd_bg_color;
+$dark_sidebar_icon_fg: $osd_fg_color;
+
+$_wm_fg: if($_light_with_dark_titlebar, $osd_fg_color, $gap-foreground);
+$_light_header: $_light and not $_light_with_dark_titlebar;
+$wm_button_hover_bg: if($_light_header, mix(#ffffff, $_header, 50%),
+                         mix($_wm_fg, $_header, 16%));
+$wm_button_hover_border: if($_light_header, mix($_wm_fg, $_header, 20%),
+                             mix(#000000, $_header, 10%));
+$wm_icon_bg: mix($_wm_fg, $_header, 60%);
+$wm_icon_unfocused_bg: mix($_wm_fg, $_header, 35%);
+$wm_icon_hover_bg: mix($_wm_fg, $_header, 80%);
