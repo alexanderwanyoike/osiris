@@ -106,3 +106,29 @@ def test_a_pack_with_a_launcher_gets_it_in_the_themes_colours(tmp_path: Path) ->
 
 def test_a_pack_without_a_launcher_leaves_osiris_own(tmp_path: Path) -> None:
     assert build_rose_pine(tmp_path, FakeRunner()).launcher is None
+
+
+def make_gtk_only_pack(root: Path) -> Path:
+    label = {"label": "elementary", "author": "a", "version": "1", "licence": "GPL-3.0"}
+    (root / "sass").mkdir(parents=True)
+    (root / "skin.json").write_text(json.dumps({**label, "source": "s"}))
+    for variant in ("light", "dark"):
+        (root / "gtk-3.0").mkdir(exist_ok=True)
+        (root / "gtk-3.0" / f"gtk-{variant}.scss").write_text("")
+    return root
+
+
+def test_a_pack_may_leave_the_panel_dock_and_libadwaita_to_osiris(
+    tmp_path: Path,
+) -> None:
+    runner = FakeRunner()
+    pack = read(make_gtk_only_pack(tmp_path / "elementary"))
+    built = build(pack, ROSE_PINE, tmp_path / "themes", tmp_path / "work", runner)
+    assert runner.count("sassc") == 1
+    assert built.cinnamon is False
+    assert built.dock is None
+    assert built.adwaita is None
+
+
+def test_a_full_pack_brings_its_own_panel(tmp_path: Path) -> None:
+    assert build_rose_pine(tmp_path, FakeRunner()).cinnamon is True
