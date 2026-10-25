@@ -8,6 +8,7 @@ import tempfile
 import zipfile
 from pathlib import Path, PurePosixPath
 
+from osiris.model.author import as_osiris
 from osiris.platform.process import CommandRunner
 from osiris.skins.pack import LABEL_FILE, Skinpack, SkinpackError, read
 
@@ -75,6 +76,14 @@ def duplicate(pack: Skinpack, mine: Path, runner: CommandRunner) -> Skinpack:
     for step in (("init", "-q"), ("add", "-A")):
         runner.run("git", "-C", str(copy), *step, quiet=True)
     runner.run(
-        "git", "-C", str(copy), "commit", "-q", "-m", f"Copy {pack.label}", quiet=True
+        "git",
+        "-C",
+        str(copy),
+        *as_osiris(),
+        "commit",
+        "-q",
+        "-m",
+        f"Copy {pack.label}",
+        quiet=True,
     )
     return read(copy)
