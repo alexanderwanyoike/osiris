@@ -1,0 +1,9 @@
+// Graphite's fixed colours, taken from the Theme.
+$warning: $gap-warning;
+$error: $gap-danger;
+$destructive: $gap-danger;
+$success: $gap-success;
+$link: $gap-accent;
+
+// Graphite's styled sidebar keeps its shape; the Theme's surface colours it.
+$sidebg: $gap-surface;
