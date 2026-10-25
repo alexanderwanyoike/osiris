@@ -677,6 +677,15 @@ def _seed(path: str, text: str) -> None:
         _write(path, text)
 
 
+def _osiris_cinnamon(theme: dict, root: str) -> None:
+    """Cinnamon's own stylesheet with the Theme's colours laid over it."""
+    if os.path.isdir(CINNAMON_BASE):
+        shutil.copytree(CINNAMON_BASE, os.path.join(root, "cinnamon"),
+                        dirs_exist_ok=True)
+        with open(os.path.join(root, "cinnamon", "cinnamon.css"), "a") as fh:
+            fh.write(cinnamon_css(theme))
+
+
 def build_theme(theme: dict) -> str | None:
     """Compile the palette into ~/.themes/Osiris-<palette>; return its name."""
     ui = _ui(theme)
@@ -704,10 +713,7 @@ def build_theme(theme: dict) -> str | None:
                f"MetacityTheme={name}\n"
                f"IconTheme={ui['icons']}\n")
 
-        if os.path.isdir(CINNAMON_BASE):
-            shutil.copytree(CINNAMON_BASE, os.path.join(root, "cinnamon"))
-            with open(os.path.join(root, "cinnamon", "cinnamon.css"), "a") as fh:
-                fh.write(cinnamon_css(theme))
+        _osiris_cinnamon(theme, root)
     except OSError as error:
         print(f"osiris-theme: building {name}: {error}", file=sys.stderr)
         return None
