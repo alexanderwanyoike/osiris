@@ -132,7 +132,7 @@ class SkinEditor(Adw.Dialog):
         box, self._cursors = _section("Cursor")
         self._cursor_names: list[str | None] = [None, *cursor_sets]
         for name in self._cursor_names:
-            pictures = cursor_pictures.get(name, []) if name else []
+            pictures = cursor_pictures.get(name or "", [])
             self._cursors.append(_card(name or THEMES_CHOICE,
                                        _pointer_row(pictures)))
         self._pick(self._cursors, self._cursor_names, cursor)
