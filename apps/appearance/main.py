@@ -45,6 +45,7 @@ from skin_editor import CSS as EDITOR_CSS, SkinEditor  # noqa: E402
 from skins_page import CSS as SKINS_CSS, SkinsPage  # noqa: E402
 
 # creator has put the osiris package on sys.path.
+from osiris.apps.theme_scheme import ThemeScheme  # noqa: E402
 from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.model.names import slug  # noqa: E402
 from osiris.themes.library import Filter, arrange  # noqa: E402
@@ -694,9 +695,8 @@ class Window(Adw.ApplicationWindow):
             self.toasts.add_toast(Adw.Toast(title=f"Failed: {error}",
                                             timeout=6))
             return
-        Adw.StyleManager.get_default().set_color_scheme(
-            Adw.ColorScheme.FORCE_DARK if theme.get("dark", True)
-            else Adw.ColorScheme.FORCE_LIGHT)
+        # At once, rather than when the file monitor catches up.
+        self.get_application().theme_scheme.follow()
         self.get_application().reload_user_css()
         self._show_skins()
         for card in self.cards:
@@ -719,18 +719,7 @@ class Application(Adw.Application):
             self.user_css.reload()
 
     def do_activate(self):
-        # libadwaita normally takes light/dark from the XDG settings portal.
-        # Cinnamon does not serve that, so the app would always render light on
-        # a dark desktop. Follow the active Osiris theme instead.
-        active = engine.current()
-        dark = True
-        if active:
-            try:
-                dark = engine.load(active).get("dark", True)
-            except KeyError:
-                pass
-        Adw.StyleManager.get_default().set_color_scheme(
-            Adw.ColorScheme.FORCE_DARK if dark else Adw.ColorScheme.FORCE_LIGHT)
+        self.theme_scheme = ThemeScheme(Path(engine.STATE), engine.load)
 
         display = Gdk.Display.get_default()
         self.user_css = UserCss(
