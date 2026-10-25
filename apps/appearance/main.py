@@ -11,6 +11,7 @@ Run directly, or install the .desktop file alongside it.
 """
 import os
 import sys
+import threading
 from pathlib import Path
 
 import gi
@@ -471,13 +472,8 @@ class Window(Adw.ApplicationWindow):
         self.reload()
 
     def _show_skins(self) -> None:
-        self.skins.set_child(SkinsPage(
-            engine.skin_choices(), engine.chosen_skin(), self.wear,
-            mine=engine.own_skins(), previews=engine.skin_previews(),
-            on_open=self.open_skin,
-            on_export=self.export_skin, on_delete=self.confirm_delete_skin,
-            on_duplicate=self.duplicate_skin, on_change=self.change_skin,
-            on_edit=self.edit_skin, on_create=self.create_skin))
+        self._show_drawn()
+        self._draw_pictures()
 
     def edit_skin(self, name: str) -> None:
         """Open the Skin's folder in the code editor Osiris ships (ADR 0016)."""
@@ -521,6 +517,45 @@ class Window(Adw.ApplicationWindow):
 
         dialog.connect("response", answered)
         dialog.present(self)
+
+
+    def _draw_pictures(self) -> None:
+        """Draw the missing pictures off the main loop, showing each as it lands."""
+        if getattr(self, "_drawing", False):
+            return
+        stale = engine.stale_skin_pictures()
+        if not stale:
+            return
+        self._drawing = True
+
+        def draw() -> None:
+            for name in stale:
+                try:
+                    engine.draw_skin_picture(name)
+                except Exception as error:              # noqa: BLE001
+                    print(f"appearance: picture of {name}: {error}",
+                          file=sys.stderr)
+                    continue
+                GLib.idle_add(self._show_drawn)
+            GLib.idle_add(self._drawn)
+
+        threading.Thread(target=draw, daemon=True).start()
+
+    def _show_drawn(self) -> bool:
+        self.skins.set_child(SkinsPage(
+            engine.skin_choices(), engine.chosen_skin(), self.wear,
+            mine=engine.own_skins(), previews=engine.skin_pictures(),
+            on_open=self.open_skin, on_export=self.export_skin,
+            on_delete=self.confirm_delete_skin,
+            on_duplicate=self.duplicate_skin, on_change=self.change_skin,
+            on_edit=self.edit_skin, on_create=self.create_skin))
+        return False
+
+    def _drawn(self) -> bool:
+        self._drawing = False
+        # A Theme picked while drawing leaves the new Theme's pictures to draw.
+        self._draw_pictures()
+        return False
 
     def duplicate_skin(self, name: str) -> None:
         try:
