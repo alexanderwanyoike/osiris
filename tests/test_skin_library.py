@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from osiris.skins.library import OSIRIS, available, choose, chosen, find
+from osiris.skins.library import OSIRIS, available, choose, chosen, find, styles
 
 
 def make_pack(root: Path, label: str) -> None:
@@ -45,3 +45,14 @@ def test_finding_the_osiris_skin_gives_no_pack(tmp_path: Path) -> None:
     assert find([tmp_path / "shipped"], OSIRIS) is None
     found = find([tmp_path / "shipped"], "colloid")
     assert found is not None and found.label == "Colloid"
+
+
+def test_any_skin_but_the_one_being_edited_can_be_a_style(tmp_path: Path) -> None:
+    """A person's own Skins are styles too, so a new style never needs to be
+    installed among the shipped ones, which belong to the system."""
+    mine, shipped = tmp_path / "mine", tmp_path / "shipped"
+    make_pack(mine / "yaru", "Yaru Colors")
+    make_pack(mine / "old-forest", "Old Forest")
+    make_pack(shipped / "colloid", "Colloid")
+    names = [pack.name for pack in styles([mine, shipped], editing="old-forest")]
+    assert names == ["yaru", "colloid"]
