@@ -95,3 +95,22 @@ def test_a_duplicate_keeps_its_history_so_changes_can_be_undone(tmp_path: Path) 
     assert runner.ran("git", "-C", str(copy.root), "init", "-q")
     assert runner.ran("git", "-C", str(copy.root), "add", "-A")
     assert runner.ran("git", "-C", str(copy.root), *as_osiris(), "commit", "-q")
+
+
+def test_a_new_skin_takes_its_name_from_what_the_person_calls_it(
+    tmp_path: Path,
+) -> None:
+    pack = read(make_pack(tmp_path / "shipped" / "colloid"))
+    made = duplicate(pack, tmp_path / "mine", FakeRunner(), label="Sharp Night")
+    assert made.name == "sharp-night"
+    assert made.label == "Sharp Night"
+    assert "--skin sharp-night" in (made.root / "AGENTS.md").read_text()
+
+
+def test_a_new_skin_named_like_another_gets_a_free_name(tmp_path: Path) -> None:
+    pack = read(make_pack(tmp_path / "shipped" / "colloid"))
+    duplicate(pack, tmp_path / "mine", FakeRunner(), label="Sharp")
+    assert (
+        duplicate(pack, tmp_path / "mine", FakeRunner(), label="Sharp").name
+        == "sharp-2"
+    )
