@@ -43,8 +43,8 @@ def _picture(preview: str | None) -> Gtk.Widget:
         blank.add_css_class("dim-label")
         return blank
     picture = Gtk.Picture.new_for_filename(preview)
-    picture.set_content_fit(Gtk.ContentFit.COVER)
-    picture.set_size_request(320, 230)
+    picture.set_content_fit(Gtk.ContentFit.CONTAIN)
+    picture.set_size_request(-1, 230)
     return picture
 
 
@@ -62,7 +62,7 @@ class SkinsPage(Gtk.ScrolledWindow):
                  on_create: Callable[[], None] = _nothing):
         super().__init__(hscrollbar_policy=Gtk.PolicyType.NEVER)
         previews = previews or {}
-        flow = Gtk.FlowBox(homogeneous=True, min_children_per_line=1,
+        flow = Gtk.FlowBox(homogeneous=True, min_children_per_line=3,
                            max_children_per_line=3, column_spacing=12,
                            row_spacing=12,
                            selection_mode=Gtk.SelectionMode.NONE)
