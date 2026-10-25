@@ -111,3 +111,33 @@ def test_only_a_persons_own_skins_offer_asking_osiris_to_change_them() -> None:
     assert len(change) == 1
     change[0].emit("clicked")
     assert asked == ["mine"]
+
+
+def test_asking_osiris_wears_the_ai_star_not_a_pencil() -> None:
+    skins = [*SKINS, ("mine", "Mine", "You, GPL-3.0")]
+    page = SkinsPage(skins, "osiris", lambda _n: None, mine={"mine"})
+    assert buttons(page, "Ask Osiris to change it")[0].get_icon_name() == (
+        "osiris-ask-symbolic"
+    )
+
+
+def test_a_persons_own_skin_can_be_edited_by_hand() -> None:
+    edited: list[str] = []
+    skins = [*SKINS, ("mine", "Mine", "You, GPL-3.0")]
+    page = SkinsPage(
+        skins, "osiris", lambda _n: None, mine={"mine"}, on_edit=edited.append
+    )
+    edit = buttons(page, "Edit")
+    assert len(edit) == 1
+    assert edit[0].get_icon_name() == "document-edit-symbolic"
+    edit[0].emit("clicked")
+    assert edited == ["mine"]
+
+
+def test_a_new_skin_can_be_created_from_the_section() -> None:
+    created: list[bool] = []
+    page = SkinsPage(
+        SKINS, "osiris", lambda _n: None, on_create=lambda: created.append(True)
+    )
+    buttons(page, "New Skin")[0].emit("clicked")
+    assert created == [True]
