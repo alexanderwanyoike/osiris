@@ -1,0 +1,157 @@
+"""The Skin editor: rename a Skin and choose its style, icons, cursor and font,
+each shown as it would look."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from gi.repository import Gtk
+from skin_editor import Choice, SkinEditor
+
+from .conftest import widgets
+
+STYLES = [("colloid", "Colloid", None), ("graphite", "Graphite", None)]
+ICONS = ["Adwaita", "Papirus"]
+CURSORS = ["Adwaita", "Bibata"]
+
+
+def editor(saved: list[Choice], **overrides: object) -> SkinEditor:
+    given: dict[str, object] = {
+        "label": "Sharp",
+        "styles": STYLES,
+        "style": "colloid",
+        "icon_sets": ICONS,
+        "icons": None,
+        "cursor_sets": CURSORS,
+        "cursor_pictures": {},
+        "cursor": None,
+        "font": None,
+        "on_save": saved.append,
+    }
+    given.update(overrides)
+    return SkinEditor(**given)
+
+
+def section(dialog: SkinEditor, title: str) -> Gtk.FlowBox:
+    return next(
+        w
+        for w in widgets(dialog)
+        if isinstance(w, Gtk.FlowBox) and w.get_name() == title
+    )
+
+
+def choose(flow: Gtk.FlowBox, label: str) -> None:
+    for child in widgets(flow):
+        if isinstance(child, Gtk.FlowBoxChild) and any(
+            isinstance(w, Gtk.Label) and w.get_text() == label for w in widgets(child)
+        ):
+            flow.select_child(child)
+            return
+    raise AssertionError(f"no {label} to choose")
+
+
+def chosen(flow: Gtk.FlowBox) -> list[str]:
+    return [
+        next(w.get_text() for w in widgets(child) if isinstance(w, Gtk.Label))
+        for child in flow.get_selected_children()
+    ]
+
+
+def save(dialog: SkinEditor) -> None:
+    next(
+        w
+        for w in widgets(dialog)
+        if isinstance(w, Gtk.Button) and w.get_label() == "Save"
+    ).emit("clicked")
+
+
+def test_saving_unchanged_gives_back_what_the_skin_has() -> None:
+    saved: list[Choice] = []
+    dialog = editor(saved)
+    save(dialog)
+    assert saved == [Choice("Sharp", "colloid", None, None, None)]
+
+
+def test_the_skin_can_be_renamed() -> None:
+    saved: list[Choice] = []
+    dialog = editor(saved)
+    name = next(
+        w
+        for w in widgets(dialog)
+        if isinstance(w, Gtk.Editable) and w.get_text() == "Sharp"
+    )
+    name.set_text("Sharp Night")
+    save(dialog)
+    assert saved[0].label == "Sharp Night"
+
+
+def test_the_skins_style_is_chosen_and_another_can_be() -> None:
+    saved: list[Choice] = []
+    dialog = editor(saved)
+    assert chosen(section(dialog, "Style")) == ["Colloid"]
+    choose(section(dialog, "Style"), "Graphite")
+    save(dialog)
+    assert saved[0].style == "graphite"
+
+
+def test_icon_sets_are_shown_by_their_icons_and_the_themes_choice_first() -> None:
+    saved: list[Choice] = []
+    dialog = editor(saved)
+    icons = section(dialog, "Icons")
+    assert chosen(icons) == ["Theme's choice"]
+    papirus = next(
+        child
+        for child in widgets(icons)
+        if isinstance(child, Gtk.FlowBoxChild)
+        and any(
+            isinstance(w, Gtk.Label) and w.get_text() == "Papirus"
+            for w in widgets(child)
+        )
+    )
+    assert len([w for w in widgets(papirus) if isinstance(w, Gtk.Image)]) >= 4
+    choose(icons, "Papirus")
+    save(dialog)
+    assert saved[0].icons == "Papirus"
+
+
+def test_cursor_sets_are_shown_by_their_pointers(tmp_path: Path) -> None:
+    saved: list[Choice] = []
+    pointer = tmp_path / "bibata-pointer.png"
+    dialog = editor(saved, cursor="Bibata", cursor_pictures={"Bibata": [str(pointer)]})
+    cursors = section(dialog, "Cursor")
+    assert chosen(cursors) == ["Bibata"]
+    files = [
+        w.get_file().get_path()
+        for w in widgets(cursors)
+        if isinstance(w, Gtk.Picture) and w.get_file() is not None
+    ]
+    assert files == [str(pointer)]
+    choose(cursors, "Theme's choice")
+    save(dialog)
+    assert saved[0].cursor is None
+
+
+def test_a_font_can_be_chosen_or_left_to_the_theme() -> None:
+    saved: list[Choice] = []
+    dialog = editor(saved, font="Inter 11")
+    keep = next(
+        w
+        for w in widgets(dialog)
+        if isinstance(w, Gtk.CheckButton) and w.get_label() == "Theme's font"
+    )
+    assert keep.get_active() is False
+    save(dialog)
+    keep.set_active(True)
+    save(dialog)
+    assert [choice.font for choice in saved] == ["Inter 11", None]
+
+
+def test_the_skin_can_still_be_opened_in_the_code_editor() -> None:
+    opened: list[bool] = []
+    dialog = editor([], on_code=lambda: opened.append(True))
+    next(
+        w
+        for w in widgets(dialog)
+        if isinstance(w, Gtk.Button) and w.get_label() == "Open in Code"
+    ).emit("clicked")
+    assert opened == [True]
