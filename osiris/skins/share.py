@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 import tempfile
 import zipfile
 from pathlib import Path, PurePosixPath
 
-from osiris.skins.pack import Skinpack, SkinpackError, read
+from osiris.platform.process import CommandRunner
+from osiris.skins.pack import LABEL_FILE, Skinpack, SkinpackError, read
 
 EXTENSION = ".skinpack"
 
@@ -54,3 +56,25 @@ def delete(pack: Skinpack, mine: Path) -> None:
     if not pack.root.resolve().is_relative_to(mine.resolve()):
         raise SkinpackError(f"{pack.label} ships with Osiris and cannot be deleted")
     shutil.rmtree(pack.root)
+
+
+AGENTS = Path(__file__).with_name("skin-agents.md")
+
+
+def duplicate(pack: Skinpack, mine: Path, runner: CommandRunner) -> Skinpack:
+    """A person's own copy of a Skin, with history and instructions for Osiris."""
+    name, number = f"{pack.name}-copy", 2
+    while (mine / name).exists():
+        name, number = f"{pack.name}-copy-{number}", number + 1
+    copy = mine / name
+    shutil.copytree(pack.root, copy, ignore=shutil.ignore_patterns(".git"))
+    label = json.loads((copy / LABEL_FILE).read_text())
+    label["label"] = f"{pack.label} (copy)"
+    (copy / LABEL_FILE).write_text(json.dumps(label, indent=2) + "\n")
+    (copy / "AGENTS.md").write_text(AGENTS.read_text().replace("SKIN_NAME", name))
+    for step in (("init", "-q"), ("add", "-A")):
+        runner.run("git", "-C", str(copy), *step, quiet=True)
+    runner.run(
+        "git", "-C", str(copy), "commit", "-q", "-m", f"Copy {pack.label}", quiet=True
+    )
+    return read(copy)
