@@ -50,6 +50,12 @@ from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.model.names import slug  # noqa: E402
 from osiris.themes.library import Filter, arrange  # noqa: E402
 
+ARCHIVES = ("*.zip", "*.tar.gz", "*.tgz", "*.tar.xz", "*.txz", "*.tar.bz2",
+            "*.tar")
+FONTS = ("*.ttf", "*.otf", "*.ttc", "*.TTF", "*.OTF")
+CONVERT = ("Convert this imported theme so it follows my Theme: replace its "
+           "written-in colours with the Theme's gaps, for light and dark, then "
+           "wear it.")
 HARNESS = "dev.osiris.Harness"
 HARNESS_PATH = "/dev/osiris/Harness"
 
@@ -494,14 +500,44 @@ class Window(Adw.ApplicationWindow):
             self.get_application().reload_user_css()
             self._show_skins()
 
-        SkinEditor(
+        def adding(kind: str):
+            def add() -> None:
+                editor.close()
+                self._add_to_look(kind, lambda: self.edit_skin(name))
+            return add
+
+        editor = SkinEditor(
             label=details["label"], styles=engine.skin_styles(),
             style=details["style"], icon_sets=engine.icon_sets(),
             icons=details["icons"], cursor_sets=cursors,
             cursor_pictures=engine.cursor_pictures(cursors),
             cursor=details["cursor"], font=details["font"], on_save=saved,
             on_code=lambda: self.open_in_code(name),
-        ).present(self)
+            on_add_icons=adding("icons"), on_add_cursors=adding("cursors"),
+            on_add_fonts=adding("fonts"),
+        )
+        editor.present(self)
+
+    def _add_to_look(self, kind: str, then) -> None:
+        """Install downloaded icon sets, cursor sets or fonts, then reopen."""
+        def chosen(paths: list[str]) -> None:
+            try:
+                if paths and kind == "fonts":
+                    names = engine.import_fonts(paths)
+                elif paths:
+                    names = engine.import_icon_sets(paths[0])
+                else:
+                    names = []
+                if names:
+                    self._toast(f"Added {', '.join(names)}")
+            except Exception as error:                  # noqa: BLE001
+                self._toast(f"Not added: {error}")
+            then()
+
+        if kind == "fonts":
+            self._choose_files("Fonts", FONTS + ARCHIVES, chosen, many=True)
+        else:
+            self._choose_files("Icon and cursor sets", ARCHIVES, chosen)
 
     def open_in_code(self, name: str) -> None:
         """For those who would rather write the style sheets (ADR 0016)."""
@@ -576,8 +612,53 @@ class Window(Adw.ApplicationWindow):
             on_open=self.open_skin, on_export=self.export_skin,
             on_delete=self.confirm_delete_skin,
             on_duplicate=self.duplicate_skin, on_change=self.change_skin,
-            on_edit=self.edit_skin, on_create=self.create_skin))
+            on_edit=self.edit_skin, on_create=self.create_skin,
+            on_import=self.import_gtk_theme))
         return False
+
+    def _choose_files(self, title: str, patterns: tuple[str, ...], chosen,
+                      many: bool = False) -> None:
+        """Ask for downloaded files; chosen gets their paths, or nothing."""
+        only = Gtk.FileFilter(name=title)
+        for pattern in patterns:
+            only.add_pattern(pattern)
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        filters.append(only)
+        dialog = Gtk.FileDialog(title=title, filters=filters)
+
+        def done(_dialog, result) -> None:
+            try:
+                if many:
+                    files = dialog.open_multiple_finish(result)
+                    paths = [files.get_item(i).get_path()
+                             for i in range(files.get_n_items())]
+                else:
+                    paths = [dialog.open_finish(result).get_path()]
+            except GLib.Error:
+                paths = []
+            chosen(paths)
+
+        if many:
+            dialog.open_multiple(self, None, done)
+        else:
+            dialog.open(self, None, done)
+
+    def _toast(self, title: str) -> None:
+        self.toasts.add_toast(Adw.Toast(title=title, timeout=5))
+
+    def import_gtk_theme(self) -> None:
+        def chosen(paths: list[str]) -> None:
+            if not paths:
+                return
+            try:
+                name = engine.import_gtk_theme(paths[0])
+            except Exception as error:                  # noqa: BLE001
+                self._toast(f"Not imported: {error}")
+                return
+            self._show_skins()
+            self._ask_osiris(name, CONVERT)
+
+        self._choose_files("GTK themes", ARCHIVES, chosen)
 
     def _drawn(self) -> bool:
         self._drawing = False
@@ -596,12 +677,21 @@ class Window(Adw.ApplicationWindow):
         self.toasts.add_toast(Adw.Toast(title=f"Copied as {copy}", timeout=3))
 
     def change_skin(self, name: str) -> None:
-        """Open Osiris on a new Conversation in the Skin's folder."""
+        self._ask_osiris(name)
+
+    def _ask_osiris(self, name: str, draft: str | None = None) -> None:
+        """Open Osiris on a new Conversation in the Skin's folder, with a
+        request written in but not sent."""
         try:
             connection = Gio.bus_get_sync(Gio.BusType.SESSION, None)
             actions = Gio.DBusActionGroup.get(connection, HARNESS, HARNESS_PATH)
-            actions.activate_action("new-conversation-in",
-                                    GLib.Variant("s", engine.skin_folder(name)))
+            folder = engine.skin_folder(name)
+            if draft:
+                actions.activate_action("new-conversation-in-with",
+                                        GLib.Variant("(ss)", (folder, draft)))
+            else:
+                actions.activate_action("new-conversation-in",
+                                        GLib.Variant("s", folder))
         except Exception as error:                      # noqa: BLE001
             self.toasts.add_toast(Adw.Toast(title=f"Osiris did not open: {error}",
                                             timeout=6))
