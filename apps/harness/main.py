@@ -510,6 +510,11 @@ class Application(Adw.Application):
         opening.connect("activate", lambda _action, session:
                         self.open_conversation(session.get_string()))
         self.add_action(opening)
+        starting = Gio.SimpleAction.new("new-conversation-in",
+                                        GLib.VariantType.new("s"))
+        starting.connect("activate", lambda _action, folder:
+                         self.start_in(Path(folder.get_string())))
+        self.add_action(starting)
 
     def do_startup(self):
         Adw.Application.do_startup(self)
@@ -650,6 +655,12 @@ class Application(Adw.Application):
         if not self.open:
             self.summon()
         self.open_past(session)
+
+    def start_in(self, folder: Path) -> None:
+        """An Entry point: the drawer, on a new Conversation in folder's Project."""
+        if not self.open:
+            self.summon()
+        self.new_conversation(folder)
 
     def summon(self) -> None:
         self.open = True
