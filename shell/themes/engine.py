@@ -782,6 +782,43 @@ def chosen_skin() -> str:
     return skins.chosen(Path(SKIN_CHOICE))
 
 
+def _variant() -> str:
+    try:
+        return "dark" if load(current() or DEFAULT_THEME).get("dark", True) else "light"
+    except (KeyError, OSError, ValueError):
+        return "dark"
+
+
+def _shipped_preview(name: str, variant: str) -> Path | None:
+    for folder in SKIN_DIRS[1:]:
+        picture = Path(folder) / "previews" / f"{name}-{variant}.png"
+        if picture.is_file():
+            return picture
+    return None
+
+
+def skin_previews() -> dict[str, str]:
+    """A picture of each Skin for the current Theme's variant, where one exists."""
+    variant = _variant()
+    found = {}
+    for name, _label, _credit in skin_choices():
+        pack = skins.find([Path(folder) for folder in SKIN_DIRS], name)
+        picture = (pack.preview(variant) if pack else None) or _shipped_preview(
+            name, variant)
+        if picture is not None:
+            found[name] = str(picture)
+    return found
+
+
+def _give_previews(base: str, made: str) -> None:
+    """A new Skin starts with the pictures of the Skin it came from."""
+    pack = _pack(base)
+    for variant in ("dark", "light"):
+        picture = pack.preview(variant) or _shipped_preview(base, variant)
+        if picture is not None:
+            shutil.copy(picture, Path(skin_folder(made)) / f"preview-{variant}.png")
+
+
 def own_skins() -> set[str]:
     """The Skins the person opened or made, which they may delete."""
     return {pack.name for pack in skins.available([Path(SKIN_DIRS[0])])}
@@ -806,6 +843,7 @@ def open_skin(path: str) -> str:
 def duplicate_skin(name: str) -> str:
     """Copy a Skin into the person's own; returns the copy's name."""
     copy = share.duplicate(_pack(name), Path(SKIN_DIRS[0]), SubprocessRunner())
+    _give_previews(name, copy.name)
     return copy.name
 
 
@@ -813,6 +851,7 @@ def create_skin(label: str, base: str) -> str:
     """A new Skin of the person's, named label, started from base."""
     made = share.duplicate(_pack(base), Path(SKIN_DIRS[0]), SubprocessRunner(),
                            label=label)
+    _give_previews(base, made.name)
     return made.name
 
 
