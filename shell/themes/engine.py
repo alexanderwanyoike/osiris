@@ -45,7 +45,7 @@ use_osiris_package()
 import osiris  # noqa: E402
 from osiris.platform.process import CommandError, SubprocessRunner  # noqa: E402
 from osiris.provision.seeding import may_write  # noqa: E402
-from osiris.skins import carried, library as skins, pictures, share, xcursor  # noqa: E402
+from osiris.skins import carried, edit, library as skins, looks, pictures, share, xcursor  # noqa: E402
 from osiris.skins.build import Built, build as build_skin_pack  # noqa: E402
 from osiris.skins.pack import Look, SkinpackError  # noqa: E402
 from osiris.themes import terminal  # noqa: E402
@@ -95,6 +95,11 @@ FONTS_DIR = os.path.join(HOME, ".local", "share", "fonts", "osiris-skins")
 SKIN_WORK = os.path.join(HOME, ".cache", "osiris", "skins")
 SKIN_PICTURES = os.path.join(HOME, ".cache", "osiris", "skin-pictures")
 SAMPLER = "/usr/share/osiris/appearance/sampler.py"
+CURSOR_DIRS = [os.path.join(HOME, ".local", "share", "icons"),
+               os.path.join(HOME, ".icons"), "/usr/share/icons"]
+# The shapes the editor shows for a cursor theme, each by its usual names.
+POINTER = ("left_ptr", "default")
+CURSOR_SHAPES = (POINTER, ("hand2", "pointer"), ("xterm", "text"))
 THEME_PREFIX = "Osiris-"
 CINNAMON_BASE = "/usr/share/cinnamon/theme"
 
@@ -848,31 +853,34 @@ def draw_skin_picture(name: str) -> str:
 def _look_of(name: str, theme: dict) -> Look:
     """The icons, cursor and font a Skin wears in this Theme."""
     ui = _ui(theme)
-    variant = "dark" if theme.get("dark", True) else "light"
+    variant = _variant_of(theme)
     pack = None if name == skins.OSIRIS else _pack(name)
     look = pack.look(variant) if pack else Look(None, None, None)
     return Look(look.icons or ui["icons"], look.cursor or ui["cursor"],
                 look.font or ui["font"])
 
 
-def _pointer(cursor: str, cache: Path) -> str | None:
-    """The cursor theme's pointer as a picture, or None if it cannot be found."""
-    for folder in (os.path.join(HOME, ".local", "share", "icons"),
-                   os.path.join(HOME, ".icons"), "/usr/share/icons"):
-        for shape in ("left_ptr", "default"):
+def _cursor_picture(cursor: str, shapes: tuple[str, ...], cache: Path) -> str | None:
+    """One of a cursor theme's shapes as a picture, or None if none is found."""
+    for folder in CURSOR_DIRS:
+        for shape in shapes:
             path = os.path.join(folder, cursor, "cursors", shape)
             if not os.path.isfile(path):
                 continue
             try:
                 with open(path, "rb") as fh:
-                    pointer = xcursor.read(fh.read(), 32)
+                    image = xcursor.read(fh.read(), 32)
             except (OSError, xcursor.XcursorError):
                 continue
-            out = cache / f"pointer-{cursor}.png"
+            out = cache / f"cursor-{cursor}-{shapes[0]}.png"
             out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_bytes(xcursor.png(pointer))
+            out.write_bytes(xcursor.png(image))
             return str(out)
     return None
+
+
+def _pointer(cursor: str, cache: Path) -> str | None:
+    return _cursor_picture(cursor, POINTER, cache)
 
 
 def own_skins() -> set[str]:
@@ -911,6 +919,56 @@ def create_skin(label: str, base: str) -> str:
 
 def skin_folder(name: str) -> str:
     return str(_pack(name).root)
+
+
+def icon_sets() -> list[str]:
+    """Installed icon sets, without the per-Theme tinted copies Osiris makes."""
+    return [name for name in looks.icon_themes([Path(d) for d in CURSOR_DIRS])
+            if not name.startswith(THEME_PREFIX)]
+
+
+def cursor_sets() -> list[str]:
+    return looks.cursor_themes([Path(d) for d in CURSOR_DIRS])
+
+
+def cursor_pictures(names: list[str]) -> dict[str, list[str]]:
+    """Each cursor theme's pointer, hand and text cursors as pictures."""
+    cache = Path(SKIN_PICTURES)
+    found = {}
+    for name in names:
+        shown = [_cursor_picture(name, shapes, cache) for shapes in CURSOR_SHAPES]
+        found[name] = [path for path in shown if path]
+    return found
+
+
+def skin_styles() -> list[tuple[str, str, str | None]]:
+    """The shipped Skins a person's Skin can take its style from."""
+    drawn = skin_pictures()
+    shipped = skins.available([Path(folder) for folder in SKIN_DIRS[1:]])
+    return [(pack.name, pack.label, drawn.get(pack.name)) for pack in shipped]
+
+
+def skin_details(name: str) -> dict:
+    """What the editor starts from: a Skin's label, style and look."""
+    pack = _pack(name)
+    look = pack.look(_variant_of(_current_theme()))
+    return {"label": pack.label, "style": pack.style, "icons": look.icons,
+            "cursor": look.cursor, "font": look.font}
+
+
+def save_skin(name: str, label: str, style: str | None, icons: str | None,
+              cursor: str | None, font: str | None) -> None:
+    """Save an edit to the person's Skin, and wear it again if it is worn."""
+    pack = _pack(name)
+    taken = _pack(style) if style and style != pack.style else None
+    edit.save(pack, edit.Edit(label, taken, icons, cursor, font),
+              SubprocessRunner())
+    if chosen_skin() == name:
+        set_skin(name)
+
+
+def _variant_of(theme: dict) -> str:
+    return "dark" if theme.get("dark", True) else "light"
 
 
 def delete_skin(name: str) -> None:
