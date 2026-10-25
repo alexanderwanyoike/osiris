@@ -809,6 +809,13 @@ def duplicate_skin(name: str) -> str:
     return copy.name
 
 
+def create_skin(label: str, base: str) -> str:
+    """A new Skin of the person's, named label, started from base."""
+    made = share.duplicate(_pack(base), Path(SKIN_DIRS[0]), SubprocessRunner(),
+                           label=label)
+    return made.name
+
+
 def skin_folder(name: str) -> str:
     return str(_pack(name).root)
 
