@@ -174,3 +174,12 @@ def test_a_skin_without_a_picture_still_gets_a_card() -> None:
         and w.get_icon_name() == "preferences-desktop-appearance-symbolic"
         for w in widgets(card)
     )
+
+
+def test_a_downloaded_gtk_theme_can_be_imported_from_the_section() -> None:
+    imported: list[bool] = []
+    page = SkinsPage(
+        SKINS, "osiris", lambda _n: None, on_import=lambda: imported.append(True)
+    )
+    buttons(page, "Import a GTK theme")[0].emit("clicked")
+    assert imported == [True]

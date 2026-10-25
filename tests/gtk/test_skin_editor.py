@@ -168,3 +168,20 @@ def test_the_themes_choice_shows_the_themes_own_cursor(tmp_path: Path) -> None:
         if isinstance(w, Gtk.Picture) and w.get_file() is not None
     ]
     assert files == [str(pointer)]
+
+
+def test_downloaded_icons_cursors_and_fonts_can_be_added() -> None:
+    added: list[str] = []
+    dialog = editor(
+        [],
+        on_add_icons=lambda: added.append("icons"),
+        on_add_cursors=lambda: added.append("cursors"),
+        on_add_fonts=lambda: added.append("fonts"),
+    )
+    for tooltip in ("Add an icon set", "Add a cursor set", "Add fonts"):
+        next(
+            w
+            for w in widgets(dialog.get_child())
+            if isinstance(w, Gtk.Button) and w.get_tooltip_text() == tooltip
+        ).emit("clicked")
+    assert added == ["icons", "cursors", "fonts"]
