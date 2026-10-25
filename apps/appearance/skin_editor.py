@@ -36,11 +36,24 @@ def _nothing() -> None:
     pass
 
 
-def _section(title: str) -> tuple[Gtk.Box, Gtk.FlowBox]:
-    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-    heading = Gtk.Label(label=title, xalign=0)
+def _heading(title: str, add: tuple[str, Callable[[], None]] | None) -> Gtk.Box:
+    line = Gtk.Box(spacing=6)
+    heading = Gtk.Label(label=title, xalign=0, hexpand=True)
     heading.add_css_class("editor-heading")
-    box.append(heading)
+    line.append(heading)
+    if add is not None:
+        tooltip, clicked = add
+        button = Gtk.Button(icon_name="list-add-symbolic", tooltip_text=tooltip)
+        button.add_css_class("flat")
+        button.connect("clicked", lambda _b: clicked())
+        line.append(button)
+    return line
+
+
+def _section(title: str, add: tuple[str, Callable[[], None]] | None = None
+             ) -> tuple[Gtk.Box, Gtk.FlowBox]:
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+    box.append(_heading(title, add))
     flow = Gtk.FlowBox(name=title, homogeneous=True, min_children_per_line=2,
                        max_children_per_line=4, column_spacing=8,
                        row_spacing=8, selection_mode=Gtk.SelectionMode.SINGLE)
@@ -102,7 +115,10 @@ class SkinEditor(Adw.Dialog):
                  cursor_sets: Sequence[str],
                  cursor_pictures: Mapping[str, Sequence[str]], cursor: str | None,
                  font: str | None, on_save: Callable[[Choice], None],
-                 on_code: Callable[[], None] = _nothing):
+                 on_code: Callable[[], None] = _nothing,
+                 on_add_icons: Callable[[], None] = _nothing,
+                 on_add_cursors: Callable[[], None] = _nothing,
+                 on_add_fonts: Callable[[], None] = _nothing):
         super().__init__(title="Edit Skin", content_width=880,
                          content_height=760)
         self._on_save = on_save
@@ -122,14 +138,14 @@ class SkinEditor(Adw.Dialog):
         self._pick(self._styles, self._style_names, style)
         page.append(box)
 
-        box, self._icons = _section("Icons")
+        box, self._icons = _section("Icons", ("Add an icon set", on_add_icons))
         self._icon_names: list[str | None] = [None, *icon_sets]
         for name in self._icon_names:
             self._icons.append(_card(name or THEMES_CHOICE, _icon_row(name)))
         self._pick(self._icons, self._icon_names, icons)
         page.append(box)
 
-        box, self._cursors = _section("Cursor")
+        box, self._cursors = _section("Cursor", ("Add a cursor set", on_add_cursors))
         self._cursor_names: list[str | None] = [None, *cursor_sets]
         for name in self._cursor_names:
             pictures = cursor_pictures.get(name or "", [])
@@ -138,7 +154,7 @@ class SkinEditor(Adw.Dialog):
         self._pick(self._cursors, self._cursor_names, cursor)
         page.append(box)
 
-        page.append(self._font_section(font))
+        page.append(self._font_section(font, on_add_fonts))
 
         code = Gtk.Button(label="Open in Code", halign=Gtk.Align.START)
         code.add_css_class("flat")
@@ -161,11 +177,10 @@ class SkinEditor(Adw.Dialog):
         toolbar.add_top_bar(header)
         self.set_child(toolbar)
 
-    def _font_section(self, font: str | None) -> Gtk.Box:
+    def _font_section(self, font: str | None,
+                      on_add: Callable[[], None]) -> Gtk.Box:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        heading = Gtk.Label(label="Font", xalign=0)
-        heading.add_css_class("editor-heading")
-        box.append(heading)
+        box.append(_heading("Font", ("Add fonts", on_add)))
         line = Gtk.Box(spacing=12)
         self._keep_font = Gtk.CheckButton(label="Theme's font",
                                           active=font is None)
