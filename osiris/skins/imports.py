@@ -3,6 +3,7 @@ fonts and GTK themes, from the archives they usually come in."""
 
 from __future__ import annotations
 
+import json
 import shutil
 import tarfile
 import tempfile
@@ -10,7 +11,11 @@ import zipfile
 from collections.abc import Sequence
 from pathlib import Path, PurePosixPath
 
+from osiris.model.names import slug
+from osiris.platform.process import CommandRunner
 from osiris.skins.looks import is_cursor_set, is_icon_set
+from osiris.skins.pack import LABEL_FILE, Skinpack, read
+from osiris.skins.share import free_name, start_history
 
 
 class UnusableDownload(ValueError):
@@ -79,3 +84,57 @@ def install_fonts(downloads: Sequence[Path], fonts_dir: Path) -> list[str]:
     if not installed:
         raise UnusableDownload("no font in what was given")
     return sorted(installed)
+
+
+#: The parts of a GTK theme a Skin shapes; the rest of a download is left out.
+SURFACE_FOLDERS = ("gtk-3.0", "gtk-4.0", "cinnamon")
+
+
+def import_gtk_theme(download: Path, mine: Path, runner: CommandRunner) -> Skinpack:
+    """A downloaded GTK theme as a person's own Skin, worn in its own colours
+    until Osiris converts them to the Theme's gaps."""
+    with tempfile.TemporaryDirectory() as scratch:
+        unpack(download, Path(scratch))
+        themes = sorted(
+            (
+                folder
+                for folder in Path(scratch).rglob("*")
+                if (folder / "gtk-3.0" / "gtk.css").is_file()
+            ),
+            key=lambda folder: len(folder.name),
+        )
+        if not themes:
+            raise UnusableDownload(f"{download.name}: no GTK theme in it")
+        dark = [folder for folder in themes if "dark" in folder.name.lower()]
+        light = [folder for folder in themes if folder not in dark]
+        label = (light or dark)[0].name
+        skin = mine / free_name(mine, slug(label))
+        variants = (
+            {"light": light[0], "dark": dark[0]}
+            if light and dark
+            else {"common": themes[0]}
+        )
+        for variant, theme in variants.items():
+            for surface in SURFACE_FOLDERS:
+                if (theme / surface).is_dir():
+                    shutil.copytree(theme / surface, skin / "files" / variant / surface)
+            dock = theme / "plank" / "dock.theme"
+            if dock.is_file():
+                for target in ("light", "dark") if variant == "common" else (variant,):
+                    (skin / "plank").mkdir(parents=True, exist_ok=True)
+                    shutil.copy(dock, skin / "plank" / f"dock-{target}.theme")
+    (skin / LABEL_FILE).write_text(
+        json.dumps(
+            {
+                "label": label,
+                "author": "Imported",
+                "version": "imported",
+                "licence": "See the original download",
+                "source": download.name,
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    start_history(skin, f"Import {download.name}", runner)
+    return read(skin)
