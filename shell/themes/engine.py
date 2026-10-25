@@ -935,9 +935,10 @@ def cursor_pictures(names: list[str]) -> dict[str, list[str]]:
     """Each cursor theme's pointer, hand and text cursors as pictures."""
     cache = Path(SKIN_PICTURES)
     found = {}
-    for name in names:
+    # Under the empty name, the Theme's own cursor, for "Theme's choice".
+    for key, name in [("", _ui(_current_theme())["cursor"]), *zip(names, names)]:
         shown = [_cursor_picture(name, shapes, cache) for shapes in CURSOR_SHAPES]
-        found[name] = [path for path in shown if path]
+        found[key] = [path for path in shown if path]
     return found
 
 
