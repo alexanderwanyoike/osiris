@@ -142,3 +142,26 @@ def test_a_pack_may_leave_the_panel_dock_and_libadwaita_to_osiris(
 
 def test_a_full_pack_brings_its_own_panel(tmp_path: Path) -> None:
     assert build_rose_pine(tmp_path, FakeRunner()).cinnamon is True
+
+
+def test_a_picture_needs_only_the_gtk3_sheet(tmp_path: Path) -> None:
+    """Pictures are drawn for every Skin in the Theme, so they build no more
+    than they show."""
+    runner = FakeRunner()
+    pack = read(make_pack(tmp_path / "colloid"))
+    build(
+        pack,
+        ROSE_PINE,
+        tmp_path / "themes",
+        tmp_path / "work",
+        runner,
+        only=("gtk-3.0",),
+    )
+    assert runner.count("sassc") == 1
+    assert runner.ran(
+        "sassc",
+        "-M",
+        "-t",
+        "expanded",
+        str(tmp_path / "work" / "colloid" / "gtk-3.0" / "gtk-dark.scss"),
+    )
