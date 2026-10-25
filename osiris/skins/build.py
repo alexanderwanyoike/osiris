@@ -15,7 +15,7 @@ A skinpack is laid out by surface, one Sass entry per variant:
 from __future__ import annotations
 
 import shutil
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -46,6 +46,7 @@ def build(
     themes_dir: Path,
     work_dir: Path,
     runner: CommandRunner,
+    only: Sequence[str] | None = None,
 ) -> Built:
     filled = gaps(theme)
     variant = filled["variant"]
@@ -66,7 +67,7 @@ def build(
         svg.write_text(fill(svg.read_text(), filled))
     for entry, out in SURFACES:
         source = work / f"{entry}-{variant}.scss"
-        if not source.is_file():
+        if not source.is_file() or (only and entry.split("/")[0] not in only):
             continue
         (target / out).parent.mkdir(parents=True, exist_ok=True)
         runner.run(
