@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 from osiris.platform.process import FakeRunner
@@ -165,3 +166,24 @@ def test_a_picture_needs_only_the_gtk3_sheet(tmp_path: Path) -> None:
         "expanded",
         str(tmp_path / "work" / "colloid" / "gtk-3.0" / "gtk-dark.scss"),
     )
+
+
+def test_a_skins_css_files_take_gaps_like_its_pictures(tmp_path: Path) -> None:
+    """An imported theme is plain CSS; converting it puts gaps straight into it."""
+    root = make_gtk_only_pack(tmp_path / "neon")
+    (root / "gtk-3.0" / "gtk-dark.scss").unlink()
+    sheet = root / "files" / "dark" / "gtk-3.0" / "gtk.css"
+    sheet.parent.mkdir(parents=True)
+    sheet.write_text("window { background: {{background}}; }")
+    build(read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner())
+    built = tmp_path / "themes" / "Osiris-neon-rose-pine" / "gtk-3.0" / "gtk.css"
+    assert built.read_text() == "window { background: #191724; }"
+
+
+def test_a_pack_without_sass_still_builds(tmp_path: Path) -> None:
+    root = make_gtk_only_pack(tmp_path / "neon")
+    shutil.rmtree(root / "sass")
+    built = build(
+        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
+    )
+    assert built.theme == "Osiris-neon-rose-pine"
