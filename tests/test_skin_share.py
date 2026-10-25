@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from osiris.model.author import as_osiris
 from osiris.platform.process import FakeRunner
 from osiris.skins.pack import SkinpackError, read
 from osiris.skins.share import EXTENSION, delete, duplicate, export, open_file
@@ -93,4 +94,4 @@ def test_a_duplicate_keeps_its_history_so_changes_can_be_undone(tmp_path: Path) 
     )
     assert runner.ran("git", "-C", str(copy.root), "init", "-q")
     assert runner.ran("git", "-C", str(copy.root), "add", "-A")
-    assert runner.ran("git", "-C", str(copy.root), "commit", "-q")
+    assert runner.ran("git", "-C", str(copy.root), *as_osiris(), "commit", "-q")
