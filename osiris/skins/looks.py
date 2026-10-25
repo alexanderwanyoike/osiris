@@ -30,7 +30,7 @@ def _themes(folders: Sequence[Path], wanted: Callable[[Path], bool]) -> list[str
     return sorted(found, key=str.lower)
 
 
-def _is_icon_set(folder: Path) -> bool:
+def is_icon_set(folder: Path) -> bool:
     index = _index(folder)
     return (
         index is not None
@@ -40,8 +40,12 @@ def _is_icon_set(folder: Path) -> bool:
 
 
 def icon_themes(folders: Sequence[Path]) -> list[str]:
-    return _themes(folders, _is_icon_set)
+    return _themes(folders, is_icon_set)
+
+
+def is_cursor_set(folder: Path) -> bool:
+    return (folder / "cursors").is_dir()
 
 
 def cursor_themes(folders: Sequence[Path]) -> list[str]:
-    return _themes(folders, lambda folder: (folder / "cursors").is_dir())
+    return _themes(folders, is_cursor_set)
