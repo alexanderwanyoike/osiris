@@ -59,7 +59,8 @@ class SkinsPage(Gtk.ScrolledWindow):
                  on_duplicate: Callable[[str], None] = _nothing,
                  on_change: Callable[[str], None] = _nothing,
                  on_edit: Callable[[str], None] = _nothing,
-                 on_create: Callable[[], None] = _nothing):
+                 on_create: Callable[[], None] = _nothing,
+                 on_import: Callable[[], None] = _nothing):
         super().__init__(hscrollbar_policy=Gtk.PolicyType.NEVER)
         previews = previews or {}
         flow = Gtk.FlowBox(homogeneous=True, min_children_per_line=3,
@@ -102,6 +103,8 @@ class SkinsPage(Gtk.ScrolledWindow):
         heading.append(_button("list-add-symbolic", "New Skin", on_create))
         heading.append(_button("document-open-symbolic", "Open a skinpack",
                                on_open))
+        heading.append(_button("folder-download-symbolic", "Import a GTK theme",
+                               on_import))
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
                        margin_top=18, margin_bottom=18, margin_start=18,
                        margin_end=18)
