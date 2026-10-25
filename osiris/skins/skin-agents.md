@@ -37,6 +37,19 @@ Leave colours that are part of the look whatever the Theme.
 
 ## Rules
 
+- A Skin is data only: style sheets, pictures, a dock and launcher theme, and
+  its label. Add no scripts, programs or background services, here or
+  anywhere else, and change no settings outside this folder; Osiris applies
+  the Skin itself. If something cannot be done with gaps and data, say so to
+  the person rather than building around it.
+- Icon sets, cursor sets and fonts are named in `skin.json`'s `look` and must
+  be installed under `~/.local/share/icons` or `~/.local/share/fonts`. Their
+  colours are their own; only the style sheets and pictures here follow the
+  Theme.
+- Another style for this Skin, or a new one, is a Skin of the person's in
+  `~/.local/share/osiris/skins`. Never write to `/usr/share/osiris`: it
+  belongs to the system package, and needs no administrator rights for a
+  Skin.
 - Never write a colour from the Theme literally: use the gaps, so the Skin
   works under every Theme, light and dark. Fixed colours are only for things
   that are part of the look whatever the Theme, and only if asked.
