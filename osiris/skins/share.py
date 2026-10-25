@@ -63,33 +63,34 @@ def delete(pack: Skinpack, mine: Path) -> None:
 AGENTS = Path(__file__).with_name("skin-agents.md")
 
 
+def free_name(mine: Path, base: str) -> str:
+    """base, or base-2, base-3 and so on, whichever is not taken."""
+    name, number = base, 2
+    while (mine / name).exists():
+        name, number = f"{base}-{number}", number + 1
+    return name
+
+
+def start_history(skin: Path, message: str, runner: CommandRunner) -> None:
+    """Give a person's new Skin its instructions for Osiris and a first commit."""
+    (skin / "AGENTS.md").write_text(AGENTS.read_text().replace("SKIN_NAME", skin.name))
+    for step in (("init", "-q"), ("add", "-A")):
+        runner.run("git", "-C", str(skin), *step, quiet=True)
+    runner.run(
+        "git", "-C", str(skin), *as_osiris(), "commit", "-q", "-m", message, quiet=True
+    )
+
+
 def duplicate(
     pack: Skinpack, mine: Path, runner: CommandRunner, label: str | None = None
 ) -> Skinpack:
     """A person's own copy of a Skin, with history and instructions for Osiris;
     a label makes it a new Skin of that name rather than a copy."""
-    base = slug(label) if label else f"{pack.name}-copy"
-    name, number = base, 2
-    while (mine / name).exists():
-        name, number = f"{base}-{number}", number + 1
-    copy = mine / name
+    copy = mine / free_name(mine, slug(label) if label else f"{pack.name}-copy")
     shutil.copytree(pack.root, copy, ignore=shutil.ignore_patterns(".git"))
     label_of = json.loads((copy / LABEL_FILE).read_text())
     label_of["label"] = label or f"{pack.label} (copy)"
     label_of["style"] = pack.style or pack.name
     (copy / LABEL_FILE).write_text(json.dumps(label_of, indent=2) + "\n")
-    (copy / "AGENTS.md").write_text(AGENTS.read_text().replace("SKIN_NAME", name))
-    for step in (("init", "-q"), ("add", "-A")):
-        runner.run("git", "-C", str(copy), *step, quiet=True)
-    runner.run(
-        "git",
-        "-C",
-        str(copy),
-        *as_osiris(),
-        "commit",
-        "-q",
-        "-m",
-        f"Copy {pack.label}",
-        quiet=True,
-    )
+    start_history(copy, f"Copy {pack.label}", runner)
     return read(copy)
