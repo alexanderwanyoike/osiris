@@ -40,7 +40,7 @@ import drift  # noqa: E402
 import engine  # noqa: E402
 
 from creator import Creator  # noqa: E402
-from skins_page import SkinsPage  # noqa: E402
+from skins_page import CSS as SKINS_CSS, SkinsPage  # noqa: E402
 
 # creator has put the osiris package on sys.path.
 from osiris.apps.user_css import UserCss  # noqa: E402
@@ -473,7 +473,8 @@ class Window(Adw.ApplicationWindow):
     def _show_skins(self) -> None:
         self.skins.set_child(SkinsPage(
             engine.skin_choices(), engine.chosen_skin(), self.wear,
-            mine=engine.own_skins(), on_open=self.open_skin,
+            mine=engine.own_skins(), previews=engine.skin_previews(),
+            on_open=self.open_skin,
             on_export=self.export_skin, on_delete=self.confirm_delete_skin,
             on_duplicate=self.duplicate_skin, on_change=self.change_skin,
             on_edit=self.edit_skin, on_create=self.create_skin))
@@ -635,6 +636,7 @@ class Window(Adw.ApplicationWindow):
             Adw.ColorScheme.FORCE_DARK if theme.get("dark", True)
             else Adw.ColorScheme.FORCE_LIGHT)
         self.get_application().reload_user_css()
+        self._show_skins()
         for card in self.cards:
             card.set_selected(card.theme["name"] == theme["name"])
         note = f"{theme['label']} applied"
@@ -674,7 +676,7 @@ class Application(Adw.Application):
         if display is not None:
             # Our widget styling above the user palette.
             provider = Gtk.CssProvider()
-            provider.load_from_data(CSS)
+            provider.load_from_data(CSS + SKINS_CSS)
             Gtk.StyleContext.add_provider_for_display(
                 display, provider, UserCss.PRIORITY + 1)
         Window(self).present()
