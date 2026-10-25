@@ -47,6 +47,9 @@ from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.model.names import slug  # noqa: E402
 from osiris.themes.library import Filter, arrange  # noqa: E402
 
+HARNESS = "dev.osiris.Harness"
+HARNESS_PATH = "/dev/osiris/Harness"
+
 FILTERS = ((Filter.ALL, "All"), (Filter.DARK, "Dark"),
            (Filter.LIGHT, "Light"), (Filter.MINE, "Mine"))
 
@@ -471,7 +474,29 @@ class Window(Adw.ApplicationWindow):
         self.skins.set_child(SkinsPage(
             engine.skin_choices(), engine.chosen_skin(), self.wear,
             mine=engine.own_skins(), on_open=self.open_skin,
-            on_export=self.export_skin, on_delete=self.confirm_delete_skin))
+            on_export=self.export_skin, on_delete=self.confirm_delete_skin,
+            on_duplicate=self.duplicate_skin, on_change=self.change_skin))
+
+    def duplicate_skin(self, name: str) -> None:
+        try:
+            copy = engine.duplicate_skin(name)
+        except Exception as error:                      # noqa: BLE001
+            self.toasts.add_toast(Adw.Toast(title=f"Not copied: {error}",
+                                            timeout=6))
+            return
+        self._show_skins()
+        self.toasts.add_toast(Adw.Toast(title=f"Copied as {copy}", timeout=3))
+
+    def change_skin(self, name: str) -> None:
+        """Open Osiris on a new Conversation in the Skin's folder."""
+        try:
+            connection = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+            actions = Gio.DBusActionGroup.get(connection, HARNESS, HARNESS_PATH)
+            actions.activate_action("new-conversation-in",
+                                    GLib.Variant("s", engine.skin_folder(name)))
+        except Exception as error:                      # noqa: BLE001
+            self.toasts.add_toast(Adw.Toast(title=f"Osiris did not open: {error}",
+                                            timeout=6))
 
     def _skinpacks(self) -> Gio.ListStore:
         only = Gtk.FileFilter(name="Skinpacks")
