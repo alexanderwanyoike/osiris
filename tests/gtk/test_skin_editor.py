@@ -35,7 +35,7 @@ def editor(saved: list[Choice], **overrides: object) -> SkinEditor:
 def section(dialog: SkinEditor, title: str) -> Gtk.FlowBox:
     return next(
         w
-        for w in widgets(dialog)
+        for w in widgets(dialog.get_child())
         if isinstance(w, Gtk.FlowBox) and w.get_name() == title
     )
 
@@ -60,7 +60,7 @@ def chosen(flow: Gtk.FlowBox) -> list[str]:
 def save(dialog: SkinEditor) -> None:
     next(
         w
-        for w in widgets(dialog)
+        for w in widgets(dialog.get_child())
         if isinstance(w, Gtk.Button) and w.get_label() == "Save"
     ).emit("clicked")
 
@@ -77,7 +77,7 @@ def test_the_skin_can_be_renamed() -> None:
     dialog = editor(saved)
     name = next(
         w
-        for w in widgets(dialog)
+        for w in widgets(dialog.get_child())
         if isinstance(w, Gtk.Editable) and w.get_text() == "Sharp"
     )
     name.set_text("Sharp Night")
@@ -136,7 +136,7 @@ def test_a_font_can_be_chosen_or_left_to_the_theme() -> None:
     dialog = editor(saved, font="Inter 11")
     keep = next(
         w
-        for w in widgets(dialog)
+        for w in widgets(dialog.get_child())
         if isinstance(w, Gtk.CheckButton) and w.get_label() == "Theme's font"
     )
     assert keep.get_active() is False
@@ -151,7 +151,7 @@ def test_the_skin_can_still_be_opened_in_the_code_editor() -> None:
     dialog = editor([], on_code=lambda: opened.append(True))
     next(
         w
-        for w in widgets(dialog)
+        for w in widgets(dialog.get_child())
         if isinstance(w, Gtk.Button) and w.get_label() == "Open in Code"
     ).emit("clicked")
     assert opened == [True]
