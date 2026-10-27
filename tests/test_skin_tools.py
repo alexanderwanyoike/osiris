@@ -64,7 +64,7 @@ def test_a_new_skin_starts_from_a_base_and_is_undone_by_deleting_it() -> None:
         call(skins, "create_skin", {"label": "Old Forest", "base": "colloid"}, log)
     )
     assert "old-forest" in answer and "AGENTS.md" in answer
-    assert log.changes()[-1].undo == {"action": "delete_skin", "name": "old-forest"}
+    assert log.last_changes()[-1].undo == {"action": "delete_skin", "name": "old-forest"}
 
 
 def test_a_skin_with_problems_is_not_worn_and_the_model_is_told_why() -> None:
@@ -78,7 +78,7 @@ def test_wearing_is_undone_by_wearing_the_skin_it_replaced() -> None:
     skins, log = FakeSkinStore(), new_log()
     call(skins, "wear_skin", {"name": "colloid"}, log)
     assert skins.worn() == "colloid"
-    assert log.changes()[-1].undo == {"action": "wear_skin", "name": "osiris"}
+    assert log.last_changes()[-1].undo == {"action": "wear_skin", "name": "osiris"}
 
 
 def test_checking_names_every_problem_or_none() -> None:
@@ -98,7 +98,7 @@ def test_downloads_come_in_through_osiris_and_can_be_undone() -> None:
     call(skins, "import_gtk_theme", {"path": "/tmp/Yaru-Green.tar.xz"}, log)
     call(skins, "install_icon_set", {"path": "/tmp/buuf.tar.xz"}, log)
     call(skins, "install_fonts", {"paths": ["/tmp/FiraCode.zip"]}, log)
-    assert [change.undo["action"] for change in log.changes()[-3:]] == [
+    assert [change.undo["action"] for change in log.last_changes()[-3:]] == [
         "delete_skin",
         "remove_icon_sets",
         "remove_fonts",
