@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from osiris.platform.process import CommandRunner
-from osiris.skins.pack import Skinpack, fill, gaps, sass_gaps
+from osiris.skins.pack import Skinpack, fill, gaps, refuse_programs, sass_gaps
 
 SURFACES = (
     ("gtk-3.0/gtk", "gtk-3.0/gtk.css"),
@@ -48,6 +48,7 @@ def build(
     runner: CommandRunner,
     only: Sequence[str] | None = None,
 ) -> Built:
+    refuse_programs(pack)
     filled = gaps(theme)
     variant = filled["variant"]
     # Shipped packs are read-only; the gaps are written into a copy.

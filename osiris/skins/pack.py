@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from osiris.skins.check import problems
+
 LABEL_FILE = "skin.json"
 LABEL_FIELDS = ("label", "author", "version", "licence", "source")
 
@@ -109,3 +111,10 @@ def sass_gaps(filled: Mapping[str, str]) -> str:
         for name, value in filled.items()
         if not name.endswith("_plank")
     )
+
+
+def refuse_programs(pack: Skinpack) -> None:
+    """Raise unless the Skin is data only."""
+    found = problems(pack.root)
+    if found:
+        raise SkinpackError(f"{pack.label}: " + "; ".join(found))

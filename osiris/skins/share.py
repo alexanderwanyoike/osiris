@@ -11,12 +11,19 @@ from pathlib import Path, PurePosixPath
 from osiris.model.author import as_osiris
 from osiris.model.names import slug
 from osiris.platform.process import CommandRunner
-from osiris.skins.pack import LABEL_FILE, Skinpack, SkinpackError, read
+from osiris.skins.pack import (
+    LABEL_FILE,
+    Skinpack,
+    SkinpackError,
+    read,
+    refuse_programs,
+)
 
 EXTENSION = ".skinpack"
 
 
 def export(pack: Skinpack, folder: Path) -> Path:
+    refuse_programs(pack)
     folder.mkdir(parents=True, exist_ok=True)
     shared = folder / f"{pack.name}{EXTENSION}"
     with zipfile.ZipFile(shared, "w", zipfile.ZIP_DEFLATED) as archive:
@@ -46,7 +53,7 @@ def open_file(shared: Path, mine: Path) -> Skinpack:
             raise SkinpackError(f"{shared.name}: not one folder of its own")
         archive.extractall(scratch)
         unpacked = Path(scratch) / tops.pop()
-        read(unpacked)
+        refuse_programs(read(unpacked))
         target = mine / unpacked.name
         mine.mkdir(parents=True, exist_ok=True)
         shutil.rmtree(target, ignore_errors=True)
