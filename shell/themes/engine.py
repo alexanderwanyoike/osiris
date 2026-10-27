@@ -34,6 +34,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -48,7 +49,8 @@ from osiris.provision.seeding import may_write  # noqa: E402
 from osiris.skins import (  # noqa: E402
     carried, edit, imports, library as skins, looks, pictures, share, xcursor)
 from osiris.skins.build import Built, build as build_skin_pack  # noqa: E402
-from osiris.skins.pack import Look, SkinpackError  # noqa: E402
+from osiris.skins.check import problems as check_programs  # noqa: E402
+from osiris.skins.pack import Look, SkinpackError, refuse_programs  # noqa: E402
 from osiris.themes import terminal  # noqa: E402
 from osiris.themes.at_login import theme_to_apply  # noqa: E402
 from osiris.themes.adwaita import adwaita_css  # noqa: E402
@@ -995,6 +997,43 @@ def import_gtk_theme(path: str) -> str:
                                     SubprocessRunner()).name
 
 
+def check_skin(name: str) -> list[str]:
+    """Why a Skin would not be worn: not data only, or Sass that does not
+    compile in the current Theme, with the compiler's own errors."""
+    if name == skins.OSIRIS:
+        return []
+    pack = _pack(name)
+    found = check_programs(pack.root)
+    if found:
+        return found
+    with tempfile.TemporaryDirectory() as scratch:
+        try:
+            build_skin_pack(pack, _current_theme(), Path(scratch) / "themes",
+                            Path(scratch) / "work", SubprocessRunner())
+        except CommandError as error:
+            return [error.output.strip() or str(error)]
+        except (SkinpackError, OSError) as error:
+            return [str(error)]
+    return []
+
+
+def remove_icon_sets(names: list[str]) -> None:
+    """Undo an install: only sets in the person's own icon folder."""
+    for name in names:
+        target = Path(ICONS_DIR) / name
+        if target.parent == Path(ICONS_DIR) and target.is_dir():
+            shutil.rmtree(target)
+
+
+def remove_fonts(names: list[str]) -> None:
+    for name in names:
+        target = Path(IMPORTED_FONTS) / name
+        if target.parent == Path(IMPORTED_FONTS) and target.is_file():
+            target.unlink()
+    SubprocessRunner().run("fc-cache", "-f", IMPORTED_FONTS, check=False,
+                           quiet=True)
+
+
 def delete_skin(name: str) -> None:
     """Delete one of the person's Skins, back to Osiris's look if it was worn."""
     share.delete(_pack(name), Path(SKIN_DIRS[0]))
@@ -1004,6 +1043,8 @@ def delete_skin(name: str) -> None:
 
 def set_skin(name: str) -> list[str]:
     """Choose a Skin and wear it in the current Theme."""
+    if name != skins.OSIRIS:
+        refuse_programs(_pack(name))
     skins.choose(Path(SKIN_CHOICE), name)
     return apply(current() or DEFAULT_THEME)
 
