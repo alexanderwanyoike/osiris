@@ -4,7 +4,6 @@ programs, so nothing in a Skin ever runs."""
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 from osiris.skins.check import problems
@@ -65,7 +64,7 @@ def test_a_service_or_desktop_entry_is_refused(tmp_path: Path) -> None:
 
 def test_an_executable_file_is_refused_whatever_its_name(tmp_path: Path) -> None:
     root = make_skin(tmp_path / "skin", {"files/common/gtk.css": "window {}"})
-    os.chmod(root / "files/common/gtk.css", 0o755)
+    (root / "files/common/gtk.css").chmod(0o755)
     assert problems(root) == ["files/common/gtk.css may not be executable"]
 
 
