@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import shutil
+from pathlib import Path
 
 import pytest
-from pathlib import Path
 
 from osiris.platform.process import FakeRunner
 from osiris.skins.build import Built, build
