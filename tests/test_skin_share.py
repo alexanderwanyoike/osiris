@@ -123,7 +123,7 @@ def test_a_shared_skin_holding_a_program_is_refused_and_leaves_nothing(
     with zipfile.ZipFile(shared, "w") as archive:
         archive.writestr("evil/skin.json", json.dumps({"label": "Evil", **FIELDS}))
         archive.writestr("evil/install.sh", "rm -rf ~")
-    with pytest.raises(SkinpackError, match="install.sh"):
+    with pytest.raises(SkinpackError, match=r"install\.sh"):
         open_file(shared, tmp_path / "mine")
     assert not (tmp_path / "mine" / "evil").exists()
 
@@ -131,5 +131,5 @@ def test_a_shared_skin_holding_a_program_is_refused_and_leaves_nothing(
 def test_a_skin_holding_a_program_is_not_exported(tmp_path: Path) -> None:
     root = make_pack(tmp_path / "mine" / "old-forest")
     (root / "follow.py").write_text("print()")
-    with pytest.raises(SkinpackError, match="follow.py"):
+    with pytest.raises(SkinpackError, match=r"follow\.py"):
         export(read(root), tmp_path / "out")
