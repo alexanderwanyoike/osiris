@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from gi.repository import Gtk
 from skin_editor import Choice, SkinEditor
 
@@ -185,3 +186,39 @@ def test_downloaded_icons_cursors_and_fonts_can_be_added() -> None:
             if isinstance(w, Gtk.Button) and w.get_tooltip_text() == tooltip
         ).emit("clicked")
     assert added == ["icons", "cursors", "fonts"]
+
+
+@pytest.mark.parametrize("style", [None, "gone"])
+def test_a_style_not_on_offer_is_shown_as_it_is_and_kept(style: str | None) -> None:
+    """Review of #134: the first style was pre-selected instead, and an
+    unchanged save replaced the Skin's sheets with it."""
+    saved: list[Choice] = []
+    dialog = editor(saved, style=style)
+    assert chosen(section(dialog, "Style")) == ["As it is"]
+    save(dialog)
+    assert saved[0].style is None
+
+
+def test_an_icon_set_or_cursor_not_installed_stays_chosen() -> None:
+    saved: list[Choice] = []
+    dialog = editor(saved, icons="Gone-Icons", cursor="Gone-Cursor")
+    assert chosen(section(dialog, "Icons")) == ["Gone-Icons"]
+    assert chosen(section(dialog, "Cursor")) == ["Gone-Cursor"]
+    save(dialog)
+    assert (saved[0].icons, saved[0].cursor) == ("Gone-Icons", "Gone-Cursor")
+
+
+def test_the_themes_font_is_what_the_theme_uses() -> None:
+    dialog = editor([], theme_font="Noto Sans 10")
+    picker = next(
+        w for w in widgets(dialog.get_child()) if isinstance(w, Gtk.FontDialogButton)
+    )
+    assert picker.get_font_desc().to_string() == "Noto Sans 10"
+
+
+def test_a_failed_save_keeps_the_editor_open() -> None:
+    closed: list[bool] = []
+    dialog = editor([], on_save=lambda _choice: False)
+    dialog.close = lambda: closed.append(True)
+    save(dialog)
+    assert closed == []
