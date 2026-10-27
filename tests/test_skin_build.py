@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import json
 import shutil
+
+import pytest
 from pathlib import Path
 
 from osiris.platform.process import FakeRunner
 from osiris.skins.build import Built, build
-from osiris.skins.pack import read
+from osiris.skins.pack import SkinpackError, read
 
 ROSE_PINE = {
     "name": "rose-pine",
@@ -187,3 +189,12 @@ def test_a_pack_without_sass_still_builds(tmp_path: Path) -> None:
         read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
     )
     assert built.theme == "Osiris-neon-rose-pine"
+
+
+def test_a_skin_holding_a_program_is_not_built(tmp_path: Path) -> None:
+    root = make_pack(tmp_path / "colloid")
+    (root / "follow.py").write_text("print()")
+    runner = FakeRunner()
+    with pytest.raises(SkinpackError, match="follow.py is not part of a Skin"):
+        build(read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", runner)
+    assert runner.count("sassc") == 0
