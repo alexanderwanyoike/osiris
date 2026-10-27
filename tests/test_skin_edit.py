@@ -88,3 +88,54 @@ def test_a_save_is_committed_as_osiris(tmp_path: Path) -> None:
 
 def test_a_copy_remembers_the_style_it_came_from(tmp_path: Path) -> None:
     assert read(mine(tmp_path)).style == "colloid"
+
+
+def test_a_skin_given_itself_as_its_style_keeps_everything(tmp_path: Path) -> None:
+    """Review of #134: a Skin opened from a shared copy of a shipped one could
+    resolve to itself as its style and was emptied."""
+    root = mine(tmp_path)
+    saved = save(read(root), Edit("Sharp", read(root), None, None, None), FakeRunner())
+    assert (root / "sass" / "_palette.scss").read_text() == "colloid"
+    assert saved.label == "Sharp"
+
+
+def test_a_skin_without_history_gets_one_before_saving(tmp_path: Path) -> None:
+    root = make_pack(tmp_path / "mine" / "opened", "Opened", "Someone", "opened")
+    runner = FakeRunner()
+    save(read(root), keep("Opened"), runner)
+    assert runner.ran("git", "-C", str(root), "init", "-q")
+
+
+def test_a_skin_with_history_is_not_initialised_again(tmp_path: Path) -> None:
+    root = mine(tmp_path)
+    (root / ".git").mkdir(exist_ok=True)
+    runner = FakeRunner()
+    save(read(root), keep(), runner)
+    assert not runner.ran("git", "-C", str(root), "init", "-q")
+
+
+def test_taking_a_style_copes_with_a_linked_folder_in_the_skin(tmp_path: Path) -> None:
+    root = mine(tmp_path)
+    (tmp_path / "elsewhere").mkdir()
+    (root / "linked").symlink_to(tmp_path / "elsewhere", target_is_directory=True)
+    graphite = read(
+        make_pack(tmp_path / "shipped" / "graphite", "Graphite", "V", "graphite")
+    )
+    save(read(root), Edit("Sharp", graphite, None, None, None), FakeRunner())
+    assert (root / "sass" / "_palette.scss").read_text() == "graphite"
+    assert not (root / "linked").exists()
+    assert (tmp_path / "elsewhere").is_dir()
+
+
+def test_icons_set_per_variant_survive_a_save_that_did_not_change_them(
+    tmp_path: Path,
+) -> None:
+    root = mine(tmp_path)
+    label = json.loads((root / "skin.json").read_text())
+    label["look"] = {"icons": {"light": "Papirus-Light", "dark": "Papirus-Dark"}}
+    (root / "skin.json").write_text(json.dumps(label))
+    saved = save(
+        read(root), Edit("Sharp", None, "Papirus-Dark", None, None), FakeRunner()
+    )
+    assert saved.look("light").icons == "Papirus-Light"
+    assert saved.look("dark").icons == "Papirus-Dark"
