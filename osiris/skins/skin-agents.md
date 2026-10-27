@@ -53,7 +53,9 @@ Leave colours that are part of the look whatever the Theme.
 - Never write a colour from the Theme literally: use the gaps, so the Skin
   works under every Theme, light and dark. Fixed colours are only for things
   that are part of the look whatever the Theme, and only if asked.
-- After each change, build and wear it, and fix any sassc error it reports:
+- After each change, check it with the check_skin tool and wear it with
+  wear_skin, and fix whatever check_skin reports. Without those tools, the
+  engine does the same:
 
       python3 /usr/share/osiris/themes/engine.py --skin SKIN_NAME
 
