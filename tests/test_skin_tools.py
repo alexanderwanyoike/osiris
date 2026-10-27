@@ -10,13 +10,13 @@ from typing import Any
 
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
-from osiris.skins.store import FakeSkinStore
 
 from osiris.apps.tool_server import TIERS, instructions, server, undo
 from osiris.harness.log import LOG_FILE, HarnessLog
 from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem, FakeRunner
 from osiris.programs.programs import Programs
+from osiris.skins.store import FakeSkinStore
 from osiris.themes.store import FakeThemeStore
 from osiris.themes.wallpapers import UserWallpapers
 
@@ -64,7 +64,10 @@ def test_a_new_skin_starts_from_a_base_and_is_undone_by_deleting_it() -> None:
         call(skins, "create_skin", {"label": "Old Forest", "base": "colloid"}, log)
     )
     assert "old-forest" in answer and "AGENTS.md" in answer
-    assert log.last_changes()[-1].undo == {"action": "delete_skin", "name": "old-forest"}
+    assert log.last_changes()[-1].undo == {
+        "action": "delete_skin",
+        "name": "old-forest",
+    }
 
 
 def test_a_skin_with_problems_is_not_worn_and_the_model_is_told_why() -> None:
