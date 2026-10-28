@@ -24,6 +24,8 @@ from osiris.skins.pack import (
 
 EXTENSION = ".skinpack"
 AGENTS_FILE = "AGENTS.md"
+#: The folder macOS adds to a zip it makes, beside what was zipped.
+_MACOS_EXTRAS = "__MACOSX"
 #: Unpacked, in bytes: room for the icon sets and fonts a Skin may carry, not
 #: for a small file that unpacks to fill the disk.
 LARGEST = 1024**3
@@ -55,7 +57,11 @@ def open_file(
     except zipfile.BadZipFile:
         raise SkinpackError(f"{shared.name}: not a skinpack") from None
     with archive:
-        names = archive.namelist()
+        names = [
+            name
+            for name in archive.namelist()
+            if PurePosixPath(name).parts[:1] != (_MACOS_EXTRAS,)
+        ]
         tops = {PurePosixPath(name).parts[0] for name in names if name}
         unsafe = [
             name
