@@ -12,10 +12,22 @@ from typing import Any
 
 from osiris.model.author import as_osiris
 from osiris.platform.process import CommandRunner
+from osiris.skins.imports import copy_data
 from osiris.skins.pack import LABEL_FIELDS, LABEL_FILE, Skinpack, read
 
 #: What stays the person's when a Skin takes another style.
 _KEPT = {LABEL_FILE, "AGENTS.md", ".git"}
+#: What a style is made of; see osiris.skins.build.
+_LAYOUT = (
+    "sass",
+    "gtk-3.0",
+    "gtk-4.0",
+    "cinnamon",
+    "libadwaita",
+    "files",
+    "plank",
+    "rofi",
+)
 
 
 @dataclass(frozen=True)
@@ -73,9 +85,10 @@ def _take_style(pack: Skinpack, style: Skinpack) -> None:
     """Copy the style in first, and remove the old one only once that worked."""
     with tempfile.TemporaryDirectory(dir=pack.root.parent) as scratch:
         staged = Path(scratch) / "style"
-        shutil.copytree(
-            style.root, staged, symlinks=True, ignore=shutil.ignore_patterns(*_KEPT)
-        )
+        staged.mkdir()
+        for folder in _LAYOUT:
+            if (style.root / folder).is_dir():
+                copy_data(style.root / folder, staged / folder)
         for entry in pack.root.iterdir():
             if entry.name in _KEPT:
                 continue
