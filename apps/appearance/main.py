@@ -600,15 +600,22 @@ class Window(Adw.ApplicationWindow):
         def draw() -> None:
             for name in stale:
                 try:
-                    engine.draw_skin_picture(name)
+                    picture = engine.draw_skin_picture(name)
                 except Exception as error:              # noqa: BLE001
                     print(f"appearance: picture of {name}: {error}",
                           file=sys.stderr)
                     continue
-                GLib.idle_add(self._show_drawn)
+                GLib.idle_add(self._landed, name, picture)
             GLib.idle_add(self._drawn)
 
         threading.Thread(target=draw, daemon=True).start()
+
+    def _landed(self, name: str, picture: str) -> bool:
+        page = self.skins.get_child()
+        # A picture of the Theme before a switch is not this page's.
+        if isinstance(page, SkinsPage) and engine.skin_pictures().get(name) == picture:
+            page.show_picture(name, picture)
+        return False
 
     def _show_drawn(self) -> bool:
         self.skins.set_child(SkinsPage(
