@@ -775,7 +775,8 @@ def _link_adwaita_assets(skin: Built | None) -> None:
     link = os.path.join(HOME, ".config", "gtk-4.0", "assets")
     if os.path.islink(link):
         os.remove(link)
-    pictures = os.path.join(THEMES_DIR, skin.theme, "gtk-4.0", "assets") if skin else ""
+    pictures = (os.path.join(THEMES_DIR, skin.theme, "gtk-4.0", "assets")
+                if skin and skin.adwaita else "")
     if pictures and os.path.isdir(pictures) and not os.path.exists(link):
         os.symlink(pictures, link)
 
