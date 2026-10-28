@@ -84,8 +84,23 @@ def open_file(
             if top != name:
                 (made.parent / top).rename(made)
             refuse_programs(read(made))
+            _refuse_unbuildable(made)
             start_history(made, f"Open {shared.name}", runner)
     return read(mine / name)
+
+
+def _refuse_unbuildable(root: Path) -> None:
+    """GTK 3 is the one surface every Skin styles, in both variants: from a
+    Sass entry, or from compiled sheets in files/."""
+    for variant in ("light", "dark"):
+        compiled = (
+            root / "files" / folder / "gtk-3.0" / "gtk.css"
+            for folder in ("common", variant)
+        )
+        if not (root / "gtk-3.0" / f"gtk-{variant}.scss").is_file() and not any(
+            path.is_file() for path in compiled
+        ):
+            raise SkinpackError(f"{root.name}: no GTK 3 style for {variant} Themes")
 
 
 @contextmanager
