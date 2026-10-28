@@ -787,7 +787,7 @@ def skin_choices() -> list[tuple[str, str, str]]:
     """Every Skin as (name, label, who made it), Osiris's own first."""
     packs = skins.available([Path(folder) for folder in SKIN_DIRS])
     return [(skins.OSIRIS, "Osiris", "Osiris's own look")] + [
-        (pack.name, pack.label, f"{pack.author}, {pack.licence}") for pack in packs
+        (pack.name, pack.label, skins.credit(pack)) for pack in packs
     ]
 
 
