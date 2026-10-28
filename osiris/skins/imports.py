@@ -114,6 +114,13 @@ def _is_font(path: Path, unpacked: Path) -> bool:
     return path.suffix.lower() in FONT_SUFFIXES and path.is_file() and not any(hidden)
 
 
+def _unused(font: Path, taken: Sequence[str]) -> str:
+    name, number = font.name, 2
+    while name in taken:
+        name, number = f"{font.stem}-{number}{font.suffix}", number + 1
+    return name
+
+
 def install_fonts(downloads: Sequence[Path], fonts_dir: Path) -> list[str]:
     """Install the fonts given, or inside the archives given; their file names."""
     installed: list[str] = []
@@ -130,8 +137,9 @@ def install_fonts(downloads: Sequence[Path], fonts_dir: Path) -> list[str]:
                     continue
                 fonts = [font for font in into.rglob("*") if _is_font(font, into)]
             for font in fonts:
-                shutil.copy(font, fonts_dir / font.name)
-                installed.append(font.name)
+                name = _unused(font, installed)
+                shutil.copy(font, fonts_dir / name)
+                installed.append(name)
     if not installed:
         raise UnusableDownload("no font in what was given")
     return sorted(installed)
