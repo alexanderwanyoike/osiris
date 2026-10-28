@@ -7,7 +7,15 @@ import os
 import time
 from pathlib import Path
 
-from osiris.skins.pictures import failed, is_fresh, needs_drawing, picture_for
+import pytest
+
+from osiris.skins.pictures import (
+    cursor_picture,
+    failed,
+    is_fresh,
+    needs_drawing,
+    picture_for,
+)
 
 
 def touch(path: Path, when: float) -> Path:
@@ -57,3 +65,17 @@ def test_a_picture_that_failed_is_not_drawn_again_until_its_skin_changes(
     assert not needs_drawing(picture, [pack])
     touch(pack / "sass" / "_palette.scss", time.time() + 60)
     assert needs_drawing(picture, [pack])
+
+
+def test_a_cursors_picture_is_kept_in_the_cache(tmp_path: Path) -> None:
+    assert cursor_picture(tmp_path, "Bibata", "left_ptr").parent == tmp_path
+
+
+@pytest.mark.parametrize("name", ["../../evil", "a/b", "..", ".", ""])
+def test_a_cursor_name_that_is_not_a_plain_name_is_refused(
+    tmp_path: Path, name: str
+) -> None:
+    """Review of #133: a Skin's look naming its cursor ../../x wrote the
+    picture outside the cache."""
+    with pytest.raises(ValueError):
+        cursor_picture(tmp_path, name, "left_ptr")
