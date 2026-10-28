@@ -485,8 +485,28 @@ class Window(Adw.ApplicationWindow):
 
     def edit_skin(self, name: str) -> None:
         """Rename a Skin and choose its style, icons, cursor and font."""
-        details = engine.skin_details(name)
-        cursors = engine.cursor_sets()
+        # Reading every icon and cursor set, and drawing each cursor, takes
+        # long enough to freeze the window.
+        def gather() -> None:
+            try:
+                cursors = engine.cursor_sets()
+                found = {"details": engine.skin_details(name),
+                         "styles": engine.skin_styles(name),
+                         "icon_sets": engine.icon_sets(), "cursor_sets": cursors,
+                         "cursor_pictures": engine.cursor_pictures(cursors)}
+            except Exception as error:                  # noqa: BLE001
+                GLib.idle_add(self._not_editable, str(error))
+                return
+            GLib.idle_add(self._open_editor, name, found)
+
+        threading.Thread(target=gather, daemon=True).start()
+
+    def _not_editable(self, error: str) -> bool:
+        self._toast(f"Could not open the editor: {error}")
+        return False
+
+    def _open_editor(self, name: str, found: dict) -> bool:
+        details = found["details"]
 
         def saved(choice) -> bool:
             try:
@@ -510,10 +530,10 @@ class Window(Adw.ApplicationWindow):
             return add
 
         editor = SkinEditor(
-            label=details["label"], styles=engine.skin_styles(name),
-            style=details["style"], icon_sets=engine.icon_sets(),
-            icons=details["icons"], cursor_sets=cursors,
-            cursor_pictures=engine.cursor_pictures(cursors),
+            label=details["label"], styles=found["styles"],
+            style=details["style"], icon_sets=found["icon_sets"],
+            icons=details["icons"], cursor_sets=found["cursor_sets"],
+            cursor_pictures=found["cursor_pictures"],
             cursor=details["cursor"], font=details["font"],
             theme_icons=details["theme_icons"],
             theme_font=details["theme_font"], on_save=saved,
@@ -522,6 +542,7 @@ class Window(Adw.ApplicationWindow):
             on_add_fonts=adding("fonts"),
         )
         editor.present(self)
+        return False
 
     def _add_to_look(self, kind: str, then) -> None:
         """Install downloaded icon sets, cursor sets or fonts, then reopen."""
