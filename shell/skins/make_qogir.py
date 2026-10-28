@@ -88,7 +88,8 @@ $wm_icon_unfocused_bg: mix($_wm_fg, $_header, 35%);
 $wm_icon_hover_bg: mix($_wm_fg, $_header, 80%);
 """
 
-# The names the palette defines, cut from upstream's _colors.scss so its stand.
+# The names the palette defines, cut from upstream's _colors.scss so the
+# palette's definitions stand.
 ROOTS = re.findall(r"^\$([a-z]\w*):", PALETTE, re.MULTILINE)
 SVG_NS = "http://www.w3.org/2000/svg"
 XLINK = "{http://www.w3.org/1999/xlink}href"
