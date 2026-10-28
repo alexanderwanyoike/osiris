@@ -824,8 +824,11 @@ def skin_pictures() -> dict[str, str]:
 
 def stale_skin_pictures() -> list[str]:
     """The Skins whose picture for the current Theme is missing or out of date."""
-    drawn = skin_pictures()
-    return [name for name, _label, _credit in skin_choices() if name not in drawn]
+    theme = _current_theme()
+    return [name for name, _label, _credit in skin_choices()
+            if pictures.needs_drawing(
+                pictures.picture_for(Path(SKIN_PICTURES), name, theme["name"]),
+                _picture_sources(name, theme))]
 
 
 def draw_skin_picture(name: str) -> str:
@@ -834,7 +837,11 @@ def draw_skin_picture(name: str) -> str:
     theme = _current_theme()
     cache = Path(SKIN_PICTURES)
     picture = pictures.picture_for(cache, name, theme["name"])
-    _draw(name, theme, cache, picture)
+    try:
+        _draw(name, theme, cache, picture)
+    except Exception:
+        pictures.failed(picture)
+        raise
     return str(picture)
 
 

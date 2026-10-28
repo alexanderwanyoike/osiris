@@ -21,3 +21,19 @@ def is_fresh(picture: Path, sources: Sequence[Path]) -> bool:
     if not picture.is_file():
         return False
     return picture.stat().st_mtime >= max(map(_newest, sources), default=0.0)
+
+
+def _failure(picture: Path) -> Path:
+    return picture.with_suffix(".failed")
+
+
+def failed(picture: Path) -> None:
+    """Remember that drawing it failed, so it is not tried again until
+    something it shows changes."""
+    marker = _failure(picture)
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.touch()
+
+
+def needs_drawing(picture: Path, sources: Sequence[Path]) -> bool:
+    return not is_fresh(picture, sources) and not is_fresh(_failure(picture), sources)
