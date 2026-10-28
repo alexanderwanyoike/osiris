@@ -769,9 +769,9 @@ class Window(Adw.ApplicationWindow):
         try:
             engine.set_skin(name)
         except Exception as error:                      # noqa: BLE001
-            self.toasts.add_toast(Adw.Toast(title=f"Failed: {error}",
+            # The desktop may have fallen back to Osiris's own look.
+            self.toasts.add_toast(Adw.Toast(title=f"Not worn: {error}",
                                             timeout=6))
-            return
         self.get_application().reload_user_css()
         self._show_skins()
 
