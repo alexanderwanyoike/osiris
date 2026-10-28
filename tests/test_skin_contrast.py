@@ -24,6 +24,7 @@ SHEETS = {
     "graphite": FILLED,
     "orchis": FILLED,
     "qogir": FILLED,
+    "jasper": FILLED,
 }
 
 Colour = tuple[float, ...]
