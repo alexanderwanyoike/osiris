@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import tempfile
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from pathlib import Path
 
@@ -29,16 +31,24 @@ def needs_drawing(picture: Path) -> bool:
     return not picture.is_file() and not _failure(picture).exists()
 
 
-def draw(picture: Path, drawer: Callable[[Path], None]) -> None:
-    """Have drawer write the picture beside it, then move it in whole, in
-    place of the pictures of this Skin and Theme it supersedes."""
+def land(picture: Path, drawer: Callable[[Path], None]) -> None:
+    """Have drawer write the picture beside it, then move it in whole; each
+    drawing has a file of its own, so two at once never mix."""
     picture.parent.mkdir(parents=True, exist_ok=True)
-    partial = picture.with_suffix(".partial.png")
+    handle, name = tempfile.mkstemp(suffix=".partial.png", dir=picture.parent)
+    os.close(handle)
+    partial = Path(name)
     try:
         drawer(partial)
         partial.replace(picture)
     finally:
         partial.unlink(missing_ok=True)
+
+
+def draw(picture: Path, drawer: Callable[[Path], None]) -> None:
+    """Land the picture in place of the pictures of this Skin and Theme it
+    supersedes."""
+    land(picture, drawer)
     for superseded in picture.parent.iterdir():
         if superseded != picture:
             superseded.unlink(missing_ok=True)
