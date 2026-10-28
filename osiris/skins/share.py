@@ -22,6 +22,7 @@ from osiris.skins.pack import (
 )
 
 EXTENSION = ".skinpack"
+AGENTS_FILE = "AGENTS.md"
 
 
 def export(pack: Skinpack, folder: Path) -> Path:
@@ -30,11 +31,15 @@ def export(pack: Skinpack, folder: Path) -> Path:
     shared = folder / f"{pack.name}{EXTENSION}"
     with zipfile.ZipFile(shared, "w", zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(pack.root.rglob("*")):
-            if path.is_file():
-                archive.write(
-                    path, PurePosixPath(pack.name, path.relative_to(pack.root))
-                )
+            relative = path.relative_to(pack.root)
+            if path.is_file() and not _kept_back(relative):
+                archive.write(path, PurePosixPath(pack.name, relative))
     return shared
+
+
+def _kept_back(relative: Path) -> bool:
+    """The person's history and Osiris's instructions stay with the person."""
+    return ".git" in relative.parts or relative == Path(AGENTS_FILE)
 
 
 def open_file(shared: Path, mine: Path, runner: CommandRunner) -> Skinpack:
