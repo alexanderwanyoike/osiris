@@ -30,3 +30,8 @@ def test_an_edit_meant_for_one_place_stops_the_maker_when_found_twice() -> None:
     makers = load()
     with pytest.raises(SystemExit, match=r"expected '//' once in _colors\.scss"):
         makers.replace_once("// a\n// b\n", "//", "", "_colors.scss")
+
+
+def test_a_colour_becomes_its_gap_in_either_case() -> None:
+    recolour = load().Recolour({"#5294e2": "{{accent}}"})
+    assert recolour('<path fill="#5294E2"/>') == '<path fill="{{accent}}"/>'
