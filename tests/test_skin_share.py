@@ -161,6 +161,16 @@ def test_a_file_holding_a_lone_file_rather_than_a_folder_is_refused(
         open_file(loose, tmp_path / "mine", FakeRunner())
 
 
+def test_what_macos_adds_to_a_zipped_skin_is_ignored(tmp_path: Path) -> None:
+    shared = zipped(
+        make_pack(tmp_path / "made" / "colloid"), tmp_path / f"colloid{EXTENSION}"
+    )
+    with zipfile.ZipFile(shared, "a") as archive:
+        archive.writestr("__MACOSX/colloid/._skin.json", "resource fork")
+    opened = open_file(shared, tmp_path / "mine", FakeRunner())
+    assert [path.name for path in (tmp_path / "mine").iterdir()] == [opened.name]
+
+
 def test_a_persons_skin_can_be_deleted(tmp_path: Path) -> None:
     pack = read(make_pack(tmp_path / "mine" / "colloid"))
     delete(pack, tmp_path / "mine")
