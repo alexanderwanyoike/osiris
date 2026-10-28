@@ -866,22 +866,28 @@ def draw_skin_picture(name: str) -> str:
 
 
 def _draw(name: str, theme: dict, cache: Path, picture: Path) -> None:
-    themes = cache / "themes"
-    if name == skins.OSIRIS:
-        built = f"Osiris-osiris-{theme['name']}"
-        base = f"/usr/share/themes/{_ui(theme)['gtk']}/gtk-3.0/gtk.css"
-        _write(str(themes / built / "gtk-3.0" / "gtk.css"), palette_css(theme, base))
-    else:
-        built = build_skin_pack(_pack(name), theme, themes, cache / "work",
-                                SubprocessRunner(), only=("gtk-3.0",)).theme
-    look = _look_of(name, theme)
-    extra = ["--icons", look.icons, "--font", look.font]
-    pointer = _pointer(look.cursor or "", cache)
-    if pointer:
-        extra += ["--cursor", pointer]
-    subprocess.run([sys.executable, _sampler(), built, str(picture), *extra],
-                   env=pictures.sampler_env(os.environ, cache),
-                   check=True, capture_output=True, timeout=60)
+    # The theme built for a picture is thrown away after, or every Skin in
+    # every Theme would stay built in the cache.
+    cache.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=cache) as scratch:
+        themes = Path(scratch) / "themes"
+        if name == skins.OSIRIS:
+            built = f"Osiris-osiris-{theme['name']}"
+            base = f"/usr/share/themes/{_ui(theme)['gtk']}/gtk-3.0/gtk.css"
+            _write(str(themes / built / "gtk-3.0" / "gtk.css"),
+                   palette_css(theme, base))
+        else:
+            built = build_skin_pack(_pack(name), theme, themes,
+                                    Path(scratch) / "work", SubprocessRunner(),
+                                    only=("gtk-3.0",)).theme
+        look = _look_of(name, theme)
+        extra = ["--icons", look.icons, "--font", look.font]
+        pointer = _pointer(look.cursor or "", cache)
+        if pointer:
+            extra += ["--cursor", pointer]
+        subprocess.run([sys.executable, _sampler(), built, str(picture), *extra],
+                       env=pictures.sampler_env(os.environ, Path(scratch)),
+                       check=True, capture_output=True, timeout=60)
 
 
 def _look_of(name: str, theme: dict) -> Look:
