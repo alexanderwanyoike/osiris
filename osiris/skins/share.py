@@ -174,7 +174,7 @@ def duplicate(
     with _making(mine, name) as copy:
         shutil.copytree(pack.root, copy, ignore=shutil.ignore_patterns(".git"))
         label_of = json.loads((copy / LABEL_FILE).read_text())
-        label_of["label"] = label or f"{pack.label} (copy)"
+        label_of["label"] = label or f"{pack.label.removesuffix(' (copy)')} (copy)"
         label_of["style"] = pack.style or pack.name
         (copy / LABEL_FILE).write_text(json.dumps(label_of, indent=2) + "\n")
         start_history(copy, f"Copy {pack.label}", runner)
