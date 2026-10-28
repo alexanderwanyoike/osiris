@@ -810,7 +810,11 @@ def _picture_sources(name: str, theme: dict) -> list[Path]:
 
 
 def _current_theme() -> dict:
-    return load(current() or DEFAULT_THEME)
+    """The current Theme, or the default if its file is gone or unreadable."""
+    try:
+        return load(current() or DEFAULT_THEME)
+    except (KeyError, OSError, ValueError):
+        return load(DEFAULT_THEME)
 
 
 def skin_pictures() -> dict[str, str]:
