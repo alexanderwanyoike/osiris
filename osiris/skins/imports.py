@@ -4,6 +4,7 @@ fonts and GTK themes, from the archives they usually come in."""
 from __future__ import annotations
 
 import json
+import posixpath
 import shutil
 import tarfile
 import tempfile
@@ -13,6 +14,7 @@ from pathlib import Path, PurePosixPath
 
 from osiris.model.names import slug
 from osiris.platform.process import CommandRunner
+from osiris.skins.check import is_data
 from osiris.skins.looks import FALLBACKS, is_cursor_set, is_icon_set
 from osiris.skins.pack import LABEL_FILE, Skinpack, read
 from osiris.skins.share import free_name, start_history
@@ -38,6 +40,25 @@ def unpack(download: Path, into: Path) -> None:
             archive.extractall(into, filter="data")
     except (tarfile.TarError, OSError) as error:
         raise UnusableDownload(f"{download.name}: {error}") from None
+
+
+def copy_data(source: Path, target: Path) -> None:
+    """Copy what is a Skin's data under source, without exec bits, and the
+    links that stay inside it, as links."""
+    for path in sorted(source.rglob("*")):
+        relative = path.relative_to(source)
+        if any(part.startswith(".") for part in relative.parts):
+            continue
+        copied = target / relative
+        if path.is_symlink():
+            points_to = path.readlink()
+            reach = posixpath.normpath((relative.parent / points_to).as_posix())
+            if not points_to.is_absolute() and not reach.startswith(".."):
+                copied.parent.mkdir(parents=True, exist_ok=True)
+                copied.symlink_to(points_to)
+        elif path.is_file() and is_data(path, relative):
+            copied.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, copied)
 
 
 FONT_SUFFIXES = {".ttf", ".otf", ".ttc"}
@@ -76,7 +97,7 @@ def install_sets(
             new, replaced = Path(staging) / "new", Path(staging) / "replaced"
             replaced.mkdir()
             for folder in found:
-                shutil.copytree(folder, new / folder.name, symlinks=True)
+                copy_data(folder, new / folder.name)
             for folder in found:
                 target = icons_dir / folder.name
                 if target.exists() or target.is_symlink():
