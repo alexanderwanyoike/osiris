@@ -12,6 +12,8 @@ import zlib
 from dataclasses import dataclass
 
 _IMAGE = 0xFFFD0002
+#: Real themes stop at 256; anything past this is not a cursor worth reading.
+_MAX_SIZE = 1024
 
 
 class XcursorError(ValueError):
@@ -46,6 +48,8 @@ def _read(data: bytes, size: int) -> Cursor:
         raise XcursorError("no image in the cursor")
     _nominal, position = min(images, key=lambda image: abs(image[0] - size))
     width, height, xhot, yhot = struct.unpack_from("<4I", data, position + 16)
+    if width > _MAX_SIZE or height > _MAX_SIZE:
+        raise XcursorError(f"a {width}x{height} image is too large for a cursor")
     pixels = struct.unpack_from(f"<{width * height}I", data, position + 36)
     return Cursor(width, height, xhot, yhot, bytes(_straight(pixels)))
 
