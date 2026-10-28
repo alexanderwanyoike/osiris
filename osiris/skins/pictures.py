@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 
@@ -45,3 +45,14 @@ def cursor_picture(cache: Path, cursor: str, shape: str) -> Path:
     if not cursor or "/" in cursor or cursor in (".", ".."):
         raise ValueError(f"{cursor!r} is not the name of a cursor theme")
     return cache / f"cursor-{cursor}-{shape}.png"
+
+
+#: What the XDG base directory spec says to assume when it is unset.
+_DATA_DIRS = "/usr/local/share:/usr/share"
+
+
+def sampler_env(environ: Mapping[str, str], themes_root: Path) -> dict[str, str]:
+    """The sampler's environment: GTK finds a theme by name under any data
+    folder's themes/, and the person's own folder keeps its icons and fonts."""
+    dirs = environ.get("XDG_DATA_DIRS") or _DATA_DIRS
+    return {**environ, "XDG_DATA_DIRS": f"{themes_root}:{dirs}"}

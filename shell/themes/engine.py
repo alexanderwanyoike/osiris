@@ -865,9 +865,8 @@ def _draw(name: str, theme: dict, cache: Path, picture: Path) -> None:
     pointer = _pointer(look.cursor or "", cache)
     if pointer:
         extra += ["--cursor", pointer]
-    # GTK finds the theme by name under $XDG_DATA_HOME/themes.
     subprocess.run([sys.executable, _sampler(), built, str(picture), *extra],
-                   env={**os.environ, "XDG_DATA_HOME": str(cache)},
+                   env=pictures.sampler_env(os.environ, cache),
                    check=True, capture_output=True, timeout=60)
 
 
