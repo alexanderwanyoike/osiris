@@ -54,4 +54,6 @@ class Recolour:
         """Stop unless every colour matched in some text since this was made."""
         for colour in self.gaps:
             if colour not in self.matched:
-                raise SystemExit(f"upstream changed: {colour!r} matched nothing in {where}")
+                raise SystemExit(
+                    f"upstream changed: {colour!r} matched nothing in {where}"
+                )
