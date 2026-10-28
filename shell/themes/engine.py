@@ -885,9 +885,11 @@ def _draw(name: str, theme: dict, cache: Path, picture: Path) -> None:
         pointer = _pointer(look.cursor or "", cache)
         if pointer:
             extra += ["--cursor", pointer]
-        subprocess.run([sys.executable, _sampler(), built, str(picture), *extra],
-                       env=pictures.sampler_env(os.environ, Path(scratch)),
-                       check=True, capture_output=True, timeout=60)
+        argv = [sys.executable, _sampler(), built, str(picture), *extra]
+        done = subprocess.run(argv, env=pictures.sampler_env(os.environ, Path(scratch)),
+                              capture_output=True, text=True, timeout=60)
+        if done.returncode != 0:
+            raise CommandError(argv, done.returncode, done.stderr)
 
 
 def _look_of(name: str, theme: dict) -> Look:
