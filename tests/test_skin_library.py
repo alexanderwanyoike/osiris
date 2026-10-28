@@ -12,11 +12,12 @@ from osiris.skins.library import (
     available,
     choose,
     chosen,
+    credit,
     find,
     styles,
     wear_choice,
 )
-from osiris.skins.pack import SkinpackError
+from osiris.skins.pack import SkinpackError, read
 
 
 def make_pack(root: Path, label: str) -> None:
@@ -98,3 +99,19 @@ def test_a_skin_that_could_not_be_worn_is_reported_and_not_chosen(
             tmp_path / "skin", "colloid", lambda: SkinpackError("Colloid: bad sheet")
         )
     assert chosen(tmp_path / "skin") == OSIRIS
+
+
+def test_a_skin_is_credited_to_who_made_it_and_its_licence(tmp_path: Path) -> None:
+    make_pack(tmp_path / "colloid", "Colloid")
+    assert credit(read(tmp_path / "colloid")) == "a, GPL-3.0"
+
+
+def test_an_imported_skin_is_credited_to_its_download(tmp_path: Path) -> None:
+    """Review: an imported Skin's card read "Imported, See the original
+    download"."""
+    root = tmp_path / "orchis"
+    root.mkdir()
+    fields = {"author": "Imported", "version": "imported", "source": "Orchis.tar.xz"}
+    label = {"label": "Orchis", "licence": "See the original download", **fields}
+    (root / "skin.json").write_text(json.dumps(label))
+    assert credit(read(root)) == "Imported from Orchis.tar.xz"
