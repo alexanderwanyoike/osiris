@@ -108,11 +108,20 @@ def free_name(mine: Path, base: str, shipped: Sequence[Path] = ()) -> str:
 def start_history(skin: Path, message: str, runner: CommandRunner) -> None:
     """Give a person's new Skin its instructions for Osiris and a first commit."""
     (skin / AGENTS_FILE).write_text(AGENTS.read_text().replace("SKIN_NAME", skin.name))
-    for step in (("init", "-q"), ("add", "-A")):
-        runner.run("git", "-C", str(skin), *step, quiet=True)
+    commit(skin, message, runner)
+
+
+def commit(skin: Path, message: str, runner: CommandRunner, check: bool = True) -> None:
+    """Commit everything in a person's Skin as Osiris, starting its history if
+    it has none."""
+    where = str(skin)
+    if not (skin / ".git").exists():
+        runner.run("git", "-C", where, "init", "-q", quiet=True)
+    runner.run("git", "-C", where, "add", "-A", quiet=True)
     runner.run(
-        "git", "-C", str(skin), *as_osiris(), "commit", "-q", "-m", message, quiet=True
-    )
+        "git", "-C", where, *as_osiris(), "commit", "-q", "-m", message,
+        check=check, quiet=True,
+    )  # fmt: skip
 
 
 def duplicate(

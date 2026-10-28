@@ -10,11 +10,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from osiris.model.author import as_osiris
 from osiris.platform.process import CommandRunner
 from osiris.skins.check import DATA_NAMES
 from osiris.skins.imports import copy_data
 from osiris.skins.pack import LABEL_FIELDS, LABEL_FILE, Skinpack, read
+from osiris.skins.share import commit
 
 #: What stays the person's when a Skin takes another style.
 _KEPT = {LABEL_FILE, "AGENTS.md", ".git"}
@@ -72,14 +72,8 @@ def _look(before: Mapping[str, Any], edit: Edit) -> dict[str, Any]:
 
 
 def _commit(root: Path, message: str, runner: CommandRunner) -> None:
-    where = str(root)
-    if not (root / ".git").exists():
-        runner.run("git", "-C", where, "init", "-q", quiet=True)
-    runner.run("git", "-C", where, "add", "-A", quiet=True)
-    runner.run(
-        "git", "-C", where, *as_osiris(), "commit", "-q", "-m", message,
-        check=False, quiet=True,
-    )  # fmt: skip
+    # An unchanged save leaves nothing to commit, which git reports as failure.
+    commit(root, message, runner, check=False)
 
 
 def _is_credit(entry: Path) -> bool:
