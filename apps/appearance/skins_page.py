@@ -63,6 +63,7 @@ class SkinsPage(Gtk.ScrolledWindow):
                  on_import: Callable[[], None] = _nothing):
         super().__init__(hscrollbar_policy=Gtk.PolicyType.NEVER)
         previews = previews or {}
+        self._pictures: dict[str, Gtk.Widget] = {}
         flow = Gtk.FlowBox(homogeneous=True, min_children_per_line=3,
                            max_children_per_line=3, column_spacing=12,
                            row_spacing=12,
@@ -85,8 +86,9 @@ class SkinsPage(Gtk.ScrolledWindow):
                                        lambda skin=name: on_duplicate(skin)))
                 buttons.append(_button("document-save-symbolic", "Export",
                                        lambda skin=name: on_export(skin)))
+            self._pictures[name] = _picture(previews.get(name))
             flow.append(self._card(name == chosen, label, credit,
-                                   previews.get(name), buttons))
+                                   self._pictures[name], buttons))
         heading = Gtk.Box(spacing=6)
         words = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True,
                         spacing=4)
@@ -113,14 +115,24 @@ class SkinsPage(Gtk.ScrolledWindow):
         self.set_child(Adw.Clamp(child=page, maximum_size=1280,
                                  tightening_threshold=1000))
 
+    def show_picture(self, name: str, preview: str) -> None:
+        """Put a picture drawn since on its card, leaving the rest as it is."""
+        old = self._pictures.get(name)
+        card = old.get_parent() if old is not None else None
+        if card is None:
+            return
+        self._pictures[name] = _picture(preview)
+        card.insert_child_after(self._pictures[name], old)
+        card.remove(old)
+
     @staticmethod
-    def _card(chosen: bool, label: str, credit: str, preview: str | None,
+    def _card(chosen: bool, label: str, credit: str, picture: Gtk.Widget,
               buttons: Gtk.Box) -> Gtk.Box:
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         card.add_css_class("skin-card")
         if chosen:
             card.add_css_class("selected")
-        card.append(_picture(preview))
+        card.append(picture)
         line = Gtk.Box(spacing=6)
         words = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         title = Gtk.Label(label=label, xalign=0)
