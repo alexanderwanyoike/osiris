@@ -58,3 +58,14 @@ def find(folders: Sequence[Path], name: str) -> Skinpack | None:
 def styles(folders: Sequence[Path], editing: str) -> list[Skinpack]:
     """The Skins a Skin can take its style from: every one but itself."""
     return [pack for pack in available(folders) if pack.name != editing]
+
+
+#: The author osiris.skins.imports writes for a Skin made from a download.
+IMPORTED = "Imported"
+
+
+def credit(pack: Skinpack) -> str:
+    """Who made a Skin, as its card says it."""
+    if pack.author == IMPORTED:
+        return f"Imported from {pack.source}"
+    return f"{pack.author}, {pack.licence}"
