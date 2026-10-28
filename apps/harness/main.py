@@ -672,6 +672,8 @@ class Application(Adw.Application):
     def start_in(self, folder: Path, draft: str | None = None) -> None:
         """An Entry point: the drawer, on a new Conversation in folder's Project,
         with a request written in the input but not sent."""
+        if not (folder.is_absolute() and folder.is_dir()):
+            return
         if not self.open:
             self.summon()
         self.waiting = (folder, draft)
