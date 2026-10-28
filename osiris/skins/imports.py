@@ -166,27 +166,33 @@ def import_gtk_theme(download: Path, mine: Path, runner: CommandRunner) -> Skinp
         variants = _variants(themes)
         label = next(iter(variants.values())).name
         skin = mine / free_name(mine, slug(label))
-        for variant, theme in variants.items():
-            for surface in SURFACE_FOLDERS:
-                if (theme / surface).is_dir():
-                    copy_data(theme / surface, skin / "files" / variant / surface)
-            dock = theme / "plank" / "dock.theme"
-            if dock.is_file():
-                for target in ("light", "dark") if variant == "common" else (variant,):
-                    (skin / "plank").mkdir(parents=True, exist_ok=True)
-                    shutil.copyfile(dock, skin / "plank" / f"dock-{target}.theme")
-    (skin / LABEL_FILE).write_text(
-        json.dumps(
-            {
-                "label": label,
-                "author": "Imported",
-                "version": "imported",
-                "licence": "See the original download",
-                "source": download.name,
-            },
-            indent=2,
-        )
-        + "\n"
-    )
-    start_history(skin, f"Import {download.name}", runner)
-    return read(skin)
+        try:
+            for variant, theme in variants.items():
+                for surface in SURFACE_FOLDERS:
+                    if (theme / surface).is_dir():
+                        copy_data(theme / surface, skin / "files" / variant / surface)
+                dock = theme / "plank" / "dock.theme"
+                if dock.is_file():
+                    for target in (
+                        ("light", "dark") if variant == "common" else (variant,)
+                    ):
+                        (skin / "plank").mkdir(parents=True, exist_ok=True)
+                        shutil.copyfile(dock, skin / "plank" / f"dock-{target}.theme")
+            (skin / LABEL_FILE).write_text(
+                json.dumps(
+                    {
+                        "label": label,
+                        "author": "Imported",
+                        "version": "imported",
+                        "licence": "See the original download",
+                        "source": download.name,
+                    },
+                    indent=2,
+                )
+                + "\n"
+            )
+            start_history(skin, f"Import {download.name}", runner)
+            return read(skin)
+        except BaseException:
+            shutil.rmtree(skin, ignore_errors=True)
+            raise
