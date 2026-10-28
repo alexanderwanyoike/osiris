@@ -29,7 +29,7 @@ If `skin.json` says the author is "Imported", this Skin came from a GTK theme
 the person downloaded: compiled CSS in `files/` with its colours written in.
 Converting it means finding the colours its window backgrounds, header bars
 and sidebars, text, selection and accent, and success, warning and error
-states use, in `gtk-3.0/gtk.css`, `gtk-4.0/gtk.css` and
+states use, in `gtk-3.0/gtk.css`, `libadwaita.css` and
 `cinnamon/cinnamon.css` of each variant, and replacing them with the matching
 gaps. Keep a colour's transparency with GTK's own function, for example
 `alpha({{accent}}, 0.5)`; Cinnamon's stylesheet takes plain colours only.
