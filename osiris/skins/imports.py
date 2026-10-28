@@ -152,9 +152,14 @@ def _variants(themes: Mapping[str, Path]) -> dict[str, Path]:
 
 
 def _lay_out(theme: Path, variant: str, skin: Path) -> None:
+    files = skin / "files" / variant
     for surface in SURFACE_FOLDERS:
         if (theme / surface).is_dir():
-            copy_data(theme / surface, skin / "files" / variant / surface)
+            copy_data(theme / surface, files / surface)
+    # A theme's GTK 4 sheet is written for libadwaita, as its own installers
+    # put it in ~/.config/gtk-4.0; its pictures stay where it names them.
+    if (files / "gtk-4.0" / "gtk.css").is_file():
+        (files / "gtk-4.0" / "gtk.css").rename(files / "libadwaita.css")
     dock = theme / "plank" / "dock.theme"
     if dock.is_file():
         for target in ("light", "dark") if variant == "common" else (variant,):
