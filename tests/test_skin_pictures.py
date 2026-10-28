@@ -16,6 +16,7 @@ from osiris.skins.pictures import (
     needs_drawing,
     picture_for,
     sampler_env,
+    signature,
 )
 
 
@@ -97,3 +98,17 @@ def test_the_systems_data_folders_are_kept_after_the_built_theme(
 ) -> None:
     env = sampler_env({"XDG_DATA_DIRS": "/opt/share:/usr/share"}, tmp_path)
     assert env["XDG_DATA_DIRS"] == f"{tmp_path}:/opt/share:/usr/share"
+
+
+def test_what_a_picture_shows_is_signed_by_content_not_by_time(tmp_path: Path) -> None:
+    """Review of #133: by modification time, a Skin merely touched, or one
+    whose history moved on, had its picture drawn again."""
+    pack = tmp_path / "pack"
+    touch(pack / "sass" / "_palette.scss", 100)
+    theme = touch(tmp_path / "nord.json", 100)
+    before = signature([pack, theme])
+    touch(pack / "sass" / "_palette.scss", 300)
+    touch(pack / ".git" / "HEAD", 300)
+    assert signature([pack, theme]) == before
+    (pack / "sass" / "_palette.scss").write_text("changed")
+    assert signature([pack, theme]) != before
