@@ -12,6 +12,7 @@ Run directly, or install the .desktop file alongside it.
 import os
 import sys
 import threading
+import time
 from pathlib import Path
 
 import gi
@@ -559,6 +560,10 @@ class Window(Adw.ApplicationWindow):
             try:
                 if paths and kind == "fonts":
                     names = engine.import_fonts(paths)
+                    # GTK rereads fontconfig when this changes, so the font
+                    # chooser lists the new fonts without a restart.
+                    Gtk.Settings.get_default().set_property(
+                        "gtk-fontconfig-timestamp", int(time.time()))
                 elif paths:
                     names = engine.import_icon_sets(paths[0])
                 else:
