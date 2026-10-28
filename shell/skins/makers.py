@@ -24,8 +24,17 @@ class Recolour:
 
     def __init__(self, gaps: dict[str, str]) -> None:
         self.gaps = gaps
+        self.matched: set[str] = set()
 
     def __call__(self, text: str) -> str:
         for colour, gap in self.gaps.items():
-            text = re.sub(re.escape(colour), gap, text, flags=re.IGNORECASE)
+            text, count = re.subn(re.escape(colour), gap, text, flags=re.IGNORECASE)
+            if count:
+                self.matched.add(colour)
         return text
+
+    def check(self, where: str) -> None:
+        """Stop unless every colour matched in some text since this was made."""
+        for colour in self.gaps:
+            if colour not in self.matched:
+                raise SystemExit(f"upstream changed: {colour!r} matched nothing in {where}")
