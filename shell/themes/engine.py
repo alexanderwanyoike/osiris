@@ -1087,7 +1087,9 @@ def _apply(name: str) -> SkinpackError | None:
     # Folders tinted to the accent, over the theme's declared icon set. Falls
     # back to that set when Papirus is absent rather than naming a theme that
     # does not exist.
-    icon_theme = look.icons or icons.build(theme, ui["icons"]) or ui["icons"]
+    icon_theme = (looks.installed_icon_set(look.icons,
+                                           [Path(d) for d in CURSOR_DIRS])
+                  or icons.build(theme, ui["icons"]) or ui["icons"])
     wallpaper = wallpaper_for(theme)
     # Plank reads its theme when the setting changes, so the name carries the
     # palette - the same reason the GTK theme does.
