@@ -84,3 +84,13 @@ def test_a_record_still_being_written_is_not_followed(tmp_path: Path) -> None:
         Gio.FileMonitorEvent.CHANGED,
     )
     assert scheme() == Adw.ColorScheme.FORCE_LIGHT
+
+
+def test_an_empty_record_keeps_the_scheme_it_has(tmp_path: Path) -> None:
+    """Review of #135: an empty record read as no Theme and flashed dark."""
+    record = tmp_path / "theme"
+    record.write_text("rose-pine-dawn\n")
+    following = ThemeScheme(record, THEMES.__getitem__)
+    record.write_text("")
+    following.follow()
+    assert scheme() == Adw.ColorScheme.FORCE_LIGHT
