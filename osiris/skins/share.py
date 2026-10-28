@@ -102,7 +102,7 @@ def free_name(mine: Path, base: str) -> str:
 
 def start_history(skin: Path, message: str, runner: CommandRunner) -> None:
     """Give a person's new Skin its instructions for Osiris and a first commit."""
-    (skin / "AGENTS.md").write_text(AGENTS.read_text().replace("SKIN_NAME", skin.name))
+    (skin / AGENTS_FILE).write_text(AGENTS.read_text().replace("SKIN_NAME", skin.name))
     for step in (("init", "-q"), ("add", "-A")):
         runner.run("git", "-C", str(skin), *step, quiet=True)
     runner.run(
