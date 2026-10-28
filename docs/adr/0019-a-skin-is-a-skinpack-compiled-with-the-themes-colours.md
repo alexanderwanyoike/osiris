@@ -60,3 +60,9 @@ The Osiris Skin stays what it is today: adw-gtk3 recoloured by named colours
   own. It may name icons, a cursor and a font, each otherwise the Theme's
   choice. The Theme still owns the terminal, the wallpaper, and the icons'
   tint when the Skin names no icons.
+- A GTK theme the person downloads is imported as a Skin in its own fixed
+  colours, which is the role-by-role recolouring rejected above, now asked of
+  the Harness's model one theme at a time rather than done by Osiris for
+  every theme. It is a starting point the person chose, not a shipped Skin:
+  the result is still data only, checked and built like any other, and kept
+  under git so a bad conversion is one revert away.
