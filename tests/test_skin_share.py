@@ -187,6 +187,16 @@ def test_a_duplicate_keeps_its_history_so_changes_can_be_undone(tmp_path: Path) 
     )
 
 
+def test_a_duplicate_that_fails_leaves_nothing_behind(tmp_path: Path) -> None:
+    """A half-made copy would show as a Skin of the person's with no history."""
+    pack = read(make_pack(tmp_path / "shipped" / "colloid"))
+    mine = tmp_path / "mine"
+    mine.mkdir()
+    with pytest.raises(OSError):
+        duplicate(pack, mine, FakeRunner(results={"git": OSError("no git")}))
+    assert list(mine.iterdir()) == []
+
+
 def test_a_new_skin_takes_its_name_from_what_the_person_calls_it(
     tmp_path: Path,
 ) -> None:
