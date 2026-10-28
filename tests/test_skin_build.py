@@ -198,3 +198,17 @@ def test_a_skin_holding_a_program_is_not_built(tmp_path: Path) -> None:
     with pytest.raises(SkinpackError, match=r"follow\.py is not part of a Skin"):
         build(read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", runner)
     assert runner.count("sassc") == 0
+
+
+@pytest.mark.parametrize("picture", ["check.svg", "gtk.css"])
+def test_a_picture_that_is_not_utf8_is_a_skinpack_error(
+    tmp_path: Path, picture: str
+) -> None:
+    """Any other error escapes the fallback to Osiris's own look, and every
+    Theme switch fails."""
+    root = make_pack(tmp_path / "colloid")
+    (root / "files" / "common" / "gtk-3.0" / picture).write_bytes(b"\xff\xfe<svg/>")
+    with pytest.raises(SkinpackError, match=picture):
+        build(
+            read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
+        )
