@@ -147,6 +147,19 @@ def test_a_full_pack_brings_its_own_panel(tmp_path: Path) -> None:
     assert build_rose_pine(tmp_path, FakeRunner()).cinnamon is True
 
 
+def test_a_panel_sheet_among_a_skins_files_is_its_panel(tmp_path: Path) -> None:
+    """Review of #136: an imported theme's Cinnamon sheet was overwritten by
+    Osiris's own, because only a Sass entry counted as the Skin's panel."""
+    root = make_gtk_only_pack(tmp_path / "neon")
+    sheet = root / "files" / "common" / "cinnamon" / "cinnamon.css"
+    sheet.parent.mkdir(parents=True)
+    sheet.write_text("#panel {}")
+    built = build(
+        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
+    )
+    assert built.cinnamon is True
+
+
 def test_a_picture_needs_only_the_gtk3_sheet(tmp_path: Path) -> None:
     """Pictures are drawn for every Skin in the Theme, so they build no more
     than they show."""
