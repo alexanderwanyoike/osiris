@@ -45,6 +45,7 @@ def _heading(title: str, add: tuple[str, Callable[[], None]] | None) -> Gtk.Box:
     if add is not None:
         tooltip, clicked = add
         button = Gtk.Button(icon_name="list-add-symbolic", tooltip_text=tooltip)
+        button.update_property([Gtk.AccessibleProperty.LABEL], [tooltip])
         button.add_css_class("flat")
         button.connect("clicked", lambda _b: clicked())
         line.append(button)
