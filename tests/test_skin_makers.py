@@ -24,3 +24,9 @@ def test_a_replacement_that_matches_nothing_stops_the_maker() -> None:
     makers = load()
     with pytest.raises(SystemExit, match=r"upstream changed: '156' not in on\(\)"):
         makers.replace("@if ($b >= 128)", "156", "$mid", "on()")
+
+
+def test_an_edit_meant_for_one_place_stops_the_maker_when_found_twice() -> None:
+    makers = load()
+    with pytest.raises(SystemExit, match=r"expected '//' once in _colors\.scss"):
+        makers.replace_once("// a\n// b\n", "//", "", "_colors.scss")
