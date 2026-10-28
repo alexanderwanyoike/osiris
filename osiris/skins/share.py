@@ -54,9 +54,8 @@ def open_file(shared: Path, mine: Path) -> Skinpack:
         archive.extractall(scratch)
         unpacked = Path(scratch) / tops.pop()
         refuse_programs(read(unpacked))
-        target = mine / unpacked.name
+        target = mine / free_name(mine, unpacked.name)
         mine.mkdir(parents=True, exist_ok=True)
-        shutil.rmtree(target, ignore_errors=True)
         shutil.move(unpacked, target)
     return read(target)
 
