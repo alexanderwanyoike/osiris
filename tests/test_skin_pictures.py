@@ -10,6 +10,7 @@ import pytest
 
 from osiris.skins.pictures import (
     cursor_picture,
+    draw,
     failed,
     needs_drawing,
     picture_for,
@@ -66,6 +67,34 @@ def test_a_picture_that_failed_is_not_drawn_again_until_what_it_shows_changes(
     assert not needs_drawing(picture)
     (tmp_path / "pack" / "sass" / "_palette.scss").write_text("changed")
     assert needs_drawing(picture_for(tmp_path / "cache", "colloid", "nord", shows))
+
+
+def test_a_picture_appears_only_once_it_is_whole(tmp_path: Path) -> None:
+    """Review of #133: the sampler wrote straight to the picture, so the
+    page could show one half written."""
+    picture = picture_for(tmp_path / "cache", "colloid", "nord", skin(tmp_path))
+    seen: list[bool] = []
+
+    def drawer(out: Path) -> None:
+        out.write_bytes(b"half")
+        seen.append(picture.exists())
+        out.write_bytes(b"whole")
+
+    draw(picture, drawer)
+    assert seen == [False]
+    assert picture.read_bytes() == b"whole"
+
+
+def test_a_picture_that_fails_leaves_nothing_half_drawn(tmp_path: Path) -> None:
+    picture = picture_for(tmp_path / "cache", "colloid", "nord", skin(tmp_path))
+
+    def drawer(out: Path) -> None:
+        out.write_bytes(b"half")
+        raise RuntimeError("the sampler crashed")
+
+    with pytest.raises(RuntimeError):
+        draw(picture, drawer)
+    assert not list(picture.parent.glob("*.png"))
 
 
 def test_a_cursors_picture_is_kept_in_the_cache(tmp_path: Path) -> None:
