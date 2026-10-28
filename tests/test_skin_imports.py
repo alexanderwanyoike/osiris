@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from osiris.platform.process import FakeRunner
+from osiris.skins.check import problems
 from osiris.skins.imports import (
     UnusableDownload,
     import_gtk_theme,
@@ -262,6 +263,25 @@ def test_a_gtk_theme_with_light_and_dark_becomes_a_skin_of_both(tmp_path: Path) 
     ).read_text() == "window { background: #111111; }"
     assert not (files / "light" / "xfwm4").exists()
     assert (skin.root / "plank" / "dock-dark.theme").is_file()
+
+
+def test_only_a_gtk_themes_data_becomes_the_skin(tmp_path: Path) -> None:
+    """Review of #136: an import copied programs, exec bits and dotfiles into
+    the person's Skin, which check_skin then refused to wear."""
+    download = tmp_path / "plain.tar.gz"
+    with tarfile.open(download, "w:gz") as archive:
+        for name, mode in [
+            ("Plain/gtk-3.0/gtk.css", 0o755),
+            ("Plain/gtk-3.0/render.sh", 0o755),
+            ("Plain/gtk-3.0/.git/config", 0o644),
+            ("Plain/plank/dock.theme", 0o755),
+        ]:
+            info = tarfile.TarInfo(name)
+            info.size, info.mode = 1, mode
+            archive.addfile(info, io.BytesIO(b"x"))
+    skin = import_gtk_theme(download, tmp_path / "mine", FakeRunner())
+    assert problems(skin.root) == []
+    assert (skin.root / "files" / "common" / "gtk-3.0" / "gtk.css").is_file()
 
 
 def test_a_theme_with_one_variant_serves_both(tmp_path: Path) -> None:
