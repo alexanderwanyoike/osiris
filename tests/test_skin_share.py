@@ -94,6 +94,17 @@ def test_an_opened_skin_keeps_its_history_so_changes_can_be_undone(
     assert any("commit" in step for step in done)
 
 
+def test_a_shared_skins_own_git_folder_is_left_out(tmp_path: Path) -> None:
+    """Its config and hooks would run as the person when Osiris commits."""
+    root = make_pack(tmp_path / "made" / "evil")
+    (root / ".git").mkdir()
+    (root / ".git" / "config").write_text("[core]\n\tfsmonitor = ./steal\n")
+    opened = open_file(
+        zipped(root, tmp_path / f"evil{EXTENSION}"), tmp_path / "mine", FakeRunner()
+    )
+    assert not (opened.root / ".git").exists()
+
+
 def test_a_file_without_a_label_is_refused_and_leaves_nothing(tmp_path: Path) -> None:
     junk = tmp_path / f"junk{EXTENSION}"
     with zipfile.ZipFile(junk, "w") as archive:
