@@ -49,3 +49,29 @@ def test_colours_that_each_matched_somewhere_pass() -> None:
     recolour('<path fill="#5294e2"/>')
     recolour('<path fill="#4080fb"/>')
     recolour.check("cinnamon")
+
+
+def test_a_maker_that_stops_leaves_the_pack_as_it_was(tmp_path: Path) -> None:
+    pack = tmp_path / "jasper"
+    pack.mkdir()
+    (pack / "skin.json").write_text("{}")
+
+    def make(into: Path) -> None:
+        (into / "half.scss").write_text("")
+        raise SystemExit("upstream changed")
+
+    with pytest.raises(SystemExit):
+        load().rewrite(pack, make)
+    assert [p.name for p in tmp_path.rglob("*")] == ["jasper", "skin.json"]
+
+
+def test_a_maker_that_finishes_replaces_the_whole_pack(tmp_path: Path) -> None:
+    pack = tmp_path / "jasper"
+    pack.mkdir()
+    (pack / "old.scss").write_text("")
+
+    def make(into: Path) -> None:
+        (into / "skin.json").write_text("{}")
+
+    load().rewrite(pack, make)
+    assert sorted(p.name for p in tmp_path.rglob("*")) == ["jasper", "skin.json"]
