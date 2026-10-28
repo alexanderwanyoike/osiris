@@ -28,13 +28,22 @@ def make_zip(path: Path, files: dict[str, str]) -> Path:
     return path
 
 
-def make_tar(path: Path, files: dict[str, str], mode: str = "w:gz") -> Path:
+def make_tar(
+    path: Path,
+    files: dict[str, str],
+    mode: str = "w:gz",
+    links: dict[str, str] | None = None,
+) -> Path:
     with tarfile.open(path, mode) as archive:
         for name, text in files.items():
             data = text.encode()
             info = tarfile.TarInfo(name)
             info.size = len(data)
             archive.addfile(info, io.BytesIO(data))
+        for name, points_to in (links or {}).items():
+            info = tarfile.TarInfo(name)
+            info.type, info.linkname = tarfile.SYMTYPE, points_to
+            archive.addfile(info)
     return path
 
 
@@ -155,6 +164,25 @@ def test_a_failed_import_keeps_the_sets_it_would_have_replaced(
         install_sets(download, tmp_path / "icons")
     assert (old / "stale.png").read_text() == "old"
     assert [entry.name for entry in (tmp_path / "icons").iterdir()] == ["Neon"]
+
+
+def test_a_set_keeps_its_own_links_even_dangling_or_looping(tmp_path: Path) -> None:
+    """Review of #136: a dangling link or a loop, common in icon sets, made the
+    copy fail."""
+    download = make_tar(
+        tmp_path / "neon.tar.gz",
+        {"Neon/index.theme": ICON_INDEX, "Neon/48x48/apps/folder.png": "png"},
+        links={
+            "Neon/48x48/apps/alias.png": "folder.png",
+            "Neon/48x48/apps/gone.png": "missing.png",
+            "Neon/48x48/apps/one.png": "two.png",
+            "Neon/48x48/apps/two.png": "one.png",
+        },
+    )
+    install_sets(download, tmp_path / "icons")
+    apps = tmp_path / "icons" / "Neon" / "48x48" / "apps"
+    assert (apps / "alias.png").readlink() == Path("folder.png")
+    assert (apps / "alias.png").read_text() == "png"
 
 
 def test_a_download_with_no_set_in_it_is_refused(tmp_path: Path) -> None:
