@@ -497,8 +497,10 @@ class Window(Adw.ApplicationWindow):
                 self.toasts.add_toast(Adw.Toast(title=f"Not saved: {error}",
                                                 timeout=6))
                 return False
-            self.get_application().reload_user_css()
-            self._show_skins()
+            if engine.chosen_skin() == name:
+                self.wear(name)
+            else:
+                self._show_skins()
             return True
 
         def adding(kind: str):

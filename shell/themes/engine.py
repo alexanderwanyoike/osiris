@@ -973,13 +973,11 @@ def skin_details(name: str) -> dict:
 
 def save_skin(name: str, label: str, style: str | None, icons: str | None,
               cursor: str | None, font: str | None) -> None:
-    """Save an edit to the person's Skin, and wear it again if it is worn."""
+    """Save an edit to the person's Skin; wearing it again is the caller's."""
     pack = _pack(name)
     taken = _pack(style) if style and style != pack.style else None
     edit.save(pack, edit.Edit(label, taken, icons, cursor, font),
               SubprocessRunner())
-    if chosen_skin() == name:
-        set_skin(name)
 
 
 def _variant_of(theme: dict) -> str:
