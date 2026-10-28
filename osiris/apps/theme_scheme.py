@@ -15,6 +15,8 @@ import gi
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio  # noqa: E402
 
+from osiris.apps.user_css import WRITTEN  # noqa: E402
+
 
 class ThemeScheme:
     def __init__(self, record: Path, load: Callable[[str], Mapping[str, Any]]) -> None:
@@ -23,8 +25,14 @@ class ThemeScheme:
         self._monitor = Gio.File.new_for_path(str(record)).monitor_file(
             Gio.FileMonitorFlags.NONE, None
         )
-        self._monitor.connect("changed", lambda *_args: self.follow())
+        self._monitor.connect("changed", self._changed)
         self.follow()
+
+    def _changed(
+        self, _monitor: object, _file: object, _other: object, event: object
+    ) -> None:
+        if event in WRITTEN:
+            self.follow()
 
     def follow(self) -> None:
         try:
