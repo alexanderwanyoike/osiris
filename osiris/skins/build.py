@@ -82,14 +82,7 @@ def build(
         and not (target / "gtk-3.0" / "gtk.css").is_file()
     ):
         raise SkinpackError(f"{pack.label}: no gtk-3.0 sheet for {variant}")
-    for entry, out in SURFACES:
-        source = work / f"{entry}-{variant}.scss"
-        if not source.is_file() or (only and entry.split("/")[0] not in only):
-            continue
-        (target / out).parent.mkdir(parents=True, exist_ok=True)
-        runner.run(
-            "sassc", "-M", "-t", "expanded", str(source), str(target / out), quiet=True
-        )
+    compiled = _compile(work, target, variant, runner, only)
     (target / "index.theme").write_text(
         "[X-GNOME-Metatheme]\n"
         f"Name={name}\n"
@@ -102,16 +95,35 @@ def build(
     dock = _filled(plank, filled) if plank.is_file() else None
     rofi = work / "rofi" / "launcher.rasi"
     launcher = _filled(rofi, filled) if rofi.is_file() else None
-    adwaita = target / "libadwaita.css"
     return Built(
         theme=name,
         dock=dock,
-        adwaita=adwaita
-        if (work / f"libadwaita/libadwaita-{variant}.scss").is_file()
-        else None,
-        cinnamon=(work / f"cinnamon/cinnamon-{variant}.scss").is_file(),
+        adwaita=target / "libadwaita.css" if "libadwaita" in compiled else None,
+        cinnamon="cinnamon" in compiled,
         launcher=launcher,
     )
+
+
+def _compile(
+    work: Path,
+    target: Path,
+    variant: str,
+    runner: CommandRunner,
+    only: Sequence[str] | None,
+) -> set[str]:
+    """Compile each surface's Sass entry for the variant; the surfaces done."""
+    compiled = set()
+    for entry, out in SURFACES:
+        surface = entry.split("/")[0]
+        source = work / f"{entry}-{variant}.scss"
+        if not source.is_file() or (only and surface not in only):
+            continue
+        (target / out).parent.mkdir(parents=True, exist_ok=True)
+        runner.run(
+            "sassc", "-M", "-t", "expanded", str(source), str(target / out), quiet=True
+        )
+        compiled.add(surface)
+    return compiled
 
 
 def _filled(path: Path, filled: Mapping[str, str]) -> str:
