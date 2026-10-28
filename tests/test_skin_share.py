@@ -32,6 +32,14 @@ def test_an_exported_skin_opens_as_the_same_skin(tmp_path: Path) -> None:
     assert (tmp_path / "mine" / "colloid" / "sass" / "_palette.scss").is_file()
 
 
+def test_opening_a_skin_named_like_one_of_mine_keeps_mine(tmp_path: Path) -> None:
+    mine = tmp_path / "mine"
+    make_pack(mine / "colloid", label="My Colloid")
+    shared = export(read(make_pack(tmp_path / "shipped" / "colloid")), tmp_path / "out")
+    assert open_file(shared, mine).name == "colloid-2"
+    assert read(mine / "colloid").label == "My Colloid"
+
+
 def test_a_file_without_a_label_is_refused_and_leaves_nothing(tmp_path: Path) -> None:
     junk = tmp_path / f"junk{EXTENSION}"
     with zipfile.ZipFile(junk, "w") as archive:
