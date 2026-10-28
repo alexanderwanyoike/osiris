@@ -147,3 +147,35 @@ class SkinsPage(Gtk.ScrolledWindow):
         card.append(line)
         card.append(buttons)
         return card
+
+
+def new_skin(bases: Sequence[Skin],
+             on_create: Callable[[str, str], None]) -> Adw.AlertDialog:
+    """Ask for a new Skin's name and the Skin it starts from."""
+    name = Gtk.Entry(placeholder_text="Name", activates_default=True)
+    base = Gtk.DropDown.new_from_strings([label for _n, label, _c in bases])
+    form = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+    form.append(name)
+    form.append(Gtk.Label(label="Start from", xalign=0))
+    form.append(base)
+    dialog = Adw.AlertDialog(
+        heading="New Skin",
+        body="Name it and pick a Skin to start from; then tell Osiris "
+             "how it should look.",
+        extra_child=form)
+    dialog.add_response("cancel", "Cancel")
+    dialog.add_response("create", "Create")
+    dialog.set_response_appearance("create", Adw.ResponseAppearance.SUGGESTED)
+    dialog.set_default_response("create")
+
+    def named(_entry=None) -> None:
+        dialog.set_response_enabled("create", bool(name.get_text().strip()))
+
+    def answered(_dialog, response: str) -> None:
+        if response == "create":
+            on_create(name.get_text().strip(), bases[base.get_selected()][0])
+
+    name.connect("changed", named)
+    named()
+    dialog.connect("response", answered)
+    return dialog
