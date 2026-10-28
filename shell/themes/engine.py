@@ -1003,7 +1003,8 @@ def import_fonts(paths: list[str]) -> list[str]:
 def import_gtk_theme(path: str) -> str:
     """A downloaded GTK theme as a new Skin of the person's; its name."""
     return imports.import_gtk_theme(Path(path), Path(SKIN_DIRS[0]),
-                                    SubprocessRunner()).name
+                                    SubprocessRunner(),
+                                    _shipped_skin_dirs()).name
 
 
 def check_skin(name: str) -> list[str]:

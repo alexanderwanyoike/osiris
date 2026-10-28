@@ -193,7 +193,9 @@ def _lay_out(theme: Path, variant: str, skin: Path) -> None:
             shutil.copyfile(dock, skin / "plank" / f"dock-{target}.theme")
 
 
-def import_gtk_theme(download: Path, mine: Path, runner: CommandRunner) -> Skinpack:
+def import_gtk_theme(
+    download: Path, mine: Path, runner: CommandRunner, shipped: Sequence[Path] = ()
+) -> Skinpack:
     """A downloaded GTK theme as a person's own Skin, worn in its own colours
     until Osiris converts them to the Theme's gaps."""
     with tempfile.TemporaryDirectory() as scratch:
@@ -207,7 +209,7 @@ def import_gtk_theme(download: Path, mine: Path, runner: CommandRunner) -> Skinp
             raise UnusableDownload(f"{download.name}: no GTK theme in it")
         variants = _variants(themes)
         label = next(iter(variants.values())).name
-        skin = mine / free_name(mine, slug(label))
+        skin = mine / free_name(mine, slug(label), shipped)
         try:
             for variant, theme in variants.items():
                 _lay_out(theme, variant, skin)
