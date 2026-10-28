@@ -408,3 +408,15 @@ def test_a_download_without_a_gtk_theme_is_refused(tmp_path: Path) -> None:
     download = make_zip(tmp_path / "icons.zip", {"Neon/index.theme": ICON_INDEX})
     with pytest.raises(UnusableDownload, match="no GTK theme"):
         import_gtk_theme(download, tmp_path / "mine", FakeRunner())
+
+
+def test_an_imported_theme_never_takes_a_shipped_skins_name(tmp_path: Path) -> None:
+    download = make_tar(
+        tmp_path / "Colloid.tar.xz",
+        {"Colloid/gtk-3.0/gtk.css": "window { background: #ffffff; }"},
+        "w:xz",
+    )
+    shipped = tmp_path / "shipped"
+    (shipped / "colloid").mkdir(parents=True)
+    skin = import_gtk_theme(download, tmp_path / "mine", FakeRunner(), (shipped,))
+    assert skin.name != "colloid"
