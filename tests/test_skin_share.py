@@ -4,6 +4,7 @@ person's own Skins deleted (shipped ones cannot be)."""
 from __future__ import annotations
 
 import json
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -38,6 +39,17 @@ def test_opening_a_skin_named_like_one_of_mine_keeps_mine(tmp_path: Path) -> Non
     shared = export(read(make_pack(tmp_path / "shipped" / "colloid")), tmp_path / "out")
     assert open_file(shared, mine).name == "colloid-2"
     assert read(mine / "colloid").label == "My Colloid"
+
+
+def test_a_skin_is_unpacked_beside_the_persons_own_not_in_tmp(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A large Skin needs no room in /tmp, and moving it in is one rename."""
+    shared = export(read(make_pack(tmp_path / "shipped" / "colloid")), tmp_path / "out")
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path / "no-tmp"))
+    opened = open_file(shared, tmp_path / "mine")
+    assert opened.root == tmp_path / "mine" / "colloid"
+    assert [path.name for path in (tmp_path / "mine").iterdir()] == ["colloid"]
 
 
 def test_a_file_without_a_label_is_refused_and_leaves_nothing(tmp_path: Path) -> None:
