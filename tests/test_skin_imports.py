@@ -269,6 +269,15 @@ def test_fonts_of_the_same_name_are_all_kept(tmp_path: Path) -> None:
     assert (tmp_path / "fonts" / "Regular-2.ttf").read_text() == "two"
 
 
+def test_an_installed_font_is_never_executable(tmp_path: Path) -> None:
+    """Review of #136: a font kept the exec bit it was packed with."""
+    single = tmp_path / "Inter.ttf"
+    single.write_text("font")
+    single.chmod(0o755)
+    install_fonts([single], tmp_path / "fonts")
+    assert not os.access(tmp_path / "fonts" / "Inter.ttf", os.X_OK)
+
+
 def test_a_download_with_no_font_in_it_is_refused(tmp_path: Path) -> None:
     notes = tmp_path / "notes.txt"
     notes.write_text("no fonts")
