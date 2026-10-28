@@ -14,6 +14,9 @@ from dataclasses import dataclass
 _IMAGE = 0xFFFD0002
 #: Real themes stop at 256; anything past this is not a cursor worth reading.
 _MAX_SIZE = 1024
+#: Every size of every frame of an animated cursor is one entry; real themes
+#: list a few hundred at most.
+_MAX_ENTRIES = 0x10000
 
 
 class XcursorError(ValueError):
@@ -40,6 +43,8 @@ def _read(data: bytes, size: int) -> Cursor:
     if data[:4] != b"Xcur" or len(data) < 16:
         raise XcursorError("not an Xcursor file")
     _header, _version, count = struct.unpack_from("<3I", data, 4)
+    if count > _MAX_ENTRIES:
+        raise XcursorError(f"{count} images are too many for a cursor")
     entries = [struct.unpack_from("<3I", data, 16 + 12 * i) for i in range(count)]
     images = [
         (nominal, position) for kind, nominal, position in entries if kind == _IMAGE
