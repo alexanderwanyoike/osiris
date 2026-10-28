@@ -58,3 +58,12 @@ def test_an_unknown_theme_means_dark(tmp_path: Path) -> None:
     Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
     ThemeScheme(record, THEMES.__getitem__)
     assert scheme() == Adw.ColorScheme.FORCE_DARK
+
+
+def test_a_theme_that_is_not_an_object_means_dark(tmp_path: Path) -> None:
+    """Review of #135: a Theme file holding a list raised AttributeError."""
+    record = tmp_path / "theme"
+    record.write_text("listed\n")
+    Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
+    ThemeScheme(record, lambda _name: ["not", "a", "theme"])
+    assert scheme() == Adw.ColorScheme.FORCE_DARK
