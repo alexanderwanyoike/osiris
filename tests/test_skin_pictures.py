@@ -10,6 +10,9 @@ import pytest
 
 from osiris.skins.pictures import (
     cursor_picture,
+    failed,
+    needs_drawing,
+    picture_for,
     sampler_env,
     signature,
 )
@@ -20,6 +23,49 @@ def touch(path: Path, when: float) -> Path:
     path.write_text("x")
     os.utime(path, (when, when))
     return path
+
+
+def skin(root: Path) -> list[Path]:
+    """What a picture of a Skin in a Theme shows."""
+    touch(root / "pack" / "sass" / "_palette.scss", 100)
+    return [root / "pack", touch(root / "nord.json", 100)]
+
+
+def test_each_skin_and_theme_has_a_picture_of_its_own(tmp_path: Path) -> None:
+    shows = skin(tmp_path)
+    nord = picture_for(tmp_path / "cache", "colloid", "nord", shows)
+    assert nord != picture_for(tmp_path / "cache", "colloid", "rose-pine", shows)
+    assert tmp_path / "cache" in nord.parents
+
+
+def test_a_picture_not_yet_drawn_needs_drawing(tmp_path: Path) -> None:
+    picture = picture_for(tmp_path / "cache", "colloid", "nord", skin(tmp_path))
+    assert needs_drawing(picture)
+    picture.parent.mkdir(parents=True)
+    picture.write_bytes(b"png")
+    assert not needs_drawing(picture)
+
+
+def test_a_change_to_what_it_shows_needs_a_new_picture(tmp_path: Path) -> None:
+    shows = skin(tmp_path)
+    before = picture_for(tmp_path / "cache", "colloid", "nord", shows)
+    (tmp_path / "pack" / "sass" / "_palette.scss").write_text("changed")
+    after = picture_for(tmp_path / "cache", "colloid", "nord", shows)
+    assert after != before
+    assert needs_drawing(after)
+
+
+def test_a_picture_that_failed_is_not_drawn_again_until_what_it_shows_changes(
+    tmp_path: Path,
+) -> None:
+    """Review of #133: a failed picture stayed stale, so Appearance drew it
+    again as soon as it finished, forever."""
+    shows = skin(tmp_path)
+    picture = picture_for(tmp_path / "cache", "colloid", "nord", shows)
+    failed(picture)
+    assert not needs_drawing(picture)
+    (tmp_path / "pack" / "sass" / "_palette.scss").write_text("changed")
+    assert needs_drawing(picture_for(tmp_path / "cache", "colloid", "nord", shows))
 
 
 def test_a_cursors_picture_is_kept_in_the_cache(tmp_path: Path) -> None:
