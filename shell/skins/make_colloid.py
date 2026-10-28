@@ -58,6 +58,14 @@ $grey-950: if($light, mix(#000, $gap-foreground, 30%), mix(#000, $gap-background
 $white: if($light, $gap-background, #FFFFFF);
 $black: #000000;
 
+// on() switches between them where their brightness splits, as Graphite does,
+// so each fill gets whichever reads better.
+@function osiris-brightness($c) {
+  @return (red($c) * 299 + green($c) * 587 + blue($c) * 114) / 1000;
+}
+
+$osiris-midpoint: (osiris-brightness($white) + osiris-brightness($black)) / 2;
+
 // Colloid's round window buttons keep their own colours.
 $button-close: #fd5f51;
 $button-max: #38c76a;
@@ -67,6 +75,9 @@ $links: $gap-accent;
 $default-light: $gap-accent;
 $default-dark: $gap-accent;
 """
+
+# Colloid's on() switches to dark text at a fixed brightness.
+THRESHOLD = ("@if ($brightness >= 156) {", "@if ($brightness >= $osiris-midpoint) {")
 
 # Colloid ships no launcher theme; this one follows its rounded, flat panels.
 LAUNCHER = """\
@@ -111,6 +122,12 @@ ENTRIES = {
     "cinnamon": "cinnamon",
     "libadwaita": "libadwaita",
 }
+
+
+def replace(text: str, old: str, new: str, where: str) -> str:
+    if old not in text:
+        raise SystemExit(f"upstream changed: {old!r} not in {where}")
+    return text.replace(old, new)
 
 
 def svgs(src: Path, dst: Path, gaps: bool = True) -> None:
@@ -158,6 +175,8 @@ def main() -> None:
         )
     )
     (PACK / "sass" / "_color-palette-osiris.scss").write_text(PALETTE)
+    colors = PACK / "sass" / "_colors.scss"
+    colors.write_text(replace(colors.read_text(), *THRESHOLD, "_colors.scss"))
     for folder, stem in ENTRIES.items():
         (PACK / folder).mkdir()
         for variant in ("Light", "Dark"):
