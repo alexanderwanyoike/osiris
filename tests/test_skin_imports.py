@@ -119,6 +119,17 @@ def test_a_set_named_like_a_fallback_or_a_variant_is_refused(
     assert (kept / "index.theme").read_text() == "mine"
 
 
+def test_a_set_the_system_already_has_is_refused(tmp_path: Path) -> None:
+    """Review of #136: a set in the person's icons hides the system's of the
+    same name, which a system update then no longer reaches."""
+    system = tmp_path / "usr-icons"
+    (system / "Adwaita").mkdir(parents=True)
+    download = make_zip(tmp_path / "sets.zip", {"Adwaita/index.theme": ICON_INDEX})
+    with pytest.raises(UnusableDownload, match="Adwaita"):
+        install_sets(download, tmp_path / "icons", system=[system])
+    assert not (tmp_path / "icons" / "Adwaita").exists()
+
+
 def test_a_download_with_no_set_in_it_is_refused(tmp_path: Path) -> None:
     download = make_zip(tmp_path / "wallpapers.zip", {"pics/beach.png": "png"})
     with pytest.raises(UnusableDownload, match="no icon or cursor set"):
