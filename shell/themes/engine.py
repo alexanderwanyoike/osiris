@@ -44,6 +44,7 @@ from paths import home, use_osiris_package  # noqa: E402
 
 use_osiris_package()
 import osiris  # noqa: E402
+from osiris.model.names import is_slug  # noqa: E402
 from osiris.platform.process import CommandError, SubprocessRunner  # noqa: E402
 from osiris.provision.seeding import may_write  # noqa: E402
 from osiris.skins import (  # noqa: E402
@@ -132,6 +133,8 @@ def validate(theme: dict) -> None:
     Hand-written themes are expected, so a typo should say what is wrong rather
     than producing an unreadable desktop.
     """
+    if not isinstance(theme.get("name"), str) or not is_slug(theme["name"]):
+        raise ValueError(f"{theme.get('name')!r} is not a Theme's name")
     colors = theme.get("colors")
     if not isinstance(colors, dict):
         raise ValueError(f"{theme['name']}: no colors block")
