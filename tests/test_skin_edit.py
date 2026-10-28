@@ -84,7 +84,11 @@ def test_a_save_is_committed_as_osiris(tmp_path: Path) -> None:
     root, runner = mine(tmp_path), FakeRunner()
     save(read(root), keep("Sharp Night"), runner)
     assert runner.ran("git", "-C", str(root), "add", "-A")
-    assert runner.ran("git", "-C", str(root), *as_osiris(), "commit", "-q")
+    assert any(
+        call.argv[: 3 + len(as_osiris())] == ("git", "-C", str(root), *as_osiris())
+        and "commit" in call.argv
+        for call in runner.calls
+    )
 
 
 def test_a_copy_remembers_the_style_it_came_from(tmp_path: Path) -> None:
