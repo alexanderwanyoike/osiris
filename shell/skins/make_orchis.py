@@ -11,12 +11,11 @@ import copy
 import json
 import re
 import shutil
-import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from makers import Recolour, referenced, replace, rewrite
+from makers import Recolour, plank, referenced, replace, revision, rewrite
 
 PACK = Path(__file__).resolve().parent / "orchis"
 
@@ -141,6 +140,12 @@ CINNAMON_THEMED = ("add-workspace-active", "corner-ripple", "toggle-on")
 
 # Orchis's own default build: the light window uses its light header bar
 # (gtk-Light); Cinnamon has no such entry, so its light panel stays dark.
+# The dock's fill and badge take the Theme's colours.
+DOCK = {
+    "FillStartColor": "{{background_plank}}",
+    "FillEndColor": "{{background_plank}}",
+    "BadgeColor": "{{danger_plank}}",
+}
 ENTRIES = {
     "gtk-3.0": ("gtk/3.0/gtk-Light.scss", "gtk/3.0/gtk-Dark.scss"),
     "gtk-4.0": ("gtk/4.0/gtk-Light.scss", "gtk/4.0/gtk-Dark.scss"),
@@ -235,27 +240,9 @@ def svgs(src: Path, dst: Path) -> None:
         (dst / svg.name).write_text(CINNAMON_GAPS(svg.read_text()))
 
 
-def plank(src: Path) -> str:
-    fills = {
-        "FillStartColor": "{{background_plank}}",
-        "FillEndColor": "{{background_plank}}",
-        "BadgeColor": "{{danger_plank}}",
-    }
-    lines = []
-    for line in src.read_text().splitlines():
-        key = line.split("=")[0]
-        lines.append(f"{key}={fills[key]}" if key in fills else line)
-    return "\n".join(lines) + "\n"
-
-
 def make(upstream: Path, pack: Path) -> None:
     src = upstream / "src"
-    commit = subprocess.run(
-        ["git", "-C", str(upstream), "log", "-1", "--format=%h %cs"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
+    commit = revision(upstream)
 
     sass = pack / "sass"
     shutil.copytree(src / "_sass", sass, ignore=shutil.ignore_patterns("gnome-shell"))
@@ -305,7 +292,7 @@ def make(upstream: Path, pack: Path) -> None:
     CINNAMON_GAPS.check("the Cinnamon pictures")
 
     (pack / "plank").mkdir()
-    dock = plank(src / "plank" / "dock.theme")
+    dock = plank(src / "plank" / "dock.theme", DOCK)
     for variant in ("light", "dark"):
         (pack / "plank" / f"dock-{variant}.theme").write_text(dock)
 

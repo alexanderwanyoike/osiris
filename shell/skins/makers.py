@@ -6,6 +6,7 @@ so a regenerated pack never silently loses the Theme's colours.
 
 import re
 import shutil
+import subprocess
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from pathlib import Path
@@ -25,6 +26,25 @@ def rewrite(pack: Path, make: Callable[[Path], None]) -> None:
         raise
     shutil.rmtree(pack, ignore_errors=True)
     staging.rename(pack)
+
+
+def revision(upstream: Path) -> list[str]:
+    """Upstream's checked-out commit as its short hash and its date."""
+    return subprocess.run(
+        ["git", "-C", str(upstream), "log", "-1", "--format=%h %cs"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+
+
+def plank(src: Path, fills: dict[str, str]) -> str:
+    """Upstream's dock theme with the keys in ``fills`` set to their gaps."""
+    lines = []
+    for line in src.read_text().splitlines():
+        key = line.split("=")[0]
+        lines.append(f"{key}={fills[key]}" if key in fills else line)
+    return "\n".join(lines) + "\n"
 
 
 def replace(text: str, old: str, new: str, where: str) -> str:

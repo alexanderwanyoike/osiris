@@ -15,11 +15,10 @@ entry per light and dark whose accent is the Theme's.
 import json
 import re
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
-from makers import replace, replace_once, rewrite
+from makers import replace, replace_once, revision, rewrite
 
 PACK = Path(__file__).resolve().parent / "elementary"
 VERSIONS = ("gtk-3.0", "gtk-4.0")
@@ -168,12 +167,7 @@ def entry(variant: str, version: str) -> str:
 
 def make(upstream: Path, pack: Path) -> None:
     src = upstream / "src"
-    commit = subprocess.run(
-        ["git", "-C", str(upstream), "log", "-1", "--format=%h %cs"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
+    commit = revision(upstream)
 
     for version in VERSIONS:
         sass = pack / "sass" / version

@@ -12,12 +12,11 @@ import json
 import math
 import re
 import shutil
-import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from makers import Recolour, referenced, rewrite
+from makers import Recolour, plank, referenced, revision, rewrite
 
 PACK = Path(__file__).resolve().parent / "qogir"
 
@@ -113,6 +112,12 @@ CINNAMON_GAPS = Recolour({
 # is the menu or box behind them.
 CINNAMON_WHITE = ("menu/menu.svg", "checkbox/checkbox-unchecked")
 WHITE_GAP = Recolour({"fill:#ffffff": "fill:{{background}}"})
+# The dock's fill takes the Theme's colour.
+DOCK = {
+    "FillStartColor": "{{surface_plank}}",
+    "FillEndColor": "{{surface_plank}}",
+    "InnerStrokeColor": "{{surface_plank}}",
+}
 ENTRIES = {
     "gtk-3.0": ("gtk/theme-3.0", "gtk-Light", "gtk-Dark"),
     "gtk-4.0": ("gtk/theme-4.0", "gtk-Light", "gtk-Dark"),
@@ -307,28 +312,9 @@ def cinnamon(src: Path, dst: Path) -> None:
         out.write_text(text)
 
 
-def plank(src: Path) -> str:
-    fills = ("FillStartColor", "FillEndColor", "InnerStrokeColor")
-    lines = src.read_text().splitlines()
-    return (
-        "\n".join(
-            f"{line.split('=')[0]}={{{{surface_plank}}}}"
-            if line.startswith(fills)
-            else line
-            for line in lines
-        )
-        + "\n"
-    )
-
-
 def make(upstream: Path, pack: Path) -> None:
     src = upstream / "src"
-    commit = subprocess.run(
-        ["git", "-C", str(upstream), "log", "-1", "--format=%h %cs"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
+    commit = revision(upstream)
     ET.register_namespace("", SVG_NS)
     ET.register_namespace("xlink", XLINK[1:].split("}")[0])
     ET.register_namespace("inkscape", "http://www.inkscape.org/namespaces/inkscape")
@@ -391,7 +377,7 @@ def make(upstream: Path, pack: Path) -> None:
     WHITE_GAP.check(" and ".join(CINNAMON_WHITE))
 
     (pack / "plank").mkdir()
-    dock = plank(src / "plank" / "dock.theme")
+    dock = plank(src / "plank" / "dock.theme", DOCK)
     for variant in ("light", "dark"):
         (pack / "plank" / f"dock-{variant}.theme").write_text(dock)
 

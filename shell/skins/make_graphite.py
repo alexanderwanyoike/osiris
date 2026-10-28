@@ -9,11 +9,10 @@ here runs when a person wears the Skin (ADR 0019).
 
 import json
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
-from makers import Recolour, replace, replace_once, rewrite
+from makers import Recolour, plank, replace, replace_once, revision, rewrite
 
 PACK = Path(__file__).resolve().parent / "graphite"
 
@@ -113,6 +112,11 @@ CINNAMON_INK = {
     "dark": Recolour({"#dfdfdf": "{{foreground}}"}),
 }
 
+# The dock's fill takes the Theme's colour.
+DOCK = {
+    "FillStartColor": "{{surface_plank}}",
+    "FillEndColor": "{{surface_plank}}",
+}
 ENTRIES = {
     "gtk-3.0/gtk": "gtk-3.0/gtk",
     "gtk-4.0/gtk": "gtk-4.0/gtk",
@@ -129,28 +133,9 @@ def svgs(src: Path, dst: Path, recolour: Recolour | None = None) -> None:
         (dst / svg.name).write_text(recolour(text) if recolour else text)
 
 
-def plank(src: Path) -> str:
-    fills = ("FillStartColor", "FillEndColor")
-    lines = src.read_text().splitlines()
-    return (
-        "\n".join(
-            f"{line.split('=')[0]}={{{{surface_plank}}}}"
-            if line.startswith(fills)
-            else line
-            for line in lines
-        )
-        + "\n"
-    )
-
-
 def make(upstream: Path, pack: Path) -> None:
     src = upstream / "src"
-    commit = subprocess.run(
-        ["git", "-C", str(upstream), "log", "-1", "--format=%h %cs"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
+    commit = revision(upstream)
 
     sass = pack / "sass"
     shutil.copytree(src / "sass", sass, ignore=shutil.ignore_patterns("gnome-shell"))
@@ -191,7 +176,7 @@ def make(upstream: Path, pack: Path) -> None:
 
     (pack / "plank").mkdir()
     for variant in ("Light", "Dark"):
-        dock = plank(src / "main" / "plank" / f"theme-{variant}" / "dock.theme")
+        dock = plank(src / "main" / "plank" / f"theme-{variant}" / "dock.theme", DOCK)
         (pack / "plank" / f"dock-{variant.lower()}.theme").write_text(dock)
 
     label = {
