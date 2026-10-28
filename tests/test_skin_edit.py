@@ -8,6 +8,7 @@ from pathlib import Path
 
 from osiris.model.author import as_osiris
 from osiris.platform.process import FakeRunner
+from osiris.skins.check import problems
 from osiris.skins.edit import Edit, save
 from osiris.skins.pack import read
 from osiris.skins.share import duplicate
@@ -149,3 +150,20 @@ def test_taking_a_persons_skin_as_style_records_that_skin(tmp_path: Path) -> Non
     other = duplicate(shipped, tmp_path / "mine", FakeRunner(), label="Soft")
     saved = save(read(root), Edit("Sharp", other, None, None, None), FakeRunner())
     assert saved.style == "soft"
+
+
+def test_taking_a_style_copies_only_a_skins_layout_and_data(tmp_path: Path) -> None:
+    """Review of #137: a person's Skin taken as a style brought everything in
+    it, programs and stray folders included."""
+    root = mine(tmp_path)
+    other = make_pack(tmp_path / "mine" / "loud", "Loud", "Me", "loud")
+    (other / "follow.py").write_text("print()")
+    (other / "notes").mkdir()
+    (other / "notes" / "plan.md").write_text("plan")
+    (other / "sass" / "build.sh").write_text("make")
+    (other / "sass" / ".draft.scss").write_text("draft")
+    (other / "sass" / "_palette.scss").chmod(0o755)
+    save(read(root), Edit("Sharp", read(other), None, None, None), FakeRunner())
+    assert sorted(p.name for p in root.iterdir()) == ["AGENTS.md", "sass", "skin.json"]
+    assert [p.name for p in (root / "sass").iterdir()] == ["_palette.scss"]
+    assert problems(root) == []
