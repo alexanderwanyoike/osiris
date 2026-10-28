@@ -28,9 +28,10 @@ class ThemeScheme:
 
     def follow(self) -> None:
         try:
-            dark = bool(self._load(self._record.read_text().strip()).get("dark", True))
+            theme = self._load(self._record.read_text().strip())
         except OSError, KeyError, ValueError:
-            dark = True
+            theme = {}
+        dark = bool(theme.get("dark", True)) if isinstance(theme, Mapping) else True
         Adw.StyleManager.get_default().set_color_scheme(
             Adw.ColorScheme.FORCE_DARK if dark else Adw.ColorScheme.FORCE_LIGHT
         )
