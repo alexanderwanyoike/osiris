@@ -5,6 +5,23 @@ so a regenerated pack never silently loses the Theme's colours.
 """
 
 import re
+import shutil
+from collections.abc import Callable
+from pathlib import Path
+
+
+def rewrite(pack: Path, make: Callable[[Path], None]) -> None:
+    """Make the pack afresh beside it, and swap it in only once making finished."""
+    staging = pack.with_name(f".{pack.name}.new")
+    shutil.rmtree(staging, ignore_errors=True)
+    staging.mkdir()
+    try:
+        make(staging)
+    except BaseException:
+        shutil.rmtree(staging)
+        raise
+    shutil.rmtree(pack, ignore_errors=True)
+    staging.rename(pack)
 
 
 def replace(text: str, old: str, new: str, where: str) -> str:
