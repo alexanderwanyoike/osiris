@@ -759,7 +759,7 @@ def build_skin(theme: dict) -> tuple[Built, Look] | None:
     try:
         worn = wear.wear(pack, theme, places, SubprocessRunner(),
                          lambda root: _osiris_cinnamon(theme, str(root)))
-    except (CommandError, SkinpackError, OSError) as error:
+    except SkinpackError as error:
         # Osiris's own look rather than a half-built Skin.
         print(f"osiris-theme: Skin {pack.name}: {error}", file=sys.stderr)
         return None
