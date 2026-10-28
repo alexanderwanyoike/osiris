@@ -1,4 +1,4 @@
-"""When a Skin's picture must be drawn again."""
+"""A Skin's picture in a Theme: where it is kept, and when it is drawn again."""
 
 from __future__ import annotations
 
@@ -7,21 +7,10 @@ from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 
 
-def picture_for(cache: Path, skin: str, theme: str) -> Path:
-    return cache / f"{skin}--{theme}.png"
-
-
-def _newest(source: Path) -> float:
-    if source.is_dir():
-        return max((_newest(child) for child in source.iterdir()), default=0.0)
-    return source.stat().st_mtime if source.exists() else 0.0
-
-
-def is_fresh(picture: Path, sources: Sequence[Path]) -> bool:
-    """Drawn after the last change to anything it shows."""
-    if not picture.is_file():
-        return False
-    return picture.stat().st_mtime >= max(map(_newest, sources), default=0.0)
+def picture_for(cache: Path, skin: str, theme: str, sources: Sequence[Path]) -> Path:
+    """Named for what it shows, so a picture of a Skin or Theme since
+    changed is not found and is drawn again."""
+    return cache / skin / theme / f"{signature(sources)}.png"
 
 
 def _failure(picture: Path) -> Path:
@@ -36,8 +25,8 @@ def failed(picture: Path) -> None:
     marker.touch()
 
 
-def needs_drawing(picture: Path, sources: Sequence[Path]) -> bool:
-    return not is_fresh(picture, sources) and not is_fresh(_failure(picture), sources)
+def needs_drawing(picture: Path) -> bool:
+    return not picture.is_file() and not _failure(picture).exists()
 
 
 def cursor_picture(cache: Path, cursor: str, shape: str) -> Path:

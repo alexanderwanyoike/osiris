@@ -817,24 +817,36 @@ def _current_theme() -> dict:
         return load(DEFAULT_THEME)
 
 
+def _picture(name: str, theme: dict) -> Path | None:
+    """Where a Skin's picture in this Theme is kept; None if what it shows
+    cannot be read."""
+    try:
+        return pictures.picture_for(Path(SKIN_PICTURES) / "skins", name,
+                                    theme["name"], _picture_sources(name, theme))
+    except OSError:
+        return None
+
+
 def skin_pictures() -> dict[str, str]:
     """The pictures already drawn for the current Theme, by Skin."""
     theme = _current_theme()
     found = {}
     for name, _label, _credit in skin_choices():
-        picture = pictures.picture_for(Path(SKIN_PICTURES), name, theme["name"])
-        if pictures.is_fresh(picture, _picture_sources(name, theme)):
+        picture = _picture(name, theme)
+        if picture is not None and picture.is_file():
             found[name] = str(picture)
     return found
 
 
 def stale_skin_pictures() -> list[str]:
-    """The Skins whose picture for the current Theme is missing or out of date."""
+    """The Skins whose picture for the current Theme is still to be drawn."""
     theme = _current_theme()
-    return [name for name, _label, _credit in skin_choices()
-            if pictures.needs_drawing(
-                pictures.picture_for(Path(SKIN_PICTURES), name, theme["name"]),
-                _picture_sources(name, theme))]
+    stale = []
+    for name, _label, _credit in skin_choices():
+        picture = _picture(name, theme)
+        if picture is not None and pictures.needs_drawing(picture):
+            stale.append(name)
+    return stale
 
 
 def draw_skin_picture(name: str) -> str:
@@ -842,7 +854,9 @@ def draw_skin_picture(name: str) -> str:
     Theme's colours, shown by the sampler off-screen."""
     theme = _current_theme()
     cache = Path(SKIN_PICTURES)
-    picture = pictures.picture_for(cache, name, theme["name"])
+    picture = _picture(name, theme)
+    if picture is None:
+        raise OSError(f"cannot read what the picture of {name} shows")
     try:
         _draw(name, theme, cache, picture)
     except Exception:
