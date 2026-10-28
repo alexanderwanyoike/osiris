@@ -26,6 +26,7 @@ $fg_color: $gap-foreground;
 
 $selected_bg_color: $gap-accent;
 $selected_fg_color: readable-on($gap-accent);
+$link_color: $gap-accent;
 
 $warning_color: $gap-warning;
 $error_color: $gap-danger;
