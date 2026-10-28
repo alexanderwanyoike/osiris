@@ -12,6 +12,7 @@ from osiris.skins.pictures import (
     cursor_picture,
     draw,
     failed,
+    land,
     needs_drawing,
     picture_for,
     sampler_env,
@@ -111,6 +112,24 @@ def test_a_new_picture_replaces_the_ones_it_supersedes(tmp_path: Path) -> None:
     draw(new, lambda out: out.write_bytes(b"new"))
     assert list(new.parent.iterdir()) == [new]
     assert other.is_file()
+
+
+def test_two_drawing_one_picture_at_once_never_mix(tmp_path: Path) -> None:
+    """Review of #134: the Skin editor and the picture thread both wrote a
+    cursor's picture in place, so either could read the other's half."""
+    picture = tmp_path / "cursor-Bibata-left_ptr.png"
+    inside: list[bytes] = []
+
+    def outer(out: Path) -> None:
+        out.write_bytes(b"half")
+        land(picture, lambda inner: inner.open("ab").write(b"inner"))
+        inside.append(picture.read_bytes())
+        out.write_bytes(b"outer")
+
+    land(picture, outer)
+    assert inside == [b"inner"]
+    assert picture.read_bytes() == b"outer"
+    assert list(tmp_path.iterdir()) == [picture]
 
 
 def test_a_cursors_picture_is_kept_in_the_cache(tmp_path: Path) -> None:
