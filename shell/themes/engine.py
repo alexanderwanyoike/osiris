@@ -48,7 +48,7 @@ from osiris.model.names import is_slug  # noqa: E402
 from osiris.platform.process import CommandError, SubprocessRunner  # noqa: E402
 from osiris.provision.seeding import may_write  # noqa: E402
 from osiris.skins import (  # noqa: E402
-    edit, imports, library as skins, looks, pictures, share, wear,
+    carried, edit, imports, library as skins, looks, pictures, share, wear,
     xcursor)
 from osiris.skins.build import Built, build as build_skin_pack  # noqa: E402
 from osiris.skins.check import problems as check_programs  # noqa: E402
@@ -1038,7 +1038,11 @@ def remove_fonts(names: list[str]) -> None:
 
 def delete_skin(name: str) -> None:
     """Delete one of the person's Skins, back to Osiris's look if it was worn."""
-    share.delete(_pack(name), Path(SKIN_DIRS[0]))
+    pack = _pack(name)
+    share.delete(pack, Path(SKIN_DIRS[0]))
+    if carried.remove_fonts(pack, Path(FONTS_DIR)):
+        SubprocessRunner().run("fc-cache", "-f", FONTS_DIR, check=False,
+                               quiet=True)
     if chosen_skin() == name:
         set_skin(skins.OSIRIS)
 
