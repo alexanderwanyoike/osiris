@@ -22,9 +22,11 @@ def _index(folder: Path) -> configparser.SectionProxy | None:
 def _themes(folders: Sequence[Path], wanted: Callable[[Path], bool]) -> list[str]:
     found: set[str] = set()
     for root in folders:
-        if not root.is_dir():
+        try:
+            children = list(root.iterdir())
+        except OSError:
             continue
-        for folder in root.iterdir():
+        for folder in children:
             if folder.is_dir() and folder.name not in FALLBACKS and wanted(folder):
                 found.add(folder.name)
     return sorted(found, key=str.lower)
