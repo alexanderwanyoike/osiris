@@ -67,6 +67,16 @@ FONT_SUFFIXES = {".ttf", ".otf", ".ttc"}
 _REFUSED_SETS = {*FALLBACKS, "dark", "light"}
 
 
+_ARCHIVE_SUFFIXES = (".tar.gz", ".tar.xz", ".tar.bz2", ".tgz", ".txz", ".tar", ".zip")
+
+
+def _stem(download: Path) -> str:
+    for suffix in _ARCHIVE_SUFFIXES:
+        if download.name.lower().endswith(suffix):
+            return download.name[: -len(suffix)]
+    return download.stem
+
+
 SYSTEM_ICONS = Path("/usr/share/icons")
 
 
@@ -75,7 +85,9 @@ def install_sets(
 ) -> list[str]:
     """Install every icon or cursor set inside a download; their names."""
     with tempfile.TemporaryDirectory() as scratch:
-        unpack(download, Path(scratch))
+        # Inside a folder named after the download, a set packed at the root of
+        # its archive is found like any other.
+        unpack(download, Path(scratch) / _stem(download))
         found = [
             folder
             for folder in sorted(Path(scratch).rglob("*"))
