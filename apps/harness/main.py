@@ -283,8 +283,11 @@ class Drawer(Gtk.ApplicationWindow):
 
 
     def draft(self, text: str) -> None:
-        """Write a request in the input, for the person to read and send."""
-        self.entry.get_buffer().set_text(text)
+        """Write a request in the input, for the person to read and send,
+        after anything they had typed."""
+        buffer = self.entry.get_buffer()
+        typed = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+        buffer.set_text(f"{typed.rstrip()}\n\n{text}" if typed.strip() else text)
         self.entry.grab_focus()
     def _begin_resize(self, gesture, _presses, x, y) -> None:
         surface = self.get_surface()
