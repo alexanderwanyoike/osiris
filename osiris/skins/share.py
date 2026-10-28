@@ -56,7 +56,10 @@ def open_file(shared: Path, mine: Path, runner: CommandRunner) -> Skinpack:
         top = tops.pop()
         name = free_name(mine, top)
         with _making(mine, name) as made:
-            archive.extractall(made.parent)
+            archive.extractall(
+                made.parent,
+                [name for name in names if ".git" not in PurePosixPath(name).parts],
+            )
             if top != name:
                 (made.parent / top).rename(made)
             refuse_programs(read(made))
