@@ -151,6 +151,16 @@ def test_a_file_unpacking_to_more_than_a_skin_could_need_is_refused(
     assert not (tmp_path / "mine" / "colloid").exists()
 
 
+def test_a_file_holding_a_lone_file_rather_than_a_folder_is_refused(
+    tmp_path: Path,
+) -> None:
+    loose = tmp_path / f"loose{EXTENSION}"
+    with zipfile.ZipFile(loose, "w") as archive:
+        archive.writestr("skin.json", json.dumps({"label": "Loose", **FIELDS}))
+    with pytest.raises(SkinpackError, match="not one folder"):
+        open_file(loose, tmp_path / "mine", FakeRunner())
+
+
 def test_a_persons_skin_can_be_deleted(tmp_path: Path) -> None:
     pack = read(make_pack(tmp_path / "mine" / "colloid"))
     delete(pack, tmp_path / "mine")
