@@ -20,7 +20,8 @@ def install(
     fonts_dir: Path,
     system_icons: Sequence[Path] = (),
 ) -> bool:
-    """Install what is not there yet; True when fonts were added."""
+    """Install what is not there yet, or came from another version of the
+    Skin; True when fonts were added."""
     stamp = f"{pack.name} {pack.version}\n"
     carried = pack.root / "icons"
     if carried.is_dir():
@@ -34,9 +35,9 @@ def install(
                 _replace(theme, target, stamp)
     fonts = pack.root / "fonts"
     target = fonts_dir / pack.name
-    if not fonts.is_dir() or target.exists():
+    if not fonts.is_dir() or _stamp(target) == stamp:
         return False
-    shutil.copytree(fonts, target)
+    _replace(fonts, target, stamp)
     return True
 
 
