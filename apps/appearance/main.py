@@ -58,6 +58,8 @@ CONVERT = ("Convert this imported theme so it follows my Theme: replace its "
            "wear it.")
 HARNESS = "dev.osiris.Harness"
 HARNESS_PATH = "/dev/osiris/Harness"
+#: Long enough for D-Bus to start Osiris cold and for it to answer.
+HARNESS_START_MS = 60_000
 
 FILTERS = ((Filter.ALL, "All"), (Filter.DARK, "Dark"),
            (Filter.LIGHT, "Light"), (Filter.MINE, "Mine"))
@@ -696,18 +698,36 @@ class Window(Adw.ApplicationWindow):
         """Open Osiris on a new Conversation in the Skin's folder, with a
         request written in but not sent."""
         try:
-            connection = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-            actions = Gio.DBusActionGroup.get(connection, HARNESS, HARNESS_PATH)
             folder = engine.skin_folder(name)
-            if draft:
-                actions.activate_action("new-conversation-in-with",
-                                        GLib.Variant("(ss)", (folder, draft)))
-            else:
-                actions.activate_action("new-conversation-in",
-                                        GLib.Variant("s", folder))
         except Exception as error:                      # noqa: BLE001
-            self.toasts.add_toast(Adw.Toast(title=f"Osiris did not open: {error}",
-                                            timeout=6))
+            self._toast(f"Osiris did not open: {error}")
+            return
+        if draft:
+            action, parameter = ("new-conversation-in-with",
+                                 GLib.Variant("(ss)", (folder, draft)))
+        else:
+            action, parameter = "new-conversation-in", GLib.Variant("s", folder)
+
+        # Called rather than activated through a DBusActionGroup, which never
+        # says whether Osiris was there to hear it.
+        def answered(connection, result) -> None:
+            try:
+                connection.call_finish(result)
+            except GLib.Error as error:
+                self._toast(f"Osiris did not open: {error.message}")
+
+        def connected(_source, result) -> None:
+            try:
+                connection = Gio.bus_get_finish(result)
+            except GLib.Error as error:
+                self._toast(f"Osiris did not open: {error.message}")
+                return
+            connection.call(
+                HARNESS, HARNESS_PATH, "org.gtk.Actions", "Activate",
+                GLib.Variant("(sava{sv})", (action, [parameter], {})), None,
+                Gio.DBusCallFlags.NONE, HARNESS_START_MS, None, answered)
+
+        Gio.bus_get(Gio.BusType.SESSION, None, connected)
 
     def _skinpacks(self) -> Gio.ListStore:
         only = Gtk.FileFilter(name="Skinpacks")
