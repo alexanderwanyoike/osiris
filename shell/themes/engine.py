@@ -883,6 +883,10 @@ def _look_of(name: str, theme: dict) -> Look:
 
 def _cursor_picture(cursor: str, shapes: tuple[str, ...], cache: Path) -> str | None:
     """One of a cursor theme's shapes as a picture, or None if none is found."""
+    try:
+        out = pictures.cursor_picture(cache, cursor, shapes[0])
+    except ValueError:
+        return None
     for folder in CURSOR_DIRS:
         for shape in shapes:
             path = os.path.join(folder, cursor, "cursors", shape)
@@ -893,7 +897,6 @@ def _cursor_picture(cursor: str, shapes: tuple[str, ...], cache: Path) -> str | 
                     image = xcursor.read(fh.read(), 32)
             except (OSError, xcursor.XcursorError):
                 continue
-            out = cache / f"cursor-{cursor}-{shapes[0]}.png"
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_bytes(xcursor.png(image))
             return str(out)

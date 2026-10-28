@@ -37,3 +37,11 @@ def failed(picture: Path) -> None:
 
 def needs_drawing(picture: Path, sources: Sequence[Path]) -> bool:
     return not is_fresh(picture, sources) and not is_fresh(_failure(picture), sources)
+
+
+def cursor_picture(cache: Path, cursor: str, shape: str) -> Path:
+    """Where one shape of a cursor theme is drawn; the name comes from a
+    Skin's look, which anyone may have written."""
+    if not cursor or "/" in cursor or cursor in (".", ".."):
+        raise ValueError(f"{cursor!r} is not the name of a cursor theme")
+    return cache / f"cursor-{cursor}-{shape}.png"
