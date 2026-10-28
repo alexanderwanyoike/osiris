@@ -21,7 +21,14 @@ from pathlib import Path
 from typing import Any
 
 from osiris.platform.process import CommandRunner
-from osiris.skins.pack import Skinpack, fill, gaps, refuse_programs, sass_gaps
+from osiris.skins.pack import (
+    Skinpack,
+    SkinpackError,
+    fill,
+    gaps,
+    refuse_programs,
+    sass_gaps,
+)
 
 SURFACES = (
     ("gtk-3.0/gtk", "gtk-3.0/gtk.css"),
@@ -66,7 +73,7 @@ def build(
         if files.is_dir():
             shutil.copytree(files, target, dirs_exist_ok=True)
     for picture in (*target.rglob("*.svg"), *target.rglob("*.css")):
-        picture.write_text(fill(picture.read_text(), filled))
+        picture.write_text(_filled(picture, filled))
     for entry, out in SURFACES:
         source = work / f"{entry}-{variant}.scss"
         if not source.is_file() or (only and entry.split("/")[0] not in only):
@@ -84,9 +91,9 @@ def build(
         f"MetacityTheme={name}\n"
     )
     plank = work / "plank" / f"dock-{variant}.theme"
-    dock = fill(plank.read_text(), filled) if plank.is_file() else None
+    dock = _filled(plank, filled) if plank.is_file() else None
     rofi = work / "rofi" / "launcher.rasi"
-    launcher = fill(rofi.read_text(), filled) if rofi.is_file() else None
+    launcher = _filled(rofi, filled) if rofi.is_file() else None
     adwaita = target / "libadwaita.css"
     return Built(
         theme=name,
@@ -97,3 +104,11 @@ def build(
         cinnamon=(work / f"cinnamon/cinnamon-{variant}.scss").is_file(),
         launcher=launcher,
     )
+
+
+def _filled(path: Path, filled: Mapping[str, str]) -> str:
+    try:
+        text = path.read_text()
+    except UnicodeDecodeError:
+        raise SkinpackError(f"{path.name} is not UTF-8 text") from None
+    return fill(text, filled)
