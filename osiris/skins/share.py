@@ -24,6 +24,9 @@ from osiris.skins.pack import (
 
 EXTENSION = ".skinpack"
 AGENTS_FILE = "AGENTS.md"
+#: Unpacked, in bytes: room for the icon sets and fonts a Skin may carry, not
+#: for a small file that unpacks to fill the disk.
+LARGEST = 1024**3
 
 
 def export(pack: Skinpack, folder: Path) -> Path:
@@ -61,6 +64,8 @@ def open_file(
         ]
         if len(tops) != 1 or unsafe:
             raise SkinpackError(f"{shared.name}: not one folder of its own")
+        if sum(info.file_size for info in archive.infolist()) > LARGEST:
+            raise SkinpackError(f"{shared.name}: too large to be a Skin")
         top = tops.pop()
         name = free_name(mine, top, shipped)
         with _making(mine, name) as made:
