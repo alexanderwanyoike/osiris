@@ -313,6 +313,25 @@ def test_a_dark_variant_is_named_by_its_suffix(tmp_path: Path) -> None:
     assert (files / "dark" / "gtk-3.0" / "gtk.css").read_text() == "Darkroom-dark"
 
 
+def test_an_imported_gtk4_sheet_is_the_skins_libadwaita_sheet(tmp_path: Path) -> None:
+    """Review of #136: libadwaita reads only the sheet Osiris installs for it,
+    so a theme's GTK 4 sheet left in gtk-4.0 never reached it. Its pictures
+    stay where the sheet names them."""
+    download = make_zip(
+        tmp_path / "plain.zip",
+        {
+            "Plain/gtk-3.0/gtk.css": "window {}",
+            "Plain/gtk-4.0/gtk.css": "headerbar {}",
+            "Plain/gtk-4.0/assets/check.png": "png",
+        },
+    )
+    skin = import_gtk_theme(download, tmp_path / "mine", FakeRunner())
+    common = skin.root / "files" / "common"
+    assert (common / "libadwaita.css").read_text() == "headerbar {}"
+    assert not (common / "gtk-4.0" / "gtk.css").exists()
+    assert (common / "gtk-4.0" / "assets" / "check.png").is_file()
+
+
 def test_a_theme_with_one_variant_serves_both(tmp_path: Path) -> None:
     download = make_zip(tmp_path / "plain.zip", {"Plain/gtk-3.0/gtk.css": "window {}"})
     skin = import_gtk_theme(download, tmp_path / "mine", FakeRunner())
