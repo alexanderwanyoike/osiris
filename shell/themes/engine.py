@@ -746,6 +746,7 @@ def _drop_themes_but(name: str) -> None:
 
 def build_skin(theme: dict) -> tuple[Built, Look] | None:
     """Build the chosen Skin in this Theme's colours; None for Osiris's own look.
+    Raises SkinpackError when it cannot be built.
 
     What the pack carries (icon sets, cursors, fonts) is installed first, so the
     look it names exists by the time the settings point at it.
@@ -756,13 +757,8 @@ def build_skin(theme: dict) -> tuple[Built, Look] | None:
         return None
     places = wear.Places(themes=Path(THEMES_DIR), work=Path(SKIN_WORK),
                          icons=Path(ICONS_DIR), fonts=Path(FONTS_DIR))
-    try:
-        worn = wear.wear(pack, theme, places, SubprocessRunner(),
-                         lambda root: _osiris_cinnamon(theme, str(root)))
-    except SkinpackError as error:
-        # Osiris's own look rather than a half-built Skin.
-        print(f"osiris-theme: Skin {pack.name}: {error}", file=sys.stderr)
-        return None
+    worn = wear.wear(pack, theme, places, SubprocessRunner(),
+                     lambda root: _osiris_cinnamon(theme, str(root)))
     _drop_themes_but(worn[0].theme)
     return worn
 
@@ -1046,11 +1042,13 @@ def delete_skin(name: str) -> None:
 
 
 def set_skin(name: str) -> list[str]:
-    """Choose a Skin and wear it in the current Theme."""
+    """Choose a Skin and wear it in the current Theme; raises SkinpackError
+    when it could not be worn, and Osiris's own look is worn instead."""
     if name != skins.OSIRIS:
         refuse_programs(_pack(name))
-    skins.choose(Path(SKIN_CHOICE), name)
-    return apply(current() or DEFAULT_THEME)
+    skins.wear_choice(Path(SKIN_CHOICE), name,
+                      lambda: _apply(current() or DEFAULT_THEME))
+    return []
 
 
 def apply(name: str) -> list[str]:
@@ -1061,6 +1059,12 @@ def apply(name: str) -> list[str]:
     Cinnamon panel, the wallpaper, running terminals - repaints in place, and
     the launcher reads its theme each time it opens.
     """
+    _apply(name)
+    return []
+
+
+def _apply(name: str) -> SkinpackError | None:
+    """Apply a theme; why the chosen Skin was not worn, if it was not."""
     theme = load(name)
     ui = _ui(theme)
     env = _session_env()
@@ -1070,7 +1074,12 @@ def apply(name: str) -> list[str]:
     # One theme name for every surface. Because the name differs per palette
     # this is an ordinary theme change, which GTK applications, Muffin's window
     # decorations and the Cinnamon shell all already reload on.
-    worn = build_skin(theme)
+    try:
+        worn, failed = build_skin(theme), None
+    except SkinpackError as error:
+        # Osiris's own look rather than a half-built Skin.
+        print(f"osiris-theme: Skin: {error}", file=sys.stderr)
+        worn, failed = None, error
     skin, look = worn if worn else (None, Look(None, None, None))
     applied = skin.theme if skin else build_theme(theme) or ui["gtk"]
     # Folders tinted to the accent, over the theme's declared icon set. Falls
@@ -1118,7 +1127,7 @@ def apply(name: str) -> list[str]:
     _drift(theme)
     if frozen:
         _transition("Release", str(SETTLE_MS), str(FADE_MS), env=env)
-    return []
+    return failed
 
 
 def login() -> None:
@@ -1148,7 +1157,10 @@ def main() -> None:
     if args.login:
         login()
     elif args.skin:
-        set_skin(args.skin)
+        try:
+            set_skin(args.skin)
+        except SkinpackError as error:
+            sys.exit(f"osiris-theme: {error}")
     else:
         apply(args.apply)
 
