@@ -179,9 +179,12 @@ def test_a_duplicate_keeps_its_history_so_changes_can_be_undone(tmp_path: Path) 
     copy = duplicate(
         read(make_pack(tmp_path / "shipped" / "colloid")), tmp_path / "mine", runner
     )
-    assert runner.ran("git", "-C", str(copy.root), "init", "-q")
-    assert runner.ran("git", "-C", str(copy.root), "add", "-A")
-    assert runner.ran("git", "-C", str(copy.root), *as_osiris(), "commit", "-q")
+    done = git_in(runner, copy.name)
+    assert ("init", "-q") in done
+    assert ("add", "-A") in done
+    assert any(
+        step[: len(as_osiris())] == as_osiris() and "commit" in step for step in done
+    )
 
 
 def test_a_new_skin_takes_its_name_from_what_the_person_calls_it(
