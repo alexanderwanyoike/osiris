@@ -509,6 +509,8 @@ class Application(Adw.Application):
         #: Admin password requests waiting on the person, by session.
         self.admin_pending: dict[str, AdminPending] = {}
         self._admin_object = 0
+        #: An Entry point's folder and draft, until it can be started.
+        self.waiting: tuple[Path, str | None] | None = None
         show = Gio.SimpleAction.new("show", None)
         show.connect("activate", lambda *_: self.toggle())
         self.add_action(show)
@@ -672,9 +674,18 @@ class Application(Adw.Application):
         with a request written in the input but not sent."""
         if not self.open:
             self.summon()
+        self.waiting = (folder, draft)
+        self.start_waiting()
+
+    def start_waiting(self) -> bool:
+        """Start the Entry point given, once there is a Harness to start it in."""
+        if self.waiting is None or self.harness is None:
+            return False
+        (folder, draft), self.waiting = self.waiting, None
         self.new_conversation(folder)
         if draft:
             self.drawer.draft(draft)
+        return False
 
     def summon(self) -> None:
         self.open = True
@@ -1061,6 +1072,7 @@ class Application(Adw.Application):
                                            self.files, self.home))
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)
+                GLib.idle_add(self.start_waiting)
                 GLib.idle_add(lambda: self.load_history() or False)
                 for event in engine.events():
                     handled = self.harness.handle(event)
