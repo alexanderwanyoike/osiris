@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from pathlib import Path
 
 
@@ -27,6 +27,17 @@ def failed(picture: Path) -> None:
 
 def needs_drawing(picture: Path) -> bool:
     return not picture.is_file() and not _failure(picture).exists()
+
+
+def draw(picture: Path, drawer: Callable[[Path], None]) -> None:
+    """Have drawer write the picture beside it, then move it in whole."""
+    picture.parent.mkdir(parents=True, exist_ok=True)
+    partial = picture.with_suffix(".partial.png")
+    try:
+        drawer(partial)
+        partial.replace(picture)
+    finally:
+        partial.unlink(missing_ok=True)
 
 
 def cursor_picture(cache: Path, cursor: str, shape: str) -> Path:
