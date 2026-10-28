@@ -112,13 +112,15 @@ element selected { background-color: @accent; text-color: @bg; }
 """
 
 # The colours Colloid's own installer swaps in its pictures (assets.sh).
-SVG_GAPS = Recolour({
-    "#5b9bf8": "{{accent}}",
-    "#3c84f7": "{{accent}}",
-    "#ffffff": "{{background}}",
-    "#2c2c2c": "{{background}}",
-    "#3c3c3c": "{{surface}}",
-})
+SVG_GAPS = Recolour(
+    {
+        "#5b9bf8": "{{accent}}",
+        "#3c84f7": "{{accent}}",
+        "#ffffff": "{{background}}",
+        "#2c2c2c": "{{background}}",
+        "#3c3c3c": "{{surface}}",
+    }
+)
 # The dock's fill takes the Theme's colour.
 DOCK = {
     "FillStartColor": "{{background_plank}}",

@@ -85,11 +85,13 @@ $default-dark: $gap-accent;
 
 # The accent Jasper's own scripts swap in its Cinnamon pictures
 # (src/assets/cinnamon/make-assets.sh), and its dark knob and tick grey.
-SVG_GAPS = Recolour({
-    "#009688": "{{accent}}",
-    "#4db6ac": "{{accent}}",
-    "#242424": "{{background}}",
-})
+SVG_GAPS = Recolour(
+    {
+        "#009688": "{{accent}}",
+        "#4db6ac": "{{accent}}",
+        "#242424": "{{background}}",
+    }
+)
 # Jasper's on() switches to dark text at a fixed brightness.
 THRESHOLD = ("@if ($brightness >= 156) {", "@if ($brightness >= $osiris-midpoint) {")
 # The dock's fill takes the Theme's colour.

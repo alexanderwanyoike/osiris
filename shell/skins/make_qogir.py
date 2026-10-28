@@ -96,18 +96,20 @@ XLINK = "{http://www.w3.org/1999/xlink}href"
 # The colours Qogir's per-accent pictures differ by (assets-Manjaro.svg and
 # assets-Ubuntu.svg swap only this one), and the Cinnamon pictures' own.
 GTK_GAPS = Recolour({"#5294e2": "{{accent}}"})
-CINNAMON_GAPS = Recolour({
-    "#5294e2": "{{accent}}",
-    "#4080fb": "{{accent}}",
-    "#1d78df": "{{accent}}",
-    "#398cd3": "{{accent}}",
-    "#398dd3": "{{accent}}",
-    "#fcfdfd": "{{background}}",
-    "#f5f6f7": "{{background}}",
-    "#32343d": "{{background}}",
-    "#2d323d": "{{background}}",
-    "#323644": "{{background}}",
-})
+CINNAMON_GAPS = Recolour(
+    {
+        "#5294e2": "{{accent}}",
+        "#4080fb": "{{accent}}",
+        "#1d78df": "{{accent}}",
+        "#398cd3": "{{accent}}",
+        "#398dd3": "{{accent}}",
+        "#fcfdfd": "{{background}}",
+        "#f5f6f7": "{{background}}",
+        "#32343d": "{{background}}",
+        "#2d323d": "{{background}}",
+        "#323644": "{{background}}",
+    }
+)
 # White is also Qogir's tick and knob colour, so it becomes a gap only where it
 # is the menu or box behind them.
 CINNAMON_WHITE = ("menu/menu.svg", "checkbox/checkbox-unchecked")

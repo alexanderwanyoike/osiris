@@ -122,20 +122,24 @@ STOP_GAPS = {
 }
 # The selected sidebar row's corners are filled with the view colour ($base),
 # which is the Theme's surface in both variants.
-ROW_GAPS = Recolour({
-    "#ffffff": "{{surface}}",
-    "#2c2c2c": "{{surface}}",
-    "#0f0f0f": "{{surface}}",
-})
+ROW_GAPS = Recolour(
+    {
+        "#ffffff": "{{surface}}",
+        "#2c2c2c": "{{surface}}",
+        "#0f0f0f": "{{surface}}",
+    }
+)
 
 # The colours Orchis's cinnamon/make-assets.sh swaps, plus the check and radio
 # green, which the Sass draws as $success ($check_radio 'default').
-CINNAMON_GAPS = Recolour({
-    "#1a73e8": "{{accent}}",
-    "#3281ea": "{{accent}}",
-    "#0f9d58": "{{success}}",
-    "#81c995": "{{success}}",
-})
+CINNAMON_GAPS = Recolour(
+    {
+        "#1a73e8": "{{accent}}",
+        "#3281ea": "{{accent}}",
+        "#0f9d58": "{{success}}",
+        "#81c995": "{{success}}",
+    }
+)
 CINNAMON_THEMED = ("add-workspace-active", "corner-ripple", "toggle-on")
 
 # Orchis's own default build: the light window uses its light header bar
