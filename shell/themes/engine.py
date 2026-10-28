@@ -48,7 +48,8 @@ from osiris.model.names import is_slug  # noqa: E402
 from osiris.platform.process import CommandError, SubprocessRunner  # noqa: E402
 from osiris.provision.seeding import may_write  # noqa: E402
 from osiris.skins import (  # noqa: E402
-    carried, edit, imports, library as skins, looks, pictures, share, xcursor)
+    edit, imports, library as skins, looks, pictures, share, wear,
+    xcursor)
 from osiris.skins.build import Built, build as build_skin_pack  # noqa: E402
 from osiris.skins.check import problems as check_programs  # noqa: E402
 from osiris.skins.pack import Look, SkinpackError, refuse_programs  # noqa: E402
@@ -753,20 +754,17 @@ def build_skin(theme: dict) -> tuple[Built, Look] | None:
     pack = skins.find(folders, skins.chosen(Path(SKIN_CHOICE)))
     if pack is None:
         return None
-    runner = SubprocessRunner()
+    places = wear.Places(themes=Path(THEMES_DIR), work=Path(SKIN_WORK),
+                         icons=Path(ICONS_DIR), fonts=Path(FONTS_DIR))
     try:
-        if carried.install(pack, Path(ICONS_DIR), Path(FONTS_DIR)):
-            runner.run("fc-cache", "-f", FONTS_DIR, check=False, quiet=True)
-        built = build_skin_pack(pack, theme, Path(THEMES_DIR), Path(SKIN_WORK),
-                                runner)
+        worn = wear.wear(pack, theme, places, SubprocessRunner(),
+                         lambda root: _osiris_cinnamon(theme, str(root)))
     except (CommandError, SkinpackError, OSError) as error:
         # Osiris's own look rather than a half-built Skin.
         print(f"osiris-theme: Skin {pack.name}: {error}", file=sys.stderr)
         return None
-    if not built.cinnamon:
-        _osiris_cinnamon(theme, os.path.join(THEMES_DIR, built.theme))
-    _drop_themes_but(built.theme)
-    return built, pack.look("dark" if theme.get("dark", True) else "light")
+    _drop_themes_but(worn[0].theme)
+    return worn
 
 
 def _link_adwaita_assets(skin: Built | None) -> None:
