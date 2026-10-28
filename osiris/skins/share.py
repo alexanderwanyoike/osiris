@@ -125,11 +125,12 @@ def duplicate(
     """A person's own copy of a Skin, with history and instructions for Osiris;
     a label makes it a new Skin of that name rather than a copy."""
     base = slug(label) if label else f"{pack.name}-copy"
-    copy = mine / free_name(mine, base, shipped)
-    shutil.copytree(pack.root, copy, ignore=shutil.ignore_patterns(".git"))
-    label_of = json.loads((copy / LABEL_FILE).read_text())
-    label_of["label"] = label or f"{pack.label} (copy)"
-    label_of["style"] = pack.style or pack.name
-    (copy / LABEL_FILE).write_text(json.dumps(label_of, indent=2) + "\n")
-    start_history(copy, f"Copy {pack.label}", runner)
-    return read(copy)
+    name = free_name(mine, base, shipped)
+    with _making(mine, name) as copy:
+        shutil.copytree(pack.root, copy, ignore=shutil.ignore_patterns(".git"))
+        label_of = json.loads((copy / LABEL_FILE).read_text())
+        label_of["label"] = label or f"{pack.label} (copy)"
+        label_of["style"] = pack.style or pack.name
+        (copy / LABEL_FILE).write_text(json.dumps(label_of, indent=2) + "\n")
+        start_history(copy, f"Copy {pack.label}", runner)
+    return read(mine / name)
