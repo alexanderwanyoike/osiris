@@ -15,6 +15,7 @@ from osiris.skins.pictures import (
     is_fresh,
     needs_drawing,
     picture_for,
+    sampler_env,
 )
 
 
@@ -79,3 +80,20 @@ def test_a_cursor_name_that_is_not_a_plain_name_is_refused(
     picture outside the cache."""
     with pytest.raises(ValueError):
         cursor_picture(tmp_path, name, "left_ptr")
+
+
+def test_the_sampler_finds_the_built_theme_without_hiding_the_persons_own(
+    tmp_path: Path,
+) -> None:
+    """Review of #133: pointing XDG_DATA_HOME at the cache hid the person's
+    icons and fonts in ~/.local/share from the picture."""
+    env = sampler_env({"XDG_DATA_HOME": "/home/me/.local/share"}, tmp_path)
+    assert env["XDG_DATA_HOME"] == "/home/me/.local/share"
+    assert env["XDG_DATA_DIRS"] == f"{tmp_path}:/usr/local/share:/usr/share"
+
+
+def test_the_systems_data_folders_are_kept_after_the_built_theme(
+    tmp_path: Path,
+) -> None:
+    env = sampler_env({"XDG_DATA_DIRS": "/opt/share:/usr/share"}, tmp_path)
+    assert env["XDG_DATA_DIRS"] == f"{tmp_path}:/opt/share:/usr/share"
