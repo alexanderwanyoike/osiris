@@ -35,7 +35,7 @@ def save(pack: Skinpack, edit: Edit, runner: CommandRunner) -> Skinpack:
     if style is not None and style.root.resolve() != pack.root.resolve():
         _take_style(pack, style)
         label.update({field: getattr(style, field) for field in LABEL_FIELDS})
-        label["style"] = style.style or style.name
+        label["style"] = style.name
     label["label"] = edit.label
     look = _look(label.get("look", {}), edit)
     if look:
