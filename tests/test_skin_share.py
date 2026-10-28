@@ -223,6 +223,13 @@ def test_duplicating_twice_finds_a_free_name(tmp_path: Path) -> None:
     assert duplicate(pack, tmp_path / "mine", FakeRunner()).name == "colloid-copy-2"
 
 
+def test_a_copy_of_a_copy_is_not_labelled_copy_twice(tmp_path: Path) -> None:
+    """Review of #132: duplicating a copy gave "Colloid (copy) (copy)"."""
+    pack = read(make_pack(tmp_path / "shipped" / "colloid"))
+    copy = duplicate(pack, tmp_path / "mine", FakeRunner())
+    assert duplicate(copy, tmp_path / "mine", FakeRunner()).label == "Colloid (copy)"
+
+
 def test_a_duplicate_tells_osiris_how_to_change_it(tmp_path: Path) -> None:
     pack = read(make_pack(tmp_path / "shipped" / "colloid"))
     copy = duplicate(pack, tmp_path / "mine", FakeRunner())
