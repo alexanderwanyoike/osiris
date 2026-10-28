@@ -4,6 +4,7 @@ fonts and GTK themes, from the archives they usually come in."""
 from __future__ import annotations
 
 import io
+import shutil
 import tarfile
 import zipfile
 from pathlib import Path
@@ -128,6 +129,32 @@ def test_a_set_the_system_already_has_is_refused(tmp_path: Path) -> None:
     with pytest.raises(UnusableDownload, match="Adwaita"):
         install_sets(download, tmp_path / "icons", system=[system])
     assert not (tmp_path / "icons" / "Adwaita").exists()
+
+
+def test_a_failed_import_keeps_the_sets_it_would_have_replaced(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Review of #136: the old set was removed before the new one was copied,
+    so a copy that failed part-way left neither."""
+    old = tmp_path / "icons" / "Neon"
+    old.mkdir(parents=True)
+    (old / "stale.png").write_text("old")
+    download = make_zip(
+        tmp_path / "neon.zip",
+        {"Neon/index.theme": ICON_INDEX, "Neon-cursors/cursors/left_ptr": "Xcur"},
+    )
+    copy = shutil.copyfile
+
+    def failing(source: Path, target: Path, **kwargs: bool) -> object:
+        if Path(source).name == "left_ptr":
+            raise OSError("disk full")
+        return copy(source, target, **kwargs)
+
+    monkeypatch.setattr(shutil, "copyfile", failing)
+    with pytest.raises(OSError, match="disk full"):
+        install_sets(download, tmp_path / "icons")
+    assert (old / "stale.png").read_text() == "old"
+    assert [entry.name for entry in (tmp_path / "icons").iterdir()] == ["Neon"]
 
 
 def test_a_download_with_no_set_in_it_is_refused(tmp_path: Path) -> None:
