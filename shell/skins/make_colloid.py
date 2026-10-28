@@ -80,6 +80,8 @@ $default-dark: $gap-accent;
 THRESHOLD = ("@if ($brightness >= 156) {", "@if ($brightness >= $osiris-midpoint) {")
 
 # Colloid ships no launcher theme; this one follows its rounded, flat panels.
+# Its placeholder is the foreground at 60%, the opacity Colloid gives
+# secondary text (rofi reads #rrggbbaa).
 LAUNCHER = """\
 /* Colloid, in the Theme's colours. Made by shell/skins/make_colloid.py. */
 * {
@@ -97,7 +99,7 @@ inputbar { background-color: @panel; border-radius: 999px; padding: 10px 16px;
     spacing: 10px; children: [ prompt, entry ]; }
 prompt { background-color: transparent; text-color: @accent; }
 entry { background-color: transparent; text-color: @fg; placeholder: "Search";
-    placeholder-color: @fg; }
+    placeholder-color: {{foreground}}99; }
 listview { background-color: transparent; lines: 8; scrollbar: false;
     spacing: 4px; fixed-height: false; }
 element { background-color: transparent; text-color: @fg; border-radius: 8px;
