@@ -106,6 +106,14 @@ def install_sets(
         return sorted(folder.name for folder in found)
 
 
+def _is_font(path: Path, unpacked: Path) -> bool:
+    hidden = (
+        part.startswith(".") or part == "__MACOSX"
+        for part in path.relative_to(unpacked).parts
+    )
+    return path.suffix.lower() in FONT_SUFFIXES and not any(hidden)
+
+
 def install_fonts(downloads: Sequence[Path], fonts_dir: Path) -> list[str]:
     """Install the fonts given, or inside the archives given; their file names."""
     installed: list[str] = []
@@ -120,9 +128,7 @@ def install_fonts(downloads: Sequence[Path], fonts_dir: Path) -> list[str]:
                     unpack(download, into)
                 except UnusableDownload:
                     continue
-                fonts = [
-                    f for f in into.rglob("*") if f.suffix.lower() in FONT_SUFFIXES
-                ]
+                fonts = [font for font in into.rglob("*") if _is_font(font, into)]
             for font in fonts:
                 shutil.copy(font, fonts_dir / font.name)
                 installed.append(font.name)
