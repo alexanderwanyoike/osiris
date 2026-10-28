@@ -227,16 +227,20 @@ class SkinEditor(Adw.Dialog):
         children = flow.get_selected_children()
         return names[children[0].get_index()] if children else None
 
-    def _save(self) -> None:
+    def choice(self) -> Choice:
+        """What is chosen now, saved or not."""
         font = None if self._keep_font.get_active() else (
             self._font.get_font_desc().to_string())
-        saved = self._on_save(Choice(
+        return Choice(
             label=self._name.get_text().strip(),
             style=self._selected(self._styles, self._style_names),
             icons=self._selected(self._icons, self._icon_names),
             cursor=self._selected(self._cursors, self._cursor_names),
             font=font,
-        ))
+        )
+
+    def _save(self) -> None:
+        saved = self._on_save(self.choice())
         if saved is not False:
             self.close()
 
