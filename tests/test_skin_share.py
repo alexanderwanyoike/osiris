@@ -105,6 +105,20 @@ def test_a_shared_skins_own_git_folder_is_left_out(tmp_path: Path) -> None:
     assert not (opened.root / ".git").exists()
 
 
+def test_an_exported_skin_leaves_its_history_and_instructions_behind(
+    tmp_path: Path,
+) -> None:
+    """They are the person's and Osiris's; whoever opens it starts their own."""
+    root = make_pack(tmp_path / "mine" / "colloid")
+    (root / "AGENTS.md").write_text("instructions")
+    (root / ".git").mkdir()
+    (root / ".git" / "HEAD").write_text("ref: refs/heads/main\n")
+    with zipfile.ZipFile(export(read(root), tmp_path / "out")) as archive:
+        names = archive.namelist()
+    assert "colloid/skin.json" in names
+    assert not [name for name in names if "AGENTS.md" in name or ".git" in name]
+
+
 def test_a_file_without_a_label_is_refused_and_leaves_nothing(tmp_path: Path) -> None:
     junk = tmp_path / f"junk{EXTENSION}"
     with zipfile.ZipFile(junk, "w") as archive:
