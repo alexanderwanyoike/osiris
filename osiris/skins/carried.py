@@ -56,3 +56,14 @@ def _replace(source: Path, target: Path, stamp: str) -> None:
     (staging / STAMP).write_text(stamp)
     shutil.rmtree(target, ignore_errors=True)
     staging.rename(target)
+
+
+def remove_fonts(pack: Skinpack, fonts_dir: Path) -> bool:
+    """Remove the fonts installed for a Skin; True when there were some.
+
+    Its icon sets stay: another Skin may carry and wear the same one."""
+    target = fonts_dir / pack.name
+    if not target.is_dir():
+        return False
+    shutil.rmtree(target)
+    return True
