@@ -92,11 +92,11 @@ def test_the_skin_can_be_renamed() -> None:
 
 def test_the_skins_style_is_chosen_and_another_can_be() -> None:
     saved: list[Choice] = []
-    dialog = editor(saved)
-    assert chosen(section(dialog, "Style")) == ["Colloid"]
-    choose(section(dialog, "Style"), "Graphite")
+    dialog = editor(saved, style="graphite")
+    assert chosen(section(dialog, "Style")) == ["Graphite"]
+    choose(section(dialog, "Style"), "Colloid")
     save(dialog)
-    assert saved[0].style == "graphite"
+    assert saved[0].style == "colloid"
 
 
 def test_icon_sets_are_shown_by_their_icons_and_the_themes_choice_first() -> None:
