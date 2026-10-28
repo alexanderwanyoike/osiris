@@ -150,7 +150,7 @@ def install_fonts(downloads: Sequence[Path], fonts_dir: Path) -> list[str]:
                 fonts = [font for font in into.rglob("*") if _is_font(font, into)]
             for font in fonts:
                 name = _unused(font, installed)
-                shutil.copy(font, fonts_dir / name)
+                shutil.copyfile(font, fonts_dir / name)
                 installed.append(name)
     if not installed:
         raise UnusableDownload("no font in what was given")
