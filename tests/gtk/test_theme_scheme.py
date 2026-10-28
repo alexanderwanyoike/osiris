@@ -7,7 +7,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from gi.repository import Adw, GLib
+from gi.repository import Adw, Gio, GLib
 
 from osiris.apps.theme_scheme import ThemeScheme
 
@@ -67,3 +67,20 @@ def test_a_theme_that_is_not_an_object_means_dark(tmp_path: Path) -> None:
     Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
     ThemeScheme(record, lambda _name: ["not", "a", "theme"])
     assert scheme() == Adw.ColorScheme.FORCE_DARK
+
+
+def test_a_record_still_being_written_is_not_followed(tmp_path: Path) -> None:
+    """Review of #135: every write event was followed, and a record caught
+    truncated but not yet written read as no Theme, so a light Theme
+    flashed dark."""
+    record = tmp_path / "theme"
+    record.write_text("rose-pine-dawn\n")
+    following = ThemeScheme(record, THEMES.__getitem__)
+    record.write_text("")
+    following._monitor.emit(
+        "changed",
+        Gio.File.new_for_path(str(record)),
+        None,
+        Gio.FileMonitorEvent.CHANGED,
+    )
+    assert scheme() == Adw.ColorScheme.FORCE_LIGHT
