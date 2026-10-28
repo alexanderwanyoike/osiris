@@ -9,7 +9,7 @@ import shutil
 import tarfile
 import tempfile
 import zipfile
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path, PurePosixPath
 
 from osiris.model.names import slug
@@ -135,30 +135,37 @@ def install_fonts(downloads: Sequence[Path], fonts_dir: Path) -> list[str]:
 SURFACE_FOLDERS = ("gtk-3.0", "gtk-4.0", "cinnamon")
 
 
+def _base(name: str) -> str:
+    return name[: -len("-dark")] if name.lower().endswith("-dark") else name
+
+
+def _variants(themes: Mapping[str, Path]) -> dict[str, Path]:
+    """The theme with the shortest name, its colour variants left out: its
+    light and dark if it has both, otherwise the one it has for both."""
+    base = min({_base(name) for name in themes}, key=lambda name: (len(name), name))
+    named = [folder for name, folder in themes.items() if _base(name) == base]
+    light = themes.get(base)
+    dark = next((folder for folder in named if folder.name != base), None)
+    if light and dark:
+        return {"light": light, "dark": dark}
+    return {"common": named[0]}
+
+
 def import_gtk_theme(download: Path, mine: Path, runner: CommandRunner) -> Skinpack:
     """A downloaded GTK theme as a person's own Skin, worn in its own colours
     until Osiris converts them to the Theme's gaps."""
     with tempfile.TemporaryDirectory() as scratch:
         unpack(download, Path(scratch))
-        themes = sorted(
-            (
-                folder
-                for folder in Path(scratch).rglob("*")
-                if (folder / "gtk-3.0" / "gtk.css").is_file()
-            ),
-            key=lambda folder: len(folder.name),
-        )
+        themes = {
+            folder.name: folder
+            for folder in sorted(Path(scratch).rglob("*"))
+            if (folder / "gtk-3.0" / "gtk.css").is_file()
+        }
         if not themes:
             raise UnusableDownload(f"{download.name}: no GTK theme in it")
-        dark = [folder for folder in themes if "dark" in folder.name.lower()]
-        light = [folder for folder in themes if folder not in dark]
-        label = (light or dark)[0].name
+        variants = _variants(themes)
+        label = next(iter(variants.values())).name
         skin = mine / free_name(mine, slug(label))
-        variants = (
-            {"light": light[0], "dark": dark[0]}
-            if light and dark
-            else {"common": themes[0]}
-        )
         for variant, theme in variants.items():
             for surface in SURFACE_FOLDERS:
                 if (theme / surface).is_dir():
