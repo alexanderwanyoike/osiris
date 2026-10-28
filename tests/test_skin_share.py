@@ -137,7 +137,7 @@ def test_a_file_reaching_outside_its_folder_is_refused(tmp_path: Path) -> None:
         archive.writestr("evil/../../escaped.txt", "out")
     with pytest.raises(SkinpackError):
         open_file(evil, tmp_path / "mine", FakeRunner())
-    assert not (tmp_path / "escaped.txt").exists()
+    assert list(tmp_path.rglob("*")) == [evil]
 
 
 def test_a_file_unpacking_to_more_than_a_skin_could_need_is_refused(
