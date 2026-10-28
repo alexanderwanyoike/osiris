@@ -183,3 +183,16 @@ def test_a_downloaded_gtk_theme_can_be_imported_from_the_section() -> None:
     )
     buttons(page, "Import a GTK theme")[0].emit("clicked")
     assert imported == [True]
+
+
+def test_a_picture_drawn_later_lands_on_its_own_card(tmp_path: Path) -> None:
+    """Review of #133: each picture that landed rebuilt the whole page,
+    which threw away the scroll position."""
+    picture = tmp_path / "colloid-nord.png"
+    page = SkinsPage(SKINS, "osiris", lambda _n: None)
+    card = rows(page)["Colloid"]
+    page.show_picture("colloid", str(picture))
+    assert rows(page)["Colloid"] is card
+    shown = [w for w in widgets(card) if isinstance(w, Gtk.Picture)]
+    assert [w.get_file().get_path() for w in shown] == [str(picture)]
+    assert not [w for w in widgets(card) if w.has_css_class("skin-blank")]
