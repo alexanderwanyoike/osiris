@@ -858,7 +858,7 @@ def draw_skin_picture(name: str) -> str:
     if picture is None:
         raise OSError(f"cannot read what the picture of {name} shows")
     try:
-        _draw(name, theme, cache, picture)
+        pictures.draw(picture, lambda out: _draw(name, theme, cache, out))
     except Exception:
         pictures.failed(picture)
         raise
