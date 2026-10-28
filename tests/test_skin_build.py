@@ -236,7 +236,7 @@ def test_a_pack_without_a_gtk3_sheet_for_the_variant_is_refused(
     """Without it the theme is named but draws nothing of the Skin."""
     root = make_gtk_only_pack(tmp_path / "elementary")
     (root / "gtk-3.0" / "gtk-dark.scss").unlink()
-    with pytest.raises(SkinpackError, match="gtk-3.0"):
+    with pytest.raises(SkinpackError, match=r"gtk-3\.0"):
         build(
             read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
         )
