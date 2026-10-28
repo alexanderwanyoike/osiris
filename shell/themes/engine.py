@@ -833,6 +833,12 @@ def draw_skin_picture(name: str) -> str:
     Theme's colours, shown by the sampler off-screen."""
     theme = _current_theme()
     cache = Path(SKIN_PICTURES)
+    picture = pictures.picture_for(cache, name, theme["name"])
+    _draw(name, theme, cache, picture)
+    return str(picture)
+
+
+def _draw(name: str, theme: dict, cache: Path, picture: Path) -> None:
     themes = cache / "themes"
     if name == skins.OSIRIS:
         built = f"Osiris-osiris-{theme['name']}"
@@ -841,7 +847,6 @@ def draw_skin_picture(name: str) -> str:
     else:
         built = build_skin_pack(_pack(name), theme, themes, cache / "work",
                                 SubprocessRunner(), only=("gtk-3.0",)).theme
-    picture = pictures.picture_for(cache, name, theme["name"])
     look = _look_of(name, theme)
     extra = ["--icons", look.icons, "--font", look.font]
     pointer = _pointer(look.cursor or "", cache)
@@ -851,7 +856,6 @@ def draw_skin_picture(name: str) -> str:
     subprocess.run([sys.executable, _sampler(), built, str(picture), *extra],
                    env={**os.environ, "XDG_DATA_HOME": str(cache)},
                    check=True, capture_output=True, timeout=60)
-    return str(picture)
 
 
 def _look_of(name: str, theme: dict) -> Look:
