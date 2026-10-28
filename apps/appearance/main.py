@@ -689,7 +689,9 @@ class Window(Adw.ApplicationWindow):
                                             timeout=6))
             return
         self._show_skins()
-        self.toasts.add_toast(Adw.Toast(title=f"Copied as {copy}", timeout=3))
+        labels = {skin: label for skin, label, _c in engine.skin_choices()}
+        self.toasts.add_toast(Adw.Toast(
+            title=f"Copied as {labels.get(copy, copy)}", timeout=3))
 
     def change_skin(self, name: str) -> None:
         self._ask_osiris(name)
