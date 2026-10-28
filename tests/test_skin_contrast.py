@@ -23,6 +23,7 @@ FILLED = (".view:selected", "button.suggested-action", "button.destructive-actio
 SHEETS = {
     "graphite": FILLED,
     "orchis": FILLED,
+    "qogir": FILLED,
 }
 
 Colour = tuple[float, ...]
