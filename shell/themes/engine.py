@@ -296,6 +296,8 @@ def load(name: str) -> dict:
         raise KeyError(name)
     with open(path) as fh:
         theme = json.load(fh)
+    if not isinstance(theme, dict):
+        raise ValueError(f"{path}: a Theme is a JSON object")
     theme.setdefault("name", name)
     theme.setdefault("label", name)
     validate(theme)
