@@ -222,3 +222,14 @@ def test_a_failed_save_keeps_the_editor_open() -> None:
     dialog.close = lambda: closed.append(True)
     save(dialog)
     assert closed == []
+
+
+def test_what_is_chosen_can_be_read_without_saving() -> None:
+    """Review of #136: adding an icon set reopened the editor from the
+    saved Skin, losing every choice made before the Add."""
+    saved: list[Choice] = []
+    dialog = editor(saved)
+    choose(section(dialog, "Icons"), "Papirus")
+    choose(section(dialog, "Style"), "Graphite")
+    assert dialog.choice() == Choice("Sharp", "graphite", "Papirus", None, None)
+    assert saved == []
