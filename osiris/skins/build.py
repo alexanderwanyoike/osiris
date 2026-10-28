@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from osiris.model.names import is_slug
 from osiris.platform.process import CommandRunner
 from osiris.skins.pack import (
     Skinpack,
@@ -56,6 +57,8 @@ def build(
     only: Sequence[str] | None = None,
 ) -> Built:
     refuse_programs(pack)
+    if not is_slug(theme["name"]):
+        raise SkinpackError(f"{theme['name']!r} is not a Theme's name")
     filled = gaps(theme)
     variant = filled["variant"]
     # Shipped packs are read-only; the gaps are written into a copy.
