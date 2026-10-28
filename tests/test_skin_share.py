@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import tempfile
 import zipfile
+from itertools import pairwise
 from pathlib import Path
 
 import pytest
@@ -185,6 +186,22 @@ def test_a_duplicate_keeps_its_history_so_changes_can_be_undone(tmp_path: Path) 
     assert any(
         step[: len(as_osiris())] == as_osiris() and "commit" in step for step in done
     )
+
+
+def test_osiris_commits_in_a_skin_unsigned_and_without_the_persons_hooks(
+    tmp_path: Path,
+) -> None:
+    """Signing would ask for the person's key, and their hooks are for their
+    own commits, not Osiris's."""
+    runner = FakeRunner()
+    pack = read(make_pack(tmp_path / "shipped" / "colloid"))
+    copy = duplicate(pack, tmp_path / "mine", runner)
+    commits = [step for step in git_in(runner, copy.name) if "commit" in step]
+    assert commits
+    for step in commits:
+        options = set(pairwise(step))
+        assert ("-c", "commit.gpgsign=false") in options
+        assert ("-c", "core.hooksPath=") in options
 
 
 def test_a_duplicate_that_fails_leaves_nothing_behind(tmp_path: Path) -> None:
