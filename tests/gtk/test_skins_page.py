@@ -6,9 +6,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from gi.repository import Gtk
-from skins_page import SkinsPage
+from skins_page import SkinsPage, new_skin
 
-from .conftest import texts, widgets
+from .conftest import find, texts, widgets
 
 SKINS = [
     ("osiris", "Osiris", "Osiris's own look"),
@@ -196,3 +196,19 @@ def test_a_picture_drawn_later_lands_on_its_own_card(tmp_path: Path) -> None:
     shown = [w for w in widgets(card) if isinstance(w, Gtk.Picture)]
     assert [w.get_file().get_path() for w in shown] == [str(picture)]
     assert not [w for w in widgets(card) if w.has_css_class("skin-blank")]
+
+
+BASES = [("colloid", "Colloid", "Vince Liuice, GPL-3.0")]
+
+
+def test_a_new_skin_can_be_created_only_once_it_has_a_name() -> None:
+    """Review of #132: Create was offered with the name empty, and did
+    nothing."""
+    created: list[tuple[str, str]] = []
+    dialog = new_skin(BASES, lambda label, base: created.append((label, base)))
+    assert not dialog.get_response_enabled("create")
+    name = find(dialog.get_extra_child(), Gtk.Entry, "Name")
+    name.set_text("Sharp")
+    assert dialog.get_response_enabled("create")
+    dialog.emit("response", "create")
+    assert created == [("Sharp", "colloid")]
