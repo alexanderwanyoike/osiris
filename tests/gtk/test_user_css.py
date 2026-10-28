@@ -7,7 +7,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from gi.repository import GLib, Gtk
+from gi.repository import Gio, GLib, Gtk
 
 from osiris.apps.user_css import UserCss
 
@@ -46,3 +46,16 @@ def test_it_outranks_the_copy_gtk_read_at_startup() -> None:
 def test_no_sheet_means_an_empty_provider(tmp_path: Path) -> None:
     css = UserCss(tmp_path / "missing.css")
     assert css.provider.to_string().strip() == ""
+
+
+def test_a_sheet_still_being_written_is_not_loaded(tmp_path: Path) -> None:
+    """Review of #127: every write event reloaded the sheet, so a sheet the
+    engine had only truncated so far left the app unstyled for a moment."""
+    sheet = tmp_path / "gtk.css"
+    sheet.write_text("window { color: #c4a7e7; }")
+    css = UserCss(sheet)
+    sheet.write_text("")
+    css._monitor.emit(
+        "changed", Gio.File.new_for_path(str(sheet)), None, Gio.FileMonitorEvent.CHANGED
+    )
+    assert "rgb(196,167,231)" in css.provider.to_string()
