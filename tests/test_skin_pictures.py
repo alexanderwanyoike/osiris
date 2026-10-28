@@ -97,6 +97,22 @@ def test_a_picture_that_fails_leaves_nothing_half_drawn(tmp_path: Path) -> None:
     assert not list(picture.parent.glob("*.png"))
 
 
+def test_a_new_picture_replaces_the_ones_it_supersedes(tmp_path: Path) -> None:
+    """Review of #133: every change to a Skin or Theme left another picture
+    in the cache for good."""
+    shows = skin(tmp_path)
+    old = picture_for(tmp_path / "cache", "colloid", "nord", shows)
+    draw(old, lambda out: out.write_bytes(b"old"))
+    other = picture_for(tmp_path / "cache", "colloid", "rose-pine", shows)
+    draw(other, lambda out: out.write_bytes(b"other"))
+    (tmp_path / "pack" / "sass" / "_palette.scss").write_text("changed")
+    new = picture_for(tmp_path / "cache", "colloid", "nord", shows)
+    failed(new)
+    draw(new, lambda out: out.write_bytes(b"new"))
+    assert list(new.parent.iterdir()) == [new]
+    assert other.is_file()
+
+
 def test_a_cursors_picture_is_kept_in_the_cache(tmp_path: Path) -> None:
     assert cursor_picture(tmp_path, "Bibata", "left_ptr").parent == tmp_path
 
