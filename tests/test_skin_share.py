@@ -4,6 +4,7 @@ person's own Skins deleted (shipped ones cannot be)."""
 from __future__ import annotations
 
 import json
+import shutil
 import tempfile
 import zipfile
 from itertools import pairwise
@@ -172,6 +173,26 @@ def test_what_macos_adds_to_a_zipped_skin_is_ignored(tmp_path: Path) -> None:
         archive.writestr("__MACOSX/colloid/._skin.json", "resource fork")
     opened = open_file(shared, tmp_path / "mine", FakeRunner())
     assert [path.name for path in (tmp_path / "mine").iterdir()] == [opened.name]
+
+
+def test_a_skin_with_no_gtk_style_for_a_variant_is_refused(tmp_path: Path) -> None:
+    """It would leave the desktop unstyled in that variant's Themes."""
+    root = make_pack(tmp_path / "made" / "half")
+    (root / "gtk-3.0" / "gtk-dark.scss").unlink()
+    shared = zipped(root, tmp_path / f"half{EXTENSION}")
+    with pytest.raises(SkinpackError, match="dark"):
+        open_file(shared, tmp_path / "mine", FakeRunner())
+    assert not (tmp_path / "mine" / "half").exists()
+
+
+def test_a_skin_of_compiled_style_sheets_opens(tmp_path: Path) -> None:
+    """As an imported GTK theme is: its CSS in files/, per variant or common."""
+    root = make_pack(tmp_path / "made" / "flat")
+    shutil.rmtree(root / "gtk-3.0")
+    (root / "files" / "common" / "gtk-3.0").mkdir(parents=True)
+    (root / "files" / "common" / "gtk-3.0" / "gtk.css").write_text("* {}\n")
+    shared = zipped(root, tmp_path / f"flat{EXTENSION}")
+    assert open_file(shared, tmp_path / "mine", FakeRunner()).name == "flat"
 
 
 def test_a_persons_skin_can_be_deleted(tmp_path: Path) -> None:
