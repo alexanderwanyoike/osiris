@@ -49,3 +49,10 @@ def is_cursor_set(folder: Path) -> bool:
 
 def cursor_themes(folders: Sequence[Path]) -> list[str]:
     return _themes(folders, is_cursor_set)
+
+
+def installed_icon_set(name: str | None, folders: Sequence[Path]) -> str | None:
+    """The icon set a look names if it is installed; None leaves the Theme's."""
+    if name and any(is_icon_set(folder / name) for folder in folders):
+        return name
+    return None
