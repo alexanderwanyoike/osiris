@@ -43,6 +43,7 @@ for candidate in ("/usr/share/osiris/lib", REPO):
 
 import engine  # noqa: E402
 
+from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.platform import RealFileSystem  # noqa: E402
 from osiris.provision.upgrade import Upgrade  # noqa: E402
 from osiris.themes.carousel import offset, sequence, slot  # noqa: E402
@@ -629,8 +630,10 @@ class Application(Adw.Application):
         if display is not None:
             provider = Gtk.CssProvider()
             provider.load_from_data(CSS)
+            # Above the user sheet, where a Skin's libadwaita rules land and
+            # would otherwise paint the window over the desktop.
             Gtk.StyleContext.add_provider_for_display(
-                display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+                display, provider, UserCss.PRIORITY + 1)
         self.window = Window(self)
         # Warm the cards around the current theme before anyone asks.
         self.window.carousel.load()
