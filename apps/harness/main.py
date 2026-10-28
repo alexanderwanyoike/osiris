@@ -680,11 +680,14 @@ class Application(Adw.Application):
         self.start_waiting()
 
     def start_waiting(self) -> bool:
-        """Start the Entry point given, once there is a Harness to start it in."""
+        """Start the Entry point given, once there is a Harness to start it in
+        and the Conversation on screen can be left."""
         if self.waiting is None or self.harness is None:
             return False
-        (folder, draft), self.waiting = self.waiting, None
-        self.new_conversation(folder)
+        folder, draft = self.waiting
+        if not self.new_conversation(folder):
+            return False
+        self.waiting = None
         if draft:
             self.drawer.draft(draft)
         return False
@@ -999,10 +1002,11 @@ class Application(Adw.Application):
                                      changes=self.log.changes_by_question(session),
                                      undone=self.log.undone())
 
-    def new_conversation(self, folder: Path | None = None) -> None:
-        """A new Conversation, in ``folder``'s Project or in none."""
+    def new_conversation(self, folder: Path | None = None) -> bool:
+        """A new Conversation, in ``folder``'s Project or in none; False if the
+        one on screen cannot be left yet."""
         if not self._leave():
-            return
+            return False
         self.conversation = Conversation()
         if self.harness is not None:
             self.harness.new_conversation(folder)
@@ -1011,6 +1015,7 @@ class Application(Adw.Application):
         self.drawer.entry.grab_focus()
         self.load_history()
         self.update_canvas()
+        return True
 
     def _leave(self) -> bool:
         """Keep the Conversation on screen while Osiris still works on it;
@@ -1041,12 +1046,14 @@ class Application(Adw.Application):
             GLib.idle_add(self._failed_to_send, str(error))
             return
         GLib.idle_add(lambda: self.load_history() or False)
+        GLib.idle_add(self.start_waiting)
 
     def _failed_to_send(self, message: str) -> bool:
         if self.conversation.turns:
             turn = self.conversation.turns[-1]
             turn.state, turn.error = State.FAILED, message
         self.drawer.refresh()
+        self.start_waiting()
         return False
 
     def _listen(self) -> None:
