@@ -60,7 +60,9 @@ def open_file(
         unsafe = [
             name
             for name in names
-            if PurePosixPath(name).is_absolute() or ".." in PurePosixPath(name).parts
+            if PurePosixPath(name).is_absolute()
+            or ".." in PurePosixPath(name).parts
+            or (len(PurePosixPath(name).parts) == 1 and not name.endswith("/"))
         ]
         if len(tops) != 1 or unsafe:
             raise SkinpackError(f"{shared.name}: not one folder of its own")
