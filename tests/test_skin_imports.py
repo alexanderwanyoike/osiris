@@ -4,6 +4,7 @@ fonts and GTK themes, from the archives they usually come in."""
 from __future__ import annotations
 
 import io
+import os
 import shutil
 import tarfile
 import zipfile
@@ -183,6 +184,32 @@ def test_a_set_keeps_its_own_links_even_dangling_or_looping(tmp_path: Path) -> N
     apps = tmp_path / "icons" / "Neon" / "48x48" / "apps"
     assert (apps / "alias.png").readlink() == Path("folder.png")
     assert (apps / "alias.png").read_text() == "png"
+
+
+def test_only_a_sets_data_is_installed_and_never_executable(tmp_path: Path) -> None:
+    """Review of #136: an import copied programs, exec bits, dotfiles, a nested
+    git history and links reaching out of the set."""
+    download = tmp_path / "neon.tar.gz"
+    with tarfile.open(download, "w:gz") as archive:
+        for name, mode in [
+            ("Neon/index.theme", 0o644),
+            ("Neon/48x48/apps/folder.png", 0o755),
+            ("Neon/install.sh", 0o755),
+            ("Neon/.git/config", 0o644),
+            ("Neon/.hidden.png", 0o644),
+        ]:
+            data = ICON_INDEX.encode()
+            info = tarfile.TarInfo(name)
+            info.size, info.mode = len(data), mode
+            archive.addfile(info, io.BytesIO(data))
+        info = tarfile.TarInfo("Neon/48x48/apps/outside.png")
+        info.type, info.linkname = tarfile.SYMTYPE, "../../../Other/x.png"
+        archive.addfile(info)
+    install_sets(download, tmp_path / "icons")
+    neon = tmp_path / "icons" / "Neon"
+    installed = sorted(p.relative_to(neon).as_posix() for p in neon.rglob("*"))
+    assert installed == ["48x48", "48x48/apps", "48x48/apps/folder.png", "index.theme"]
+    assert not os.access(neon / "48x48" / "apps" / "folder.png", os.X_OK)
 
 
 def test_a_download_with_no_set_in_it_is_refused(tmp_path: Path) -> None:
