@@ -28,6 +28,13 @@ class Cursor:
 
 
 def read(data: bytes, size: int) -> Cursor:
+    try:
+        return _read(data, size)
+    except struct.error as error:
+        raise XcursorError(f"not an Xcursor file: {error}") from None
+
+
+def _read(data: bytes, size: int) -> Cursor:
     if data[:4] != b"Xcur" or len(data) < 16:
         raise XcursorError("not an Xcursor file")
     _header, _version, count = struct.unpack_from("<3I", data, 4)
