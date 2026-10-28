@@ -7,7 +7,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from gi.repository import Gio, GLib, Gtk
+from gi.repository import Gdk, Gio, GLib, Gtk
 
 from osiris.apps.user_css import UserCss
 
@@ -39,8 +39,21 @@ def test_a_rewritten_sheet_is_loaded_again(tmp_path: Path) -> None:
     assert settle(lambda: "rgb(144,122,169)" in css.provider.to_string())
 
 
-def test_it_outranks_the_copy_gtk_read_at_startup() -> None:
-    assert UserCss.PRIORITY > Gtk.STYLE_PROVIDER_PRIORITY_USER
+def test_it_outranks_the_copy_gtk_read_at_startup(tmp_path: Path) -> None:
+    display = Gdk.Display.get_default()
+    startup = Gtk.CssProvider()
+    startup.load_from_string("label.startup-probe { color: #ff0000; }")
+    Gtk.StyleContext.add_provider_for_display(
+        display, startup, Gtk.STYLE_PROVIDER_PRIORITY_USER
+    )
+    sheet = tmp_path / "gtk.css"
+    sheet.write_text("label.startup-probe { color: #00ff00; }")
+    try:
+        UserCss(sheet)
+        probe = Gtk.Label(css_classes=["startup-probe"])
+        assert probe.get_color().to_string() == "rgb(0,255,0)"
+    finally:
+        Gtk.StyleContext.remove_provider_for_display(display, startup)
 
 
 def test_no_sheet_means_an_empty_provider(tmp_path: Path) -> None:
