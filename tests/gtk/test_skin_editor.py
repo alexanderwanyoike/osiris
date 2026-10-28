@@ -133,12 +133,13 @@ def test_cursor_sets_are_shown_by_their_pointers(tmp_path: Path) -> None:
 
 
 def test_a_font_can_be_chosen_or_left_to_the_theme() -> None:
+    """Left to the Theme in the words the icons and cursor use (#134 review)."""
     saved: list[Choice] = []
     dialog = editor(saved, font="Inter 11")
     keep = next(
         w
         for w in widgets(dialog.get_child())
-        if isinstance(w, Gtk.CheckButton) and w.get_label() == "Theme's font"
+        if isinstance(w, Gtk.CheckButton) and w.get_label() == "Theme's choice"
     )
     assert keep.get_active() is False
     save(dialog)
