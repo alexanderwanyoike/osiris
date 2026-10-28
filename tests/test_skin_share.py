@@ -203,6 +203,23 @@ def test_a_new_skin_named_like_another_gets_a_free_name(tmp_path: Path) -> None:
     )
 
 
+def test_a_new_skin_never_hides_a_shipped_one_by_its_name(tmp_path: Path) -> None:
+    """The person's Skins are found first, so a name taken there would hide
+    the shipped Skin everywhere."""
+    shipped = tmp_path / "shipped"
+    pack = read(make_pack(shipped / "colloid"))
+    made = duplicate(pack, tmp_path / "mine", FakeRunner(), "Colloid", [shipped])
+    assert made.name == "colloid-2"
+
+
+def test_an_opened_skin_never_hides_a_shipped_one_by_its_name(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped"
+    shared = export(read(make_pack(shipped / "colloid")), tmp_path / "out")
+    assert open_file(shared, tmp_path / "mine", FakeRunner(), [shipped]).name == (
+        "colloid-2"
+    )
+
+
 def test_a_shared_skin_holding_a_program_is_refused_and_leaves_nothing(
     tmp_path: Path,
 ) -> None:
