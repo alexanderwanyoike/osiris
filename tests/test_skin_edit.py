@@ -139,3 +139,13 @@ def test_icons_set_per_variant_survive_a_save_that_did_not_change_them(
     )
     assert saved.look("light").icons == "Papirus-Light"
     assert saved.look("dark").icons == "Papirus-Dark"
+
+
+def test_taking_a_persons_skin_as_style_records_that_skin(tmp_path: Path) -> None:
+    """Review of #137: the Skin taken was recorded as the style it was itself
+    started from, so the editor showed a different style than was chosen."""
+    root = mine(tmp_path)
+    shipped = read(tmp_path / "shipped" / "colloid")
+    other = duplicate(shipped, tmp_path / "mine", FakeRunner(), label="Soft")
+    saved = save(read(root), Edit("Sharp", other, None, None, None), FakeRunner())
+    assert saved.style == "soft"
