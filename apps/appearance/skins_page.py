@@ -169,7 +169,8 @@ def new_skin(bases: Sequence[Skin],
     dialog.set_default_response("create")
 
     def named(_entry=None) -> None:
-        dialog.set_response_enabled("create", bool(name.get_text().strip()))
+        dialog.set_response_enabled(
+            "create", bool(bases) and bool(name.get_text().strip()))
 
     def answered(_dialog, response: str) -> None:
         if response == "create":
