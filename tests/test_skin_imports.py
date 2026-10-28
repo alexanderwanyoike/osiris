@@ -249,6 +249,15 @@ def test_a_folder_named_like_a_font_is_not_one(tmp_path: Path) -> None:
     assert install_fonts([family], tmp_path / "fonts") == ["Inter-Regular.ttf"]
 
 
+def test_fonts_of_the_same_name_are_all_kept(tmp_path: Path) -> None:
+    """Review of #136: two families each with a Regular.ttf left only the last."""
+    first = make_zip(tmp_path / "one.zip", {"One/Regular.ttf": "one"})
+    second = make_zip(tmp_path / "two.zip", {"Two/Regular.ttf": "two"})
+    names = install_fonts([first, second], tmp_path / "fonts")
+    assert names == ["Regular-2.ttf", "Regular.ttf"]
+    assert (tmp_path / "fonts" / "Regular-2.ttf").read_text() == "two"
+
+
 def test_a_download_with_no_font_in_it_is_refused(tmp_path: Path) -> None:
     notes = tmp_path / "notes.txt"
     notes.write_text("no fonts")
