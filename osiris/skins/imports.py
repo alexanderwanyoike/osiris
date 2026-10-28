@@ -46,7 +46,12 @@ FONT_SUFFIXES = {".ttf", ".otf", ".ttc"}
 _REFUSED_SETS = {*FALLBACKS, "dark", "light"}
 
 
-def install_sets(download: Path, icons_dir: Path) -> list[str]:
+SYSTEM_ICONS = Path("/usr/share/icons")
+
+
+def install_sets(
+    download: Path, icons_dir: Path, system: Sequence[Path] = (SYSTEM_ICONS,)
+) -> list[str]:
     """Install every icon or cursor set inside a download; their names."""
     with tempfile.TemporaryDirectory() as scratch:
         unpack(download, Path(scratch))
@@ -61,6 +66,10 @@ def install_sets(download: Path, icons_dir: Path) -> list[str]:
             if folder.name.lower() in _REFUSED_SETS:
                 raise UnusableDownload(
                     f"{download.name}: a set named {folder.name} is not imported"
+                )
+            if any((root / folder.name).exists() for root in system):
+                raise UnusableDownload(
+                    f"{download.name}: {folder.name} is installed with the system"
                 )
         for folder in found:
             target = icons_dir / folder.name
