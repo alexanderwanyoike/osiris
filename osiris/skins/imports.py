@@ -15,6 +15,7 @@ from pathlib import Path, PurePosixPath
 from osiris.model.names import slug
 from osiris.platform.process import CommandRunner
 from osiris.skins.check import is_data
+from osiris.skins.library import IMPORTED
 from osiris.skins.looks import FALLBACKS, is_cursor_set, is_icon_set
 from osiris.skins.pack import LABEL_FILE, Skinpack, read
 from osiris.skins.share import free_name, start_history
@@ -217,7 +218,7 @@ def import_gtk_theme(
                 json.dumps(
                     {
                         "label": label,
-                        "author": "Imported",
+                        "author": IMPORTED,
                         "version": "imported",
                         "licence": "See the original download",
                         "source": download.name,
