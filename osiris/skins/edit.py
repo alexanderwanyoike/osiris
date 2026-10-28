@@ -12,6 +12,7 @@ from typing import Any
 
 from osiris.model.author import as_osiris
 from osiris.platform.process import CommandRunner
+from osiris.skins.check import DATA_NAMES
 from osiris.skins.imports import copy_data
 from osiris.skins.pack import LABEL_FIELDS, LABEL_FILE, Skinpack, read
 
@@ -81,6 +82,15 @@ def _commit(root: Path, message: str, runner: CommandRunner) -> None:
     )  # fmt: skip
 
 
+def _is_credit(entry: Path) -> bool:
+    return (
+        entry.name not in _KEPT
+        and entry.is_file()
+        and not entry.is_symlink()
+        and (entry.name in DATA_NAMES or entry.suffix.lower() in {".md", ".txt"})
+    )
+
+
 def _take_style(pack: Skinpack, style: Skinpack) -> None:
     """Copy the style in first, and remove the old one only once that worked."""
     with tempfile.TemporaryDirectory(dir=pack.root.parent) as scratch:
@@ -89,6 +99,9 @@ def _take_style(pack: Skinpack, style: Skinpack) -> None:
         for folder in _LAYOUT:
             if (style.root / folder).is_dir():
                 copy_data(style.root / folder, staged / folder)
+        for entry in style.root.iterdir():
+            if _is_credit(entry):
+                shutil.copyfile(entry, staged / entry.name)
         for entry in pack.root.iterdir():
             if entry.name in _KEPT:
                 continue
