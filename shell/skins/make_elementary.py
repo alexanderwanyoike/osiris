@@ -19,7 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from makers import replace, replace_once
+from makers import replace, replace_once, rewrite
 
 PACK = Path(__file__).resolve().parent / "elementary"
 VERSIONS = ("gtk-3.0", "gtk-4.0")
@@ -166,8 +166,7 @@ def entry(variant: str, version: str) -> str:
     return text
 
 
-def main() -> None:
-    upstream = Path(sys.argv[1]).resolve()
+def make(upstream: Path, pack: Path) -> None:
     src = upstream / "src"
     commit = subprocess.run(
         ["git", "-C", str(upstream), "log", "-1", "--format=%h %cs"],
@@ -175,10 +174,9 @@ def main() -> None:
         text=True,
         check=True,
     ).stdout.split()
-    shutil.rmtree(PACK, ignore_errors=True)
 
     for version in VERSIONS:
-        sass = PACK / "sass" / version
+        sass = pack / "sass" / version
         shutil.copytree(
             src / version,
             sass,
@@ -194,13 +192,13 @@ def main() -> None:
             between(index.read_text(), SURFACES_START, SURFACES_END, SURFACES)
         )
 
-        (PACK / version).mkdir()
+        (pack / version).mkdir()
         for variant, suffix in (("light", ""), ("dark", "-dark")):
             text = (src / version / "variants" / f"blueberry{suffix}.scss").read_text()
-            (PACK / version / f"gtk-{variant}.scss").write_text(entry(text, version))
+            (pack / version / f"gtk-{variant}.scss").write_text(entry(text, version))
 
         shutil.copytree(
-            src / version / "assets", PACK / "files" / "common" / version / "assets"
+            src / version / "assets", pack / "files" / "common" / version / "assets"
         )
 
     label = {
@@ -210,15 +208,20 @@ def main() -> None:
         "licence": "GPL-3.0",
         "source": "https://github.com/elementary/stylesheet",
     }
-    (PACK / "skin.json").write_text(json.dumps(label, indent=2) + "\n")
-    shutil.copy(upstream / "COPYING", PACK / "LICENSE")
-    (PACK / "SOURCES.md").write_text(
+    (pack / "skin.json").write_text(json.dumps(label, indent=2) + "\n")
+    shutil.copy(upstream / "COPYING", pack / "LICENSE")
+    (pack / "SOURCES.md").write_text(
         f"Made by shell/skins/make_elementary.py from elementary/stylesheet"
         f" {commit[0]} ({commit[1]}),\n{label['source']}, GPL-3.0. The Sass and"
         " pictures are upstream's; the\naccent entries, the role ramps and text"
         " inks in each `_palette.scss`, the\nsurfaces in each `_index.scss` and"
         " the inks on checks and destructive buttons\nare Osiris's.\n"
     )
+
+
+def main() -> None:
+    upstream = Path(sys.argv[1]).resolve()
+    rewrite(PACK, lambda pack: make(upstream, pack))
     print("wrote", PACK)
 
 

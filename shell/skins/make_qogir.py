@@ -17,7 +17,7 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from makers import Recolour
+from makers import Recolour, rewrite
 
 PACK = Path(__file__).resolve().parent / "qogir"
 
@@ -337,8 +337,7 @@ def plank(src: Path) -> str:
     )
 
 
-def main() -> None:
-    upstream = Path(sys.argv[1]).resolve()
+def make(upstream: Path, pack: Path) -> None:
     src = upstream / "src"
     commit = subprocess.run(
         ["git", "-C", str(upstream), "log", "-1", "--format=%h %cs"],
@@ -352,9 +351,8 @@ def main() -> None:
     ET.register_namespace(
         "sodipodi", "http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
     )
-    shutil.rmtree(PACK, ignore_errors=True)
 
-    sass = PACK / "sass"
+    sass = pack / "sass"
     shutil.copytree(src / "_sass", sass, ignore=shutil.ignore_patterns("gnome-shell"))
     tweaks = (src / "_sass" / "_tweaks.scss").read_text()
     palette = "\n@import 'color-palette-osiris';\n"
@@ -373,16 +371,16 @@ def main() -> None:
         raise SystemExit("upstream changed: the GTK Sass names no PNG pictures")
 
     for folder, (where, light, dark) in ENTRIES.items():
-        (PACK / folder).mkdir()
+        (pack / folder).mkdir()
         stem = "gtk" if folder.startswith("gtk") else folder
         for variant, name in (("light", light), ("dark", dark)):
             text = (src / where / f"{name}.scss").read_text()
             text, count = re.subn(r"""(['"])(\.\./)+_sass/""", r"\1../sass/", text)
             if not count:
                 raise SystemExit(f"upstream changed: {name}.scss imports no _sass/")
-            (PACK / folder / f"{stem}-{variant}.scss").write_text(text)
+            (pack / folder / f"{stem}-{variant}.scss").write_text(text)
 
-    common = PACK / "files" / "common"
+    common = pack / "files" / "common"
     pictures = src / "gtk" / "assets"
     for version in ("gtk-3.0", "gtk-4.0"):
         assets = common / version / "assets"
@@ -402,16 +400,16 @@ def main() -> None:
         shutil.copy(pictures / "logos" / "logo@2-.svg", assets / "logo@2.svg")
     shots = src / "cinnamon" / "assets"
     cinnamon(shots / "common-assets", common / "cinnamon" / "common-assets")
-    cinnamon(shots / "assets", PACK / "files" / "light" / "cinnamon" / "assets")
-    cinnamon(shots / "assets-Dark", PACK / "files" / "dark" / "cinnamon" / "assets")
+    cinnamon(shots / "assets", pack / "files" / "light" / "cinnamon" / "assets")
+    cinnamon(shots / "assets-Dark", pack / "files" / "dark" / "cinnamon" / "assets")
     GTK_GAPS.check("the GTK pictures")
     CINNAMON_GAPS.check("the Cinnamon pictures")
     WHITE_GAP.check(" and ".join(CINNAMON_WHITE))
 
-    (PACK / "plank").mkdir()
+    (pack / "plank").mkdir()
     dock = plank(src / "plank" / "dock.theme")
     for variant in ("light", "dark"):
-        (PACK / "plank" / f"dock-{variant}.theme").write_text(dock)
+        (pack / "plank" / f"dock-{variant}.theme").write_text(dock)
 
     label = {
         "label": "Qogir",
@@ -420,15 +418,20 @@ def main() -> None:
         "licence": "GPL-3.0",
         "source": "https://github.com/vinceliuice/Qogir-theme",
     }
-    (PACK / "skin.json").write_text(json.dumps(label, indent=2) + "\n")
-    shutil.copy(upstream / "COPYING", PACK / "LICENSE")
-    (PACK / "SOURCES.md").write_text(
+    (pack / "skin.json").write_text(json.dumps(label, indent=2) + "\n")
+    shutil.copy(upstream / "COPYING", pack / "LICENSE")
+    (pack / "SOURCES.md").write_text(
         f"Made by shell/skins/make_qogir.py from Qogir-theme {commit[0]}"
         f" ({commit[1]}),\n{label['source']}, GPL-3.0. The Sass and pictures are"
         " upstream's; the\npalette (`sass/_color-palette-osiris.scss`), the cut"
         " of `_colors.scss` it\nreplaces, the GTK pictures cut from upstream's"
         " SVG sheets in place of its\nPNGs, and the gap markers are Osiris's.\n"
     )
+
+
+def main() -> None:
+    upstream = Path(sys.argv[1]).resolve()
+    rewrite(PACK, lambda pack: make(upstream, pack))
     print("wrote", PACK)
 
 

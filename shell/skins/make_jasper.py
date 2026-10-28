@@ -13,7 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from makers import Recolour, replace
+from makers import Recolour, replace, rewrite
 
 PACK = Path(__file__).resolve().parent / "jasper"
 
@@ -124,8 +124,7 @@ def plank(src: Path) -> str:
     )
 
 
-def main() -> None:
-    upstream = Path(sys.argv[1]).resolve()
+def make(upstream: Path, pack: Path) -> None:
     src = upstream / "src"
     commit = subprocess.run(
         ["git", "-C", str(upstream), "log", "-1", "--format=%h %cs"],
@@ -133,13 +132,12 @@ def main() -> None:
         text=True,
         check=True,
     ).stdout.split()
-    shutil.rmtree(PACK, ignore_errors=True)
 
     shutil.copytree(
-        src / "sass", PACK / "sass", ignore=shutil.ignore_patterns("gnome-shell")
+        src / "sass", pack / "sass", ignore=shutil.ignore_patterns("gnome-shell")
     )
     tweaks = (src / "sass" / "_tweaks.scss").read_text()
-    (PACK / "sass" / "_tweaks-temp.scss").write_text(
+    (pack / "sass" / "_tweaks-temp.scss").write_text(
         replace(
             tweaks,
             "@import 'color-palette-default';",
@@ -147,17 +145,17 @@ def main() -> None:
             "_tweaks.scss",
         )
     )
-    (PACK / "sass" / "_color-palette-osiris.scss").write_text(PALETTE)
-    colors = PACK / "sass" / "_colors.scss"
+    (pack / "sass" / "_color-palette-osiris.scss").write_text(PALETTE)
+    colors = pack / "sass" / "_colors.scss"
     colors.write_text(replace(colors.read_text(), *THRESHOLD, "_colors.scss"))
     for entry, source in ENTRIES.items():
-        (PACK / entry).parent.mkdir()
+        (pack / entry).parent.mkdir()
         for variant in ("Light", "Dark"):
             text = (src / "main" / f"{source}-{variant}.scss").read_text()
-            out = PACK / f"{entry}-{variant.lower()}.scss"
+            out = pack / f"{entry}-{variant.lower()}.scss"
             out.write_text(replace(text, "'../../sass/", "'../sass/", out.name))
 
-    common = PACK / "files" / "common"
+    common = pack / "files" / "common"
     gtk = src / "assets" / "gtk"
     for version in ("gtk-3.0", "gtk-4.0"):
         # Upstream renders these PNGs in its default accent; sassc cannot
@@ -168,14 +166,14 @@ def main() -> None:
     svgs(cinnamon / "common-assets", common / "cinnamon" / "assets", False)
     svgs(cinnamon / "theme", common / "cinnamon" / "assets")
     for variant, folder in (("light", "assets"), ("dark", "assets-Dark")):
-        dst = PACK / "files" / variant / "cinnamon" / "assets"
+        dst = pack / "files" / variant / "cinnamon" / "assets"
         svgs(cinnamon / folder, dst)
     SVG_GAPS.check("the pictures")
 
-    (PACK / "plank").mkdir()
+    (pack / "plank").mkdir()
     for variant in ("Light", "Dark"):
         dock = plank(src / "main" / "plank" / f"theme-{variant}" / "dock.theme")
-        (PACK / "plank" / f"dock-{variant.lower()}.theme").write_text(dock)
+        (pack / "plank" / f"dock-{variant.lower()}.theme").write_text(dock)
 
     label = {
         "label": "Jasper",
@@ -184,14 +182,19 @@ def main() -> None:
         "licence": "GPL-3.0",
         "source": "https://github.com/vinceliuice/Jasper-gtk-theme",
     }
-    (PACK / "skin.json").write_text(json.dumps(label, indent=2) + "\n")
-    shutil.copy(upstream / "LICENSE", PACK / "LICENSE")
-    (PACK / "SOURCES.md").write_text(
+    (pack / "skin.json").write_text(json.dumps(label, indent=2) + "\n")
+    shutil.copy(upstream / "LICENSE", pack / "LICENSE")
+    (pack / "SOURCES.md").write_text(
         f"Made by shell/skins/make_jasper.py from Jasper-gtk-theme {commit[0]}"
         f" ({commit[1]}),\n{label['source']}, GPL-3.0. The Sass and pictures are"
         " upstream's; the\npalette (`sass/_color-palette-osiris.scss`) and the"
         " gap markers are Osiris's.\n"
     )
+
+
+def main() -> None:
+    upstream = Path(sys.argv[1]).resolve()
+    rewrite(PACK, lambda pack: make(upstream, pack))
     print("wrote", PACK)
 
 

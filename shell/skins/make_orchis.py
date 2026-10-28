@@ -16,7 +16,7 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from makers import Recolour, replace
+from makers import Recolour, replace, rewrite
 
 PACK = Path(__file__).resolve().parent / "orchis"
 
@@ -242,8 +242,7 @@ def plank(src: Path) -> str:
     return "\n".join(lines) + "\n"
 
 
-def main() -> None:
-    upstream = Path(sys.argv[1]).resolve()
+def make(upstream: Path, pack: Path) -> None:
     src = upstream / "src"
     commit = subprocess.run(
         ["git", "-C", str(upstream), "log", "-1", "--format=%h %cs"],
@@ -251,9 +250,8 @@ def main() -> None:
         text=True,
         check=True,
     ).stdout.split()
-    shutil.rmtree(PACK, ignore_errors=True)
 
-    sass = PACK / "sass"
+    sass = pack / "sass"
     shutil.copytree(src / "_sass", sass, ignore=shutil.ignore_patterns("gnome-shell"))
     tweaks = (sass / "_tweaks.scss").read_text()
     (sass / "_tweaks-temp.scss").write_text(
@@ -275,15 +273,15 @@ def main() -> None:
         raise SystemExit("upstream changed: the GTK Sass names no PNG pictures")
 
     for folder, (light, dark) in ENTRIES.items():
-        (PACK / folder).mkdir()
+        (pack / folder).mkdir()
         for variant, entry in (("light", light), ("dark", dark)):
             text = (src / entry).read_text()
             text, count = re.subn(r"'(\.\./)+_sass/", "'../sass/", text)
             if not count:
                 raise SystemExit(f"upstream changed: {entry} imports no _sass/")
-            (PACK / folder / f"{STEMS[folder]}-{variant}.scss").write_text(text)
+            (pack / folder / f"{STEMS[folder]}-{variant}.scss").write_text(text)
 
-    common = PACK / "files" / "common"
+    common = pack / "files" / "common"
     for version in ("gtk-3.0", "gtk-4.0"):
         svg_assets(src / "gtk", common / version / "assets")
         shutil.copytree(
@@ -293,17 +291,17 @@ def main() -> None:
     cinnamon = src / "cinnamon"
     svgs(cinnamon / "common-assets", common / "cinnamon" / "assets")
     for variant, suffix in (("light", ""), ("dark", "-Dark")):
-        dst = PACK / "files" / variant / "cinnamon" / "assets"
+        dst = pack / "files" / variant / "cinnamon" / "assets"
         svgs(cinnamon / f"assets{suffix}", dst)
         for name in CINNAMON_THEMED:
             svg = cinnamon / "theme" / f"{name}{suffix}.svg"
             (dst / f"{name}.svg").write_text(CINNAMON_GAPS(svg.read_text()))
     CINNAMON_GAPS.check("the Cinnamon pictures")
 
-    (PACK / "plank").mkdir()
+    (pack / "plank").mkdir()
     dock = plank(src / "plank" / "dock.theme")
     for variant in ("light", "dark"):
-        (PACK / "plank" / f"dock-{variant}.theme").write_text(dock)
+        (pack / "plank" / f"dock-{variant}.theme").write_text(dock)
 
     label = {
         "label": "Orchis",
@@ -312,15 +310,20 @@ def main() -> None:
         "licence": "GPL-3.0",
         "source": "https://github.com/vinceliuice/Orchis-theme",
     }
-    (PACK / "skin.json").write_text(json.dumps(label, indent=2) + "\n")
-    shutil.copy(upstream / "COPYING", PACK / "LICENSE")
-    (PACK / "SOURCES.md").write_text(
+    (pack / "skin.json").write_text(json.dumps(label, indent=2) + "\n")
+    shutil.copy(upstream / "COPYING", pack / "LICENSE")
+    (pack / "SOURCES.md").write_text(
         f"Made by shell/skins/make_orchis.py from Orchis-theme {commit[0]}"
         f" ({commit[1]}),\n{label['source']}, GPL-3.0. The Sass and pictures are"
         " upstream's; the\npalette (`sass/_color-palette-osiris.scss`), the text"
         " colours in\n`sass/_colors.scss`, the SVGs cut from `src/gtk/assets.svg`"
         " in place of its\nPNGs, and the gap markers are Osiris's.\n"
     )
+
+
+def main() -> None:
+    upstream = Path(sys.argv[1]).resolve()
+    rewrite(PACK, lambda pack: make(upstream, pack))
     print("wrote", PACK)
 
 
