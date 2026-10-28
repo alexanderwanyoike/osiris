@@ -750,7 +750,9 @@ class Window(Adw.ApplicationWindow):
                                                 timeout=6))
                 return
             self._show_skins()
-            self.toasts.add_toast(Adw.Toast(title=f"Added {name}", timeout=3))
+            labels = {skin: label for skin, label, _c in engine.skin_choices()}
+            self.toasts.add_toast(Adw.Toast(
+                title=f"Added {labels.get(name, name)}", timeout=3))
 
         dialog.open(self, None, chosen)
 
