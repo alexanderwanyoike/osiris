@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from gi.repository import GLib
+
 from tests.test_harness import HOME
 
 from .test_side_by_side import app, asked
@@ -57,3 +59,39 @@ def test_an_entry_point_into_anything_but_a_folder_is_ignored(tmp_path: Path) ->
         stand_in.start_in(given, "make it calm")
     assert stand_in.harness.directory == HOME
     assert stand_in.drawer.drafts == []
+
+
+def settle() -> None:
+    """Run what the app left for the main loop."""
+    context = GLib.MainContext.default()
+    while context.iteration(False):
+        pass
+
+
+def test_a_request_given_while_a_question_is_on_its_way_waits_for_its_own(
+    tmp_path: Path,
+) -> None:
+    """Until the Engine opens the busy Conversation's session it cannot be
+    left, and the request would be written under the question sent."""
+    stand_in, _ = app()
+    stand_in.conversation.asked("make it calm")
+    sending = stand_in.conversation
+    stand_in.start_in(tmp_path, "Convert this theme")
+    assert stand_in.conversation is sending
+    assert stand_in.drawer.drafts == []
+    stand_in._send("make it calm")
+    settle()
+    assert stand_in.conversation is not sending
+    assert stand_in.harness.directory == tmp_path
+    assert stand_in.drawer.drafts == ["Convert this theme"]
+
+
+def test_a_request_waiting_on_a_question_that_fails_to_send_starts(
+    tmp_path: Path,
+) -> None:
+    stand_in, _ = app()
+    stand_in.conversation.asked("make it calm")
+    stand_in.start_in(tmp_path, "Convert this theme")
+    stand_in._failed_to_send("The Engine is not reachable")
+    assert stand_in.harness.directory == tmp_path
+    assert stand_in.drawer.drafts == ["Convert this theme"]
