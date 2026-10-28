@@ -63,3 +63,9 @@ def test_a_cut_short_file_is_refused_as_not_a_cursor(cut: int) -> None:
     data = xcursor([(24, 2, 0xFF000000)])
     with pytest.raises(XcursorError):
         read(data[:cut], 24)
+
+
+def test_an_image_larger_than_any_cursor_is_refused() -> None:
+    """Review of #133: a file could ask for any size, all read into memory."""
+    with pytest.raises(XcursorError):
+        read(xcursor([(24, 1025, 0xFF000000)]), 24)
