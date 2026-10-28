@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+import hashlib
+from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 
 
@@ -56,3 +57,24 @@ def sampler_env(environ: Mapping[str, str], themes_root: Path) -> dict[str, str]
     folder's themes/, and the person's own folder keeps its icons and fonts."""
     dirs = environ.get("XDG_DATA_DIRS") or _DATA_DIRS
     return {**environ, "XDG_DATA_DIRS": f"{themes_root}:{dirs}"}
+
+
+def _files(source: Path) -> Iterator[Path]:
+    if source.is_file():
+        yield source
+    elif source.is_dir():
+        for child in sorted(source.iterdir()):
+            if child.name != ".git":
+                yield from _files(child)
+
+
+def signature(sources: Sequence[Path]) -> str:
+    """The names and contents of everything a picture shows; a Skin's
+    history is not shown."""
+    digest = hashlib.sha256()
+    for source in sources:
+        for path in _files(source):
+            digest.update(str(path.relative_to(source.parent)).encode() + b"\0")
+            content = path.read_bytes()
+            digest.update(len(content).to_bytes(8) + content)
+    return digest.hexdigest()[:16]
