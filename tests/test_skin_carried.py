@@ -78,6 +78,17 @@ def test_fonts_are_installed_once_and_say_when_they_are_new(tmp_path: Path) -> N
     assert install(pack, tmp_path / "icons", tmp_path / "fonts") is False
 
 
+def test_fonts_from_an_older_version_of_the_skin_are_replaced(
+    tmp_path: Path,
+) -> None:
+    root = make_pack(tmp_path / "colloid")
+    install(read(root), tmp_path / "icons", tmp_path / "fonts")
+    a_new_version(root)
+    (root / "fonts" / "Inter.ttf").write_text("font 2")
+    assert install(read(root), tmp_path / "icons", tmp_path / "fonts") is True
+    assert (tmp_path / "fonts" / "colloid" / "Inter.ttf").read_text() == "font 2"
+
+
 def test_a_pack_carrying_nothing_installs_nothing(tmp_path: Path) -> None:
     root = tmp_path / "plain"
     root.mkdir()
