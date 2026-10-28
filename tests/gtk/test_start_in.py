@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tests.test_harness import HOME
+
 from .test_side_by_side import app, asked
 
 
@@ -45,3 +47,13 @@ def test_a_folder_given_before_the_harness_is_built_waits_for_it(
     stand_in.start_waiting()
     assert harness.directory == tmp_path
     assert stand_in.drawer.drafts == ["make it calm"]
+
+
+def test_an_entry_point_into_anything_but_a_folder_is_ignored(tmp_path: Path) -> None:
+    """Any program on the session bus can call it, and a Project is a folder."""
+    stand_in, _ = app()
+    (tmp_path / "a-file").write_text("")
+    for given in (Path("relative"), tmp_path / "missing", tmp_path / "a-file"):
+        stand_in.start_in(given, "make it calm")
+    assert stand_in.harness.directory == HOME
+    assert stand_in.drawer.drafts == []
