@@ -53,6 +53,10 @@ def read(root: Path) -> Skinpack:
         label = json.loads((root / LABEL_FILE).read_text())
     except FileNotFoundError:
         raise SkinpackError(f"{root.name}: no {LABEL_FILE}") from None
+    except (OSError, ValueError) as error:
+        raise SkinpackError(f"{root.name}: {LABEL_FILE}: {error}") from None
+    if not isinstance(label, dict):
+        raise SkinpackError(f"{root.name}: {LABEL_FILE} must be an object")
     missing = [field for field in LABEL_FIELDS if not isinstance(label.get(field), str)]
     if missing:
         raise SkinpackError(f"{root.name}: {LABEL_FILE} lacks {', '.join(missing)}")
