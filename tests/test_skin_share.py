@@ -13,6 +13,7 @@ import pytest
 
 from osiris.model.author import as_osiris
 from osiris.platform.process import FakeRunner
+from osiris.skins import share
 from osiris.skins.pack import SkinpackError, read
 from osiris.skins.share import EXTENSION, delete, duplicate, export, open_file
 
@@ -137,6 +138,17 @@ def test_a_file_reaching_outside_its_folder_is_refused(tmp_path: Path) -> None:
     with pytest.raises(SkinpackError):
         open_file(evil, tmp_path / "mine", FakeRunner())
     assert not (tmp_path / "escaped.txt").exists()
+
+
+def test_a_file_unpacking_to_more_than_a_skin_could_need_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A small file can unpack to enough to fill the disk."""
+    shared = export(read(make_pack(tmp_path / "shipped" / "colloid")), tmp_path / "out")
+    monkeypatch.setattr(share, "LARGEST", 10)
+    with pytest.raises(SkinpackError, match="too large"):
+        open_file(shared, tmp_path / "mine", FakeRunner())
+    assert not (tmp_path / "mine" / "colloid").exists()
 
 
 def test_a_persons_skin_can_be_deleted(tmp_path: Path) -> None:
