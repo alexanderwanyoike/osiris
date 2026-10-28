@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from osiris.platform.process import FakeRunner
-from osiris.skins.pack import Look, read
+import pytest
+
+from osiris.platform.process import CommandError, FakeRunner
+from osiris.skins.pack import Look, SkinpackError, read
 from osiris.skins.wear import Places, wear
 
 ROSE_PINE = {
@@ -84,3 +86,29 @@ def test_the_skin_is_worn_with_its_look_for_the_themes_variant(
     )
     assert built.theme == "Osiris-plain-rose-pine"
     assert look == Look("Plain-Dark", None, None)
+
+
+def test_a_sheet_that_does_not_compile_is_a_skin_error(tmp_path: Path) -> None:
+    runner = FakeRunner({"sassc": CommandError(["sassc"], 1, "Error: bad")})
+    with pytest.raises(SkinpackError, match="sassc"):
+        wear(
+            read(make_pack(tmp_path / "plain")),
+            ROSE_PINE,
+            places(tmp_path),
+            runner,
+            lambda _theme: None,
+        )
+
+
+def test_a_panel_that_cannot_be_written_is_a_skin_error(tmp_path: Path) -> None:
+    def full(_theme: Path) -> None:
+        raise OSError("No space left on device")
+
+    with pytest.raises(SkinpackError, match="No space"):
+        wear(
+            read(make_pack(tmp_path / "plain")),
+            ROSE_PINE,
+            places(tmp_path),
+            FakeRunner(),
+            full,
+        )
