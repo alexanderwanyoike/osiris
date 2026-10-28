@@ -46,6 +46,15 @@ def test_a_theme_changed_elsewhere_is_followed(tmp_path: Path) -> None:
     assert following is not None
 
 
-def test_no_record_or_an_unknown_theme_means_dark(tmp_path: Path) -> None:
+def test_no_record_means_dark(tmp_path: Path) -> None:
+    Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
     ThemeScheme(tmp_path / "missing", THEMES.__getitem__)
+    assert scheme() == Adw.ColorScheme.FORCE_DARK
+
+
+def test_an_unknown_theme_means_dark(tmp_path: Path) -> None:
+    record = tmp_path / "theme"
+    record.write_text("gone\n")
+    Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
+    ThemeScheme(record, THEMES.__getitem__)
     assert scheme() == Adw.ColorScheme.FORCE_DARK
