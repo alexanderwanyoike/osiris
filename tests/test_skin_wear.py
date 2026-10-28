@@ -112,3 +112,22 @@ def test_a_panel_that_cannot_be_written_is_a_skin_error(tmp_path: Path) -> None:
             FakeRunner(),
             full,
         )
+
+
+def test_wearing_leaves_the_systems_icon_sets_alone(tmp_path: Path) -> None:
+    (tmp_path / "system" / "Adwaita").mkdir(parents=True)
+    pack = read(make_pack(tmp_path / "plain", {"icons/Adwaita/index.theme": ""}))
+    wear(
+        pack,
+        ROSE_PINE,
+        Places(
+            themes=tmp_path / "themes",
+            work=tmp_path / "work",
+            icons=tmp_path / "icons",
+            fonts=tmp_path / "fonts",
+            system_icons=(tmp_path / "system",),
+        ),
+        FakeRunner(),
+        lambda _theme: None,
+    )
+    assert not (tmp_path / "icons" / "Adwaita").exists()
