@@ -7,7 +7,9 @@ A skinpack is laid out by surface, one Sass entry per variant:
     gtk-4.0/gtk-<variant>.scss          optional, like every entry below
     cinnamon/cinnamon-<variant>.scss    Osiris's own panel otherwise
     libadwaita/libadwaita-<variant>.scss
-    files/common/, files/<variant>/   copied into the theme, SVG and CSS gaps filled
+    files/common/, files/<variant>/   copied into the theme, SVG and CSS gaps filled;
+                                        a cinnamon/cinnamon.css or libadwaita.css
+                                        there stands in for that entry
     plank/dock-<variant>.theme          Osiris's own dock otherwise
     rofi/launcher.rasi          optional; Osiris's own launcher theme otherwise
 """
@@ -95,10 +97,11 @@ def build(
     dock = _filled(plank, filled) if plank.is_file() else None
     rofi = work / "rofi" / "launcher.rasi"
     launcher = _filled(rofi, filled) if rofi.is_file() else None
+    adwaita = target / "libadwaita.css"
     return Built(
         theme=name,
         dock=dock,
-        adwaita=target / "libadwaita.css" if "libadwaita" in compiled else None,
+        adwaita=adwaita if "libadwaita" in compiled or adwaita.is_file() else None,
         cinnamon="cinnamon" in compiled
         or (target / "cinnamon" / "cinnamon.css").is_file(),
         launcher=launcher,
