@@ -13,6 +13,7 @@ from pathlib import Path, PurePosixPath
 from osiris.model.author import as_osiris
 from osiris.model.names import slug
 from osiris.platform.process import CommandRunner
+from osiris.skins.library import OSIRIS
 from osiris.skins.pack import (
     LABEL_FILE,
     Skinpack,
@@ -97,7 +98,9 @@ AGENTS = Path(__file__).with_name("skin-agents.md")
 def free_name(mine: Path, base: str, shipped: Sequence[Path] = ()) -> str:
     """base, or base-2, base-3 and so on, whichever no Skin has."""
     name, number = base, 2
-    while any((folder / name).exists() for folder in (mine, *shipped)):
+    while name == OSIRIS or any(
+        (folder / name).exists() for folder in (mine, *shipped)
+    ):
         name, number = f"{base}-{number}", number + 1
     return name
 
