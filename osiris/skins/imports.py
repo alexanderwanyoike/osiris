@@ -162,12 +162,12 @@ def import_gtk_theme(download: Path, mine: Path, runner: CommandRunner) -> Skinp
         for variant, theme in variants.items():
             for surface in SURFACE_FOLDERS:
                 if (theme / surface).is_dir():
-                    shutil.copytree(theme / surface, skin / "files" / variant / surface)
+                    copy_data(theme / surface, skin / "files" / variant / surface)
             dock = theme / "plank" / "dock.theme"
             if dock.is_file():
                 for target in ("light", "dark") if variant == "common" else (variant,):
                     (skin / "plank").mkdir(parents=True, exist_ok=True)
-                    shutil.copy(dock, skin / "plank" / f"dock-{target}.theme")
+                    shutil.copyfile(dock, skin / "plank" / f"dock-{target}.theme")
     (skin / LABEL_FILE).write_text(
         json.dumps(
             {
