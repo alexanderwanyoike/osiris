@@ -99,7 +99,8 @@ def build(
         theme=name,
         dock=dock,
         adwaita=target / "libadwaita.css" if "libadwaita" in compiled else None,
-        cinnamon="cinnamon" in compiled,
+        cinnamon="cinnamon" in compiled
+        or (target / "cinnamon" / "cinnamon.css").is_file(),
         launcher=launcher,
     )
 
