@@ -485,8 +485,9 @@ class Window(Adw.ApplicationWindow):
         self._show_drawn()
         self._draw_pictures()
 
-    def edit_skin(self, name: str) -> None:
-        """Rename a Skin and choose its style, icons, cursor and font."""
+    def edit_skin(self, name: str, kept=None) -> None:
+        """Rename a Skin and choose its style, icons, cursor and font; kept
+        is a Choice made before the editor was closed to add to the look."""
         # Reading every icon and cursor set, and drawing each cursor, takes
         # long enough to freeze the window.
         def gather() -> None:
@@ -499,6 +500,11 @@ class Window(Adw.ApplicationWindow):
             except Exception as error:                  # noqa: BLE001
                 GLib.idle_add(self._not_editable, str(error))
                 return
+            if kept is not None:
+                found["details"] = {**found["details"], "style": kept.style,
+                                    "icons": kept.icons, "cursor": kept.cursor,
+                                    "font": kept.font,
+                                    "label": kept.label or found["details"]["label"]}
             GLib.idle_add(self._open_editor, name, found)
 
         threading.Thread(target=gather, daemon=True).start()
@@ -527,8 +533,9 @@ class Window(Adw.ApplicationWindow):
 
         def adding(kind: str):
             def add() -> None:
+                kept = editor.choice()
                 editor.close()
-                self._add_to_look(kind, lambda: self.edit_skin(name))
+                self._add_to_look(kind, lambda: self.edit_skin(name, kept))
             return add
 
         editor = SkinEditor(
