@@ -167,3 +167,15 @@ def test_taking_a_style_copies_only_a_skins_layout_and_data(tmp_path: Path) -> N
     assert sorted(p.name for p in root.iterdir()) == ["AGENTS.md", "sass", "skin.json"]
     assert [p.name for p in (root / "sass").iterdir()] == ["_palette.scss"]
     assert problems(root) == []
+
+
+def test_a_styles_credits_come_with_it(tmp_path: Path) -> None:
+    """Shipped Skins credit their authors in LICENSE and SOURCES.md beside the
+    layout; the licence travels with the sheets it covers."""
+    root = mine(tmp_path)
+    graphite = make_pack(tmp_path / "shipped" / "graphite", "Graphite", "V", "g")
+    (graphite / "LICENSE").write_text("GPL")
+    (graphite / "SOURCES.md").write_text("from upstream")
+    save(read(root), Edit("Sharp", read(graphite), None, None, None), FakeRunner())
+    assert (root / "LICENSE").read_text() == "GPL"
+    assert (root / "SOURCES.md").read_text() == "from upstream"
