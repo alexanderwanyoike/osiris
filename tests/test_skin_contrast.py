@@ -111,3 +111,10 @@ def test_text_on_a_fill_is_the_themes_more_legible_ink(
         )
         best = max(contrast(ink, fill) for ink in inks)
         assert contrast(seen, fill) >= min(LEGIBLE, best), selector
+
+
+@pytest.mark.skipif(shutil.which("sassc") is None, reason="needs sassc")
+def test_qogir_draws_links_in_the_themes_accent(tmp_path: Path) -> None:
+    theme = json.loads((ROOT / "shell" / "themes" / "rose-pine.json").read_text())
+    css = compiled("qogir", theme, tmp_path)
+    assert declared(css, "*:link")["color"] == theme["colors"]["accent"]
