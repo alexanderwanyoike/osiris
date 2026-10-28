@@ -5,7 +5,18 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from osiris.skins.library import OSIRIS, available, choose, chosen, find, styles
+import pytest
+
+from osiris.skins.library import (
+    OSIRIS,
+    available,
+    choose,
+    chosen,
+    find,
+    styles,
+    wear_choice,
+)
+from osiris.skins.pack import SkinpackError
 
 
 def make_pack(root: Path, label: str) -> None:
@@ -63,3 +74,27 @@ def test_any_skin_but_the_one_being_edited_can_be_a_style(tmp_path: Path) -> Non
     make_pack(shipped / "colloid", "Colloid")
     names = [pack.name for pack in styles([mine, shipped], editing="old-forest")]
     assert names == ["yaru", "colloid"]
+
+
+def test_a_skin_worn_is_the_one_chosen(tmp_path: Path) -> None:
+    worn: list[str] = []
+
+    def apply() -> SkinpackError | None:
+        worn.append(chosen(tmp_path / "skin"))
+        return None
+
+    wear_choice(tmp_path / "skin", "colloid", apply)
+    assert worn == ["colloid"]
+    assert chosen(tmp_path / "skin") == "colloid"
+
+
+def test_a_skin_that_could_not_be_worn_is_reported_and_not_chosen(
+    tmp_path: Path,
+) -> None:
+    """The desktop fell back to Osiris's own look; the choice says so, so
+    Appearance does not tick a Skin nobody sees."""
+    with pytest.raises(SkinpackError, match="bad sheet"):
+        wear_choice(
+            tmp_path / "skin", "colloid", lambda: SkinpackError("Colloid: bad sheet")
+        )
+    assert chosen(tmp_path / "skin") == OSIRIS
