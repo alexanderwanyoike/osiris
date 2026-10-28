@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from osiris.platform.process import FakeRunner
+from osiris.platform.process import CommandError, FakeRunner
 from osiris.skins.check import problems
 from osiris.skins.imports import (
     UnusableDownload,
@@ -326,6 +326,16 @@ def test_an_imported_theme_is_ready_to_be_converted(tmp_path: Path) -> None:
     assert "--skin plain" in (skin.root / "AGENTS.md").read_text()
     assert runner.ran("git", "-C", str(skin.root), "init", "-q")
     assert skin.source == "plain.zip"
+
+
+def test_a_failed_import_leaves_no_half_made_skin(tmp_path: Path) -> None:
+    """Review of #136: a Skin whose history could not be started stayed among
+    the person's, half made."""
+    download = make_zip(tmp_path / "plain.zip", {"Plain/gtk-3.0/gtk.css": "window {}"})
+    runner = FakeRunner(results={"git": CommandError(("git",), 128, "no git")})
+    with pytest.raises(CommandError):
+        import_gtk_theme(download, tmp_path / "mine", runner)
+    assert list((tmp_path / "mine").iterdir()) == []
 
 
 def test_a_download_without_a_gtk_theme_is_refused(tmp_path: Path) -> None:
