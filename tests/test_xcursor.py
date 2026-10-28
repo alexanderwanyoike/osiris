@@ -69,3 +69,9 @@ def test_an_image_larger_than_any_cursor_is_refused() -> None:
     """Review of #133: a file could ask for any size, all read into memory."""
     with pytest.raises(XcursorError):
         read(xcursor([(24, 1025, 0xFF000000)]), 24)
+
+
+def test_a_file_listing_more_images_than_any_cursor_is_refused() -> None:
+    """Review of #133: the table of contents was read whatever its length."""
+    with pytest.raises(XcursorError):
+        read(xcursor([(24, 1, 0xFF000000)] * 0x10001), 24)
