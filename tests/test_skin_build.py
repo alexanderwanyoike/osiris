@@ -212,3 +212,19 @@ def test_a_picture_that_is_not_utf8_is_a_skinpack_error(
         build(
             read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
         )
+
+
+def test_a_theme_whose_name_is_not_a_slug_is_not_built(tmp_path: Path) -> None:
+    """The name is joined into the theme folder that is removed first."""
+    outside = tmp_path / "themes" / "Osiris-colloid-x" / "keep"
+    outside.mkdir(parents=True)
+    theme = {**ROSE_PINE, "name": "x/../../themes/Osiris-colloid-x"}
+    with pytest.raises(SkinpackError, match="name"):
+        build(
+            read(make_pack(tmp_path / "colloid")),
+            theme,
+            tmp_path / "themes",
+            tmp_path / "work",
+            FakeRunner(),
+        )
+    assert outside.is_dir()
