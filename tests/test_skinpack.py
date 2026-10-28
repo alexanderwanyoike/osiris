@@ -38,6 +38,20 @@ def test_a_folder_without_a_label_is_not_a_skinpack(tmp_path: Path) -> None:
         read(tmp_path / "empty")
 
 
+@pytest.mark.parametrize(
+    "content",
+    [b"{not json", b"[]", b'"Colloid"', b'{"label": "Caf\xe9"}', b"{}"],
+)
+def test_a_malformed_label_is_a_skinpack_error(tmp_path: Path, content: bytes) -> None:
+    """Anything else escapes the listing that skips broken Skins, and with it
+    every Theme switch and login."""
+    root = tmp_path / "colloid"
+    root.mkdir()
+    (root / "skin.json").write_bytes(content)
+    with pytest.raises(SkinpackError, match=r"skin\.json"):
+        read(root)
+
+
 def test_a_label_missing_a_field_says_which(tmp_path: Path) -> None:
     label = {k: v for k, v in LABEL.items() if k != "licence"}
     with pytest.raises(SkinpackError, match="licence"):

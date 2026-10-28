@@ -40,6 +40,13 @@ def test_folders_that_are_not_skinpacks_are_skipped(tmp_path: Path) -> None:
     assert [pack.name for pack in available([tmp_path / "shipped"])] == ["colloid"]
 
 
+def test_a_skin_with_a_broken_label_is_skipped(tmp_path: Path) -> None:
+    (tmp_path / "shipped" / "broken").mkdir(parents=True)
+    (tmp_path / "shipped" / "broken" / "skin.json").write_text("[]")
+    make_pack(tmp_path / "shipped" / "colloid", "Colloid")
+    assert [pack.name for pack in available([tmp_path / "shipped"])] == ["colloid"]
+
+
 def test_finding_the_osiris_skin_gives_no_pack(tmp_path: Path) -> None:
     make_pack(tmp_path / "shipped" / "colloid", "Colloid")
     assert find([tmp_path / "shipped"], OSIRIS) is None
