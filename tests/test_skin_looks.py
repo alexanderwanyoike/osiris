@@ -61,3 +61,16 @@ def test_an_icon_set_that_is_not_installed_leaves_the_themes(tmp_path: Path) -> 
     assert installed_icon_set("Colloid-Dark", [tmp_path]) is None
     assert installed_icon_set("junk", [tmp_path]) is None
     assert installed_icon_set(None, [tmp_path]) is None
+
+
+def test_a_folder_that_cannot_be_read_is_passed_over(tmp_path: Path) -> None:
+    """Review of #134: listing a folder raised, and the Skin editor never
+    opened."""
+    locked, mine = tmp_path / "locked", tmp_path / "mine"
+    theme(mine, "Papirus", ICONS.format(name="Papirus"))
+    locked.mkdir()
+    locked.chmod(0)
+    try:
+        assert icon_themes([locked, mine]) == ["Papirus"]
+    finally:
+        locked.chmod(0o755)
