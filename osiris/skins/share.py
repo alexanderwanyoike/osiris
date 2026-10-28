@@ -57,36 +57,39 @@ def open_file(
     except zipfile.BadZipFile:
         raise SkinpackError(f"{shared.name}: not a skinpack") from None
     with archive:
-        names = [
-            name
-            for name in archive.namelist()
-            if PurePosixPath(name).parts[:1] != (_MACOS_EXTRAS,)
-        ]
-        tops = {PurePosixPath(name).parts[0] for name in names if name}
-        unsafe = [
-            name
-            for name in names
-            if PurePosixPath(name).is_absolute()
-            or ".." in PurePosixPath(name).parts
-            or (len(PurePosixPath(name).parts) == 1 and not name.endswith("/"))
-        ]
-        if len(tops) != 1 or unsafe:
-            raise SkinpackError(f"{shared.name}: not one folder of its own")
-        if sum(info.file_size for info in archive.infolist()) > LARGEST:
-            raise SkinpackError(f"{shared.name}: too large to be a Skin")
-        top = tops.pop()
+        top, unpacked = _contents(archive, shared.name)
         name = free_name(mine, top, shipped)
         with _making(mine, name) as made:
-            archive.extractall(
-                made.parent,
-                [name for name in names if ".git" not in PurePosixPath(name).parts],
-            )
+            archive.extractall(made.parent, unpacked)
             if top != name:
                 (made.parent / top).rename(made)
             refuse_programs(read(made))
             _refuse_unbuildable(made)
             start_history(made, f"Open {shared.name}", runner)
     return read(mine / name)
+
+
+def _contents(archive: zipfile.ZipFile, shown: str) -> tuple[str, list[str]]:
+    """The one folder a skinpack holds, and the entries to unpack from it."""
+    entries = [
+        entry
+        for entry in archive.namelist()
+        if PurePosixPath(entry).parts[:1] != (_MACOS_EXTRAS,)
+    ]
+    tops = {PurePosixPath(entry).parts[0] for entry in entries if entry}
+    unsafe = [
+        entry
+        for entry in entries
+        if PurePosixPath(entry).is_absolute()
+        or ".." in PurePosixPath(entry).parts
+        or (len(PurePosixPath(entry).parts) == 1 and not entry.endswith("/"))
+    ]
+    if len(tops) != 1 or unsafe:
+        raise SkinpackError(f"{shown}: not one folder of its own")
+    if sum(info.file_size for info in archive.infolist()) > LARGEST:
+        raise SkinpackError(f"{shown}: too large to be a Skin")
+    kept = [entry for entry in entries if ".git" not in PurePosixPath(entry).parts]
+    return tops.pop(), kept
 
 
 def _refuse_unbuildable(root: Path) -> None:
