@@ -55,6 +55,8 @@ The Osiris Skin stays what it is today: adw-gtk3 recoloured by named colours
 - libadwaita 1.6+ reads its accent from CSS variables only Osiris's own sheet
   sets, so a Skin's libadwaita sheet is followed by `adwaita_css(theme)`: the
   Skin gives shape, the Theme colour.
-- A Skin replaces Osiris's GTK theme, Cinnamon stylesheet and Plank theme; the
-  Theme still owns the icons' tint, the terminal and the wallpaper. A skinpack
-  without a launcher theme leaves Osiris's own.
+- A Skin replaces Osiris's GTK theme, and its Cinnamon stylesheet, Plank theme
+  and launcher theme when it brings them; each it leaves out stays Osiris's
+  own. It may name icons, a cursor and a font, each otherwise the Theme's
+  choice. The Theme still owns the terminal, the wallpaper, and the icons'
+  tint when the Skin names no icons.
