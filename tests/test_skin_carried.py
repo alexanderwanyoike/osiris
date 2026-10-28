@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from osiris.skins.carried import install
+from osiris.skins.carried import install, remove_fonts
 from osiris.skins.pack import read
 
 
@@ -96,3 +96,13 @@ def test_a_pack_carrying_nothing_installs_nothing(tmp_path: Path) -> None:
     (root / "skin.json").write_text(json.dumps({"label": "Plain", **fields}))
     assert install(read(root), tmp_path / "icons", tmp_path / "fonts") is False
     assert not (tmp_path / "icons").exists()
+
+
+def test_a_deleted_skins_fonts_go_with_it(tmp_path: Path) -> None:
+    pack = read(make_pack(tmp_path / "colloid"))
+    install(pack, tmp_path / "icons", tmp_path / "fonts")
+    (tmp_path / "fonts" / "graphite").mkdir()
+    assert remove_fonts(pack, tmp_path / "fonts") is True
+    assert not (tmp_path / "fonts" / "colloid").exists()
+    assert (tmp_path / "fonts" / "graphite").is_dir()
+    assert remove_fonts(pack, tmp_path / "fonts") is False
