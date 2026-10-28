@@ -228,3 +228,15 @@ def test_a_theme_whose_name_is_not_a_slug_is_not_built(tmp_path: Path) -> None:
             FakeRunner(),
         )
     assert outside.is_dir()
+
+
+def test_a_pack_without_a_gtk3_sheet_for_the_variant_is_refused(
+    tmp_path: Path,
+) -> None:
+    """Without it the theme is named but draws nothing of the Skin."""
+    root = make_gtk_only_pack(tmp_path / "elementary")
+    (root / "gtk-3.0" / "gtk-dark.scss").unlink()
+    with pytest.raises(SkinpackError, match="gtk-3.0"):
+        build(
+            read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
+        )
