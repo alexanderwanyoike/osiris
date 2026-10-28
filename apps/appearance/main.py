@@ -813,18 +813,20 @@ class Application(Adw.Application):
         if self.user_css is not None:
             self.user_css.reload()
 
-    def do_activate(self):
+    def do_startup(self):
+        Adw.Application.do_startup(self)
         self.theme_scheme = ThemeScheme(Path(engine.STATE), engine.load)
-
-        display = Gdk.Display.get_default()
         self.user_css = UserCss(
             Path(engine.HOME) / ".config" / "gtk-4.0" / "gtk.css")
+        display = Gdk.Display.get_default()
         if display is not None:
             # Our widget styling above the user palette.
             provider = Gtk.CssProvider()
             provider.load_from_data(CSS + SKINS_CSS + EDITOR_CSS)
             Gtk.StyleContext.add_provider_for_display(
                 display, provider, UserCss.PRIORITY + 1)
+
+    def do_activate(self):
         Window(self).present()
 
 
