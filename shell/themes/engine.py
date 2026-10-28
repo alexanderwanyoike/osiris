@@ -957,9 +957,12 @@ def skin_styles(editing: str) -> list[tuple[str, str, str | None]]:
 def skin_details(name: str) -> dict:
     """What the editor starts from: a Skin's label, style and look."""
     pack = _pack(name)
-    look = pack.look(_variant_of(_current_theme()))
+    theme = _current_theme()
+    look = pack.look(_variant_of(theme))
+    ui = _ui(theme)
     return {"label": pack.label, "style": pack.style, "icons": look.icons,
-            "cursor": look.cursor, "font": look.font}
+            "cursor": look.cursor, "font": look.font,
+            "theme_icons": ui["icons"], "theme_font": ui["font"]}
 
 
 def save_skin(name: str, label: str, style: str | None, icons: str | None,

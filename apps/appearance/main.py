@@ -488,7 +488,7 @@ class Window(Adw.ApplicationWindow):
         details = engine.skin_details(name)
         cursors = engine.cursor_sets()
 
-        def saved(choice) -> None:
+        def saved(choice) -> bool:
             try:
                 engine.save_skin(name, choice.label or details["label"],
                                  choice.style, choice.icons, choice.cursor,
@@ -496,9 +496,10 @@ class Window(Adw.ApplicationWindow):
             except Exception as error:                  # noqa: BLE001
                 self.toasts.add_toast(Adw.Toast(title=f"Not saved: {error}",
                                                 timeout=6))
-                return
+                return False
             self.get_application().reload_user_css()
             self._show_skins()
+            return True
 
         def adding(kind: str):
             def add() -> None:
@@ -511,7 +512,9 @@ class Window(Adw.ApplicationWindow):
             style=details["style"], icon_sets=engine.icon_sets(),
             icons=details["icons"], cursor_sets=cursors,
             cursor_pictures=engine.cursor_pictures(cursors),
-            cursor=details["cursor"], font=details["font"], on_save=saved,
+            cursor=details["cursor"], font=details["font"],
+            theme_icons=details["theme_icons"],
+            theme_font=details["theme_font"], on_save=saved,
             on_code=lambda: self.open_in_code(name),
             on_add_icons=adding("icons"), on_add_cursors=adding("cursors"),
             on_add_fonts=adding("fonts"),
