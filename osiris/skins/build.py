@@ -77,6 +77,11 @@ def build(
             shutil.copytree(files, target, dirs_exist_ok=True)
     for picture in (*target.rglob("*.svg"), *target.rglob("*.css")):
         picture.write_text(_filled(picture, filled))
+    if (
+        not (work / f"gtk-3.0/gtk-{variant}.scss").is_file()
+        and not (target / "gtk-3.0" / "gtk.css").is_file()
+    ):
+        raise SkinpackError(f"{pack.label}: no gtk-3.0 sheet for {variant}")
     for entry, out in SURFACES:
         source = work / f"{entry}-{variant}.scss"
         if not source.is_file() or (only and entry.split("/")[0] not in only):
