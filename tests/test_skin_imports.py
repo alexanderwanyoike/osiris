@@ -243,6 +243,12 @@ def test_the_resource_forks_a_mac_adds_are_not_fonts(tmp_path: Path) -> None:
     assert (tmp_path / "fonts" / "Inter.ttf").read_text() == "font"
 
 
+def test_a_folder_named_like_a_font_is_not_one(tmp_path: Path) -> None:
+    """Review of #136: a folder called Inter.ttf broke the whole import."""
+    family = make_zip(tmp_path / "inter.zip", {"Inter.ttf/Inter-Regular.ttf": "f"})
+    assert install_fonts([family], tmp_path / "fonts") == ["Inter-Regular.ttf"]
+
+
 def test_a_download_with_no_font_in_it_is_refused(tmp_path: Path) -> None:
     notes = tmp_path / "notes.txt"
     notes.write_text("no fonts")
