@@ -78,11 +78,19 @@ $button-min: #fdbe04;
 $fg-darker: lightness($gap-foreground) < lightness($gap-background);
 $ink-dark: if($fg-darker, $gap-foreground, $gap-background);
 $ink-light: if($fg-darker, $gap-background, $gap-foreground);
+
+@function osiris-brightness($c) {
+  @return (red($c) * 299 + green($c) * 587 + blue($c) * 114) / 1000;
+}
+
+$osiris-midpoint: (osiris-brightness($ink-dark) + osiris-brightness($ink-light)) / 2;
 """
 
-# Orchis's on() picks pure black or white text; these point it at the inks the
-# palette derives from the Theme.
+# Orchis's on() picks pure black or white text at a fixed brightness; these
+# point it at the inks the palette derives from the Theme, split where the
+# Theme's own inks split, so a fill gets whichever reads better.
 ON_GAPS = (
+    ("@if ($brightness >= 156) {", "@if ($brightness >= $osiris-midpoint) {"),
     ("@return rgba(black, 0.87);", "@return $ink-dark;"),
     ("rgba(black, ", "rgba($ink-dark, "),
     ("@return white;", "@return $ink-light;"),
