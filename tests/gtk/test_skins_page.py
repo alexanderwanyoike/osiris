@@ -212,3 +212,10 @@ def test_a_new_skin_can_be_created_only_once_it_has_a_name() -> None:
     assert dialog.get_response_enabled("create")
     dialog.emit("response", "create")
     assert created == [("Sharp", "colloid")]
+
+
+def test_with_nothing_to_start_from_no_skin_can_be_created() -> None:
+    """Review of #132: with no Skin to start from, Create raised IndexError."""
+    dialog = new_skin([], lambda _label, _base: None)
+    find(dialog.get_extra_child(), Gtk.Entry, "Name").set_text("Sharp")
+    assert not dialog.get_response_enabled("create")
