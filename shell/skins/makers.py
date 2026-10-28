@@ -6,8 +6,11 @@ so a regenerated pack never silently loses the Theme's colours.
 
 import re
 import shutil
+import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from pathlib import Path
+
+XLINK = "{http://www.w3.org/1999/xlink}href"
 
 
 def rewrite(pack: Path, make: Callable[[Path], None]) -> None:
@@ -57,3 +60,21 @@ class Recolour:
                 raise SystemExit(
                     f"upstream changed: {colour!r} matched nothing in {where}"
                 )
+
+
+def referenced(element: ET.Element, ids: dict[str, ET.Element]) -> list[str]:
+    """The ids ``element`` paints with, gradients' own references included, in order."""
+    found: list[str] = []
+    pending = [element]
+    while pending:
+        for node in pending.pop().iter():
+            for key, value in node.attrib.items():
+                refs = re.findall(r"url\(#([^)]+)\)", value)
+                if key == XLINK and value.startswith("#"):
+                    refs.append(value[1:])
+                for ref in refs:
+                    if ref in ids and ref not in found and ids[ref] is not element:
+                        found.append(ref)
+                        pending.append(ids[ref])
+    order = {id(e): n for n, e in enumerate(ids.values())}
+    return sorted(found, key=lambda i: order[id(ids[i])])

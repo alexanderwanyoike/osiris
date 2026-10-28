@@ -17,7 +17,7 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from makers import Recolour, rewrite
+from makers import Recolour, referenced, rewrite
 
 PACK = Path(__file__).resolve().parent / "qogir"
 
@@ -288,24 +288,6 @@ def cut(sheet: Path, names: list[str], dst: Path, gaps: Recolour) -> None:
             wrapper.append(copy.deepcopy(element))
             text = ET.tostring(svg, encoding="unicode")
             (dst / f"{name}{suffix}.svg").write_text(gaps(text) + "\n")
-
-
-def referenced(element: ET.Element, ids: dict[str, ET.Element]) -> list[str]:
-    """The ids ``element`` paints with, gradients' own references included, in order."""
-    found: list[str] = []
-    pending = [element]
-    while pending:
-        for node in pending.pop().iter():
-            for key, value in node.attrib.items():
-                refs = re.findall(r"url\(#([^)]+)\)", value)
-                if key == XLINK and value.startswith("#"):
-                    refs.append(value[1:])
-                for ref in refs:
-                    if ref in ids and ref not in found and ids[ref] is not element:
-                        found.append(ref)
-                        pending.append(ids[ref])
-    order = {id(e): n for n, e in enumerate(ids.values())}
-    return sorted(found, key=lambda i: order[id(ids[i])])
 
 
 def cinnamon(src: Path, dst: Path) -> None:
