@@ -36,7 +36,10 @@ class ThemeScheme:
 
     def follow(self) -> None:
         try:
-            theme = self._load(self._record.read_text().strip())
+            name = self._record.read_text().strip()
+            if not name:
+                return
+            theme = self._load(name)
         except OSError, KeyError, ValueError:
             theme = {}
         dark = bool(theme.get("dark", True)) if isinstance(theme, Mapping) else True
