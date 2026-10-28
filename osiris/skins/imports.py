@@ -67,11 +67,11 @@ FONT_SUFFIXES = {".ttf", ".otf", ".ttc"}
 _REFUSED_SETS = {*FALLBACKS, "dark", "light"}
 
 
-_ARCHIVE_SUFFIXES = (".tar.gz", ".tar.xz", ".tar.bz2", ".tgz", ".txz", ".tar", ".zip")
+ARCHIVE_SUFFIXES = (".tar.gz", ".tar.xz", ".tar.bz2", ".tgz", ".txz", ".tar", ".zip")
 
 
 def _stem(download: Path) -> str:
-    for suffix in _ARCHIVE_SUFFIXES:
+    for suffix in ARCHIVE_SUFFIXES:
         if download.name.lower().endswith(suffix):
             return download.name[: -len(suffix)]
     return download.stem
