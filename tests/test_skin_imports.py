@@ -231,6 +231,18 @@ def test_fonts_are_installed_from_files_and_archives(tmp_path: Path) -> None:
     assert (tmp_path / "fonts" / "JetBrainsMono.ttf").is_file()
 
 
+def test_the_resource_forks_a_mac_adds_are_not_fonts(tmp_path: Path) -> None:
+    """Review of #136: a zip made on a Mac carries __MACOSX/._Inter.ttf, which
+    is not a font and was installed as one."""
+    family = make_zip(
+        tmp_path / "inter.zip",
+        {"Inter/Inter.ttf": "font", "__MACOSX/Inter/._Inter.ttf": "fork"},
+    )
+    names = install_fonts([family], tmp_path / "fonts")
+    assert names == ["Inter.ttf"]
+    assert (tmp_path / "fonts" / "Inter.ttf").read_text() == "font"
+
+
 def test_a_download_with_no_font_in_it_is_refused(tmp_path: Path) -> None:
     notes = tmp_path / "notes.txt"
     notes.write_text("no fonts")
