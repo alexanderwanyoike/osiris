@@ -30,7 +30,8 @@ def needs_drawing(picture: Path) -> bool:
 
 
 def draw(picture: Path, drawer: Callable[[Path], None]) -> None:
-    """Have drawer write the picture beside it, then move it in whole."""
+    """Have drawer write the picture beside it, then move it in whole, in
+    place of the pictures of this Skin and Theme it supersedes."""
     picture.parent.mkdir(parents=True, exist_ok=True)
     partial = picture.with_suffix(".partial.png")
     try:
@@ -38,6 +39,9 @@ def draw(picture: Path, drawer: Callable[[Path], None]) -> None:
         partial.replace(picture)
     finally:
         partial.unlink(missing_ok=True)
+    for superseded in picture.parent.iterdir():
+        if superseded != picture:
+            superseded.unlink(missing_ok=True)
 
 
 def cursor_picture(cache: Path, cursor: str, shape: str) -> Path:
