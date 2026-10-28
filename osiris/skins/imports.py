@@ -76,7 +76,7 @@ def install_sets(
             new, replaced = Path(staging) / "new", Path(staging) / "replaced"
             replaced.mkdir()
             for folder in found:
-                shutil.copytree(folder, new / folder.name)
+                shutil.copytree(folder, new / folder.name, symlinks=True)
             for folder in found:
                 target = icons_dir / folder.name
                 if target.exists() or target.is_symlink():
