@@ -24,6 +24,9 @@ def make_pack(root: Path, label: str = "Colloid") -> Path:
     (root / "sass").mkdir(parents=True)
     (root / "skin.json").write_text(json.dumps({"label": label, **FIELDS}))
     (root / "sass" / "_palette.scss").write_text("@import 'gaps';\n")
+    (root / "gtk-3.0").mkdir()
+    for variant in ("light", "dark"):
+        (root / "gtk-3.0" / f"gtk-{variant}.scss").write_text("@import 'palette';\n")
     return root
 
 
