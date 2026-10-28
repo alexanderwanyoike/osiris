@@ -111,7 +111,7 @@ def _is_font(path: Path, unpacked: Path) -> bool:
         part.startswith(".") or part == "__MACOSX"
         for part in path.relative_to(unpacked).parts
     )
-    return path.suffix.lower() in FONT_SUFFIXES and not any(hidden)
+    return path.suffix.lower() in FONT_SUFFIXES and path.is_file() and not any(hidden)
 
 
 def install_fonts(downloads: Sequence[Path], fonts_dir: Path) -> list[str]:
