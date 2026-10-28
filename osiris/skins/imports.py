@@ -71,10 +71,17 @@ def install_sets(
                 raise UnusableDownload(
                     f"{download.name}: {folder.name} is installed with the system"
                 )
-        for folder in found:
-            target = icons_dir / folder.name
-            shutil.rmtree(target, ignore_errors=True)
-            shutil.copytree(folder, target)
+        icons_dir.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=icons_dir, prefix=".import-") as staging:
+            new, replaced = Path(staging) / "new", Path(staging) / "replaced"
+            replaced.mkdir()
+            for folder in found:
+                shutil.copytree(folder, new / folder.name)
+            for folder in found:
+                target = icons_dir / folder.name
+                if target.exists() or target.is_symlink():
+                    target.rename(replaced / folder.name)
+                (new / folder.name).rename(target)
         return sorted(folder.name for folder in found)
 
 
