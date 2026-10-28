@@ -151,6 +151,17 @@ def _variants(themes: Mapping[str, Path]) -> dict[str, Path]:
     return {"common": named[0]}
 
 
+def _lay_out(theme: Path, variant: str, skin: Path) -> None:
+    for surface in SURFACE_FOLDERS:
+        if (theme / surface).is_dir():
+            copy_data(theme / surface, skin / "files" / variant / surface)
+    dock = theme / "plank" / "dock.theme"
+    if dock.is_file():
+        for target in ("light", "dark") if variant == "common" else (variant,):
+            (skin / "plank").mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(dock, skin / "plank" / f"dock-{target}.theme")
+
+
 def import_gtk_theme(download: Path, mine: Path, runner: CommandRunner) -> Skinpack:
     """A downloaded GTK theme as a person's own Skin, worn in its own colours
     until Osiris converts them to the Theme's gaps."""
@@ -168,16 +179,7 @@ def import_gtk_theme(download: Path, mine: Path, runner: CommandRunner) -> Skinp
         skin = mine / free_name(mine, slug(label))
         try:
             for variant, theme in variants.items():
-                for surface in SURFACE_FOLDERS:
-                    if (theme / surface).is_dir():
-                        copy_data(theme / surface, skin / "files" / variant / surface)
-                dock = theme / "plank" / "dock.theme"
-                if dock.is_file():
-                    for target in (
-                        ("light", "dark") if variant == "common" else (variant,)
-                    ):
-                        (skin / "plank").mkdir(parents=True, exist_ok=True)
-                        shutil.copyfile(dock, skin / "plank" / f"dock-{target}.theme")
+                _lay_out(theme, variant, skin)
             (skin / LABEL_FILE).write_text(
                 json.dumps(
                     {
