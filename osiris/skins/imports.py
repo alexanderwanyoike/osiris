@@ -42,6 +42,9 @@ def unpack(download: Path, into: Path) -> None:
 
 FONT_SUFFIXES = {".ttf", ".otf", ".ttc"}
 
+#: Sets every other set falls back to, and names too generic to be one set's.
+_REFUSED_SETS = {"hicolor", "default", "locolor", "dark", "light"}
+
 
 def install_sets(download: Path, icons_dir: Path) -> list[str]:
     """Install every icon or cursor set inside a download; their names."""
@@ -54,6 +57,11 @@ def install_sets(download: Path, icons_dir: Path) -> list[str]:
         ]
         if not found:
             raise UnusableDownload(f"{download.name}: no icon or cursor set in it")
+        for folder in found:
+            if folder.name.lower() in _REFUSED_SETS:
+                raise UnusableDownload(
+                    f"{download.name}: a set named {folder.name} is not imported"
+                )
         for folder in found:
             target = icons_dir / folder.name
             shutil.rmtree(target, ignore_errors=True)
