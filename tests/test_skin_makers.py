@@ -35,3 +35,17 @@ def test_an_edit_meant_for_one_place_stops_the_maker_when_found_twice() -> None:
 def test_a_colour_becomes_its_gap_in_either_case() -> None:
     recolour = load().Recolour({"#5294e2": "{{accent}}"})
     assert recolour('<path fill="#5294E2"/>') == '<path fill="{{accent}}"/>'
+
+
+def test_a_colour_that_never_matched_stops_the_maker() -> None:
+    recolour = load().Recolour({"#5294e2": "{{accent}}", "#4080fb": "{{accent}}"})
+    recolour('<path fill="#5294e2"/>')
+    with pytest.raises(SystemExit, match="'#4080fb' matched nothing in cinnamon"):
+        recolour.check("cinnamon")
+
+
+def test_colours_that_each_matched_somewhere_pass() -> None:
+    recolour = load().Recolour({"#5294e2": "{{accent}}", "#4080fb": "{{accent}}"})
+    recolour('<path fill="#5294e2"/>')
+    recolour('<path fill="#4080fb"/>')
+    recolour.check("cinnamon")
