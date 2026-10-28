@@ -13,6 +13,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from makers import Recolour, replace, replace_once
+
 PACK = Path(__file__).resolve().parent / "graphite"
 
 # Graphite keeps its colours in functions inside _colors.scss rather than in a
@@ -105,10 +107,10 @@ THEME_TWEAK = ("$theme: 'default';", "$theme: 'osiris';")
 
 # Graphite ships one folder of pictures per accent instead of recolouring them;
 # the blue one's accent and the off-state ink become gaps.
-CINNAMON_ACCENT = {"#3684dd": "{{accent}}"}
+CINNAMON_ACCENT = Recolour({"#3684dd": "{{accent}}"})
 CINNAMON_INK = {
-    "light": {"#333333": "{{foreground}}"},
-    "dark": {"#dfdfdf": "{{foreground}}"},
+    "light": Recolour({"#333333": "{{foreground}}"}),
+    "dark": Recolour({"#dfdfdf": "{{foreground}}"}),
 }
 
 ENTRIES = {
@@ -120,19 +122,11 @@ ENTRIES = {
 }
 
 
-def replace_once(text: str, old: str, new: str) -> str:
-    if text.count(old) != 1:
-        sys.exit(f"upstream changed: expected {old!r} once")
-    return text.replace(old, new)
-
-
-def svgs(src: Path, dst: Path, gaps: dict[str, str] | None = None) -> None:
+def svgs(src: Path, dst: Path, recolour: Recolour | None = None) -> None:
     dst.mkdir(parents=True, exist_ok=True)
     for svg in src.glob("*.svg"):
         text = svg.read_text()
-        for colour, gap in (gaps or {}).items():
-            text = text.replace(colour, gap).replace(colour.upper(), gap)
-        (dst / svg.name).write_text(text)
+        (dst / svg.name).write_text(recolour(text) if recolour else text)
 
 
 def plank(src: Path) -> str:
@@ -163,11 +157,14 @@ def main() -> None:
     sass = PACK / "sass"
     shutil.copytree(src / "sass", sass, ignore=shutil.ignore_patterns("gnome-shell"))
     tweaks = (src / "sass" / "_tweaks.scss").read_text()
-    (sass / "_tweaks-temp.scss").write_text(replace_once(tweaks, *THEME_TWEAK))
+    (sass / "_tweaks-temp.scss").write_text(
+        replace_once(tweaks, *THEME_TWEAK, "_tweaks.scss")
+    )
     colors = replace_once(
         (sass / "_colors.scss").read_text(),
         COLORS_ANCHOR,
         "@import 'color-palette-osiris';\n\n" + COLORS_ANCHOR,
+        "_colors.scss",
     )
     (sass / "_colors.scss").write_text(colors + "\n@import 'colors-osiris';\n")
     (sass / "_color-palette-osiris.scss").write_text(PALETTE)
@@ -177,7 +174,7 @@ def main() -> None:
         for variant in ("Light", "Dark"):
             text = (src / "main" / f"{source}-{variant}.scss").read_text()
             out = PACK / f"{entry}-{variant.lower()}.scss"
-            out.write_text(text.replace("'../../sass/", "'../sass/"))
+            out.write_text(replace(text, "'../../sass/", "'../sass/", out.name))
 
     common = PACK / "files" / "common"
     gtk = src / "assets" / "gtk"
@@ -190,6 +187,9 @@ def main() -> None:
     for variant, folder in (("light", "assets"), ("dark", "assets-Dark")):
         dst = PACK / "files" / variant / "cinnamon" / "assets"
         svgs(cinnamon / folder, dst, CINNAMON_INK[variant])
+    CINNAMON_ACCENT.check("cinnamon/theme-blue")
+    for variant, recolour in CINNAMON_INK.items():
+        recolour.check(f"cinnamon {variant} pictures")
 
     (PACK / "plank").mkdir()
     for variant in ("Light", "Dark"):

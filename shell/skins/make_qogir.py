@@ -17,6 +17,8 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from makers import Recolour
+
 PACK = Path(__file__).resolve().parent / "qogir"
 
 PALETTE = """\
@@ -92,8 +94,8 @@ XLINK = "{http://www.w3.org/1999/xlink}href"
 
 # The colours Qogir's per-accent pictures differ by (assets-Manjaro.svg and
 # assets-Ubuntu.svg swap only this one), and the Cinnamon pictures' own.
-GTK_GAPS = {"#5294e2": "{{accent}}"}
-CINNAMON_GAPS = {
+GTK_GAPS = Recolour({"#5294e2": "{{accent}}"})
+CINNAMON_GAPS = Recolour({
     "#5294e2": "{{accent}}",
     "#4080fb": "{{accent}}",
     "#1d78df": "{{accent}}",
@@ -104,10 +106,11 @@ CINNAMON_GAPS = {
     "#32343d": "{{background}}",
     "#2d323d": "{{background}}",
     "#323644": "{{background}}",
-}
+})
 # White is also Qogir's tick and knob colour, so it becomes a gap only where it
 # is the menu or box behind them.
 CINNAMON_WHITE = ("menu/menu.svg", "checkbox/checkbox-unchecked")
+WHITE_GAP = Recolour({"fill:#ffffff": "fill:{{background}}"})
 ENTRIES = {
     "gtk-3.0": ("gtk/theme-3.0", "gtk-Light", "gtk-Dark"),
     "gtk-4.0": ("gtk/theme-4.0", "gtk-Light", "gtk-Dark"),
@@ -115,12 +118,6 @@ ENTRIES = {
     "libadwaita": ("gtk/theme-4.0", "gtk-Light", "gtk-Dark"),
     "cinnamon": ("cinnamon", "cinnamon", "cinnamon-Dark"),
 }
-
-
-def gapped(text: str, gaps: dict[str, str]) -> str:
-    for colour, gap in gaps.items():
-        text = re.sub(re.escape(colour), gap, text, flags=re.IGNORECASE)
-    return text
 
 
 def colours(upstream: str) -> str:
@@ -247,7 +244,7 @@ def bbox(element: ET.Element, ctm: tuple[float, ...]) -> list[tuple[float, float
     return found
 
 
-def cut(sheet: Path, names: list[str], dst: Path, gaps: dict[str, str]) -> None:
+def cut(sheet: Path, names: list[str], dst: Path, gaps: Recolour) -> None:
     """Each named picture of ``sheet`` as name.svg, and name@2.svg at twice the size."""
     root = ET.parse(sheet).getroot()
     if root.get("viewBox"):
@@ -289,7 +286,7 @@ def cut(sheet: Path, names: list[str], dst: Path, gaps: dict[str, str]) -> None:
             )
             wrapper.append(copy.deepcopy(element))
             text = ET.tostring(svg, encoding="unicode")
-            (dst / f"{name}{suffix}.svg").write_text(gapped(text, gaps) + "\n")
+            (dst / f"{name}{suffix}.svg").write_text(gaps(text) + "\n")
 
 
 def referenced(element: ET.Element, ids: dict[str, ET.Element]) -> list[str]:
@@ -319,10 +316,10 @@ def cinnamon(src: Path, dst: Path) -> None:
         if svg.suffix != ".svg":
             shutil.copy(svg, out)
             continue
-        text = gapped(svg.read_text(), CINNAMON_GAPS)
+        text = CINNAMON_GAPS(svg.read_text())
         where = svg.relative_to(src).as_posix()
         if src.name == "assets" and where.startswith(CINNAMON_WHITE):
-            text = re.sub("fill:#ffffff", "fill:{{background}}", text, flags=re.I)
+            text = WHITE_GAP(text)
         out.write_text(text)
 
 
@@ -365,16 +362,24 @@ def main() -> None:
     (sass / "_color-palette-osiris.scss").write_text(PALETTE)
     upstream_colours = (src / "_sass" / "_colors.scss").read_text()
     (sass / "_colors.scss").write_text(colours(upstream_colours))
+    pictures = 0
     for partial in (sass / "gtk").rglob("*.scss"):
-        text = partial.read_text()
-        partial.write_text(re.sub(r'(url\("assets/[^"]*)\.png"\)', r'\1.svg")', text))
+        text, count = re.subn(
+            r'(url\("assets/[^"]*)\.png"\)', r'\1.svg")', partial.read_text()
+        )
+        partial.write_text(text)
+        pictures += count
+    if not pictures:
+        raise SystemExit("upstream changed: the GTK Sass names no PNG pictures")
 
     for folder, (where, light, dark) in ENTRIES.items():
         (PACK / folder).mkdir()
         stem = "gtk" if folder.startswith("gtk") else folder
         for variant, name in (("light", light), ("dark", dark)):
             text = (src / where / f"{name}.scss").read_text()
-            text = re.sub(r"""(['"])(\.\./)+_sass/""", r"\1../sass/", text)
+            text, count = re.subn(r"""(['"])(\.\./)+_sass/""", r"\1../sass/", text)
+            if not count:
+                raise SystemExit(f"upstream changed: {name}.scss imports no _sass/")
             (PACK / folder / f"{stem}-{variant}.scss").write_text(text)
 
     common = PACK / "files" / "common"
@@ -399,6 +404,9 @@ def main() -> None:
     cinnamon(shots / "common-assets", common / "cinnamon" / "common-assets")
     cinnamon(shots / "assets", PACK / "files" / "light" / "cinnamon" / "assets")
     cinnamon(shots / "assets-Dark", PACK / "files" / "dark" / "cinnamon" / "assets")
+    GTK_GAPS.check("the GTK pictures")
+    CINNAMON_GAPS.check("the Cinnamon pictures")
+    WHITE_GAP.check(" and ".join(CINNAMON_WHITE))
 
     (PACK / "plank").mkdir()
     dock = plank(src / "plank" / "dock.theme")

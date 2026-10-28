@@ -13,6 +13,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from makers import Recolour, replace
+
 PACK = Path(__file__).resolve().parent / "jasper"
 
 PALETTE = """\
@@ -84,11 +86,11 @@ $default-dark: $gap-accent;
 
 # The accent Jasper's own scripts swap in its Cinnamon pictures
 # (src/assets/cinnamon/make-assets.sh), and its dark knob and tick grey.
-SVG_GAPS = {
+SVG_GAPS = Recolour({
     "#009688": "{{accent}}",
     "#4db6ac": "{{accent}}",
     "#242424": "{{background}}",
-}
+})
 # Jasper's on() switches to dark text at a fixed brightness.
 THRESHOLD = ("@if ($brightness >= 156) {", "@if ($brightness >= $osiris-midpoint) {")
 ENTRIES = {
@@ -101,20 +103,11 @@ ENTRIES = {
 }
 
 
-def replace(text: str, old: str, new: str, where: str) -> str:
-    if old not in text:
-        raise SystemExit(f"upstream changed: {old!r} not in {where}")
-    return text.replace(old, new)
-
-
 def svgs(src: Path, dst: Path, gaps: bool = True) -> None:
     dst.mkdir(parents=True, exist_ok=True)
     for svg in src.glob("*.svg"):
         text = svg.read_text()
-        if gaps:
-            for colour, gap in SVG_GAPS.items():
-                text = text.replace(colour, gap).replace(colour.upper(), gap)
-        (dst / svg.name).write_text(text)
+        (dst / svg.name).write_text(SVG_GAPS(text) if gaps else text)
 
 
 def plank(src: Path) -> str:
@@ -147,8 +140,11 @@ def main() -> None:
     )
     tweaks = (src / "sass" / "_tweaks.scss").read_text()
     (PACK / "sass" / "_tweaks-temp.scss").write_text(
-        tweaks.replace(
-            "@import 'color-palette-default';", "@import 'color-palette-osiris';"
+        replace(
+            tweaks,
+            "@import 'color-palette-default';",
+            "@import 'color-palette-osiris';",
+            "_tweaks.scss",
         )
     )
     (PACK / "sass" / "_color-palette-osiris.scss").write_text(PALETTE)
@@ -159,7 +155,7 @@ def main() -> None:
         for variant in ("Light", "Dark"):
             text = (src / "main" / f"{source}-{variant}.scss").read_text()
             out = PACK / f"{entry}-{variant.lower()}.scss"
-            out.write_text(text.replace("'../../sass/", "'../sass/"))
+            out.write_text(replace(text, "'../../sass/", "'../sass/", out.name))
 
     common = PACK / "files" / "common"
     gtk = src / "assets" / "gtk"
@@ -174,6 +170,7 @@ def main() -> None:
     for variant, folder in (("light", "assets"), ("dark", "assets-Dark")):
         dst = PACK / "files" / variant / "cinnamon" / "assets"
         svgs(cinnamon / folder, dst)
+    SVG_GAPS.check("the pictures")
 
     (PACK / "plank").mkdir()
     for variant in ("Light", "Dark"):

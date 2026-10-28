@@ -19,6 +19,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from makers import replace, replace_once
+
 PACK = Path(__file__).resolve().parent / "elementary"
 VERSIONS = ("gtk-3.0", "gtk-4.0")
 
@@ -144,12 +146,6 @@ def between(text: str, start: str, end: str, replacement: str) -> str:
     return head + replacement + end + rest.split(end, 1)[1]
 
 
-def replace_once(text: str, old: str, new: str, where: str) -> str:
-    if text.count(old) != 1:
-        raise SystemExit(f"upstream changed: expected {old!r} once in {where}")
-    return text.replace(old, new)
-
-
 def palette(text: str) -> str:
     text, count = SHADE.subn(
         lambda m: f"${m[1]}_{m[2]}: gap-ramp({RAMPS[m[1]]}, {m[2]});", text
@@ -160,11 +156,12 @@ def palette(text: str) -> str:
 
 
 def entry(variant: str, version: str) -> str:
-    text = variant.replace(
-        "@import '../_palette.scss';", f"@import '../sass/{version}/palette';"
-    ).replace("@import '../index.scss';", f"@import '../sass/{version}/index';")
-    text, count = ACCENT.subn("@define-color accent_color #{$gap-accent};", text)
-    if count != 1 or "../sass/" not in text:
+    for theirs, ours in (("_palette", "palette"), ("index", "index")):
+        old = f"@import '../{theirs}.scss';"
+        new = f"@import '../sass/{version}/{ours}';"
+        variant = replace(variant, old, new, "a variant entry")
+    text, count = ACCENT.subn("@define-color accent_color #{$gap-accent};", variant)
+    if count != 1:
         raise SystemExit("upstream variant entry changed")
     return text
 
