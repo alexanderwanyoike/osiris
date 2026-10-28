@@ -42,6 +42,20 @@ def test_a_set_already_installed_is_kept_as_the_one_copy(tmp_path: Path) -> None
     assert (existing / "index.theme").read_text() == "already here"
 
 
+def test_a_set_the_system_has_is_not_shadowed(tmp_path: Path) -> None:
+    """A copy in the person's icons would take over the system's set in every
+    program, worn or not."""
+    (tmp_path / "system" / "Colloid-Dark").mkdir(parents=True)
+    install(
+        read(make_pack(tmp_path / "colloid")),
+        tmp_path / "icons",
+        tmp_path / "fonts",
+        system_icons=[tmp_path / "system"],
+    )
+    assert not (tmp_path / "icons" / "Colloid-Dark").exists()
+    assert (tmp_path / "icons" / "Colloid-cursors").is_dir()
+
+
 def test_fonts_are_installed_once_and_say_when_they_are_new(tmp_path: Path) -> None:
     pack = read(make_pack(tmp_path / "colloid"))
     assert install(pack, tmp_path / "icons", tmp_path / "fonts") is True
