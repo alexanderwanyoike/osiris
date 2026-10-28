@@ -7,7 +7,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 #: Present everywhere as a fallback, never a look of its own.
-_FALLBACKS = {"hicolor", "default", "locolor"}
+FALLBACKS = {"hicolor", "default", "locolor"}
 
 
 def _index(folder: Path) -> configparser.SectionProxy | None:
@@ -25,7 +25,7 @@ def _themes(folders: Sequence[Path], wanted: Callable[[Path], bool]) -> list[str
         if not root.is_dir():
             continue
         for folder in root.iterdir():
-            if folder.is_dir() and folder.name not in _FALLBACKS and wanted(folder):
+            if folder.is_dir() and folder.name not in FALLBACKS and wanted(folder):
                 found.add(folder.name)
     return sorted(found, key=str.lower)
 

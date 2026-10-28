@@ -13,7 +13,7 @@ from pathlib import Path, PurePosixPath
 
 from osiris.model.names import slug
 from osiris.platform.process import CommandRunner
-from osiris.skins.looks import is_cursor_set, is_icon_set
+from osiris.skins.looks import FALLBACKS, is_cursor_set, is_icon_set
 from osiris.skins.pack import LABEL_FILE, Skinpack, read
 from osiris.skins.share import free_name, start_history
 
@@ -42,8 +42,8 @@ def unpack(download: Path, into: Path) -> None:
 
 FONT_SUFFIXES = {".ttf", ".otf", ".ttc"}
 
-#: Sets every other set falls back to, and names too generic to be one set's.
-_REFUSED_SETS = {"hicolor", "default", "locolor", "dark", "light"}
+#: Names too generic to be one set's.
+_REFUSED_SETS = {*FALLBACKS, "dark", "light"}
 
 
 def install_sets(download: Path, icons_dir: Path) -> list[str]:
