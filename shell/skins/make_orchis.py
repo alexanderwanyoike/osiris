@@ -16,7 +16,7 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from makers import Recolour, replace, rewrite
+from makers import Recolour, referenced, replace, rewrite
 
 PACK = Path(__file__).resolve().parent / "orchis"
 
@@ -189,10 +189,13 @@ def svg_assets(gtk: Path, dst: Path) -> None:
         for key in [k for k in el.attrib if k.startswith("{") and k != HREF]:
             del el.attrib[key]
 
+    defined = {el.get("id"): el for el in defs.iter() if el.get("id")}
+
     dst.mkdir(parents=True, exist_ok=True)
     for name in (gtk / "assets.txt").read_text().split():
         group = ids[name]
         x, y, width, height = bounds(group, ids)
+        used = referenced(group, defined)
         for suffix, scale in (("", 1), ("@2", 2)):
             svg = ET.Element(
                 f"{{{SVG}}}svg",
@@ -202,7 +205,10 @@ def svg_assets(gtk: Path, dst: Path) -> None:
                     "viewBox": f"{x:g} {y:g} {width:g} {height:g}",
                 },
             )
-            svg.append(defs)
+            if used:
+                ET.SubElement(svg, f"{{{SVG}}}defs").extend(
+                    copy.deepcopy(defined[i]) for i in used
+                )
             svg.append(copy.deepcopy(group))
             text = ROW_GAPS(ET.tostring(svg, encoding="unicode"))
             (dst / f"{name}{suffix}.svg").write_text(text + "\n")
