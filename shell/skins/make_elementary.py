@@ -41,6 +41,45 @@ RAMP_FUNCTION = """\
     @return scale-color($colour, $lightness: map-get($steps, $level));
 }
 
+// Upstream writes white on its fills; this is whichever of the Theme's inks
+// has the higher WCAG contrast. Sass has no pow(), so the 2.4 power of the
+// sRGB curve is x^2 times the fifth root of x^2, found by Newton's method.
+@function osiris-root5($a) {
+    $y: 1;
+    @for $i from 1 through 24 {
+        $y: (4 * $y + $a / ($y * $y * $y * $y)) / 5;
+    }
+    @return $y;
+}
+
+@function osiris-linear($channel) {
+    $c: $channel / 255;
+    @if $c <= 0.03928 {
+        @return $c / 12.92;
+    }
+    $t: ($c + 0.055) / 1.055;
+    @return $t * $t * osiris-root5($t * $t);
+}
+
+@function osiris-luminance($c) {
+    @return 0.2126 * osiris-linear(red($c)) + 0.7152 * osiris-linear(green($c))
+        + 0.0722 * osiris-linear(blue($c));
+}
+
+@function osiris-contrast($a, $b) {
+    $la: osiris-luminance($a) + 0.05;
+    $lb: osiris-luminance($b) + 0.05;
+    @return max($la, $lb) / min($la, $lb);
+}
+
+@function osiris-on($fill) {
+    $foreground: osiris-contrast($fill, $gap-foreground);
+    @if $foreground >= osiris-contrast($fill, $gap-background) {
+        @return $gap-foreground;
+    }
+    @return $gap-background;
+}
+
 """
 
 # Replaces upstream's surface block. Views take the Theme's surface and windows
@@ -78,6 +117,19 @@ $warning-icon-color: $gap-warning;
 }
 
 """
+# The white text upstream puts on the accent and on its danger red.
+ON_FILLS = {
+    "widgets/_checkbuttons.scss": (
+        "background-color: #{'@accent_color'};\n        color: white;",
+        "background-color: #{'@accent_color'};\n        color: osiris-on($gap-accent);",
+    ),
+    "widgets/_buttons.scss": (
+        "background-color: $STRAWBERRY_500;\n            color: white;",
+        "background-color: $STRAWBERRY_500;\n"
+        "            color: osiris-on($STRAWBERRY_500);",
+    ),
+}
+
 SURFACES_START = "// The default titlebar color"
 SURFACES_END = "// Disabled text, images, other foreground elements"
 
@@ -90,6 +142,12 @@ def between(text: str, start: str, end: str, replacement: str) -> str:
     if not found or end not in rest:
         raise SystemExit(f"upstream changed: {start!r} .. {end!r} not found")
     return head + replacement + end + rest.split(end, 1)[1]
+
+
+def replace_once(text: str, old: str, new: str, where: str) -> str:
+    if text.count(old) != 1:
+        raise SystemExit(f"upstream changed: expected {old!r} once in {where}")
+    return text.replace(old, new)
 
 
 def palette(text: str) -> str:
@@ -131,6 +189,9 @@ def main() -> None:
         )
         own = sass / "_palette.scss"
         own.write_text(palette(own.read_text()))
+        for partial, (old, new) in ON_FILLS.items():
+            path = sass / partial
+            path.write_text(replace_once(path.read_text(), old, new, partial))
         index = sass / "_index.scss"
         index.write_text(
             between(index.read_text(), SURFACES_START, SURFACES_END, SURFACES)
@@ -157,8 +218,9 @@ def main() -> None:
     (PACK / "SOURCES.md").write_text(
         f"Made by shell/skins/make_elementary.py from elementary/stylesheet"
         f" {commit[0]} ({commit[1]}),\n{label['source']}, GPL-3.0. The Sass and"
-        " pictures are upstream's; the\naccent entries, the role ramps in each"
-        " `_palette.scss` and the surfaces in each\n`_index.scss` are Osiris's.\n"
+        " pictures are upstream's; the\naccent entries, the role ramps and text"
+        " inks in each `_palette.scss`, the\nsurfaces in each `_index.scss` and"
+        " the inks on checks and destructive buttons\nare Osiris's.\n"
     )
     print("wrote", PACK)
 
