@@ -111,6 +111,11 @@ def start_history(skin: Path, message: str, runner: CommandRunner) -> None:
     commit(skin, message, runner)
 
 
+#: Signing would ask for the person's key, and their hooks are for their own
+#: commits, not Osiris's.
+_UNHOOKED = ("-c", "commit.gpgsign=false", "-c", "core.hooksPath=")
+
+
 def commit(skin: Path, message: str, runner: CommandRunner, check: bool = True) -> None:
     """Commit everything in a person's Skin as Osiris, starting its history if
     it has none."""
@@ -119,7 +124,7 @@ def commit(skin: Path, message: str, runner: CommandRunner, check: bool = True) 
         runner.run("git", "-C", where, "init", "-q", quiet=True)
     runner.run("git", "-C", where, "add", "-A", quiet=True)
     runner.run(
-        "git", "-C", where, *as_osiris(), "commit", "-q", "-m", message,
+        "git", "-C", where, *as_osiris(), *_UNHOOKED, "commit", "-q", "-m", message,
         check=check, quiet=True,
     )  # fmt: skip
 
