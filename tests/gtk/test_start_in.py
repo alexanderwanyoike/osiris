@@ -31,3 +31,17 @@ def test_a_folder_entry_point_may_bring_a_request_left_unsent(tmp_path: Path) ->
     stand_in.start_in(tmp_path, "Convert this theme to my Theme's colours")
     assert stand_in.drawer.drafts == ["Convert this theme to my Theme's colours"]
     assert stand_in.harness.session is None
+
+
+def test_a_folder_given_before_the_harness_is_built_waits_for_it(
+    tmp_path: Path,
+) -> None:
+    """D-Bus starts the Harness for the Entry point, and the Engine connection
+    comes up after the action has arrived."""
+    stand_in, _ = app()
+    harness, stand_in.harness = stand_in.harness, None
+    stand_in.start_in(tmp_path, "make it calm")
+    stand_in.harness = harness
+    stand_in.start_waiting()
+    assert harness.directory == tmp_path
+    assert stand_in.drawer.drafts == ["make it calm"]
