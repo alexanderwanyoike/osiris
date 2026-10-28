@@ -233,3 +233,17 @@ def test_what_is_chosen_can_be_read_without_saving() -> None:
     choose(section(dialog, "Style"), "Graphite")
     assert dialog.choice() == Choice("Sharp", "graphite", "Papirus", None, None)
     assert saved == []
+
+
+def test_the_buttons_shown_only_as_icons_are_named_for_screen_readers() -> None:
+    """Review of #134: the Add buttons had a tooltip and no accessible name."""
+    dialog = editor([])
+    adds = [
+        w
+        for w in widgets(dialog.get_child())
+        if isinstance(w, Gtk.Button) and w.get_icon_name() == "list-add-symbolic"
+    ]
+    assert len(adds) == 3
+    assert all(
+        Gtk.test_accessible_has_property(w, Gtk.AccessibleProperty.LABEL) for w in adds
+    )
