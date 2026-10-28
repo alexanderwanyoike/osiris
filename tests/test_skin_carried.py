@@ -42,6 +42,21 @@ def test_a_set_already_installed_is_kept_as_the_one_copy(tmp_path: Path) -> None
     assert (existing / "index.theme").read_text() == "already here"
 
 
+def a_new_version(root: Path) -> None:
+    label = json.loads((root / "skin.json").read_text())
+    (root / "skin.json").write_text(json.dumps({**label, "version": "2"}))
+
+
+def test_a_set_from_an_older_version_of_the_skin_is_replaced(tmp_path: Path) -> None:
+    root = make_pack(tmp_path / "colloid")
+    install(read(root), tmp_path / "icons", tmp_path / "fonts")
+    a_new_version(root)
+    (root / "icons" / "Colloid-Dark" / "index.theme").write_text("version 2")
+    install(read(root), tmp_path / "icons", tmp_path / "fonts")
+    installed = tmp_path / "icons" / "Colloid-Dark" / "index.theme"
+    assert installed.read_text() == "version 2"
+
+
 def test_a_set_the_system_has_is_not_shadowed(tmp_path: Path) -> None:
     """A copy in the person's icons would take over the system's set in every
     program, worn or not."""
