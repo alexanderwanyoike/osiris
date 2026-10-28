@@ -101,8 +101,9 @@ IMPORTED_FONTS = os.path.join(HOME, ".local", "share", "fonts", "imported")
 SKIN_WORK = os.path.join(HOME, ".cache", "osiris", "skins")
 SKIN_PICTURES = os.path.join(HOME, ".cache", "osiris", "skin-pictures")
 SAMPLER = "/usr/share/osiris/appearance/sampler.py"
+SYSTEM_ICONS = "/usr/share/icons"
 CURSOR_DIRS = [os.path.join(HOME, ".local", "share", "icons"),
-               os.path.join(HOME, ".icons"), "/usr/share/icons"]
+               os.path.join(HOME, ".icons"), SYSTEM_ICONS]
 # The shapes the editor shows for a cursor theme, each by its usual names.
 POINTER = ("left_ptr", "default")
 CURSOR_SHAPES = (POINTER, ("hand2", "pointer"), ("xterm", "text"))
@@ -756,7 +757,8 @@ def build_skin(theme: dict) -> tuple[Built, Look] | None:
     if pack is None:
         return None
     places = wear.Places(themes=Path(THEMES_DIR), work=Path(SKIN_WORK),
-                         icons=Path(ICONS_DIR), fonts=Path(FONTS_DIR))
+                         icons=Path(ICONS_DIR), fonts=Path(FONTS_DIR),
+                         system_icons=(Path(SYSTEM_ICONS),))
     worn = wear.wear(pack, theme, places, SubprocessRunner(),
                      lambda root: _osiris_cinnamon(theme, str(root)))
     _drop_themes_but(worn[0].theme)
