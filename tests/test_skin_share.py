@@ -212,6 +212,14 @@ def test_a_new_skin_never_hides_a_shipped_one_by_its_name(tmp_path: Path) -> Non
     assert made.name == "colloid-2"
 
 
+def test_a_new_skin_is_never_named_osiris(tmp_path: Path) -> None:
+    """That name is Osiris's own look, which no Skin may take."""
+    pack = read(make_pack(tmp_path / "shipped" / "colloid"))
+    assert duplicate(pack, tmp_path / "mine", FakeRunner(), "Osiris").name == (
+        "osiris-2"
+    )
+
+
 def test_an_opened_skin_never_hides_a_shipped_one_by_its_name(tmp_path: Path) -> None:
     shipped = tmp_path / "shipped"
     shared = export(read(make_pack(shipped / "colloid")), tmp_path / "out")
