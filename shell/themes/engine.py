@@ -918,8 +918,8 @@ def _cursor_picture(cursor: str, shapes: tuple[str, ...], cache: Path) -> str | 
                     image = xcursor.read(fh.read(), 32)
             except (OSError, xcursor.XcursorError):
                 continue
-            out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_bytes(xcursor.png(image))
+            drawn = xcursor.png(image)
+            pictures.land(out, lambda partial: partial.write_bytes(drawn))
             return str(out)
     return None
 
