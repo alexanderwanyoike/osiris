@@ -9,3 +9,9 @@ def replace(text: str, old: str, new: str, where: str) -> str:
     if old not in text:
         raise SystemExit(f"upstream changed: {old!r} not in {where}")
     return text.replace(old, new)
+
+
+def replace_once(text: str, old: str, new: str, where: str) -> str:
+    if text.count(old) != 1:
+        raise SystemExit(f"upstream changed: expected {old!r} once in {where}")
+    return text.replace(old, new)
