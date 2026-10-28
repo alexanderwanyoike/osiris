@@ -6,7 +6,7 @@ import json
 import shutil
 import tempfile
 import zipfile
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 
@@ -42,7 +42,9 @@ def _kept_back(relative: Path) -> bool:
     return ".git" in relative.parts or relative == Path(AGENTS_FILE)
 
 
-def open_file(shared: Path, mine: Path, runner: CommandRunner) -> Skinpack:
+def open_file(
+    shared: Path, mine: Path, runner: CommandRunner, shipped: Sequence[Path] = ()
+) -> Skinpack:
     """Unpack a shared Skin among the person's own; refuse anything else."""
     try:
         archive = zipfile.ZipFile(shared)
@@ -59,7 +61,7 @@ def open_file(shared: Path, mine: Path, runner: CommandRunner) -> Skinpack:
         if len(tops) != 1 or unsafe:
             raise SkinpackError(f"{shared.name}: not one folder of its own")
         top = tops.pop()
-        name = free_name(mine, top)
+        name = free_name(mine, top, shipped)
         with _making(mine, name) as made:
             archive.extractall(
                 made.parent,
@@ -92,10 +94,10 @@ def delete(pack: Skinpack, mine: Path) -> None:
 AGENTS = Path(__file__).with_name("skin-agents.md")
 
 
-def free_name(mine: Path, base: str) -> str:
-    """base, or base-2, base-3 and so on, whichever is not taken."""
+def free_name(mine: Path, base: str, shipped: Sequence[Path] = ()) -> str:
+    """base, or base-2, base-3 and so on, whichever no Skin has."""
     name, number = base, 2
-    while (mine / name).exists():
+    while any((folder / name).exists() for folder in (mine, *shipped)):
         name, number = f"{base}-{number}", number + 1
     return name
 
@@ -111,11 +113,16 @@ def start_history(skin: Path, message: str, runner: CommandRunner) -> None:
 
 
 def duplicate(
-    pack: Skinpack, mine: Path, runner: CommandRunner, label: str | None = None
+    pack: Skinpack,
+    mine: Path,
+    runner: CommandRunner,
+    label: str | None = None,
+    shipped: Sequence[Path] = (),
 ) -> Skinpack:
     """A person's own copy of a Skin, with history and instructions for Osiris;
     a label makes it a new Skin of that name rather than a copy."""
-    copy = mine / free_name(mine, slug(label) if label else f"{pack.name}-copy")
+    base = slug(label) if label else f"{pack.name}-copy"
+    copy = mine / free_name(mine, base, shipped)
     shutil.copytree(pack.root, copy, ignore=shutil.ignore_patterns(".git"))
     label_of = json.loads((copy / LABEL_FILE).read_text())
     label_of["label"] = label or f"{pack.label} (copy)"

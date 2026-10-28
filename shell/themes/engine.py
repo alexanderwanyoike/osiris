@@ -903,22 +903,27 @@ def export_skin(name: str, folder: str) -> str:
     return str(share.export(_pack(name), Path(folder)))
 
 
+def _shipped_skin_dirs() -> list[Path]:
+    return [Path(folder) for folder in SKIN_DIRS[1:]]
+
+
 def open_skin(path: str) -> str:
     """Add a shared Skin to the person's own; returns its name."""
-    return share.open_file(Path(path), Path(SKIN_DIRS[0]),
-                           SubprocessRunner()).name
+    return share.open_file(Path(path), Path(SKIN_DIRS[0]), SubprocessRunner(),
+                           _shipped_skin_dirs()).name
 
 
 def duplicate_skin(name: str) -> str:
     """Copy a Skin into the person's own; returns the copy's name."""
-    copy = share.duplicate(_pack(name), Path(SKIN_DIRS[0]), SubprocessRunner())
+    copy = share.duplicate(_pack(name), Path(SKIN_DIRS[0]), SubprocessRunner(),
+                           shipped=_shipped_skin_dirs())
     return copy.name
 
 
 def create_skin(label: str, base: str) -> str:
     """A new Skin of the person's, named label, started from base."""
     made = share.duplicate(_pack(base), Path(SKIN_DIRS[0]), SubprocessRunner(),
-                           label=label)
+                           label=label, shipped=_shipped_skin_dirs())
     return made.name
 
 
