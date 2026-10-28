@@ -213,6 +213,17 @@ def test_only_a_sets_data_is_installed_and_never_executable(tmp_path: Path) -> N
     assert not os.access(neon / "48x48" / "apps" / "folder.png", os.X_OK)
 
 
+def test_a_set_at_the_root_of_its_archive_is_named_after_it(tmp_path: Path) -> None:
+    """Review of #136: a set packed without a folder of its own was refused."""
+    download = make_tar(
+        tmp_path / "Neon.tar.xz",
+        {"index.theme": ICON_INDEX, "48x48/apps/folder.png": "png"},
+        "w:xz",
+    )
+    assert install_sets(download, tmp_path / "icons") == ["Neon"]
+    assert (tmp_path / "icons" / "Neon" / "48x48" / "apps" / "folder.png").is_file()
+
+
 def test_a_download_with_no_set_in_it_is_refused(tmp_path: Path) -> None:
     download = make_zip(tmp_path / "wallpapers.zip", {"pics/beach.png": "png"})
     with pytest.raises(UnusableDownload, match="no icon or cursor set"):
