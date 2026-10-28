@@ -760,17 +760,36 @@ class Window(Adw.ApplicationWindow):
         def chosen(_dialog, result) -> None:
             try:
                 folder = dialog.select_folder_finish(result).get_path()
-                shared = engine.export_skin(name, folder)
             except GLib.Error:
                 return
-            except Exception as error:                  # noqa: BLE001
-                self.toasts.add_toast(Adw.Toast(title=f"Not exported: {error}",
-                                                timeout=6))
-                return
-            self.toasts.add_toast(Adw.Toast(
-                title=f"Saved {os.path.basename(shared)}", timeout=4))
+            shared = os.path.join(folder, f"{name}{engine.share.EXTENSION}")
+            if os.path.exists(shared):
+                self._confirm_replace(shared, lambda: self._export(name, folder))
+            else:
+                self._export(name, folder)
 
         dialog.select_folder(self, None, chosen)
+
+    def _confirm_replace(self, path: str, replace) -> None:
+        dialog = Adw.AlertDialog(
+            heading=f"Replace {os.path.basename(path)}?",
+            body="A file of that name is already in the folder.")
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("replace", "Replace")
+        dialog.set_response_appearance("replace",
+                                       Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_close_response("cancel")
+        dialog.connect("response", lambda _d, response:
+                       replace() if response == "replace" else None)
+        dialog.present(self)
+
+    def _export(self, name: str, folder: str) -> None:
+        try:
+            shared = engine.export_skin(name, folder)
+        except Exception as error:                      # noqa: BLE001
+            self._toast(f"Not exported: {error}")
+            return
+        self._toast(f"Saved {os.path.basename(shared)}")
 
     def confirm_delete_skin(self, name: str) -> None:
         dialog = Adw.AlertDialog(heading="Delete this Skin?",
