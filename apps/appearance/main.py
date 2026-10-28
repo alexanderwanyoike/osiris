@@ -48,11 +48,11 @@ from skins_page import CSS as SKINS_CSS, SkinsPage  # noqa: E402
 from osiris.apps.theme_scheme import ThemeScheme  # noqa: E402
 from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.model.names import slug  # noqa: E402
+from osiris.skins.imports import ARCHIVE_SUFFIXES, FONT_SUFFIXES  # noqa: E402
 from osiris.themes.library import Filter, arrange  # noqa: E402
 
-ARCHIVES = ("*.zip", "*.tar.gz", "*.tgz", "*.tar.xz", "*.txz", "*.tar.bz2",
-            "*.tar")
-FONTS = ("*.ttf", "*.otf", "*.ttc", "*.TTF", "*.OTF")
+ARCHIVES = ARCHIVE_SUFFIXES
+FONTS = tuple(sorted(FONT_SUFFIXES))
 CONVERT = ("Convert this imported theme so it follows my Theme: replace its "
            "written-in colours with the Theme's gaps, for light and dark, then "
            "wear it.")
@@ -619,12 +619,12 @@ class Window(Adw.ApplicationWindow):
             on_import=self.import_gtk_theme))
         return False
 
-    def _choose_files(self, title: str, patterns: tuple[str, ...], chosen,
+    def _choose_files(self, title: str, suffixes: tuple[str, ...], chosen,
                       many: bool = False) -> None:
         """Ask for downloaded files; chosen gets their paths, or nothing."""
         only = Gtk.FileFilter(name=title)
-        for pattern in patterns:
-            only.add_pattern(pattern)
+        for suffix in suffixes:
+            only.add_suffix(suffix.lstrip("."))
         filters = Gio.ListStore.new(Gtk.FileFilter)
         filters.append(only)
         dialog = Gtk.FileDialog(title=title, filters=filters)
