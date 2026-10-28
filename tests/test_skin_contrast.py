@@ -25,6 +25,7 @@ SHEETS = {
     "orchis": FILLED,
     "qogir": FILLED,
     "jasper": FILLED,
+    "colloid": FILLED,
     "elementary": ("check:checked", "button.destructive-action:not(:disabled)"),
 }
 
