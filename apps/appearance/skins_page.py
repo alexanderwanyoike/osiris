@@ -7,7 +7,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gtk  # noqa: E402
+from gi.repository import Adw, Gtk, Pango  # noqa: E402
 
 #: (name, label, who made it)
 Skin = tuple[str, str, str]
@@ -137,7 +137,8 @@ class SkinsPage(Gtk.ScrolledWindow):
         words = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         title = Gtk.Label(label=label, xalign=0)
         title.add_css_class("skin-name")
-        maker = Gtk.Label(label=credit, xalign=0, ellipsize=3)
+        maker = Gtk.Label(label=credit, xalign=0,
+                          ellipsize=Pango.EllipsizeMode.END)
         maker.add_css_class("dim-label")
         maker.add_css_class("caption")
         words.append(title)
