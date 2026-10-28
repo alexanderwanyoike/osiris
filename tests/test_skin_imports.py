@@ -104,6 +104,21 @@ def test_a_newer_download_replaces_the_set_of_the_same_name(tmp_path: Path) -> N
     assert not (old / "stale.png").exists()
 
 
+@pytest.mark.parametrize("name", ["hicolor", "default", "locolor", "dark", "Light"])
+def test_a_set_named_like_a_fallback_or_a_variant_is_refused(
+    tmp_path: Path, name: str
+) -> None:
+    """Review of #136: a download could replace hicolor, which every set falls
+    back to, or default, which names the cursor."""
+    kept = tmp_path / "icons" / name
+    kept.mkdir(parents=True)
+    (kept / "index.theme").write_text("mine")
+    download = make_zip(tmp_path / "sets.zip", {f"{name}/index.theme": ICON_INDEX})
+    with pytest.raises(UnusableDownload, match=name):
+        install_sets(download, tmp_path / "icons")
+    assert (kept / "index.theme").read_text() == "mine"
+
+
 def test_a_download_with_no_set_in_it_is_refused(tmp_path: Path) -> None:
     download = make_zip(tmp_path / "wallpapers.zip", {"pics/beach.png": "png"})
     with pytest.raises(UnusableDownload, match="no icon or cursor set"):
