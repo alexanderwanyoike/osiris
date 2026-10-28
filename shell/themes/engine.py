@@ -905,7 +905,8 @@ def export_skin(name: str, folder: str) -> str:
 
 def open_skin(path: str) -> str:
     """Add a shared Skin to the person's own; returns its name."""
-    return share.open_file(Path(path), Path(SKIN_DIRS[0])).name
+    return share.open_file(Path(path), Path(SKIN_DIRS[0]),
+                           SubprocessRunner()).name
 
 
 def duplicate_skin(name: str) -> str:

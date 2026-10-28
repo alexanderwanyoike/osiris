@@ -37,7 +37,7 @@ def export(pack: Skinpack, folder: Path) -> Path:
     return shared
 
 
-def open_file(shared: Path, mine: Path) -> Skinpack:
+def open_file(shared: Path, mine: Path, runner: CommandRunner) -> Skinpack:
     """Unpack a shared Skin among the person's own; refuse anything else."""
     try:
         archive = zipfile.ZipFile(shared)
@@ -60,6 +60,7 @@ def open_file(shared: Path, mine: Path) -> Skinpack:
             if top != name:
                 (made.parent / top).rename(made)
             refuse_programs(read(made))
+            start_history(made, f"Open {shared.name}", runner)
     return read(mine / name)
 
 
