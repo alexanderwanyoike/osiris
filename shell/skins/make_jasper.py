@@ -65,6 +65,14 @@ $grey-950: mix(#000, $grey-800, 60%);
 $white: if($light, $gap-surface, $gap-foreground);
 $black: if($light, $gap-foreground, #000000);
 
+// on() switches between them where their brightness splits, as Graphite does,
+// so each fill gets whichever reads better.
+@function osiris-brightness($c) {
+  @return (red($c) * 299 + green($c) * 587 + blue($c) * 114) / 1000;
+}
+
+$osiris-midpoint: (osiris-brightness($white) + osiris-brightness($black)) / 2;
+
 // Jasper's window buttons keep their own colours.
 $button-close: #fd5f51;
 $button-max: #38c76a;
@@ -81,6 +89,8 @@ SVG_GAPS = {
     "#4db6ac": "{{accent}}",
     "#242424": "{{background}}",
 }
+# Jasper's on() switches to dark text at a fixed brightness.
+THRESHOLD = ("@if ($brightness >= 156) {", "@if ($brightness >= $osiris-midpoint) {")
 ENTRIES = {
     "gtk-3.0/gtk": "gtk-3.0/gtk",
     "gtk-4.0/gtk": "gtk-4.0/gtk",
@@ -89,6 +99,12 @@ ENTRIES = {
     # into ~/.config/gtk-4.0, so the same entry serves libadwaita.
     "libadwaita/libadwaita": "gtk-4.0/gtk",
 }
+
+
+def replace(text: str, old: str, new: str, where: str) -> str:
+    if old not in text:
+        raise SystemExit(f"upstream changed: {old!r} not in {where}")
+    return text.replace(old, new)
 
 
 def svgs(src: Path, dst: Path, gaps: bool = True) -> None:
@@ -136,6 +152,8 @@ def main() -> None:
         )
     )
     (PACK / "sass" / "_color-palette-osiris.scss").write_text(PALETTE)
+    colors = PACK / "sass" / "_colors.scss"
+    colors.write_text(replace(colors.read_text(), *THRESHOLD, "_colors.scss"))
     for entry, source in ENTRIES.items():
         (PACK / entry).parent.mkdir()
         for variant in ("Light", "Dark"):

@@ -47,6 +47,14 @@ $grey-950: mix(#000, $grey-800, 60%);
 $white: if($light, $gap-surface, $gap-foreground);
 $black: if($light, $gap-foreground, #000000);
 
+// on() switches between them where their brightness splits, as Graphite does,
+// so each fill gets whichever reads better.
+@function osiris-brightness($c) {
+  @return (red($c) * 299 + green($c) * 587 + blue($c) * 114) / 1000;
+}
+
+$osiris-midpoint: (osiris-brightness($white) + osiris-brightness($black)) / 2;
+
 // Jasper's window buttons keep their own colours.
 $button-close: #fd5f51;
 $button-max: #38c76a;
