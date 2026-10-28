@@ -42,7 +42,7 @@ import engine  # noqa: E402
 
 from creator import Creator  # noqa: E402
 from skin_editor import CSS as EDITOR_CSS, SkinEditor  # noqa: E402
-from skins_page import CSS as SKINS_CSS, SkinsPage  # noqa: E402
+from skins_page import CSS as SKINS_CSS, SkinsPage, new_skin  # noqa: E402
 
 # creator has put the osiris package on sys.path.
 from osiris.apps.theme_scheme import ThemeScheme  # noqa: E402
@@ -576,28 +576,10 @@ class Window(Adw.ApplicationWindow):
 
     def create_skin(self) -> None:
         bases = [skin for skin in engine.skin_choices() if skin[0] != "osiris"]
-        name = Gtk.Entry(placeholder_text="Name", activates_default=True)
-        base = Gtk.DropDown.new_from_strings([label for _n, label, _c in bases])
-        form = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        form.append(name)
-        form.append(Gtk.Label(label="Start from", xalign=0))
-        form.append(base)
-        dialog = Adw.AlertDialog(
-            heading="New Skin",
-            body="Name it and pick a Skin to start from; then tell Osiris "
-                 "how it should look.",
-            extra_child=form)
-        dialog.add_response("cancel", "Cancel")
-        dialog.add_response("create", "Create")
-        dialog.set_response_appearance("create", Adw.ResponseAppearance.SUGGESTED)
-        dialog.set_default_response("create")
 
-        def answered(_dialog, response: str) -> None:
-            label = name.get_text().strip()
-            if response != "create" or not label:
-                return
+        def create(label: str, base: str) -> None:
             try:
-                made = engine.create_skin(label, bases[base.get_selected()][0])
+                made = engine.create_skin(label, base)
             except Exception as error:                  # noqa: BLE001
                 self.toasts.add_toast(Adw.Toast(title=f"Not created: {error}",
                                                 timeout=6))
@@ -605,9 +587,7 @@ class Window(Adw.ApplicationWindow):
             self._show_skins()
             self.change_skin(made)
 
-        dialog.connect("response", answered)
-        dialog.present(self)
-
+        new_skin(bases, create).present(self)
 
     def _draw_pictures(self) -> None:
         """Draw the missing pictures off the main loop, showing each as it lands."""
