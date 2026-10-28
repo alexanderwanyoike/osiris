@@ -67,10 +67,14 @@ def save(dialog: SkinEditor) -> None:
 
 
 def test_saving_unchanged_gives_back_what_the_skin_has() -> None:
+    """None of these is the first on offer, which is chosen when the
+    editor finds nothing to choose."""
     saved: list[Choice] = []
-    dialog = editor(saved)
+    dialog = editor(
+        saved, style="graphite", icons="Papirus", cursor="Bibata", font="Inter 11"
+    )
     save(dialog)
-    assert saved == [Choice("Sharp", "colloid", None, None, None)]
+    assert saved == [Choice("Sharp", "graphite", "Papirus", "Bibata", "Inter 11")]
 
 
 def test_the_skin_can_be_renamed() -> None:
