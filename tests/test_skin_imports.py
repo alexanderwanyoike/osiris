@@ -284,6 +284,35 @@ def test_only_a_gtk_themes_data_becomes_the_skin(tmp_path: Path) -> None:
     assert (skin.root / "files" / "common" / "gtk-3.0" / "gtk.css").is_file()
 
 
+def test_light_and_dark_are_paired_by_the_themes_own_name(tmp_path: Path) -> None:
+    """Review of #136: a theme with colour variants had its light paired with a
+    colour's dark."""
+    download = make_zip(
+        tmp_path / "yaru.zip",
+        {
+            f"{name}/gtk-3.0/gtk.css": name
+            for name in ("Yaru", "Yaru-blue", "Yaru-blue-Dark")
+        },
+    )
+    skin = import_gtk_theme(download, tmp_path / "mine", FakeRunner())
+    assert skin.label == "Yaru"
+    files = skin.root / "files"
+    assert (files / "common" / "gtk-3.0" / "gtk.css").read_text() == "Yaru"
+    assert not (files / "dark").exists()
+
+
+def test_a_dark_variant_is_named_by_its_suffix(tmp_path: Path) -> None:
+    """Review of #136: "dark" anywhere in a name made a variant dark."""
+    download = make_zip(
+        tmp_path / "darkroom.zip",
+        {f"{name}/gtk-3.0/gtk.css": name for name in ("Darkroom", "Darkroom-dark")},
+    )
+    skin = import_gtk_theme(download, tmp_path / "mine", FakeRunner())
+    files = skin.root / "files"
+    assert (files / "light" / "gtk-3.0" / "gtk.css").read_text() == "Darkroom"
+    assert (files / "dark" / "gtk-3.0" / "gtk.css").read_text() == "Darkroom-dark"
+
+
 def test_a_theme_with_one_variant_serves_both(tmp_path: Path) -> None:
     download = make_zip(tmp_path / "plain.zip", {"Plain/gtk-3.0/gtk.css": "window {}"})
     skin = import_gtk_theme(download, tmp_path / "mine", FakeRunner())
