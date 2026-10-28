@@ -195,7 +195,7 @@ class SkinEditor(Adw.Dialog):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box.append(_heading("Font", ("Add fonts", on_add)))
         line = Gtk.Box(spacing=12)
-        self._keep_font = Gtk.CheckButton(label="Theme's font",
+        self._keep_font = Gtk.CheckButton(label=THEMES_CHOICE,
                                           active=font is None)
         self._font = Gtk.FontDialogButton(dialog=Gtk.FontDialog(),
                                           use_font=True, use_size=True)
