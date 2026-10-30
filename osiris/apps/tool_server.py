@@ -8,20 +8,22 @@ tools are looks.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import functools
+from collections.abc import Callable, Mapping
 from typing import Annotated
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from osiris.harness.log import HarnessLog
 from osiris.harness.tiers import Tier
-from osiris.programs.programs import FOLLOW_THEME, Programs
+from osiris.programs.programs import FOLLOW_THEME, ProgramError, Programs
 from osiris.themes import actions
 from osiris.themes.intent import Harmony, Mood
 from osiris.themes.store import ThemeStore
-from osiris.themes.wallpapers import UserWallpapers
+from osiris.themes.wallpapers import UserWallpapers, WallpaperError
 
 NAME = "osiris"
 
@@ -86,9 +88,27 @@ TIERS = {
 Seed = Annotated[str, Field(pattern="^#[0-9a-fA-F]{6}$")]
 
 ANNOTATIONS = {
-    Tier.LOOK: ToolAnnotations(readOnlyHint=True),
-    Tier.UNDOABLE: ToolAnnotations(readOnlyHint=False, destructiveHint=False),
+    Tier.LOOK: ToolAnnotations(read_only_hint=True),
+    Tier.UNDOABLE: ToolAnnotations(read_only_hint=False, destructive_hint=False),
 }
+
+
+#: Failures a model can act on, such as a shader that does not compile.
+EXPLAINED = (actions.ThemeActionError, ProgramError, WallpaperError)
+
+
+def explained[**P, R](tool: Callable[P, R]) -> Callable[P, R]:
+    """Give the model a tool's anticipated failure with its reason; the SDK
+    withholds the reason of any exception that is not a ToolError."""
+
+    @functools.wraps(tool)
+    def call(*args: P.args, **kwargs: P.kwargs) -> R:
+        try:
+            return tool(*args, **kwargs)
+        except EXPLAINED as error:
+            raise ToolError(str(error)) from error
+
+    return call
 
 
 def undo(
@@ -120,21 +140,23 @@ def server(
     wallpapers: UserWallpapers,
     *,
     allow_everything: bool = False,
-) -> FastMCP:
+) -> MCPServer:
     """The tools, acting on ``store``; every change they make is written to
     ``log`` with the step that undoes it."""
-    tools = FastMCP(
+    tools = MCPServer(
         NAME,
         instructions=instructions(allow_everything=allow_everything),
         log_level="WARNING",
     )
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["list_themes"]])
+    @explained
     def list_themes() -> list[dict[str, object]]:
         """The themes on this desktop, light or dark, and which is applied."""
         return actions.list_themes(store)
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["create_theme"]])
+    @explained
     def create_theme(
         label: str, seed: Seed, harmony: Harmony, mood: Mood, dark: bool
     ) -> str:
@@ -166,6 +188,7 @@ def server(
         return f"Made {label}, named {name}."
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["apply_theme"]])
+    @explained
     def apply_theme(name: str) -> str:
         """Apply a theme to the whole desktop, by its name from list_themes."""
         previous = actions.apply_theme(store, name)
@@ -177,6 +200,7 @@ def server(
         return f"Applied {name}" + (f" in place of {previous}." if previous else ".")
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["list_programs"]])
+    @explained
     def list_programs() -> list[dict[str, object]]:
         """The Programs built on this desktop, where their source is, and
         whether the latest commit of each is installed."""
@@ -193,6 +217,7 @@ def server(
         ]
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["create_program"]])
+    @explained
     def create_program(
         label: str,
         description: str,
@@ -235,6 +260,7 @@ def server(
         )
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["commit_program"]])
+    @explained
     def commit_program(name: str, message: str) -> str:
         """Commit what changed in a Program as one atomic change.
 
@@ -251,6 +277,7 @@ def server(
         return f"Committed {message} as {commit[:7]}."
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["check_program"]])
+    @explained
     def check_program(name: str) -> str:
         """Find Python in a Program that does not compile, without running it.
         Other languages are checked by their build when the person tries them."""
@@ -258,6 +285,7 @@ def server(
         return "\n".join(problems) if problems else "No problems found."
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["make_wallpaper"]])
+    @explained
     def make_wallpaper(label: str, shader: str) -> str:
         """Make a moving wallpaper and put it on the desktop, worn by a copy of
         the theme in use, so the theme itself is untouched.

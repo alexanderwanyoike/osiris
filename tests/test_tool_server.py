@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from mcp.server.fastmcp.exceptions import ToolError
+from mcp.server.mcpserver.exceptions import ToolError
 
 from osiris.apps.tool_server import TIERS, server, undo
 from osiris.harness.log import LOG_FILE, Change, HarnessLog
@@ -107,15 +107,15 @@ def test_listing_and_checking_are_looks_and_the_rest_undoable_changes() -> None:
 
 def test_only_listing_is_marked_as_a_look() -> None:
     offered = tools(FakeThemeStore())
-    assert offered["list_themes"].annotations.readOnlyHint is True
-    assert offered["list_programs"].annotations.readOnlyHint is True
-    assert offered["check_program"].annotations.readOnlyHint is True
+    assert offered["list_themes"].annotations.read_only_hint is True
+    assert offered["list_programs"].annotations.read_only_hint is True
+    assert offered["check_program"].annotations.read_only_hint is True
     for change in ("create_theme", "apply_theme", "create_program", "commit_program"):
-        assert offered[change].annotations.readOnlyHint is False
+        assert offered[change].annotations.read_only_hint is False
 
 
 def test_a_model_is_offered_exactly_the_harmonies_and_moods_osiris_knows() -> None:
-    schema = tools(FakeThemeStore())["create_theme"].inputSchema
+    schema = tools(FakeThemeStore())["create_theme"].input_schema
     choices = {name: definition["enum"] for name, definition in schema["$defs"].items()}
     assert choices == {
         "Harmony": [
@@ -220,7 +220,7 @@ def test_an_unknown_undo_step_is_refused() -> None:
 
 
 def test_a_model_is_told_a_seed_is_a_hex_colour_before_it_tries() -> None:
-    seed = tools(FakeThemeStore())["create_theme"].inputSchema["properties"]["seed"]
+    seed = tools(FakeThemeStore())["create_theme"].input_schema["properties"]["seed"]
     assert seed["pattern"] == "^#[0-9a-fA-F]{6}$"
 
 
@@ -304,8 +304,22 @@ def test_undo_trashes_a_program_or_reverts_a_commit() -> None:
 
 
 def test_a_program_cannot_be_made_without_an_icon() -> None:
-    schema = tools(FakeThemeStore())["create_program"].inputSchema
+    schema = tools(FakeThemeStore())["create_program"].input_schema
     assert "icon_svg" in schema["required"]
+
+
+def test_a_refused_program_reaches_the_model_with_its_reason() -> None:
+    with pytest.raises(ToolError, match="The icon is not an SVG"):
+        call(
+            FakeThemeStore(),
+            "create_program",
+            {
+                "label": "Pomodoro",
+                "description": "A focus timer.",
+                "run": ["python3", "main.py"],
+                "icon_svg": "a tomato",
+            },
+        )
 
 
 def test_making_a_program_names_its_folder_as_a_path_a_file_tool_takes() -> None:
@@ -319,7 +333,7 @@ def test_making_a_program_names_its_folder_as_a_path_a_file_tool_takes() -> None
             "icon_svg": '<svg xmlns="http://www.w3.org/2000/svg"/>',
         },
     )
-    text = reply[0][0].text
+    text = reply.content[0].text
     assert str(POMODORO) in text
     assert "~" not in text
 
