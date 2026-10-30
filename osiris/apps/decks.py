@@ -110,7 +110,6 @@ class ThemeDeck:
             for section, theme in sequence(sections)
         ]
 
-
     def active(self) -> str | None:
         return self._engine.current()
 
@@ -128,7 +127,15 @@ class ThemeDeck:
 
 
 #: The palette roles shown on a Theme's card, in order.
-SWATCHES = ("background", "surface", "accent", "accentMuted", "success", "warning", "danger")
+SWATCHES = (
+    "background",
+    "surface",
+    "accent",
+    "accentMuted",
+    "success",
+    "warning",
+    "danger",
+)
 
 
 def _theme_card(section: str, theme: Theme, wallpaper: str) -> Card:
