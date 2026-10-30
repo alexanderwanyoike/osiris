@@ -308,6 +308,20 @@ def test_a_program_cannot_be_made_without_an_icon() -> None:
     assert "icon_svg" in schema["required"]
 
 
+def test_a_refused_program_reaches_the_model_with_its_reason() -> None:
+    with pytest.raises(ToolError, match="The icon is not an SVG"):
+        call(
+            FakeThemeStore(),
+            "create_program",
+            {
+                "label": "Pomodoro",
+                "description": "A focus timer.",
+                "run": ["python3", "main.py"],
+                "icon_svg": "a tomato",
+            },
+        )
+
+
 def test_making_a_program_names_its_folder_as_a_path_a_file_tool_takes() -> None:
     reply = call(
         FakeThemeStore(),
