@@ -91,18 +91,40 @@ class ThemeEngine(Protocol):
     def all_themes(self) -> list[Theme]: ...
     def favourites(self) -> set[str]: ...
     def wallpaper_for(self, theme: Theme) -> str: ...
+    def current(self) -> str | None: ...
+    def missing_packages(self, theme: Theme) -> list[str]: ...
+    def apply(self, name: str) -> list[str]: ...
 
 
 class ThemeDeck:
     def __init__(self, engine: ThemeEngine) -> None:
         self._engine = engine
+        self._themes: dict[str, Theme] = {}
 
     def cards(self) -> list[Card]:
-        sections = arrange(self._engine.all_themes(), favourites=self._engine.favourites())
+        themes = self._engine.all_themes()
+        self._themes = {theme["name"]: theme for theme in themes}
+        sections = arrange(themes, favourites=self._engine.favourites())
         return [
             _theme_card(section, theme, self._engine.wallpaper_for(theme))
             for section, theme in sequence(sections)
         ]
+
+
+    def active(self) -> str | None:
+        return self._engine.current()
+
+    def refused(self, card: Card) -> str | None:
+        """Why a card cannot be chosen: a Theme whose packages are missing."""
+        absent = self._engine.missing_packages(self._themes[card.name])
+        return f"{card.label} needs {', '.join(absent)}" if absent else None
+
+    def choose(self, name: str) -> None:
+        self._engine.apply(name)
+
+    def undrawn(self) -> list[str]:
+        """Theme pictures are made with the Theme, never by the overlay."""
+        return []
 
 
 #: The palette roles shown on a Theme's card, in order.
