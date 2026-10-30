@@ -18,6 +18,11 @@ class Card:
     #: Images to draw the card with, the best first; the first that loads wins.
     pictures: tuple[str, ...]
     backdrop: tuple[str, ...]
+    #: Colours shown on the card as dots.
+    swatches: tuple[str, ...]
+    #: The card's colour until a picture has loaded.
+    fill: str
+    warning: str
 
 
 class SkinEngine(Protocol):
@@ -40,6 +45,7 @@ class SkinDeck:
         mine = self._engine.own_skins()
         drawn = self._engine.skin_pictures()
         theme = self._engine.current_theme()
+        colours = theme["colors"]
         backdrop = _images(self._engine.wallpaper_for(theme), theme.get("preview"))
         return [
             Card(
@@ -49,6 +55,9 @@ class SkinDeck:
                 detail=credit,
                 pictures=_images(drawn.get(name)),
                 backdrop=backdrop,
+                swatches=(),
+                fill=colours["background"],
+                warning=colours["warning"],
             )
             for name, label, credit in self._engine.skin_choices()
         ]
