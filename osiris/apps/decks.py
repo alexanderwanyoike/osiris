@@ -6,6 +6,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from osiris.themes.carousel import sequence
+from osiris.themes.library import arrange, family_of
+
 Theme = Mapping[str, Any]
 
 
@@ -82,3 +85,33 @@ class SkinDeck:
     def draw(self, name: str) -> None:
         """Slow: the picture is drawn by another process."""
         self._engine.draw_skin_picture(name)
+
+
+class ThemeEngine(Protocol):
+    def all_themes(self) -> list[Theme]: ...
+    def favourites(self) -> set[str]: ...
+
+
+class ThemeDeck:
+    def __init__(self, engine: ThemeEngine) -> None:
+        self._engine = engine
+
+    def cards(self) -> list[Card]:
+        sections = arrange(self._engine.all_themes(), favourites=self._engine.favourites())
+        return [_theme_card(section, theme) for section, theme in sequence(sections)]
+
+
+def _theme_card(section: str, theme: Theme) -> Card:
+    mode = "Dark" if theme.get("dark", True) else "Light"
+    colours = theme["colors"]
+    return Card(
+        name=theme["name"],
+        label=theme["label"],
+        section=section,
+        detail=f"{family_of(theme).value}  ·  {mode}",
+        pictures=(),
+        backdrop=(),
+        swatches=(),
+        fill=colours["background"],
+        warning=colours["warning"],
+    )
