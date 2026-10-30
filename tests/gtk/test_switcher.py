@@ -90,6 +90,7 @@ def test_super_s_over_the_theme_cards_turns_them_to_skins() -> None:
     deck = skins()
     window.show_switcher(window.carousel.deck)
     settle(lambda: window.carousel.reveal == 1)
+    assert window.carousel.reveal == 1
     window.show_switcher(deck)
     assert window.carousel.deck is deck
     assert window.carousel.focused().name == "colloid"
