@@ -16,6 +16,7 @@ from osiris.harness.log import LOG_FILE, HarnessLog
 from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem, FakeRunner
 from osiris.programs.programs import Programs
+from osiris.skins.imports import UnusableDownload
 from osiris.skins.store import FakeSkinStore
 from osiris.themes.store import FakeThemeStore
 from osiris.themes.wallpapers import UserWallpapers
@@ -106,6 +107,18 @@ def test_downloads_come_in_through_osiris_and_can_be_undone() -> None:
         "remove_icon_sets",
         "remove_fonts",
     ]
+
+
+class EmptyDownloads(FakeSkinStore):
+    def import_gtk_theme(self, path: Path) -> str:
+        raise UnusableDownload(f"{path.name}: no GTK theme in it")
+
+
+def test_an_unusable_download_reaches_the_model_with_its_reason() -> None:
+    with pytest.raises(ToolError, match=r"notes\.zip: no GTK theme in it"):
+        call(
+            EmptyDownloads(), "import_gtk_theme", {"path": "/tmp/notes.zip"}, new_log()
+        )
 
 
 def test_undoing_skin_steps_reaches_the_skin_store() -> None:
