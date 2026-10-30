@@ -88,3 +88,11 @@ def test_the_worn_skin_is_current_and_choosing_one_wears_it() -> None:
     assert deck.refused(deck.cards()[2]) is None
     deck.choose("old-forest")
     assert skins.worn == ["old-forest"]
+
+
+def test_skins_without_a_picture_in_this_theme_are_drawn_on_request() -> None:
+    skins = Skins()
+    deck = SkinDeck(skins)
+    assert deck.undrawn() == ["osiris", "old-forest"]
+    deck.draw("osiris")
+    assert skins.drawn == ["osiris"]
