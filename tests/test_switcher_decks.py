@@ -150,3 +150,15 @@ def test_a_theme_card_is_its_wallpaper_with_its_palette() -> None:
     assert card.pictures == ("/walls/rose-pine.png", "/previews/rose-pine.png")
     assert card.backdrop == card.pictures
     assert card.swatches == tuple(PALETTE.values())
+
+
+def test_the_current_theme_is_current_and_one_missing_packages_is_refused() -> None:
+    themes = Themes()
+    deck = ThemeDeck(themes)
+    rose_pine, ember = deck.cards()
+    assert deck.active() == "ember"
+    assert deck.refused(ember) == "Ember needs ttf-iosevka, papirus"
+    assert deck.refused(rose_pine) is None
+    deck.choose("rose-pine")
+    assert themes.applied == ["rose-pine"]
+    assert deck.undrawn() == []
