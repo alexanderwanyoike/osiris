@@ -90,6 +90,7 @@ class SkinDeck:
 class ThemeEngine(Protocol):
     def all_themes(self) -> list[Theme]: ...
     def favourites(self) -> set[str]: ...
+    def wallpaper_for(self, theme: Theme) -> str: ...
 
 
 class ThemeDeck:
@@ -98,20 +99,28 @@ class ThemeDeck:
 
     def cards(self) -> list[Card]:
         sections = arrange(self._engine.all_themes(), favourites=self._engine.favourites())
-        return [_theme_card(section, theme) for section, theme in sequence(sections)]
+        return [
+            _theme_card(section, theme, self._engine.wallpaper_for(theme))
+            for section, theme in sequence(sections)
+        ]
 
 
-def _theme_card(section: str, theme: Theme) -> Card:
+#: The palette roles shown on a Theme's card, in order.
+SWATCHES = ("background", "surface", "accent", "accentMuted", "success", "warning", "danger")
+
+
+def _theme_card(section: str, theme: Theme, wallpaper: str) -> Card:
     mode = "Dark" if theme.get("dark", True) else "Light"
     colours = theme["colors"]
+    pictures = _images(wallpaper, theme.get("preview"))
     return Card(
         name=theme["name"],
         label=theme["label"],
         section=section,
         detail=f"{family_of(theme).value}  ·  {mode}",
-        pictures=(),
-        backdrop=(),
-        swatches=(),
+        pictures=pictures,
+        backdrop=pictures,
+        swatches=tuple(colours[role] for role in SWATCHES),
         fill=colours["background"],
         warning=colours["warning"],
     )
