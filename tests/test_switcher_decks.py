@@ -79,3 +79,12 @@ def test_a_skin_card_takes_its_colours_from_the_current_theme() -> None:
     assert card.fill == "#191724"
     assert card.warning == "#f6c177"
     assert card.swatches == ()
+
+
+def test_the_worn_skin_is_current_and_choosing_one_wears_it() -> None:
+    skins = Skins()
+    deck = SkinDeck(skins)
+    assert deck.active() == "colloid"
+    assert deck.refused(deck.cards()[2]) is None
+    deck.choose("old-forest")
+    assert skins.worn == ["old-forest"]
