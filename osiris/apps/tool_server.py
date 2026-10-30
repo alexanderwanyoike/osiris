@@ -21,6 +21,7 @@ from pydantic import Field
 from osiris.harness.log import HarnessLog
 from osiris.harness.tiers import Tier
 from osiris.programs.programs import FOLLOW_THEME, ProgramError, Programs
+from osiris.skins.imports import UnusableDownload
 from osiris.skins.pack import SkinpackError
 from osiris.skins.store import SkinStore
 from osiris.themes import actions
@@ -118,7 +119,13 @@ ANNOTATIONS = {
 
 
 #: Failures a model can act on, such as a shader that does not compile.
-EXPLAINED = (actions.ThemeActionError, ProgramError, SkinpackError, WallpaperError)
+EXPLAINED = (
+    actions.ThemeActionError,
+    ProgramError,
+    SkinpackError,
+    UnusableDownload,
+    WallpaperError,
+)
 
 
 def explained[**P, R](tool: Callable[P, R]) -> Callable[P, R]:
