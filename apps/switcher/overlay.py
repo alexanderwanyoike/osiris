@@ -35,6 +35,14 @@ SLIDE_MS = 300
 FADE_MS = 180
 
 
+def in_background(work, done) -> None:
+    """Run work off the main loop and hand its result to done on it."""
+    def run() -> None:
+        result = work()
+        GLib.idle_add(lambda: done(result) and False)
+    threading.Thread(target=run, daemon=True).start()
+
+
 def rgb(value: str) -> tuple[float, float, float]:
     v = value.lstrip("#")
     return tuple(int(v[i:i + 2], 16) / 255 for i in (0, 2, 4))
@@ -160,10 +168,12 @@ class Images:
 class Carousel(Gtk.DrawingArea):
     """The whole overlay, drawn in one pass so every frame is consistent."""
 
-    def __init__(self, window, deck):
+    def __init__(self, window, deck, background=in_background):
         super().__init__(hexpand=True, vexpand=True, focusable=True)
         self.window = window
         self.deck = deck
+        self.background = background
+        self.drawing = False
         self.items: list[Card] = []
         self.active: str | None = None
         self.position = 0.0
@@ -202,6 +212,35 @@ class Carousel(Gtk.DrawingArea):
         self.position = self.target = float(start)
         self.note = None
         self._prefetch()
+        if not self.drawing:
+            self.drawing = True
+            self.background(self.deck.undrawn,
+                            lambda names, deck=self.deck: self._picture(deck, names))
+
+    def _picture(self, deck, names: list[str]) -> None:
+        """Draw the deck's missing pictures one at a time, each shown as it
+        lands."""
+        if not names:
+            self.drawing = False
+            return
+        name, rest = names[0], names[1:]
+
+        def drawn(_result) -> None:
+            if deck is self.deck:
+                self.items = deck.cards()
+                self._prefetch()
+                self.queue_draw()
+            self._picture(deck, rest)
+
+        self.background(lambda: self._draw_one(deck, name), drawn)
+
+    @staticmethod
+    def _draw_one(deck, name: str) -> None:
+        try:
+            deck.draw(name)
+        except Exception as error:                      # noqa: BLE001
+            print(f"osiris-switcher: picture of {name}: {error}",
+                  file=sys.stderr)
 
     def index(self) -> int:
         return round(self.target) % len(self.items) if self.items else 0
@@ -555,10 +594,10 @@ class Carousel(Gtk.DrawingArea):
 
 
 class Window(Gtk.ApplicationWindow):
-    def __init__(self, app, deck):
-        super().__init__(application=app, title="Themes", decorated=False)
+    def __init__(self, app, deck, background=in_background):
+        super().__init__(application=app, title="Switcher", decorated=False)
         self.add_css_class("switcher")
-        self.carousel = Carousel(self, deck)
+        self.carousel = Carousel(self, deck, background)
         self.set_child(self.carousel)
         keys = Gtk.EventControllerKey()
         keys.connect("key-pressed",
@@ -570,12 +609,17 @@ class Window(Gtk.ApplicationWindow):
         self.carousel.close()
         return True
 
-    def show_switcher(self) -> None:
-        if self.get_visible() and self.carousel.reveal > 0:
-            # Super+T again while open steps on, the way Alt+Tab does.
+    def show_switcher(self, deck) -> None:
+        shown = self.get_visible() and self.carousel.reveal > 0
+        if shown and deck is self.carousel.deck:
+            # The same key again while open steps on, the way Alt+Tab does.
             self.carousel.move(1)
             return
+        self.carousel.deck = deck
         self.carousel.load()
+        if shown:
+            self.carousel.queue_draw()
+            return
         self.fullscreen()
         self.present()
         self.carousel.grab_focus()
