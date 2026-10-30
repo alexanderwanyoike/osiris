@@ -60,3 +60,8 @@ def test_every_skin_is_a_card_saying_who_made_it() -> None:
         ("colloid", "Colloid", "Vince Liuice, GPL-3.0"),
         ("old-forest", "Old Forest", "You"),
     ]
+
+
+def test_the_persons_own_skins_are_headed_apart_from_the_rest() -> None:
+    cards = SkinDeck(Skins()).cards()
+    assert [c.section for c in cards] == ["Skins", "Skins", "Your Skins"]
