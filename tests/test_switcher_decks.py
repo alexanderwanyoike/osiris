@@ -65,3 +65,10 @@ def test_every_skin_is_a_card_saying_who_made_it() -> None:
 def test_the_persons_own_skins_are_headed_apart_from_the_rest() -> None:
     cards = SkinDeck(Skins()).cards()
     assert [c.section for c in cards] == ["Skins", "Skins", "Your Skins"]
+
+
+def test_a_skin_shows_its_picture_once_drawn_over_the_themes_wallpaper() -> None:
+    cards = {c.name: c for c in SkinDeck(Skins()).cards()}
+    assert cards["colloid"].pictures == ("/cache/colloid.png",)
+    assert cards["osiris"].pictures == ()
+    assert cards["osiris"].backdrop == ("/walls/rose-pine.png", "/previews/rose-pine.png")
