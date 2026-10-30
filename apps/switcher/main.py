@@ -43,11 +43,11 @@ for candidate in ("/usr/share/osiris/lib", REPO):
 
 import engine  # noqa: E402
 
+from osiris.apps.decks import Card, ThemeDeck  # noqa: E402
 from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.platform import RealFileSystem  # noqa: E402
 from osiris.provision.upgrade import Upgrade  # noqa: E402
-from osiris.themes.carousel import offset, sequence, slot  # noqa: E402
-from osiris.themes.library import arrange, family_of  # noqa: E402
+from osiris.themes.carousel import offset, slot  # noqa: E402
 
 APP_ID = "dev.osiris.Switcher"
 
@@ -60,8 +60,6 @@ PREFETCH = 3
 
 SLIDE_MS = 300
 FADE_MS = 180
-SWATCHES = ("background", "surface", "accent", "accentMuted",
-            "success", "warning", "danger")
 
 CSS = b"window.switcher { background: transparent; }"
 
@@ -114,23 +112,24 @@ def cover(cr, image: cairo.ImageSurface, x: float, y: float,
 
 
 class Images:
-    """Card and backdrop images for each theme, decoded on demand.
+    """Card and backdrop images, decoded on demand.
 
-    The preview thumbnail stands in until the wallpaper has loaded, so a card
-    is never blank; wallpapers load one per idle tick, nearest the focus
-    first, and the least recently wanted are dropped past KEEP.
+    A card names its images best first. The first is decoded at card size
+    one per idle tick, nearest the focus first, and the least recently wanted
+    are dropped past KEEP; until then a later, smaller one stands in, so a
+    card is never blank for want of a wallpaper.
     """
 
     def __init__(self, on_loaded):
         self.on_loaded = on_loaded
         self.previews: dict[str, tuple] = {}
-        self.wallpapers: OrderedDict[str, tuple] = OrderedDict()
-        self.queue: list[dict] = []
+        self.large: OrderedDict[str, tuple] = OrderedDict()
+        self.queue: list[str] = []
         self.loading = False
 
     @staticmethod
-    def _load(path: str | None, size: tuple[int, int]):
-        if not path or not os.path.exists(path):
+    def _load(path: str, size: tuple[int, int]):
+        if not os.path.exists(path):
             return None
         try:
             pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
@@ -139,31 +138,35 @@ class Images:
             return None
         return (os.path.getmtime(path), surface_of(pixbuf), blurred(pixbuf))
 
-    def _fresh(self, cache, name: str, path: str | None) -> tuple | None:
-        entry = cache.get(name)
-        if entry is None or not path or not os.path.exists(path):
+    @staticmethod
+    def _fresh(cache, path: str) -> tuple | None:
+        entry = cache.get(path)
+        if entry is None or not os.path.exists(path):
             return None
         return entry if entry[0] == os.path.getmtime(path) else None
 
-    def get(self, theme: dict) -> tuple | None:
+    def get(self, paths: tuple[str, ...]) -> tuple | None:
         """(card, backdrop) surfaces, or None if there is nothing to show."""
-        name = theme["name"]
-        entry = self._fresh(self.wallpapers, name, engine.wallpaper_for(theme))
+        if not paths:
+            return None
+        entry = self._fresh(self.large, paths[0])
         if entry is not None:
-            self.wallpapers.move_to_end(name)
+            self.large.move_to_end(paths[0])
             return entry[1], entry[2]
-        entry = self._fresh(self.previews, name, theme.get("preview"))
-        if entry is None:
-            entry = self._load(theme.get("preview"), (400, 250))
+        for path in paths[1:]:
+            entry = self._fresh(self.previews, path)
             if entry is None:
-                return None
-            self.previews[name] = entry
-        return entry[1], entry[2]
+                entry = self._load(path, (400, 250))
+                if entry is None:
+                    continue
+                self.previews[path] = entry
+            return entry[1], entry[2]
+        return None
 
-    def want(self, themes: list[dict]) -> None:
-        """Load these wallpapers, in this order, when the app is idle."""
-        self.queue = [t for t in themes if self._fresh(
-            self.wallpapers, t["name"], engine.wallpaper_for(t)) is None]
+    def want(self, wanted: list[tuple[str, ...]]) -> None:
+        """Load the best of each, in this order, when the app is idle."""
+        self.queue = [path for path in dict.fromkeys(p[0] for p in wanted if p)
+                      if self._fresh(self.large, path) is None]
         if self.queue and not self.loading:
             self.loading = True
             GLib.idle_add(self._next, priority=GLib.PRIORITY_LOW)
@@ -172,13 +175,13 @@ class Images:
         if not self.queue:
             self.loading = False
             return False
-        theme = self.queue.pop(0)
-        entry = self._load(engine.wallpaper_for(theme), CARD_IMAGE)
+        path = self.queue.pop(0)
+        entry = self._load(path, CARD_IMAGE)
         if entry is not None:
-            self.wallpapers[theme["name"]] = entry
-            self.wallpapers.move_to_end(theme["name"])
-            while len(self.wallpapers) > KEEP:
-                self.wallpapers.popitem(last=False)
+            self.large[path] = entry
+            self.large.move_to_end(path)
+            while len(self.large) > KEEP:
+                self.large.popitem(last=False)
             self.on_loaded()
         return True
 
@@ -186,10 +189,11 @@ class Images:
 class Carousel(Gtk.DrawingArea):
     """The whole overlay, drawn in one pass so every frame is consistent."""
 
-    def __init__(self, window):
+    def __init__(self, window, deck):
         super().__init__(hexpand=True, vexpand=True, focusable=True)
         self.window = window
-        self.items: list[tuple[str, dict]] = []
+        self.deck = deck
+        self.items: list[Card] = []
         self.active: str | None = None
         self.position = 0.0
         self.target = 0.0
@@ -218,12 +222,11 @@ class Carousel(Gtk.DrawingArea):
     # -- state -------------------------------------------------------------
 
     def load(self) -> None:
-        """Read the library afresh; themes and favourites may have changed."""
-        sections = arrange(engine.all_themes(), favourites=engine.favourites())
-        self.items = sequence(sections)
-        self.active = engine.current()
-        start = next((i for i, (_, t) in enumerate(self.items)
-                      if t["name"] == self.active), 0)
+        """Read the deck afresh; what it holds may have changed."""
+        self.items = self.deck.cards()
+        self.active = self.deck.active()
+        start = next((i for i, card in enumerate(self.items)
+                      if card.name == self.active), 0)
         self.slide.pause()
         self.position = self.target = float(start)
         self.note = None
@@ -232,8 +235,8 @@ class Carousel(Gtk.DrawingArea):
     def index(self) -> int:
         return round(self.target) % len(self.items) if self.items else 0
 
-    def focused(self) -> dict | None:
-        return self.items[self.index()][1] if self.items else None
+    def focused(self) -> Card | None:
+        return self.items[self.index()] if self.items else None
 
     def _prefetch(self) -> None:
         if not self.items:
@@ -243,8 +246,9 @@ class Carousel(Gtk.DrawingArea):
         for d in range(1, PREFETCH + 1):
             order += [(here + d) % n, (here - d) % n]
         seen: set[int] = set()
-        self.images.want([self.items[i][1] for i in order
-                          if not (i in seen or seen.add(i))])
+        wanted = [self.items[i].pictures for i in order
+                  if not (i in seen or seen.add(i))]
+        self.images.want([self.items[here].backdrop, *wanted])
 
     def move(self, delta: int) -> None:
         if len(self.items) < 2 or delta == 0:
@@ -306,21 +310,20 @@ class Carousel(Gtk.DrawingArea):
         return False
 
     def apply(self) -> None:
-        theme = self.focused()
-        if theme is None:
+        card = self.focused()
+        if card is None:
             return
-        absent = engine.missing_packages(theme)
-        if absent:
-            self.say(f"{theme['label']} needs {', '.join(absent)}")
+        refused = self.deck.refused(card)
+        if refused:
+            self.say(refused)
             return
-        if theme["name"] != self.active:
-            self.pending = theme["name"]
+        if card.name != self.active:
+            self.pending = card.name
         self.close()
 
-    @staticmethod
-    def _apply(name: str) -> None:
+    def _apply(self, name: str) -> None:
         try:
-            engine.apply(name)
+            self.deck.choose(name)
         except Exception as error:                      # noqa: BLE001
             print(f"osiris-switcher: {name}: {error}", file=sys.stderr)
 
@@ -329,8 +332,9 @@ class Carousel(Gtk.DrawingArea):
     def _layout(self) -> tuple[float, float, float, float]:
         """Centre-card width and height, and its centre, for this size."""
         w, h = self.get_width(), self.get_height()
-        cw = min(w * 0.44, h * 0.5 * 16 / 9)
-        return cw, cw * 9 / 16, w / 2, h * 0.45
+        aspect = self.deck.aspect
+        cw = min(w * 0.44, h * 0.5 * aspect)
+        return cw, cw / aspect, w / 2, h * 0.45
 
     def _bounds(self, index: int) -> tuple[float, float, float, float, float]:
         cw, ch, cx, cy = self._layout()
@@ -408,7 +412,7 @@ class Carousel(Gtk.DrawingArea):
         for index, alpha in ((lower, 1.0), (lower + 1, frac)):
             if alpha <= 0 or not n:
                 continue
-            images = self.images.get(self.items[index % n][1])
+            images = self.images.get(self.items[index % n].backdrop)
             if images is None:
                 continue
             cr.save()
@@ -426,7 +430,7 @@ class Carousel(Gtk.DrawingArea):
         cr.set_source(vignette)
         cr.paint()
 
-    def _card(self, cr, theme: dict, x: float, y: float, w: float, h: float,
+    def _card(self, cr, card: Card, x: float, y: float, w: float, h: float,
               opacity: float, scale: float) -> None:
         radius = 18 * scale
         cr.save()
@@ -442,11 +446,11 @@ class Carousel(Gtk.DrawingArea):
         cr.save()
         rounded(cr, x, y, w, h, radius)
         cr.clip()
-        images = self.images.get(theme)
+        images = self.images.get(card.pictures)
         if images is not None:
             cover(cr, images[0], x, y, w, h)
         else:
-            cr.set_source_rgb(*rgb(theme["colors"]["background"]))
+            cr.set_source_rgb(*rgb(card.fill))
             cr.paint()
         # Neighbours dim as well as fade, so they recede rather than wash out.
         cr.set_source_rgba(0, 0, 0, (1 - opacity) * 0.45)
@@ -458,30 +462,30 @@ class Carousel(Gtk.DrawingArea):
         cr.set_line_width(1)
         cr.stroke()
 
-        self._swatches(cr, theme, x, y, w, h, scale)
-        if theme["name"] == self.active:
+        if card.swatches:
+            self._swatches(cr, card.swatches, x, y, w, h, scale)
+        if card.name == self.active:
             self._chip(cr, "Current", x + 16 * scale, y + 16 * scale, scale)
 
         cr.pop_group_to_source()
         cr.paint_with_alpha(min(1.0, opacity * 1.6))
         cr.restore()
 
-    def _swatches(self, cr, theme: dict, x: float, y: float, w: float,
-                  h: float, scale: float) -> None:
-        colours = theme["colors"]
+    def _swatches(self, cr, colours: tuple[str, ...], x: float, y: float,
+                  w: float, h: float, scale: float) -> None:
         r = 9 * scale
         gap = 8 * scale
         pad = 10 * scale
-        width = len(SWATCHES) * 2 * r + (len(SWATCHES) - 1) * gap + 2 * pad
+        width = len(colours) * 2 * r + (len(colours) - 1) * gap + 2 * pad
         px, py = x + 16 * scale, y + h - 16 * scale - 2 * r - 2 * pad
         rounded(cr, px, py, width, 2 * r + 2 * pad, r + pad)
         cr.set_source_rgba(0, 0, 0, 0.38)
         cr.fill()
-        for i, key in enumerate(SWATCHES):
+        for i, colour in enumerate(colours):
             cx = px + pad + r + i * (2 * r + gap)
             cy = py + pad + r
             cr.arc(cx, cy, r, 0, 2 * math.pi)
-            cr.set_source_rgb(*rgb(colours[key]))
+            cr.set_source_rgb(*rgb(colour))
             cr.fill_preserve()
             cr.set_source_rgba(1, 1, 1, 0.28)
             cr.set_line_width(max(1, 1.2 * scale))
@@ -508,7 +512,8 @@ class Carousel(Gtk.DrawingArea):
         n = len(self.items)
         cw, ch, cx, cy = self._layout()
         if not n:
-            self._text(cr, "No themes", 28, Pango.Weight.BOLD, 0.9, cx, cy)
+            self._text(cr, "Nothing to choose from", 28, Pango.Weight.BOLD,
+                       0.9, cx, cy)
             return
 
         visible = []
@@ -519,32 +524,30 @@ class Carousel(Gtk.DrawingArea):
         for _, i in sorted(visible, reverse=True):
             bx, by, bw, bh, d = self._bounds(i)
             place = slot(d)
-            self._card(cr, self.items[i][1], bx, by, bw, bh,
+            self._card(cr, self.items[i], bx, by, bw, bh,
                        place.opacity, place.scale)
 
         # Labels belong to the nearest card and fade out as it slides away.
         nearest = round(self.position)
         alpha = max(0.0, 1 - abs(self.position - nearest) * 2.5)
-        section, theme = self.items[nearest % n]
+        card = self.items[nearest % n]
         top = cy - ch / 2 - 44
-        self._text(cr, section.upper(), 12, Pango.Weight.BOLD, 0.6 * alpha,
-                   cx, top, spacing=2.4)
+        self._text(cr, card.section.upper(), 12, Pango.Weight.BOLD,
+                   0.6 * alpha, cx, top, spacing=2.4)
         y = cy + ch / 2 + 30
-        y += self._text(cr, theme["label"], 30, Pango.Weight.BOLD, alpha,
+        y += self._text(cr, card.label, 30, Pango.Weight.BOLD, alpha,
                         cx, y) + 6
         if self.note:
             self._text(cr, self.note[0], 14, Pango.Weight.SEMIBOLD, 1, cx, y,
-                       colour=rgb(theme["colors"]["warning"]))
+                       colour=rgb(card.warning))
         else:
-            mode = "Dark" if theme.get("dark", True) else "Light"
-            detail = (f"{family_of(theme).value}  ·  {mode}  ·  "
-                      f"{nearest % n + 1} of {n}")
+            detail = f"{card.detail}  ·  {nearest % n + 1} of {n}"
             self._text(cr, detail, 14, Pango.Weight.NORMAL, 0.62 * alpha,
                        cx, y)
         self._hints(cr, w, h)
 
     def _hints(self, cr, w: int, h: int) -> None:
-        hints = (("← →", "browse"), ("Enter", "apply"),
+        hints = (("← →", "browse"), ("Enter", self.deck.verb),
                  ("Esc", "close"))
         layouts = []
         for key, label in hints:
@@ -581,10 +584,10 @@ class Carousel(Gtk.DrawingArea):
 
 
 class Window(Gtk.ApplicationWindow):
-    def __init__(self, app):
+    def __init__(self, app, deck):
         super().__init__(application=app, title="Themes", decorated=False)
         self.add_css_class("switcher")
-        self.carousel = Carousel(self)
+        self.carousel = Carousel(self, deck)
         self.set_child(self.carousel)
         keys = Gtk.EventControllerKey()
         keys.connect("key-pressed",
@@ -634,7 +637,7 @@ class Application(Adw.Application):
             # would otherwise paint the window over the desktop.
             Gtk.StyleContext.add_provider_for_display(
                 display, provider, UserCss.PRIORITY + 1)
-        self.window = Window(self)
+        self.window = Window(self, ThemeDeck(engine))
         # Warm the cards around the current theme before anyone asks.
         self.window.carousel.load()
         GLib.timeout_add_seconds(UPGRADE_POLL, self._restart_if_upgraded)
