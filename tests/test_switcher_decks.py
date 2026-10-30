@@ -72,3 +72,10 @@ def test_a_skin_shows_its_picture_once_drawn_over_the_themes_wallpaper() -> None
     assert cards["colloid"].pictures == ("/cache/colloid.png",)
     assert cards["osiris"].pictures == ()
     assert cards["osiris"].backdrop == ("/walls/rose-pine.png", "/previews/rose-pine.png")
+
+
+def test_a_skin_card_takes_its_colours_from_the_current_theme() -> None:
+    card = SkinDeck(Skins()).cards()[0]
+    assert card.fill == "#191724"
+    assert card.warning == "#f6c177"
+    assert card.swatches == ()
