@@ -4,14 +4,53 @@ from __future__ import annotations
 
 from typing import Any
 
-from osiris.apps.decks import SkinDeck
+from osiris.apps.decks import SkinDeck, ThemeDeck
 
+PALETTE = {
+    "background": "#191724",
+    "surface": "#1f1d2e",
+    "accent": "#2f6fd6",
+    "accentMuted": "#26233a",
+    "success": "#9ccfd8",
+    "warning": "#f6c177",
+    "danger": "#eb6f92",
+}
 ROSE_PINE: dict[str, Any] = {
     "name": "rose-pine",
     "label": "Rose Pine",
     "preview": "/previews/rose-pine.png",
-    "colors": {"background": "#191724", "warning": "#f6c177"},
+    "colors": PALETTE,
 }
+EMBER: dict[str, Any] = {
+    "name": "ember",
+    "label": "Ember",
+    "dark": False,
+    "colors": {**PALETTE, "accent": "#e8762c"},
+}
+
+
+class Themes:
+    def __init__(self) -> None:
+        self.applied: list[str] = []
+
+    def all_themes(self) -> list[dict[str, Any]]:
+        return [ROSE_PINE, EMBER]
+
+    def favourites(self) -> set[str]:
+        return {"rose-pine"}
+
+    def current(self) -> str | None:
+        return "ember"
+
+    def wallpaper_for(self, theme: dict[str, Any]) -> str:
+        return f"/walls/{theme['name']}.png"
+
+    def missing_packages(self, theme: dict[str, Any]) -> list[str]:
+        return ["ttf-iosevka", "papirus"] if theme["name"] == "ember" else []
+
+    def apply(self, name: str) -> list[str]:
+        self.applied.append(name)
+        return []
 
 
 class Skins:
@@ -96,3 +135,11 @@ def test_skins_without_a_picture_in_this_theme_are_drawn_on_request() -> None:
     assert deck.undrawn() == ["osiris", "old-forest"]
     deck.draw("osiris")
     assert skins.drawn == ["osiris"]
+
+
+def test_themes_are_cards_in_library_order_with_family_and_mode() -> None:
+    cards = ThemeDeck(Themes()).cards()
+    assert [(c.section, c.name, c.label, c.detail) for c in cards] == [
+        ("Favourites", "rose-pine", "Rose Pine", "Blues  ·  Dark"),
+        ("Oranges", "ember", "Ember", "Oranges  ·  Light"),
+    ]
