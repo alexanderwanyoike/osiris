@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Osiris theme switcher - Super+T, browse with the arrows, Enter applies.
+"""Osiris switcher - Super+T for Themes, Super+S for Skins; browse with the
+arrows, Enter applies or wears.
 
-A full-screen carousel over a blurred backdrop of the focused theme's
-wallpaper: the focused theme large in the middle, its neighbours smaller and
-fainter either side, sliding as you browse. Nothing is applied until Enter, so
-browsing is free; Escape, or a click outside the cards, leaves things as they
-were. The order is the library's (osiris/themes/library.py): favourites first,
-then colour families round the wheel.
+A full-screen carousel over a blurred backdrop: the focused card large in the
+middle, its neighbours smaller and fainter either side, sliding as you browse.
+Nothing is applied until Enter, so browsing is free; Escape, or a click
+outside the cards, leaves things as they were. Themes come in the library's
+order (osiris/themes/library.py): favourites first, then colour families round
+the wheel. Skins come as Appearance lists them, each pictured in the current
+Theme.
 
 The app stays resident so the overlay opens at once. It is started at login,
-or by D-Bus on first use, with --gapplication-service, and Super+T runs
-`gapplication action dev.osiris.Switcher show`, which costs no Python start.
+or by D-Bus on first use, with --gapplication-service, and the keys run
+`gapplication action dev.osiris.Switcher show` (or `show-skins`), which costs
+no Python start.
 """
 import os
 import sys
@@ -38,7 +41,7 @@ for candidate in ("/usr/share/osiris/lib", REPO):
 
 import engine  # noqa: E402
 
-from osiris.apps.decks import ThemeDeck  # noqa: E402
+from osiris.apps.decks import SkinDeck, ThemeDeck  # noqa: E402
 from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.platform import RealFileSystem  # noqa: E402
 from osiris.provision.upgrade import Upgrade  # noqa: E402
@@ -58,14 +61,17 @@ class Application(Adw.Application):
         super().__init__(application_id=APP_ID)
         self.window: Window | None = None
         self.upgrade = Upgrade(RealFileSystem())
-        show = Gio.SimpleAction.new("show", None)
-        show.connect("activate", lambda *_: self.show_switcher())
-        self.add_action(show)
+        self.themes = ThemeDeck(engine)
+        self.skins = SkinDeck(engine)
+        for action, deck in (("show", self.themes), ("show-skins", self.skins)):
+            show = Gio.SimpleAction.new(action, None)
+            show.connect("activate", lambda *_, deck=deck: self.show_switcher(deck))
+            self.add_action(show)
 
     def do_startup(self):
         Adw.Application.do_startup(self)
         # Resident: closing the overlay hides it, and the process waits for
-        # the next Super+T with its images already decoded.
+        # the next key with its images already decoded.
         self.hold()
         display = Gdk.Display.get_default()
         if display is not None:
@@ -75,14 +81,14 @@ class Application(Adw.Application):
             # would otherwise paint the window over the desktop.
             Gtk.StyleContext.add_provider_for_display(
                 display, provider, UserCss.PRIORITY + 1)
-        self.window = Window(self, ThemeDeck(engine))
+        self.window = Window(self, self.themes)
         # Warm the cards around the current theme before anyone asks.
         self.window.carousel.load()
         GLib.timeout_add_seconds(UPGRADE_POLL, self._restart_if_upgraded)
 
     def _restart_if_upgraded(self) -> bool:
         """Quit once Osiris is upgraded under it and the overlay is put away;
-        D-Bus starts the new code on the next Super+T."""
+        D-Bus starts the new code on the next key."""
         in_use = self.window is not None and self.window.get_visible()
         if not self.upgrade.restart_due(in_use=in_use):
             return GLib.SOURCE_CONTINUE
@@ -90,11 +96,11 @@ class Application(Adw.Application):
         return GLib.SOURCE_REMOVE
 
     def do_activate(self):
-        self.show_switcher()
+        self.show_switcher(self.themes)
 
-    def show_switcher(self) -> None:
+    def show_switcher(self, deck) -> None:
         if self.window is not None:
-            self.window.show_switcher()
+            self.window.show_switcher(deck)
 
 
 if __name__ == "__main__":
