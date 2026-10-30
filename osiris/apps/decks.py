@@ -45,6 +45,10 @@ def _images(*paths: str | None) -> tuple[str, ...]:
 
 
 class SkinDeck:
+    #: The sampler's picture, apps/appearance/sampler.py.
+    aspect = 560 / 360
+    verb = "wear"
+
     def __init__(self, engine: SkinEngine) -> None:
         self._engine = engine
 
@@ -97,6 +101,9 @@ class ThemeEngine(Protocol):
 
 
 class ThemeDeck:
+    aspect = 16 / 9
+    verb = "apply"
+
     def __init__(self, engine: ThemeEngine) -> None:
         self._engine = engine
         self._themes: dict[str, Theme] = {}
