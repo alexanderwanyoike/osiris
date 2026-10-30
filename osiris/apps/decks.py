@@ -33,6 +33,8 @@ class SkinEngine(Protocol):
     def wallpaper_for(self, theme: Theme) -> str: ...
     def chosen_skin(self) -> str: ...
     def set_skin(self, name: str) -> list[str]: ...
+    def stale_skin_pictures(self) -> list[str]: ...
+    def draw_skin_picture(self, name: str) -> str: ...
 
 
 def _images(*paths: str | None) -> tuple[str, ...]:
@@ -73,3 +75,10 @@ class SkinDeck:
 
     def choose(self, name: str) -> None:
         self._engine.set_skin(name)
+
+    def undrawn(self) -> list[str]:
+        return self._engine.stale_skin_pictures()
+
+    def draw(self, name: str) -> None:
+        """Slow: the picture is drawn by another process."""
+        self._engine.draw_skin_picture(name)
