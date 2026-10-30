@@ -143,3 +143,10 @@ def test_themes_are_cards_in_library_order_with_family_and_mode() -> None:
         ("Favourites", "rose-pine", "Rose Pine", "Blues  ·  Dark"),
         ("Oranges", "ember", "Ember", "Oranges  ·  Light"),
     ]
+
+
+def test_a_theme_card_is_its_wallpaper_with_its_palette() -> None:
+    card = ThemeDeck(Themes()).cards()[0]
+    assert card.pictures == ("/walls/rose-pine.png", "/previews/rose-pine.png")
+    assert card.backdrop == card.pictures
+    assert card.swatches == tuple(PALETTE.values())
