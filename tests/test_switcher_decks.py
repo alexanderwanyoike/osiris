@@ -165,3 +165,9 @@ def test_the_current_theme_is_current_and_one_missing_packages_is_refused() -> N
     deck.choose("rose-pine")
     assert themes.applied == ["rose-pine"]
     assert deck.undrawn() == []
+
+
+def test_theme_cards_are_shaped_like_wallpapers_and_skin_cards_like_pictures() -> None:
+    assert ThemeDeck(Themes()).aspect == 16 / 9
+    assert SkinDeck(Skins()).aspect == 560 / 360
+    assert (ThemeDeck.verb, SkinDeck.verb) == ("apply", "wear")
