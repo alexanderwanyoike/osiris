@@ -809,7 +809,7 @@ def _picture_sources(name: str, theme: dict) -> list[Path]:
         [Path(found)] if found else [])
 
 
-def _current_theme() -> dict:
+def current_theme() -> dict:
     """The current Theme, or the default if its file is gone or unreadable."""
     try:
         return load(current() or DEFAULT_THEME)
@@ -829,7 +829,7 @@ def _picture(name: str, theme: dict) -> Path | None:
 
 def skin_pictures() -> dict[str, str]:
     """The pictures already drawn for the current Theme, by Skin."""
-    theme = _current_theme()
+    theme = current_theme()
     found = {}
     for name, _label, _credit in skin_choices():
         picture = _picture(name, theme)
@@ -840,7 +840,7 @@ def skin_pictures() -> dict[str, str]:
 
 def stale_skin_pictures() -> list[str]:
     """The Skins whose picture for the current Theme is still to be drawn."""
-    theme = _current_theme()
+    theme = current_theme()
     stale = []
     for name, _label, _credit in skin_choices():
         picture = _picture(name, theme)
@@ -852,7 +852,7 @@ def stale_skin_pictures() -> list[str]:
 def draw_skin_picture(name: str) -> str:
     """Draw a Skin's picture in the current Theme: its GTK 3 sheet built in the
     Theme's colours, shown by the sampler off-screen."""
-    theme = _current_theme()
+    theme = current_theme()
     cache = Path(SKIN_PICTURES)
     picture = _picture(name, theme)
     if picture is None:
@@ -987,7 +987,7 @@ def cursor_pictures(names: list[str]) -> dict[str, list[str]]:
     cache = Path(SKIN_PICTURES)
     found = {}
     # Under the empty name, the Theme's own cursor, for "Theme's choice".
-    for key, name in [("", _ui(_current_theme())["cursor"]), *zip(names, names)]:
+    for key, name in [("", _ui(current_theme())["cursor"]), *zip(names, names)]:
         shown = [_cursor_picture(name, shapes, cache) for shapes in CURSOR_SHAPES]
         found[key] = [path for path in shown if path]
     return found
@@ -1004,7 +1004,7 @@ def skin_styles(editing: str) -> list[tuple[str, str, str | None]]:
 def skin_details(name: str) -> dict:
     """What the editor starts from: a Skin's label, style and look."""
     pack = _pack(name)
-    theme = _current_theme()
+    theme = current_theme()
     look = pack.look(_variant_of(theme))
     ui = _ui(theme)
     return {"label": pack.label, "style": pack.style, "icons": look.icons,
@@ -1057,7 +1057,7 @@ def check_skin(name: str) -> list[str]:
         return found
     with tempfile.TemporaryDirectory() as scratch:
         try:
-            build_skin_pack(pack, _current_theme(), Path(scratch) / "themes",
+            build_skin_pack(pack, current_theme(), Path(scratch) / "themes",
                             Path(scratch) / "work", SubprocessRunner())
         except CommandError as error:
             return [error.output.strip() or str(error)]
