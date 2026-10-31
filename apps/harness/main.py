@@ -916,7 +916,15 @@ class Application(Adw.Application):
             return [(known[name], programs.files(name))
                     for name in names if name in known]
 
-        self.background(gather, self.drawer.show_canvas)
+        # Gathered off the main loop: by the time it is back another
+        # Conversation may be on screen, and its Canvas is not this one.
+        session = self.session
+
+        def show(found) -> None:
+            if self.session == session:
+                self.drawer.show_canvas(found)
+
+        self.background(gather, show)
 
     def archive(self, session: str) -> None:
         if self.harness is None:
