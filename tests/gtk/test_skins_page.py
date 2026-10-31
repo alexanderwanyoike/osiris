@@ -1,11 +1,14 @@
-"""Appearance's Skins section: every Skin, the chosen one marked, one click to wear."""
+"""Appearance's Skins section: every Skin as a card with a picture of it, the
+chosen one marked, one click to wear."""
 
 from __future__ import annotations
 
-from gi.repository import Adw, Gtk
-from skins_page import SkinsPage
+from pathlib import Path
 
-from .conftest import texts, widgets
+from gi.repository import Gtk
+from skins_page import SkinsPage, new_skin
+
+from .conftest import find, texts, widgets
 
 SKINS = [
     ("osiris", "Osiris", "Osiris's own look"),
@@ -13,18 +16,28 @@ SKINS = [
 ]
 
 
-def rows(page: Gtk.Widget) -> dict[str, Adw.ActionRow]:
+def rows(page: Gtk.Widget) -> dict[str, Gtk.Widget]:
+    """Each Skin's card, by the name it shows."""
+    cards = [w for w in widgets(page) if w.has_css_class("skin-card")]
     return {
-        row.get_title(): row for row in widgets(page) if isinstance(row, Adw.ActionRow)
+        next(
+            w.get_text()
+            for w in widgets(card)
+            if isinstance(w, Gtk.Label) and w.has_css_class("skin-name")
+        ): card
+        for card in cards
     }
+
+
+def wear(page: Gtk.Widget, title: str) -> None:
+    flow = next(w for w in widgets(page) if isinstance(w, Gtk.FlowBox))
+    flow.emit("child-activated", rows(page)[title].get_parent())
 
 
 def test_every_skin_is_listed_with_who_made_it() -> None:
     page = SkinsPage(SKINS, chosen="osiris", on_pick=lambda _name: None)
     assert list(rows(page)) == ["Osiris", "Colloid"]
-    assert "Vince Liuice, GPL-3.0" in [
-        row.get_subtitle() for row in rows(page).values()
-    ]
+    assert "Vince Liuice, GPL-3.0" in texts(rows(page)["Colloid"])
 
 
 def test_only_the_chosen_skin_is_marked() -> None:
@@ -45,7 +58,7 @@ def test_only_the_chosen_skin_is_marked() -> None:
 def test_choosing_a_skin_asks_to_wear_it() -> None:
     picked: list[str] = []
     page = SkinsPage(SKINS, chosen="osiris", on_pick=picked.append)
-    rows(page)["Colloid"].emit("activated")
+    wear(page, "Colloid")
     assert picked == ["colloid"]
 
 
@@ -141,3 +154,68 @@ def test_a_new_skin_can_be_created_from_the_section() -> None:
     )
     buttons(page, "New Skin")[0].emit("clicked")
     assert created == [True]
+
+
+def test_a_card_shows_a_picture_of_its_skin(tmp_path: Path) -> None:
+    picture = tmp_path / "colloid-dark.png"
+    page = SkinsPage(
+        SKINS, "osiris", lambda _n: None, previews={"colloid": str(picture)}
+    )
+    shown = [w for w in widgets(rows(page)["Colloid"]) if isinstance(w, Gtk.Picture)]
+    assert [w.get_file().get_path() for w in shown] == [str(picture)]
+
+
+def test_a_skin_without_a_picture_still_gets_a_card() -> None:
+    page = SkinsPage(SKINS, "osiris", lambda _n: None)
+    card = rows(page)["Osiris"]
+    assert not [w for w in widgets(card) if isinstance(w, Gtk.Picture)]
+    assert any(
+        isinstance(w, Gtk.Image)
+        and w.get_icon_name() == "preferences-desktop-appearance-symbolic"
+        for w in widgets(card)
+    )
+
+
+def test_a_downloaded_gtk_theme_can_be_imported_from_the_section() -> None:
+    imported: list[bool] = []
+    page = SkinsPage(
+        SKINS, "osiris", lambda _n: None, on_import=lambda: imported.append(True)
+    )
+    buttons(page, "Import a GTK theme")[0].emit("clicked")
+    assert imported == [True]
+
+
+def test_a_picture_drawn_later_lands_on_its_own_card(tmp_path: Path) -> None:
+    """Review of #133: each picture that landed rebuilt the whole page,
+    which threw away the scroll position."""
+    picture = tmp_path / "colloid-nord.png"
+    page = SkinsPage(SKINS, "osiris", lambda _n: None)
+    card = rows(page)["Colloid"]
+    page.show_picture("colloid", str(picture))
+    assert rows(page)["Colloid"] is card
+    shown = [w for w in widgets(card) if isinstance(w, Gtk.Picture)]
+    assert [w.get_file().get_path() for w in shown] == [str(picture)]
+    assert not [w for w in widgets(card) if w.has_css_class("skin-blank")]
+
+
+BASES = [("colloid", "Colloid", "Vince Liuice, GPL-3.0")]
+
+
+def test_a_new_skin_can_be_created_only_once_it_has_a_name() -> None:
+    """Review of #132: Create was offered with the name empty, and did
+    nothing."""
+    created: list[tuple[str, str]] = []
+    dialog = new_skin(BASES, lambda label, base: created.append((label, base)))
+    assert not dialog.get_response_enabled("create")
+    name = find(dialog.get_extra_child(), Gtk.Entry, "Name")
+    name.set_text("Sharp")
+    assert dialog.get_response_enabled("create")
+    dialog.emit("response", "create")
+    assert created == [("Sharp", "colloid")]
+
+
+def test_with_nothing_to_start_from_no_skin_can_be_created() -> None:
+    """Review of #132: with no Skin to start from, Create raised IndexError."""
+    dialog = new_skin([], lambda _label, _base: None)
+    find(dialog.get_extra_child(), Gtk.Entry, "Name").set_text("Sharp")
+    assert not dialog.get_response_enabled("create")
