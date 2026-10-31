@@ -21,8 +21,9 @@ jobs:
           cache: pip
 
       - name: System libraries
-        # pyparted, which archinstall depends on, builds against libparted.
-        run: sudo apt-get update && sudo apt-get install -y libparted-dev pkg-config
+        # pyparted, which archinstall depends on, builds against libparted;
+        # the shipped Skins' contrast is tested on sheets compiled with sassc.
+        run: sudo apt-get update && sudo apt-get install -y libparted-dev pkg-config sassc
 
       - name: Install
         run: |

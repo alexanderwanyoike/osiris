@@ -166,3 +166,12 @@ def test_wifi_passwords_are_kept_by_a_secrets_service() -> None:
     it a Wi-Fi network is saved with no password and every later connection
     fails. LightDM's PAM unlocks it at login when it is installed."""
     assert "gnome-keyring" in package.depends()
+
+
+def test_skins_can_be_compiled_on_the_machine() -> None:
+    """A Skin is built from Sass on every Theme switch (ADR 0019)."""
+    assert "sassc" in package.depends()
+
+
+def test_the_shipped_skinpacks_are_carried() -> None:
+    assert "shell/skins" in package.PAYLOAD

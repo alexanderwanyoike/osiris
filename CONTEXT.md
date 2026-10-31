@@ -15,15 +15,16 @@ one another.
 _Avoid_: meta theme, colour scheme
 
 **Skin**:
-The shape of one surface, with no colours of its own: layout, geometry, styling,
-and the base it is built on (GTK base theme, panel layout, dock geometry,
-launcher layout, **Harness** placement, fonts, icon set, cursor).
-_Avoid_: style, theme (for shapes)
+The look of the desktop apart from its colours: the shapes of the windows, the
+panel and menus, the dock and the launcher, and the fonts, icons and cursor.
+One **Skin** covers all of them.
+_Avoid_: style, theme (for shapes), skin set
 
-**Skin set**:
-A curated bundle of one **Skin** per surface, chosen as a whole; any surface in it
-can then be swapped on its own, making it a modified **Skin set**.
-_Avoid_: preset, layout
+**Skinpack**:
+What a **Skin** is made from and shared as: its label, its style sheets and
+pictures with named gaps for the **Theme**'s colours, and its fonts, icons and
+cursor. One file when shared; nothing in it runs.
+_Avoid_: skin file, preset
 
 **Theme intent**:
 What a **Theme** is asked to be - a seed colour or a **Wallpaper**, a harmony,
@@ -153,21 +154,19 @@ _Avoid_: metadata
 
 ## Relationships
 
-- A **Theme** never carries shape; a **Skin** never carries colour.
-- Switching **Theme** keeps every **Skin**; switching a **Skin** keeps the **Theme**.
-- Choosing a **Skin set** replaces every **Skin**; a modified **Skin set** is kept
-  so it can be chosen again.
-- What a person keeps of their **Skins** is only their choice: the **Skin set**
-  they chose and the surfaces they swapped. The **Skins** themselves ship with
-  Osiris, so an upgrade improves them without touching that choice.
-- Choosing another **Skin set** starts it as shipped; a modified **Skin set** is
-  kept beside its stock one, and either can be chosen again.
-- A **Skin set** shapes the windows, the panel, the dock, the launcher, the
-  **Harness**, the fonts, the icons and the cursor. The **Boot screens** keep
-  Osiris's own shape, and the **Wallpaper** belongs to the **Theme**.
-- A GTK **Skin** is a base that can be recoloured plus a shape layer (ADR 0013).
-- Osiris ships five **Skin sets**, Osiris, Crisp, Paper, Pebble and Bold, each one
-  shape everywhere: round where it is round, square where it is square.
+- A **Theme** never carries shape. A **Skin** takes its colours from the
+  **Theme**, keeping only the few that make it recognisable.
+- Switching **Theme** keeps the **Skin**; switching **Skin** keeps the **Theme**.
+- A **Skin** is built from its **Skinpack** with the **Theme**'s colours filling
+  its gaps, again on every **Theme** switch (ADR 0019).
+- **Skins** that ship with Osiris improve with each upgrade. A **Skin** a person
+  makes or opens is theirs, kept out of sight beside their **Themes**, and an
+  upgrade never touches it. Sharing one exports its **Skinpack**.
+- The **Boot screens** keep Osiris's own shape, and the **Wallpaper** belongs to
+  the **Theme**.
+- Osiris ships seven **Skins**: Osiris, Colloid, Graphite, Orchis, Qogir, Jasper
+  and elementary. Osiris's own is adw-gtk3 recoloured; the others are built from
+  their upstream sources.
 - An upgrade of Osiris never overwrites a person's choice: their **Theme**,
   **Skins**, keybindings, dock and the files they edit. What Osiris keeps in a
   home is upgraded once, at the next login, and what runs in a session restarts
@@ -200,8 +199,7 @@ _Avoid_: metadata
 - The **Harness** is one surface, **Compact** or **Expanded**, showing the same
   **Conversation**, history and permissions in both. Which it is follows its
   width, as the person drags it; expanding takes it to the widest and back.
-  Where it sits and how it expands belong to the **Skin**; its colours to the
-  **Theme**.
+  Its colours belong to the **Theme**.
 - Only the person resizes the **Harness**. Something that wants room appears as a
   card in **Compact**, and opening it expands the surface to the **Canvas**.
 - What a **Conversation** shows in the **Canvas** belongs to that **Conversation**

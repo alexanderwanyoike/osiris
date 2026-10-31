@@ -5,6 +5,7 @@
 Lays down:
     /usr/share/osiris/lib/osiris/    the osiris package
     /usr/share/osiris/themes/        theme manifests, engine, previews
+    /usr/share/osiris/skins/         skinpacks
     /usr/share/osiris/logo-mask.png  the mark, composited into wallpapers
     /usr/share/osiris/appearance/    the Appearance app
     /usr/bin/osiris-appearance       launcher
@@ -142,6 +143,15 @@ def main() -> None:
     shutil.copytree(packages, target,
                     ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     print(f"  wallpaper packages -> {target}")
+
+    print("installing skins")
+    skins = os.path.join(SHARE, "skins")
+    if os.path.isdir(skins):
+        shutil.rmtree(skins)
+    # Only the packs: the makers that generate them are for whoever updates one.
+    shutil.copytree(os.path.join(args.repo, "shell", "skins"), skins,
+                    ignore=shutil.ignore_patterns("*.py", "__pycache__"))
+    print(f"  {len(os.listdir(skins))} skinpacks -> {skins}")
 
     previews = os.path.join(src_themes, "previews")
     if os.path.isdir(previews):

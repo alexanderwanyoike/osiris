@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="144" height="54" viewBox="5 130 144 54"><defs><linearGradient id="color-primary-dark">
+      <stop stop-color="{{accent}}" offset="1" id="stop14" />
+    </linearGradient>
+    <linearGradient id="linearGradient1066" x1="72" x2="192" y1="260" y2="260" gradientTransform="matrix(1.2,0,0,1,-42.4,0)" gradientUnits="userSpaceOnUse" xlink:href="#color-primary-dark" />
+    </defs><g id="row-selected-light" transform="translate(-39,-103)">
+    <rect x="44" y="233" width="144" height="54" fill="url(#linearGradient1066)" opacity=".08" id="rect196" />
+    <path d="m188 233c0 4.986-4.014 9-9 9h-93c-9.972 0-18 8.028-18 18s8.028 18 18 18h93c4.986 0 9 4.014 9 9v-45z" fill="{{surface}}" id="path198" />
+  </g>
+  </svg>

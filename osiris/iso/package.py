@@ -25,7 +25,7 @@ URL = "https://github.com/alexanderwanyoike/osiris"
 SOURCE_DIR = "/usr/share/osiris/source"
 
 #: Directories of the repository that make up that tree.
-PAYLOAD = ("osiris", "provision", "apps", "branding", "shell/themes")
+PAYLOAD = ("osiris", "provision", "apps", "branding", "shell/themes", "shell/skins")
 
 SETUP = "/usr/bin/osiris-setup"
 
@@ -91,6 +91,7 @@ DESKTOP = (
     "xdg-desktop-portal-gtk", "xdg-user-dirs",
     "xed", "gnome-screenshot",
     "adw-gtk-theme", "papirus-icon-theme",
+    "sassc",
     "polkit", "upower", "brightnessctl",
     # Cinnamon saves Wi-Fi and other passwords through libsecret but lists the
     # service behind it as optional; without one, nothing is kept.
