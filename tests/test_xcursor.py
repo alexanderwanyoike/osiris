@@ -49,3 +49,29 @@ def test_a_cursor_becomes_a_png_of_its_size() -> None:
     assert (width, height) == (2, 2)
     raw = zlib.decompress(data[data.index(b"IDAT") + 4 : data.index(b"IEND") - 8])
     assert raw == bytes([0, 255, 255, 255, 255] * 1 + [255, 255, 255, 255]) * 2
+
+
+@pytest.mark.parametrize(
+    "cut",
+    [
+        20,  # inside the table of contents
+        -8,  # inside the pixels
+    ],
+)
+def test_a_cut_short_file_is_refused_as_not_a_cursor(cut: int) -> None:
+    """Review of #133: struct.error escaped, which callers do not expect."""
+    data = xcursor([(24, 2, 0xFF000000)])
+    with pytest.raises(XcursorError):
+        read(data[:cut], 24)
+
+
+def test_an_image_larger_than_any_cursor_is_refused() -> None:
+    """Review of #133: a file could ask for any size, all read into memory."""
+    with pytest.raises(XcursorError):
+        read(xcursor([(24, 1025, 0xFF000000)]), 24)
+
+
+def test_a_file_listing_more_images_than_any_cursor_is_refused() -> None:
+    """Review of #133: the table of contents was read whatever its length."""
+    with pytest.raises(XcursorError):
+        read(xcursor([(24, 1, 0xFF000000)] * 0x10001), 24)

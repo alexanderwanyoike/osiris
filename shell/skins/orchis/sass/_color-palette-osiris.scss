@@ -57,3 +57,9 @@ $button-min: #fdbe04;
 $fg-darker: lightness($gap-foreground) < lightness($gap-background);
 $ink-dark: if($fg-darker, $gap-foreground, $gap-background);
 $ink-light: if($fg-darker, $gap-background, $gap-foreground);
+
+@function osiris-brightness($c) {
+  @return (red($c) * 299 + green($c) * 587 + blue($c) * 114) / 1000;
+}
+
+$osiris-midpoint: (osiris-brightness($ink-dark) + osiris-brightness($ink-light)) / 2;

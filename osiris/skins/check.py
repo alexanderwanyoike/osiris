@@ -38,12 +38,12 @@ def problems(root: Path) -> list[str]:
             continue
         if os.access(path, os.X_OK):
             found.append(f"{shown} may not be executable")
-        elif not _is_data(path, relative):
+        elif not is_data(path, relative):
             found.append(f"{shown} is not part of a Skin")
     return found
 
 
-def _is_data(path: Path, relative: Path) -> bool:
+def is_data(path: Path, relative: Path) -> bool:
     if path.suffix.lower() in DATA_SUFFIXES or path.name in DATA_NAMES:
         return True
     if "cursors" in relative.parts[:-1]:

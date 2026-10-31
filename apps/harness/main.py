@@ -283,8 +283,11 @@ class Drawer(Gtk.ApplicationWindow):
 
 
     def draft(self, text: str) -> None:
-        """Write a request in the input, for the person to read and send."""
-        self.entry.get_buffer().set_text(text)
+        """Write a request in the input, for the person to read and send,
+        after anything they had typed."""
+        buffer = self.entry.get_buffer()
+        typed = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+        buffer.set_text(f"{typed.rstrip()}\n\n{text}" if typed.strip() else text)
         self.entry.grab_focus()
     def _begin_resize(self, gesture, _presses, x, y) -> None:
         surface = self.get_surface()
@@ -509,6 +512,8 @@ class Application(Adw.Application):
         #: Admin password requests waiting on the person, by session.
         self.admin_pending: dict[str, AdminPending] = {}
         self._admin_object = 0
+        #: An Entry point's folder and draft, until it can be started.
+        self.waiting: tuple[Path, str | None] | None = None
         show = Gio.SimpleAction.new("show", None)
         show.connect("activate", lambda *_: self.toggle())
         self.add_action(show)
@@ -670,11 +675,25 @@ class Application(Adw.Application):
     def start_in(self, folder: Path, draft: str | None = None) -> None:
         """An Entry point: the drawer, on a new Conversation in folder's Project,
         with a request written in the input but not sent."""
+        if not (folder.is_absolute() and folder.is_dir()):
+            return
         if not self.open:
             self.summon()
-        self.new_conversation(folder)
+        self.waiting = (folder, draft)
+        self.start_waiting()
+
+    def start_waiting(self) -> bool:
+        """Start the Entry point given, once there is a Harness to start it in
+        and the Conversation on screen can be left."""
+        if self.waiting is None or self.harness is None:
+            return False
+        folder, draft = self.waiting
+        if not self.new_conversation(folder):
+            return False
+        self.waiting = None
         if draft:
             self.drawer.draft(draft)
+        return False
 
     def summon(self) -> None:
         self.open = True
@@ -986,10 +1005,11 @@ class Application(Adw.Application):
                                      changes=self.log.changes_by_question(session),
                                      undone=self.log.undone())
 
-    def new_conversation(self, folder: Path | None = None) -> None:
-        """A new Conversation, in ``folder``'s Project or in none."""
+    def new_conversation(self, folder: Path | None = None) -> bool:
+        """A new Conversation, in ``folder``'s Project or in none; False if the
+        one on screen cannot be left yet."""
         if not self._leave():
-            return
+            return False
         self.conversation = Conversation()
         if self.harness is not None:
             self.harness.new_conversation(folder)
@@ -998,6 +1018,7 @@ class Application(Adw.Application):
         self.drawer.entry.grab_focus()
         self.load_history()
         self.update_canvas()
+        return True
 
     def _leave(self) -> bool:
         """Keep the Conversation on screen while Osiris still works on it;
@@ -1028,12 +1049,14 @@ class Application(Adw.Application):
             GLib.idle_add(self._failed_to_send, str(error))
             return
         GLib.idle_add(lambda: self.load_history() or False)
+        GLib.idle_add(self.start_waiting)
 
     def _failed_to_send(self, message: str) -> bool:
         if self.conversation.turns:
             turn = self.conversation.turns[-1]
             turn.state, turn.error = State.FAILED, message
         self.drawer.refresh()
+        self.start_waiting()
         return False
 
     def _listen(self) -> None:
@@ -1061,6 +1084,7 @@ class Application(Adw.Application):
                                            self.files, self.home))
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 GLib.idle_add(self._refresh)
+                GLib.idle_add(self.start_waiting)
                 GLib.idle_add(lambda: self.load_history() or False)
                 for event in engine.events():
                     handled = self.harness.handle(event)

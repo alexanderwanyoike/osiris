@@ -5,11 +5,17 @@
 $_light: $variant == 'light';
 $_light_with_dark_titlebar: $_light and $titlebar == 'dark';
 
+@function osiris-brightness($c) {
+  @return (red($c) * 299 + green($c) * 587 + blue($c) * 114) / 1000;
+}
+
+// Whichever of the Theme's inks reads better on $fill, split where the inks
+// themselves split, as Graphite does.
 @function readable-on($fill) {
-  $luma: (0.299 * red($fill) + 0.587 * green($fill) + 0.114 * blue($fill)) / 255;
   $dark-end: if($_light, $gap-foreground, $gap-background);
   $light-end: if($_light, $gap-background, $gap-foreground);
-  @return if($luma > 0.6, $dark-end, $light-end);
+  $midpoint: (osiris-brightness($dark-end) + osiris-brightness($light-end)) / 2;
+  @return if(osiris-brightness($fill) >= $midpoint, $dark-end, $light-end);
 }
 
 $base_color: if($_light, mix(#ffffff, $gap-background, 50%),
@@ -20,6 +26,7 @@ $fg_color: $gap-foreground;
 
 $selected_bg_color: $gap-accent;
 $selected_fg_color: readable-on($gap-accent);
+$link_color: $gap-accent;
 
 $warning_color: $gap-warning;
 $error_color: $gap-danger;
