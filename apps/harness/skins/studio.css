@@ -1,0 +1,308 @@
+/* Studio: the glass kept, everything on it quiet. Hairlines rather than
+   filled blocks, the accent saved for what acts (send, focus, what is
+   running or unread), muted text for everything secondary, one radius
+   scale and gentle motion. Shape only: every colour is the Theme's. */
+
+window.harness-drawer, window.harness-drawer.background { background-color: transparent; }
+
+/* The same drawn frost as the sidebar, so the drawer reads as one pane of
+   glass: Cinnamon cannot blur behind a window. */
+.harness-surface {
+    margin: 10px;
+    border-radius: 16px;
+    background-color: alpha(@harness_bg, 0.86);
+    background-image: linear-gradient(to bottom, alpha(@harness_glass_edge, 0.10), alpha(@harness_glass_edge, 0) 30%);
+    color: @harness_fg;
+    border: 1px solid alpha(@harness_fg, 0.09);
+    box-shadow: 0 1px 2px alpha(@harness_sunken, 0.30),
+                0 18px 48px alpha(@harness_sunken, 0.45),
+                inset 0 1px alpha(@harness_glass_edge, 0.30);
+}
+
+/* Every control on the glass is flat and muted until it is used; a toggle
+   that is on is a soft shade, never a block of accent. */
+.harness-surface button {
+    transition: background-color 120ms ease-out, color 120ms ease-out, opacity 120ms ease-out;
+}
+.harness-surface button.flat, .harness-surface menubutton > button.flat,
+.harness-surface togglebutton.flat, .harness-surface button.toggle {
+    color: @harness_muted;
+    background: none;
+    box-shadow: none;
+    border-radius: 8px;
+    min-height: 28px;
+    min-width: 28px;
+}
+.harness-surface button.flat:hover, .harness-surface button.toggle:hover {
+    color: @harness_fg;
+    background-color: alpha(@harness_fg, 0.06);
+}
+.harness-surface button.flat:checked, .harness-surface button.toggle:checked,
+.harness-surface button.flat:active {
+    color: @harness_fg;
+    background-color: alpha(@harness_fg, 0.10);
+}
+.harness-surface button:focus-visible { outline: 2px solid alpha(@harness_accent, 0.55); outline-offset: 1px; }
+
+.harness-header { padding: 6px 8px; min-height: 40px; border-bottom: 1px solid alpha(@harness_fg, 0.06); }
+.harness-header .harness-title { font-weight: 500; font-size: 0.95em; letter-spacing: -0.01em; margin-left: 6px; }
+.harness-meta { color: @harness_muted; font-size: 0.82em; }
+
+/* The Conversation: the question a soft shade, the answer open text. */
+.harness-turn { margin: 6px 20px; }
+.harness-question {
+    background-color: alpha(@harness_fg, 0.07);
+    border: 1px solid alpha(@harness_fg, 0.05);
+    border-radius: 14px;
+    padding: 8px 13px;
+}
+.harness-answer { margin-top: 4px; }
+.harness-paragraph { line-height: 1.55; }
+
+.harness-heading { font-weight: 600; letter-spacing: -0.01em; margin-top: 8px; }
+.harness-heading.level-1 { font-size: 1.25em; }
+.harness-heading.level-2 { font-size: 1.12em; }
+.harness-heading.level-3 { font-size: 1.0em; }
+
+.harness-code {
+    background-color: alpha(@harness_sunken, 0.75);
+    border: 1px solid alpha(@harness_fg, 0.07);
+    border-radius: 10px;
+}
+.harness-code-header {
+    background-color: alpha(@harness_fg, 0.03);
+    border-bottom: 1px solid alpha(@harness_fg, 0.05);
+    border-radius: 10px 10px 0 0;
+    padding: 2px 4px 2px 12px;
+}
+.harness-code-header label { color: @harness_muted; font-size: 0.82em; }
+.harness-code-view { font-size: 0.9em; }
+.harness-copy { min-height: 22px; padding: 0 8px; border-radius: 6px; font-size: 0.82em; }
+
+.harness-list-marker { color: @harness_muted; }
+.harness-quote {
+    border-left: 2px solid alpha(@harness_fg, 0.18);
+    padding: 2px 0 2px 12px;
+    color: @harness_muted;
+}
+.harness-table { border: 1px solid alpha(@harness_fg, 0.08); border-radius: 10px; }
+.harness-table-header { font-weight: 600; background-color: alpha(@harness_fg, 0.03); padding: 6px 10px; }
+.harness-table-cell { padding: 6px 10px; border-top: 1px solid alpha(@harness_fg, 0.06); }
+.harness-rule { background-color: alpha(@harness_fg, 0.08); min-height: 1px; margin: 8px 0; }
+
+.harness-chip {
+    background-color: alpha(@harness_fg, 0.05);
+    border-radius: 8px;
+    padding: 2px 8px;
+    color: @harness_muted;
+    font-size: 0.82em;
+}
+.harness-chip button.flat { min-height: 20px; padding: 0 6px; color: @harness_fg; }
+.harness-error { color: @harness_danger; }
+
+/* While Osiris works: three small dots breathe in turn, beside the step. */
+@keyframes harness-wave {
+    0%, 60%, 100% { opacity: 0.3; transform: scale(0.75); }
+    30% { opacity: 1; transform: scale(1); }
+}
+.harness-working { margin-top: 4px; font-size: 0.9em; }
+.harness-dot {
+    min-width: 5px;
+    min-height: 5px;
+    border-radius: 999px;
+    background-color: @harness_muted;
+    animation: harness-wave 1.2s ease-in-out infinite;
+}
+.harness-dot:nth-child(2) { animation-delay: 150ms; }
+.harness-dot:nth-child(3) { animation-delay: 300ms; }
+.harness-doing { color: @harness_muted; }
+/* Figures of one width, so the count does not jitter as it ticks. */
+.harness-elapsed { font-feature-settings: "tnum"; color: alpha(@harness_muted, 0.8); }
+
+.harness-activity { color: @harness_muted; font-size: 0.86em; }
+.harness-activity button.flat { min-height: 24px; padding: 0 6px; }
+.harness-step { padding: 2px 0 2px 20px; }
+.harness-step image { color: alpha(@harness_success, 0.85); }
+.harness-step.refused image { color: @harness_warning; }
+
+/* The composer: a raised pane on the glass that wakes when it has focus. */
+.harness-composer {
+    margin: 8px 16px 0;
+    padding: 10px 8px 8px 14px;
+    background-color: alpha(@harness_raised, 0.85);
+    border: 1px solid alpha(@harness_fg, 0.09);
+    border-radius: 18px;
+    box-shadow: 0 1px 2px alpha(@harness_sunken, 0.25);
+    transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+.harness-composer:focus-within {
+    border-color: alpha(@harness_accent, 0.45);
+    box-shadow: 0 0 0 3px alpha(@harness_accent, 0.10);
+}
+.harness-composer textview, .harness-composer textview text {
+    background: none;
+    min-height: 40px;
+}
+.harness-send {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    border-radius: 999px;
+    background-color: @harness_accent;
+    color: @harness_on_accent;
+    box-shadow: none;
+}
+.harness-send:hover { background-color: mix(@harness_accent, @harness_fg, 0.12); }
+.harness-send:disabled { background-color: alpha(@harness_fg, 0.10); color: @harness_muted; }
+.harness-model-picker, .harness-model-picker > button { color: @harness_muted; font-size: 0.85em; }
+.harness-footer { padding: 6px 20px 12px; }
+.harness-footer label { color: alpha(@harness_muted, 0.8); font-size: 0.8em; }
+
+.harness-provider { padding: 8px 0; border-bottom: 1px solid alpha(@harness_fg, 0.06); }
+.harness-key-form, .harness-code-form { padding: 4px 0 10px; }
+
+.harness-provider-card {
+    background-color: alpha(@harness_fg, 0.03);
+    border: 1px solid alpha(@harness_fg, 0.08);
+    border-radius: 14px;
+    padding: 10px 12px;
+}
+.harness-provider-card .harness-provider { padding: 2px 0 6px; border-bottom: none; }
+.harness-monogram {
+    min-width: 22px;
+    min-height: 22px;
+    border-radius: 7px;
+    background-color: alpha(@harness_fg, 0.08);
+    color: @harness_fg;
+    font-weight: 600;
+    font-size: 0.8em;
+}
+.harness-connected {
+    border-radius: 999px;
+    padding: 2px 8px;
+    color: @harness_success;
+    font-size: 0.82em;
+}
+.harness-sign-in { border-radius: 10px; background-color: @harness_accent; color: @harness_on_accent; }
+
+/* A Program the Conversation made: a hairline card; its buttons quiet but
+   for the one that installs. */
+.harness-program {
+    background-color: alpha(@harness_fg, 0.03);
+    border: 1px solid alpha(@harness_fg, 0.08);
+    border-radius: 14px;
+    padding: 12px 14px;
+}
+.harness-program button {
+    min-height: 28px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background-color: alpha(@harness_fg, 0.07);
+    color: @harness_fg;
+    box-shadow: none;
+}
+.harness-program button:hover { background-color: alpha(@harness_fg, 0.12); }
+.harness-program button.suggested-action { background-color: @harness_accent; color: @harness_on_accent; }
+
+/* The admin password card stands apart from the answer: it waits on the
+   person, and the command in it runs as root. */
+.harness-admin {
+    background-color: alpha(@harness_warning, 0.08);
+    border: 1px solid alpha(@harness_warning, 0.40);
+    border-radius: 14px;
+    padding: 12px 14px;
+}
+.harness-admin-command {
+    background-color: alpha(@harness_sunken, 0.75);
+    color: @harness_fg;
+    border-radius: 8px;
+    padding: 6px 8px;
+}
+
+/* The Canvas: flush code on the sunken colour, tabs as quiet pills. */
+.harness-canvas { background-color: alpha(@harness_sunken, 0.92); border-left: 1px solid alpha(@harness_fg, 0.07); }
+.harness-canvas tabbar, .harness-canvas tabbar .box,
+.harness-canvas scrolledwindow, .harness-canvas viewport, .harness-canvas list,
+.harness-canvas .navigation-sidebar { background-color: transparent; box-shadow: none; }
+.harness-canvas tabbar .box { padding: 6px 8px; border-bottom: 1px solid alpha(@harness_fg, 0.06); }
+.harness-canvas tabbar tab, .harness-canvas tabbar tab:backdrop {
+    color: @harness_muted;
+    border-radius: 8px;
+    min-height: 28px;
+    transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+.harness-canvas tabbar tab:hover { color: @harness_fg; background-color: alpha(@harness_fg, 0.05); }
+.harness-canvas tabbar tab:selected, .harness-canvas tabbar tab:selected:backdrop {
+    color: @harness_fg;
+    background-color: alpha(@harness_fg, 0.09);
+    box-shadow: none;
+}
+.harness-canvas .sidebar-pane { background-color: transparent; color: @harness_fg; border-right: 1px solid alpha(@harness_fg, 0.06); }
+.harness-canvas .sidebar-pane label { color: @harness_fg; }
+.harness-canvas .navigation-sidebar row {
+    margin: 1px 6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    color: @harness_muted;
+    font-size: 0.9em;
+}
+.harness-canvas .navigation-sidebar row:hover { background-color: alpha(@harness_fg, 0.05); color: @harness_fg; }
+.harness-canvas .navigation-sidebar row:selected { background-color: alpha(@harness_fg, 0.09); color: @harness_fg; }
+.harness-canvas .navigation-sidebar row:selected label { color: @harness_fg; }
+.harness-path { padding: 6px 12px; border-bottom: 1px solid alpha(@harness_fg, 0.06); }
+.harness-path label { color: @harness_muted; font-size: 0.85em; }
+.harness-path button.suggested-action, .harness-path button:checked { background-color: alpha(@harness_fg, 0.08); color: @harness_fg; }
+/* The Canvas's code sits flush, unlike a code block inside an answer. */
+.harness-canvas .harness-code, .harness-canvas .harness-code text { border: none; border-radius: 0; box-shadow: none; background-color: transparent; }
+
+/* Menus opened on the glass: a raised card of quiet rows. */
+.harness-surface popover > contents {
+    background-color: @harness_raised;
+    color: @harness_fg;
+    border: 1px solid alpha(@harness_fg, 0.10);
+    border-radius: 12px;
+    padding: 4px;
+    box-shadow: 0 8px 24px alpha(@harness_sunken, 0.45);
+}
+.harness-surface popover > arrow { background-color: @harness_raised; border-color: alpha(@harness_fg, 0.10); }
+.harness-surface popover button.flat {
+    color: @harness_fg;
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 8px;
+}
+.harness-surface popover button.flat label { font-weight: 400; }
+.harness-surface popover button.flat:hover { background-color: alpha(@harness_fg, 0.07); }
+
+/* The sidebar: the same frost, a shade deeper, its rows quiet and dense. */
+.harness-sidebar {
+    background-color: alpha(@harness_glass, 0.55);
+    border-right: 1px solid alpha(@harness_fg, 0.06);
+}
+.harness-sidebar scrolledwindow, .harness-sidebar viewport,
+.harness-sidebar list { background-color: transparent; }
+.harness-sidebar row {
+    margin: 1px 6px;
+    padding: 2px 4px;
+    border-radius: 8px;
+    color: @harness_muted;
+    font-size: 0.92em;
+    transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+.harness-sidebar row:hover { background-color: alpha(@harness_fg, 0.05); color: @harness_fg; }
+.harness-sidebar row:selected { background-color: alpha(@harness_fg, 0.09); color: @harness_fg; }
+.harness-sidebar row label { color: inherit; }
+.harness-sidebar-heading { margin-top: 10px; }
+.harness-sidebar-heading label { color: alpha(@harness_muted, 0.75); font-size: 0.78em; font-weight: 600; letter-spacing: 0.04em; }
+/* Row controls appear where the pointer is, keeping the sidebar quiet. Child
+   selectors, so the rule stops at the row's own buttons and never reaches a
+   menu one of them opens. */
+.harness-sidebar row > box > button,
+.harness-sidebar row > box > menubutton > button { opacity: 0; }
+.harness-sidebar row:hover > box > button, .harness-sidebar row:hover > box > menubutton > button,
+.harness-sidebar row:selected > box > button, .harness-sidebar row:selected > box > menubutton > button,
+.harness-sidebar row > box > button:focus, .harness-sidebar row > box > menubutton > button:checked,
+.harness-sidebar row > box > menubutton > button:focus { opacity: 1; }
+.harness-running { color: @harness_accent; }
+.harness-unread { font-weight: 600; color: @harness_fg; }
+.harness-unread-dot { min-width: 6px; min-height: 6px; margin: 0 6px; border-radius: 999px; background-color: @harness_accent; }

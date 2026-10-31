@@ -22,7 +22,7 @@ SCHEME_FILE = ".local/share/gtksourceview-5/styles/osiris.xml"
 #: Relative to the home: the chosen Skin's name, as plain text.
 SKIN_FILE = ".config/osiris/harness/skin"
 
-SKINS = ("bubbles", "transcript")
+SKINS = ("bubbles", "transcript", "studio")
 DEFAULT_SKIN = "bubbles"
 
 #: The colours a Skin may refer to, and nothing else.
