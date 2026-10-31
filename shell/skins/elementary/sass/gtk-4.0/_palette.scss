@@ -6,6 +6,45 @@
     @return scale-color($colour, $lightness: map-get($steps, $level));
 }
 
+// Upstream writes white on its fills; this is whichever of the Theme's inks
+// has the higher WCAG contrast. Sass has no pow(), so the 2.4 power of the
+// sRGB curve is x^2 times the fifth root of x^2, found by Newton's method.
+@function osiris-root5($a) {
+    $y: 1;
+    @for $i from 1 through 24 {
+        $y: (4 * $y + $a / ($y * $y * $y * $y)) / 5;
+    }
+    @return $y;
+}
+
+@function osiris-linear($channel) {
+    $c: $channel / 255;
+    @if $c <= 0.03928 {
+        @return $c / 12.92;
+    }
+    $t: ($c + 0.055) / 1.055;
+    @return $t * $t * osiris-root5($t * $t);
+}
+
+@function osiris-luminance($c) {
+    @return 0.2126 * osiris-linear(red($c)) + 0.7152 * osiris-linear(green($c))
+        + 0.0722 * osiris-linear(blue($c));
+}
+
+@function osiris-contrast($a, $b) {
+    $la: osiris-luminance($a) + 0.05;
+    $lb: osiris-luminance($b) + 0.05;
+    @return max($la, $lb) / min($la, $lb);
+}
+
+@function osiris-on($fill) {
+    $foreground: osiris-contrast($fill, $gap-foreground);
+    @if $foreground >= osiris-contrast($fill, $gap-background) {
+        @return $gap-foreground;
+    }
+    @return $gap-background;
+}
+
 // Internal Palette
 $STRAWBERRY_100: gap-ramp($gap-danger, 100);
 $STRAWBERRY_300: gap-ramp($gap-danger, 300);

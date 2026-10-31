@@ -9,6 +9,14 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 
+#: A file finished being written, or one put in its place or taken away;
+#: anything else may be a file still half written.
+WRITTEN = (
+    Gio.FileMonitorEvent.CHANGES_DONE_HINT,
+    Gio.FileMonitorEvent.CREATED,
+    Gio.FileMonitorEvent.DELETED,
+)
+
 
 class UserCss:
     #: Above the copy GTK itself read at startup, which never reloads.
@@ -25,8 +33,14 @@ class UserCss:
         self._monitor = Gio.File.new_for_path(str(sheet)).monitor_file(
             Gio.FileMonitorFlags.NONE, None
         )
-        self._monitor.connect("changed", lambda *_args: self.reload())
+        self._monitor.connect("changed", self._changed)
         self.reload()
+
+    def _changed(
+        self, _monitor: object, _file: object, _other: object, event: object
+    ) -> None:
+        if event in WRITTEN:
+            self.reload()
 
     def reload(self) -> None:
         try:

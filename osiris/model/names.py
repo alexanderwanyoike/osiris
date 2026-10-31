@@ -14,3 +14,7 @@ def slug(label: str) -> str:
     """
     out = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")
     return out or "untitled"
+
+
+def is_slug(name: str) -> bool:
+    return slug(name) == name
