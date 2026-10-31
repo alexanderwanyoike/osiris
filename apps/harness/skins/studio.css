@@ -320,16 +320,18 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-unread { font-weight: 600; color: @harness_fg; }
 .harness-unread-dot { min-width: 6px; min-height: 6px; margin: 0 6px; border-radius: 999px; background-color: @harness_accent; }
 
-/* Expanded, the drawer is panels on the glass, like cards on a desk: the
-   sidebar, the Conversation and the Canvas each rounded, with a gap between.
-   The Conversation pane has no class of its own; it is the pane beside the
-   Canvas. */
-.harness-surface overlay-split-view > .content-pane paned > box:not(.harness-canvas) {
-    margin: 0 8px 8px 4px;
+/* The drawer is panels on the glass, like cards on a desk: the sidebar, the
+   Conversation and the Canvas each rounded, with a gap between. The
+   Conversation is a card at every width, so expanding does not change its
+   colour; it has no class of its own, and is the pane beside the Canvas. */
+.harness-surface overlay-split-view paned > box:not(.harness-canvas) {
+    margin: 0 8px 8px 8px;
     border-radius: 12px;
     background-color: alpha(@harness_bg, 0.92);
     border: 1px solid alpha(@harness_fg, 0.07);
 }
+/* Beside the sidebar the gap is shared, as between the other cards. */
+.harness-surface overlay-split-view > .content-pane paned > box:not(.harness-canvas) { margin-left: 4px; }
 .harness-surface overlay-split-view > .content-pane paned > separator { background: none; min-width: 0; }
 .harness-surface overlay-split-view > widget.sidebar-pane { border: none; box-shadow: none; background: none; }
 /* Narrow, the sidebar slides over the Conversation: a solid card over a
