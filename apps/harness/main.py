@@ -957,6 +957,7 @@ class Application(Adw.Application):
             self.conversation = Conversation()
             self.drawer.clear()
             self.drawer.refresh()
+            self.update_canvas()
         self.load_history()
 
     def open_past(self, session: str) -> None:
