@@ -4,10 +4,13 @@ can call."""
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from typing import Any
 
 import pytest
+from mcp.server.context import ServerRequestContext
+from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
 from osiris.apps.tool_server import TIERS, server, undo
@@ -159,6 +162,32 @@ def test_making_a_theme_is_logged_as_a_change_undone_by_deleting_it() -> None:
     assert log.last_changes() == [
         Change("Made Harbour", {"action": "delete_theme", "name": "harbour"})
     ]
+
+
+def asked_by(session: str, subject: MCPServer) -> Context:
+    """A tool call as the Engine makes it for one of its sessions."""
+    request = ServerRequestContext(
+        session=None,
+        lifespan_context=None,
+        protocol_version="2025-06-18",
+        method="tools/call",
+        meta={"ai.opencode/sessionID": session},
+    )
+    return Context(request_context=request, mcp_server=subject)
+
+
+def test_a_change_is_logged_with_the_conversation_that_asked_for_it() -> None:
+    files = FakeFileSystem()
+    subject = server(
+        FakeThemeStore(),
+        new_programs(),
+        HarnessLog(files, HOME / LOG_FILE),
+        new_wallpapers(),
+    )
+    asyncio.run(subject.call_tool("create_theme", HARBOUR, asked_by("ses_A", subject)))
+    entry = json.loads(files.read(HOME / LOG_FILE).splitlines()[-1])
+    assert entry["kind"] == "changed"
+    assert entry["session"] == "ses_A"
 
 
 def test_applying_is_logged_as_a_change_undone_by_the_theme_it_replaced() -> None:
