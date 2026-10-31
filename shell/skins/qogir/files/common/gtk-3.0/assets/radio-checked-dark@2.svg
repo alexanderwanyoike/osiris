@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink" width="32" height="32" viewBox="204 55 16 16"><defs><linearGradient id="selected_bg_color" inkscape:swatch="solid">
+      <stop stop-color="{{accent}}" offset="0" id="stop14" />
+    </linearGradient>
+    <linearGradient inkscape:collect="always" xlink:href="#selected_bg_color" id="linearGradient3896" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0.26458333,0,0,0.26458333,112.44792,172.02141)" x1="-82.5" y1="-162.64" x2="-82.5" y2="-167.64" />
+    </defs><g transform="matrix(1 0 0 1 0 -138)"><g transform="matrix(3.7795276,0,0,3.7795276,-130.00002,-283.51967)" id="radio-checked-dark">
+      <rect id="rect2737" style="opacity:1;fill:none;stroke-width:0.14111206;paint-order:stroke fill markers" ry="1.6884539e-06" height="4.2333369" width="4.2333369" y="126.07916" x="88.370834" />
+      <rect style="color:#000000;fill:url(#linearGradient3896);stroke-width:0.26458332" x="89.958336" y="127.66666" width="1.3229166" height="1.3229166" rx="0.66108793" ry="0.66145831" id="rect324" />
+      <path inkscape:connector-curvature="0" d="m 90.619792,126.34374 a 1.984375,1.984375 0 0 0 -1.984375,1.98438 1.984375,1.984375 0 0 0 1.984375,1.98437 1.984375,1.984375 0 0 0 1.984375,-1.98437 1.984375,1.984375 0 0 0 -1.984375,-1.98438 z m 0,0.26459 a 1.7197916,1.7197916 0 0 1 1.719792,1.71979 1.7197916,1.7197916 0 0 1 -1.719792,1.71979 1.7197916,1.7197916 0 0 1 -1.719791,-1.71979 1.7197916,1.7197916 0 0 1 1.719791,-1.71979 z" style="fill:#808080;stroke-width:0.26458332;paint-order:stroke fill markers" id="path326" />
+    </g>
+    </g></svg>

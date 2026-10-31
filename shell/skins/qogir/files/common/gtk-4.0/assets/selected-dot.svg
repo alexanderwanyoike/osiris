@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink" width="4" height="4" viewBox="220 116 4 4"><defs><linearGradient id="selected_bg_color" inkscape:swatch="solid">
+      <stop stop-color="{{accent}}" offset="0" id="stop14" />
+    </linearGradient>
+    <linearGradient id="aw" x1="182" x2="182" y1="-112.64" y2="-116.64" gradientTransform="translate(40,370.64)" gradientUnits="userSpaceOnUse" xlink:href="#selected_bg_color" />
+    </defs><g transform="matrix(1 0 0 1 0 -138)"><rect style="color:#000000;fill:url(#aw)" id="selected-dot" x="220" y="254" width="4" height="4" rx="1.9989001" ry="2" />
+    </g></svg>
