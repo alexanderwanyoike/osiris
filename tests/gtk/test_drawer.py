@@ -83,11 +83,11 @@ def test_the_expand_button_points_the_way_the_drawer_will_go() -> None:
     back to the right."""
     window, _ = drawer()
     window.app.expand = lambda _expanded: None
-    assert window.expand_button.get_icon_name() == "pan-start-symbolic"
+    assert window.expand_button.get_icon_name() == "xsi-go-previous-symbolic"
     window.expand_button.emit("clicked")
-    assert window.expand_button.get_icon_name() == "pan-end-symbolic"
+    assert window.expand_button.get_icon_name() == "xsi-go-next-symbolic"
     window.expand_button.emit("clicked")
-    assert window.expand_button.get_icon_name() == "pan-start-symbolic"
+    assert window.expand_button.get_icon_name() == "xsi-go-previous-symbolic"
 
 
 def test_the_left_edge_is_a_handle_for_resizing_the_drawer() -> None:
