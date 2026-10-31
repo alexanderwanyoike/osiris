@@ -1133,7 +1133,8 @@ class Application(Adw.Application):
         self.admin_answer(session, None)
         self.backgrounded.pop(session, None)
         if conversation is self.conversation and self.log is not None:
-            changes = self.log.last_changes()
+            asked = self.log.changes_by_question(session)
+            changes = asked[-1] if asked else []
             conversation.changed(changes)
             worked_on = [c.program for c in changes if c.program]
             if worked_on and self.harness is not None:
