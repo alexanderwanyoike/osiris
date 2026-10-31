@@ -67,6 +67,11 @@ with Osiris: Osiris Obsidian, Tokyo Night, Nord, Catppuccin Mocha, Rose Pine,
 Rose Pine Dawn and Everforest. You can make your own in the Appearance app,
 starting from a colour or a picture, or ask the agent for one.
 
+A Skin is the shape of the desktop: corners, buttons, title bars, the panel
+and the dock, worn in whatever colours the theme gives it. Press Super+S to
+flip through them the same way. Seven come with Osiris, and you can import
+one you downloaded or ask the agent to make one.
+
 Wallpapers move. Each one is a small shader, a program that runs on your
 graphics card and animates slowly in the theme's colours. On a computer without
 a graphics card you get the still version. Ask the agent for a new one, say "rain
