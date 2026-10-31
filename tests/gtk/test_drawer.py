@@ -303,3 +303,21 @@ def test_in_a_narrow_drawer_choosing_a_conversation_folds_the_list_away() -> Non
     window.sidebar.list.emit("row-activated", window.sidebar.list.get_row_at_index(2))
     assert window.app.opened == ["ses_theme"]
     assert not window.split.get_show_sidebar()
+
+
+def test_a_draft_never_replaces_what_the_person_typed() -> None:
+    window, _ = drawer()
+    buffer = window.entry.get_buffer()
+    buffer.set_text("half a thought")
+    window.draft("Convert this theme")
+    text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+    assert "half a thought" in text
+    assert "Convert this theme" in text
+
+
+def test_a_draft_fills_an_empty_input() -> None:
+    window, _ = drawer()
+    window.draft("Convert this theme")
+    buffer = window.entry.get_buffer()
+    text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+    assert text == "Convert this theme"

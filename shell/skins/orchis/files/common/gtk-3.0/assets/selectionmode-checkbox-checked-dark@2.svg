@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="80" height="80" viewBox="256 72 40 40"><defs><linearGradient id="color-on-primary-light" x1="6.2124" x2="29.25" y1="11.894" y2="11.894" gradientTransform="scale(1.1453 .87314)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="{{background}}" offset="1" id="stop5" />
+    </linearGradient>
+    <linearGradient id="color-primary-light">
+      <stop stop-color="{{accent}}" offset="1" id="stop17" />
+    </linearGradient>
+    <g id="base-selectionmode-checkbox">
+      <rect width="40" height="40" fill="none" id="rect51" />
+      <rect x="2" y="2" width="36" height="36" rx="4" id="rect53" />
+    </g>
+    <g id="base-selectionmode-checkmark">
+      <path transform="matrix(1.5 0 0 1.5 2 2)" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" id="path56" />
+    </g>
+    <linearGradient id="linearGradient1073" x2="40" gradientUnits="userSpaceOnUse" xlink:href="#color-primary-light" />
+    </defs><g id="selectionmode-checkbox-checked-dark" transform="translate(256,72)">
+    <use width="100%" height="100%" fill="url(#linearGradient1073)" xlink:href="#base-selectionmode-checkbox" id="use181" />
+    <use width="100%" height="100%" fill="url(#color-on-primary-light)" xlink:href="#base-selectionmode-checkmark" id="use183" />
+  </g>
+  </svg>

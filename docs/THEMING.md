@@ -219,7 +219,9 @@ palette. Click a card and it applies immediately.
 
     apps/appearance/main.py          the picker
     apps/appearance/creator.py       the creator dialog
-    apps/switcher/main.py            the Super+T carousel
+    apps/switcher/main.py            the Super+T and Super+S carousel
+    apps/switcher/overlay.py         its drawing; the cards come from
+                                     osiris/apps/decks.py
     shell/themes/engine.py           load and apply; shared, not duplicated
     shell/themes/derive.py           a full palette from two or three seeds
     shell/themes/wallpaper.py        generative backgrounds from a palette
@@ -272,6 +274,18 @@ sending one D-Bus call, so a key press never waits for a Python interpreter
 to start. If the switcher is not running, D-Bus starts it. Wallpapers are
 decoded at 1280px and only the sixteen nearest the focus are kept, with the
 small preview thumbnail standing in until a wallpaper has loaded.
+
+### Super+S
+
+**Super+S** opens the same carousel on Skins, starting on the one being worn.
+Each card is the Skin's picture in the current Theme, the one Appearance's
+Skins section shows, over the Theme's blurred wallpaper; Enter wears it. Skins
+whose picture is not drawn yet get one in the background, a card at a time.
+Super+S over the Theme cards turns them to Skins, and Super+T turns them
+back. The keybinding runs `gapplication action dev.osiris.Switcher
+show-skins`. What a card shows and what choosing it does is a deck in
+`osiris/apps/decks.py`, one for Themes and one for Skins, tested without GTK;
+the overlay only draws cards.
 
 Everything on screen is drawn in one cairo pass rather than built from
 widgets, so cards, labels and backdrop move in step on every frame of the

@@ -94,12 +94,16 @@ def dock_theme(theme: dict) -> str:
 
 def build(theme: dict) -> str | None:
     """Write the dock theme for a palette. Returns its name, or None."""
-    name = theme_name(theme)
+    return install(theme_name(theme), dock_theme(theme))
+
+
+def install(name: str, text: str) -> str | None:
+    """Write a dock theme under `name`, dropping Osiris's others. Returns the name."""
     root = os.path.join(THEMES_DIR, name)
     try:
         os.makedirs(root, exist_ok=True)
         with open(os.path.join(root, "dock.theme"), "w") as fh:
-            fh.write(dock_theme(theme))
+            fh.write(text)
     except OSError:
         return None
 

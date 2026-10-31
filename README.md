@@ -67,6 +67,11 @@ with Osiris: Osiris Obsidian, Tokyo Night, Nord, Catppuccin Mocha, Rose Pine,
 Rose Pine Dawn and Everforest. You can make your own in the Appearance app,
 starting from a colour or a picture, or ask the agent for one.
 
+A Skin is the shape of the desktop: corners, buttons, title bars, the panel
+and the dock, worn in whatever colours the theme gives it. Press Super+S to
+flip through them the same way. Seven come with Osiris, and you can import
+one you downloaded or ask the agent to make one.
+
 Wallpapers move. Each one is a small shader, a program that runs on your
 graphics card and animates slowly in the theme's colours. On a computer without
 a graphics card you get the still version. Ask the agent for a new one, say "rain
@@ -120,18 +125,18 @@ try it in a virtual machine before trusting it with a disk you care about.
 
 Download the ISO, about 2.8 GB, and its checksum:
 
-- [osiris-0.1.5-x86_64.iso](https://osiris-downloads.alphaneuron.net/osiris/0.1.5/osiris-0.1.5-x86_64.iso)
-- [osiris-0.1.5-x86_64.iso.sha256](https://osiris-downloads.alphaneuron.net/osiris/0.1.5/osiris-0.1.5-x86_64.iso.sha256)
+- [osiris-0.2.0-x86_64.iso](https://osiris-downloads.alphaneuron.net/osiris/0.2.0/osiris-0.2.0-x86_64.iso)
+- [osiris-0.2.0-x86_64.iso.sha256](https://osiris-downloads.alphaneuron.net/osiris/0.2.0/osiris-0.2.0-x86_64.iso.sha256)
 
 Check the download, then write it to a USB stick (replace `/dev/sdX` with your
 stick; everything on it is erased):
 
 ```bash
-sha256sum -c osiris-0.1.5-x86_64.iso.sha256
+sha256sum -c osiris-0.2.0-x86_64.iso.sha256
 ```
 
 ```bash
-sudo dd if=osiris-0.1.5-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
+sudo dd if=osiris-0.2.0-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
 ### Building it yourself
