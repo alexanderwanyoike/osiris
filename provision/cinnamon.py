@@ -88,6 +88,9 @@ color-scheme='prefer-dark'
 
 [org/cinnamon/desktop/keybindings]
 custom-list=['custom0', 'custom1', 'custom2', 'custom3']
+# Cinnamon gives Super+S to showing desklets as well, and whichever binding
+# registers last at login takes the key. Osiris ships no desklets.
+show-desklets=@as []
 
 [org/cinnamon/desktop/keybindings/custom-keybindings/custom0]
 name='Launcher'
