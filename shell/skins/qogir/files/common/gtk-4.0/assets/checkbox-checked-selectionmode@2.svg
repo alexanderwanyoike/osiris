@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink" width="80" height="80" viewBox="0 96 40 40"><defs><linearGradient id="selected_bg_color" inkscape:swatch="solid">
+      <stop stop-color="{{accent}}" offset="0" id="stop14" />
+    </linearGradient>
+    <linearGradient id="au" x1="484.20001" x2="484.20001" y1="188.95" y2="204.89" gradientUnits="userSpaceOnUse" xlink:href="#selected_bg_color" />
+    <linearGradient id="ax" x1="20" x2="20" y1="132" y2="100" gradientUnits="userSpaceOnUse" xlink:href="#selected_bg_color" />
+    </defs><g transform="matrix(1 0 0 1 0 -138)"><g id="checkbox-checked-selectionmode" transform="translate(-462,54.639999)">
+      <rect x="462" y="179.36" width="40" height="40" rx="2" ry="2" id="rect127" style="fill:none;stroke-width:0" />
+      <path transform="translate(462,83.362)" d="m 6,100 c -1.108,0 -2,0.892 -2,2 v 28 c 0,1.108 0.892,2 2,2 h 28 c 1.108,0 2,-0.892 2,-2 v -28 c 0,-1.108 -0.892,-2 -2,-2 z" id="path129" inkscape:connector-curvature="0" style="fill:#ffffff" />
+      <path transform="translate(462,83.362)" d="m 6,100 c -1.108,0 -2,0.892 -2,2 v 28 c 0,1.108 0.892,2 2,2 h 28 c 1.108,0 2,-0.892 2,-2 v -28 c 0,-1.108 -0.892,-2 -2,-2 z m 0,1 h 28 c 0.554,0 1,0.446 1,1 v 28 c 0,0.554 -0.446,1 -1,1 H 6 c -0.554,0 -1,-0.446 -1,-1 v -28 c 0,-0.554 0.446,-1 1,-1 z" id="path131" inkscape:connector-curvature="0" style="fill:url(#ax)" />
+      <g transform="translate(-2.2045,1.973)" id="g135">
+        <path d="m 491.36,188.95 -9.5312,9.5625 -4.7812,-4.7812 -3.1876,3.1875 4.7813,4.7812 3.1875,3.1875 3.1562,-3.1875 9.5626,-9.5625 z" id="path133" inkscape:connector-curvature="0" style="fill:url(#au)" />
+      </g>
+    </g>
+    </g></svg>

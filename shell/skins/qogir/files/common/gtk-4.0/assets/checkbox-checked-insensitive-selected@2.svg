@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink" width="32" height="32" viewBox="269 -43 16 16"><defs><linearGradient id="selected_fg_color" inkscape:swatch="solid">
+      <stop stop-color="#ffffffgit" offset="0" id="stop11" />
+    </linearGradient>
+    <linearGradient inkscape:collect="always" xlink:href="#selected_fg_color" id="linearGradient2615" gradientUnits="userSpaceOnUse" gradientTransform="translate(183,405.64)" x1="-152.5" y1="-157.64" x2="-152.5" y2="-172.64" />
+    <linearGradient inkscape:collect="always" xlink:href="#selected_fg_color" id="linearGradient2617" gradientUnits="userSpaceOnUse" gradientTransform="translate(141.9996,146.002)" x1="-111.5" y1="97.681999" x2="-111.5" y2="91.318001" />
+    </defs><g transform="matrix(1 0 0 1 0 -76)"><g id="checkbox-checked-insensitive-selected" transform="translate(247,-199)" style="opacity:0.35">
+      <rect id="rect2571" style="opacity:0;stroke-width:0.56667;paint-order:stroke fill markers" ry="6.3815528e-06" height="16" width="16" y="232" x="22" />
+      <path inkscape:connector-curvature="0" style="color:#000000;opacity:0.75;fill:url(#linearGradient2615);stroke-width:0" id="path2573" d="m 25,233 c -1.108,0 -2,0.89199 -2,2 v 11 c 0,1.108 0.89199,2 2,2 h 11 c 1.108,0 2,-0.89199 2,-2 v -11 c 0,-1.108 -0.89199,-2 -2,-2 z m 0,1 h 11 c 0.554,0 1,0.446 1,1 v 11 c 0,0.554 -0.446,1 -1,1 H 25 c -0.554,0 -1,-0.446 -1,-1 v -11 c 0,-0.554 0.446,-1 1,-1 z" />
+      <path d="m 34.3896,237.32 -4.9492,4.9492 -2.8281,-2.8281 -0.70703,0.70703 3.5352,3.5352 5.6562,-5.6562 z" id="path2575" style="fill:url(#linearGradient2617)" inkscape:connector-curvature="0" />
+    </g>
+    </g></svg>
