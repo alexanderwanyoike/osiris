@@ -101,5 +101,5 @@ Tech Debt (optional): what this leaves to do later.
 
 Open an issue with what you did, what you expected, and what happened. For a
 problem on an installed system, include the Osiris version
-(`~/.config/osiris/version`) and the output of `journalctl --user -b` around the
+(`pacman -Q osiris`) and the output of `journalctl --user -b` around the
 time it happened.
