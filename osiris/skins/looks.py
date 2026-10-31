@@ -7,7 +7,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 #: Present everywhere as a fallback, never a look of its own.
-_FALLBACKS = {"hicolor", "default", "locolor"}
+FALLBACKS = {"hicolor", "default", "locolor"}
 
 
 def _index(folder: Path) -> configparser.SectionProxy | None:
@@ -22,15 +22,17 @@ def _index(folder: Path) -> configparser.SectionProxy | None:
 def _themes(folders: Sequence[Path], wanted: Callable[[Path], bool]) -> list[str]:
     found: set[str] = set()
     for root in folders:
-        if not root.is_dir():
+        try:
+            children = list(root.iterdir())
+        except OSError:
             continue
-        for folder in root.iterdir():
-            if folder.is_dir() and folder.name not in _FALLBACKS and wanted(folder):
+        for folder in children:
+            if folder.is_dir() and folder.name not in FALLBACKS and wanted(folder):
                 found.add(folder.name)
     return sorted(found, key=str.lower)
 
 
-def _is_icon_set(folder: Path) -> bool:
+def is_icon_set(folder: Path) -> bool:
     index = _index(folder)
     return (
         index is not None
@@ -40,8 +42,19 @@ def _is_icon_set(folder: Path) -> bool:
 
 
 def icon_themes(folders: Sequence[Path]) -> list[str]:
-    return _themes(folders, _is_icon_set)
+    return _themes(folders, is_icon_set)
+
+
+def is_cursor_set(folder: Path) -> bool:
+    return (folder / "cursors").is_dir()
 
 
 def cursor_themes(folders: Sequence[Path]) -> list[str]:
-    return _themes(folders, lambda folder: (folder / "cursors").is_dir())
+    return _themes(folders, is_cursor_set)
+
+
+def installed_icon_set(name: str | None, folders: Sequence[Path]) -> str | None:
+    """The icon set a look names if it is installed; None leaves the Theme's."""
+    if name and any(is_icon_set(folder / name) for folder in folders):
+        return name
+    return None
