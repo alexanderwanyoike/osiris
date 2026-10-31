@@ -7,7 +7,9 @@ A skinpack is laid out by surface, one Sass entry per variant:
     gtk-4.0/gtk-<variant>.scss          optional, like every entry below
     cinnamon/cinnamon-<variant>.scss    Osiris's own panel otherwise
     libadwaita/libadwaita-<variant>.scss
-    files/common/, files/<variant>/   copied into the theme, SVG gaps filled
+    files/common/, files/<variant>/   copied into the theme, SVG and CSS gaps filled;
+                                        a cinnamon/cinnamon.css or libadwaita.css
+                                        there stands in for that entry
     plank/dock-<variant>.theme          Osiris's own dock otherwise
     rofi/launcher.rasi          optional; Osiris's own launcher theme otherwise
 """
@@ -15,13 +17,21 @@ A skinpack is laid out by surface, one Sass entry per variant:
 from __future__ import annotations
 
 import shutil
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from osiris.model.names import is_slug
 from osiris.platform.process import CommandRunner
-from osiris.skins.pack import Skinpack, fill, gaps, sass_gaps
+from osiris.skins.pack import (
+    Skinpack,
+    SkinpackError,
+    fill,
+    gaps,
+    refuse_programs,
+    sass_gaps,
+)
 
 SURFACES = (
     ("gtk-3.0/gtk", "gtk-3.0/gtk.css"),
@@ -46,13 +56,18 @@ def build(
     themes_dir: Path,
     work_dir: Path,
     runner: CommandRunner,
+    only: Sequence[str] | None = None,
 ) -> Built:
+    refuse_programs(pack)
+    if not is_slug(theme["name"]):
+        raise SkinpackError(f"{theme['name']!r} is not a Theme's name")
     filled = gaps(theme)
     variant = filled["variant"]
     # Shipped packs are read-only; the gaps are written into a copy.
     work = work_dir / pack.name
     shutil.rmtree(work, ignore_errors=True)
     shutil.copytree(pack.root, work)
+    (work / "sass").mkdir(exist_ok=True)
     (work / "sass" / "_gaps.scss").write_text(sass_gaps(filled))
 
     name = f"Osiris-{pack.name}-{theme['name']}"
@@ -62,16 +77,14 @@ def build(
     for files in (work / "files" / "common", work / "files" / variant):
         if files.is_dir():
             shutil.copytree(files, target, dirs_exist_ok=True)
-    for svg in target.rglob("*.svg"):
-        svg.write_text(fill(svg.read_text(), filled))
-    for entry, out in SURFACES:
-        source = work / f"{entry}-{variant}.scss"
-        if not source.is_file():
-            continue
-        (target / out).parent.mkdir(parents=True, exist_ok=True)
-        runner.run(
-            "sassc", "-M", "-t", "expanded", str(source), str(target / out), quiet=True
-        )
+    for picture in (*target.rglob("*.svg"), *target.rglob("*.css")):
+        picture.write_text(_filled(picture, filled))
+    if (
+        not (work / f"gtk-3.0/gtk-{variant}.scss").is_file()
+        and not (target / "gtk-3.0" / "gtk.css").is_file()
+    ):
+        raise SkinpackError(f"{pack.label}: no gtk-3.0 sheet for {variant}")
+    compiled = _compile(work, target, variant, runner, only)
     (target / "index.theme").write_text(
         "[X-GNOME-Metatheme]\n"
         f"Name={name}\n"
@@ -81,16 +94,45 @@ def build(
         f"MetacityTheme={name}\n"
     )
     plank = work / "plank" / f"dock-{variant}.theme"
-    dock = fill(plank.read_text(), filled) if plank.is_file() else None
+    dock = _filled(plank, filled) if plank.is_file() else None
     rofi = work / "rofi" / "launcher.rasi"
-    launcher = fill(rofi.read_text(), filled) if rofi.is_file() else None
+    launcher = _filled(rofi, filled) if rofi.is_file() else None
     adwaita = target / "libadwaita.css"
     return Built(
         theme=name,
         dock=dock,
-        adwaita=adwaita
-        if (work / f"libadwaita/libadwaita-{variant}.scss").is_file()
-        else None,
-        cinnamon=(work / f"cinnamon/cinnamon-{variant}.scss").is_file(),
+        adwaita=adwaita if "libadwaita" in compiled or adwaita.is_file() else None,
+        cinnamon="cinnamon" in compiled
+        or (target / "cinnamon" / "cinnamon.css").is_file(),
         launcher=launcher,
     )
+
+
+def _compile(
+    work: Path,
+    target: Path,
+    variant: str,
+    runner: CommandRunner,
+    only: Sequence[str] | None,
+) -> set[str]:
+    """Compile each surface's Sass entry for the variant; the surfaces done."""
+    compiled = set()
+    for entry, out in SURFACES:
+        surface = entry.split("/")[0]
+        source = work / f"{entry}-{variant}.scss"
+        if not source.is_file() or (only and surface not in only):
+            continue
+        (target / out).parent.mkdir(parents=True, exist_ok=True)
+        runner.run(
+            "sassc", "-M", "-t", "expanded", str(source), str(target / out), quiet=True
+        )
+        compiled.add(surface)
+    return compiled
+
+
+def _filled(path: Path, filled: Mapping[str, str]) -> str:
+    try:
+        text = path.read_text()
+    except UnicodeDecodeError:
+        raise SkinpackError(f"{path.name} is not UTF-8 text") from None
+    return fill(text, filled)

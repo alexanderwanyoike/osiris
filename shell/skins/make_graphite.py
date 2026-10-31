@@ -9,9 +9,10 @@ here runs when a person wears the Skin (ADR 0019).
 
 import json
 import shutil
-import subprocess
 import sys
 from pathlib import Path
+
+from makers import Recolour, plank, replace, replace_once, revision, rewrite
 
 PACK = Path(__file__).resolve().parent / "graphite"
 
@@ -105,12 +106,17 @@ THEME_TWEAK = ("$theme: 'default';", "$theme: 'osiris';")
 
 # Graphite ships one folder of pictures per accent instead of recolouring them;
 # the blue one's accent and the off-state ink become gaps.
-CINNAMON_ACCENT = {"#3684dd": "{{accent}}"}
+CINNAMON_ACCENT = Recolour({"#3684dd": "{{accent}}"})
 CINNAMON_INK = {
-    "light": {"#333333": "{{foreground}}"},
-    "dark": {"#dfdfdf": "{{foreground}}"},
+    "light": Recolour({"#333333": "{{foreground}}"}),
+    "dark": Recolour({"#dfdfdf": "{{foreground}}"}),
 }
 
+# The dock's fill takes the Theme's colour.
+DOCK = {
+    "FillStartColor": "{{surface_plank}}",
+    "FillEndColor": "{{surface_plank}}",
+}
 ENTRIES = {
     "gtk-3.0/gtk": "gtk-3.0/gtk",
     "gtk-4.0/gtk": "gtk-4.0/gtk",
@@ -120,66 +126,40 @@ ENTRIES = {
 }
 
 
-def replace_once(text: str, old: str, new: str) -> str:
-    if text.count(old) != 1:
-        sys.exit(f"upstream changed: expected {old!r} once")
-    return text.replace(old, new)
-
-
-def svgs(src: Path, dst: Path, gaps: dict[str, str] | None = None) -> None:
+def svgs(src: Path, dst: Path, recolour: Recolour | None = None) -> None:
     dst.mkdir(parents=True, exist_ok=True)
     for svg in src.glob("*.svg"):
         text = svg.read_text()
-        for colour, gap in (gaps or {}).items():
-            text = text.replace(colour, gap).replace(colour.upper(), gap)
-        (dst / svg.name).write_text(text)
+        (dst / svg.name).write_text(recolour(text) if recolour else text)
 
 
-def plank(src: Path) -> str:
-    fills = ("FillStartColor", "FillEndColor")
-    lines = src.read_text().splitlines()
-    return (
-        "\n".join(
-            f"{line.split('=')[0]}={{{{surface_plank}}}}"
-            if line.startswith(fills)
-            else line
-            for line in lines
-        )
-        + "\n"
-    )
-
-
-def main() -> None:
-    upstream = Path(sys.argv[1]).resolve()
+def make(upstream: Path, pack: Path) -> None:
     src = upstream / "src"
-    commit = subprocess.run(
-        ["git", "-C", str(upstream), "log", "-1", "--format=%h %cs"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
-    shutil.rmtree(PACK, ignore_errors=True)
+    commit = revision(upstream)
 
-    sass = PACK / "sass"
+    sass = pack / "sass"
     shutil.copytree(src / "sass", sass, ignore=shutil.ignore_patterns("gnome-shell"))
     tweaks = (src / "sass" / "_tweaks.scss").read_text()
-    (sass / "_tweaks-temp.scss").write_text(replace_once(tweaks, *THEME_TWEAK))
+    (sass / "_tweaks-temp.scss").write_text(
+        replace_once(tweaks, *THEME_TWEAK, "_tweaks.scss")
+    )
     colors = replace_once(
         (sass / "_colors.scss").read_text(),
         COLORS_ANCHOR,
         "@import 'color-palette-osiris';\n\n" + COLORS_ANCHOR,
+        "_colors.scss",
     )
     (sass / "_colors.scss").write_text(colors + "\n@import 'colors-osiris';\n")
     (sass / "_color-palette-osiris.scss").write_text(PALETTE)
     (sass / "_colors-osiris.scss").write_text(COLORS)
     for entry, source in ENTRIES.items():
-        (PACK / entry).parent.mkdir(exist_ok=True)
+        (pack / entry).parent.mkdir(exist_ok=True)
         for variant in ("Light", "Dark"):
             text = (src / "main" / f"{source}-{variant}.scss").read_text()
-            out = PACK / f"{entry}-{variant.lower()}.scss"
-            out.write_text(text.replace("'../../sass/", "'../sass/"))
+            out = pack / f"{entry}-{variant.lower()}.scss"
+            out.write_text(replace(text, "'../../sass/", "'../sass/", out.name))
 
-    common = PACK / "files" / "common"
+    common = pack / "files" / "common"
     gtk = src / "assets" / "gtk"
     for version in ("gtk-3.0", "gtk-4.0"):
         shutil.copytree(gtk / "assets", common / version / "assets")
@@ -188,13 +168,16 @@ def main() -> None:
     svgs(cinnamon / "common-assets", common / "cinnamon" / "assets")
     svgs(cinnamon / "theme-blue", common / "cinnamon" / "assets", CINNAMON_ACCENT)
     for variant, folder in (("light", "assets"), ("dark", "assets-Dark")):
-        dst = PACK / "files" / variant / "cinnamon" / "assets"
+        dst = pack / "files" / variant / "cinnamon" / "assets"
         svgs(cinnamon / folder, dst, CINNAMON_INK[variant])
+    CINNAMON_ACCENT.check("cinnamon/theme-blue")
+    for variant, recolour in CINNAMON_INK.items():
+        recolour.check(f"cinnamon {variant} pictures")
 
-    (PACK / "plank").mkdir()
+    (pack / "plank").mkdir()
     for variant in ("Light", "Dark"):
-        dock = plank(src / "main" / "plank" / f"theme-{variant}" / "dock.theme")
-        (PACK / "plank" / f"dock-{variant.lower()}.theme").write_text(dock)
+        dock = plank(src / "main" / "plank" / f"theme-{variant}" / "dock.theme", DOCK)
+        (pack / "plank" / f"dock-{variant.lower()}.theme").write_text(dock)
 
     label = {
         "label": "Graphite",
@@ -203,15 +186,20 @@ def main() -> None:
         "licence": "GPL-3.0",
         "source": "https://github.com/vinceliuice/Graphite-gtk-theme",
     }
-    (PACK / "skin.json").write_text(json.dumps(label, indent=2) + "\n")
-    shutil.copy(upstream / "LICENSE", PACK / "LICENSE")
-    (PACK / "SOURCES.md").write_text(
+    (pack / "skin.json").write_text(json.dumps(label, indent=2) + "\n")
+    shutil.copy(upstream / "LICENSE", pack / "LICENSE")
+    (pack / "SOURCES.md").write_text(
         f"Made by shell/skins/make_graphite.py from Graphite-gtk-theme {commit[0]}"
         f" ({commit[1]}),\n{label['source']}, GPL-3.0. The Sass and pictures are"
         " upstream's; the\npalette (`sass/_color-palette-osiris.scss`,"
         " `sass/_colors-osiris.scss`), the two\nimports of them in"
         " `sass/_colors.scss` and the gap markers are Osiris's.\n"
     )
+
+
+def main() -> None:
+    upstream = Path(sys.argv[1]).resolve()
+    rewrite(PACK, lambda pack: make(upstream, pack))
     print("wrote", PACK)
 
 
