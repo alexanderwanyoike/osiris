@@ -155,3 +155,17 @@ Two rules worth repeating here because they are silent when broken:
 - Not built with bash, live-build, Docker chroot hooks, or Calamares. None of that.
 - Not built with mkosi either: it has no ISO output format. archiso, with the
   profile generated from Python. See docs/ARCHITECTURE.md.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on alexanderwanyoike/osiris, one milestone per Unit. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five triage states use their own names, beside `bug`, `enhancement` and `area:` labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` and `docs/adr/` at the root. See `docs/agents/domain.md`.
