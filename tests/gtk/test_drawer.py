@@ -68,8 +68,8 @@ def drawer():
 
 
 def test_the_expand_button_asks_to_fill_the_screen_and_to_come_back() -> None:
-    """Expanding goes through the extension, which stops above the dock; the
-    window manager's maximise would cover Plank."""
+    """Expanding goes through the extension, which keeps the drawer at the
+    right edge and maximises it; without the extension the app maximises."""
     window, _ = drawer()
     asked: list[bool] = []
     window.app.expand = asked.append
