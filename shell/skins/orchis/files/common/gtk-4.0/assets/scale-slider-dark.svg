@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24" height="24" viewBox="208 8 24 24"><defs><linearGradient id="color-primary-light">
+      <stop stop-color="{{accent}}" offset="1" id="stop17" />
+    </linearGradient>
+    <g id="base-scale-slider">
+      <rect width="24" height="24" fill="none" id="rect32" />
+      <circle cx="12" cy="12" r="6" id="circle34" />
+    </g>
+    <linearGradient id="linearGradient1043" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-primary-light" />
+    </defs><g id="scale-slider-dark" transform="translate(208,8)">
+    <use width="100%" height="100%" fill="url(#linearGradient1043)" xlink:href="#base-scale-slider" id="use138" />
+  </g>
+  </svg>

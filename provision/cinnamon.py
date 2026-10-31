@@ -5,7 +5,8 @@
 Layout: one 30px panel at the TOP carrying a menu, indicators and a clock, and
 nothing else. No window list in the panel - Plank at the bottom owns running and
 pinned applications. rofi on Super+Space is the launcher, Super+Enter opens
-the terminal, Super+T the theme switcher and Super+A the Harness.
+the terminal, Super+T the theme switcher, Super+S the same for Skins and
+Super+A the Harness.
 
 Everything is written as system-wide dconf defaults under /etc/dconf/db/local.d,
 not poked into a live session. That means it applies to every user, survives a
@@ -86,7 +87,7 @@ color-scheme='prefer-dark'
 color-scheme='prefer-dark'
 
 [org/cinnamon/desktop/keybindings]
-custom-list=['custom0', 'custom1', 'custom2']
+custom-list=['custom0', 'custom1', 'custom2', 'custom3']
 
 [org/cinnamon/desktop/keybindings/custom-keybindings/custom0]
 name='Launcher'
@@ -102,6 +103,11 @@ binding=['<Super>t']
 name='Ask Osiris'
 command='gapplication action dev.osiris.Harness show'
 binding=['<Super>a']
+
+[org/cinnamon/desktop/keybindings/custom-keybindings/custom3]
+name='Skin switcher'
+command='gapplication action dev.osiris.Switcher show-skins'
+binding=['<Super>s']
 
 # Cinnamon gives Super+Space to switching keyboard layouts as well, and that
 # binding wins: the launcher never opens. Layouts keep their dedicated key.

@@ -15,6 +15,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("GtkSource", "5")
 from gi.repository import Gdk, Gio, Gtk, GtkSource  # noqa: E402
 
+from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.harness.style import (  # noqa: E402
     SCHEME_FILE,
     SCHEME_ID,
@@ -38,6 +39,9 @@ FALLBACK_THEME = "osiris-obsidian"
 
 
 class Look:
+    #: Above the user sheet, so a Skin's whole-window rules cannot undo the glass.
+    PRIORITY = UserCss.PRIORITY + 1
+
     def __init__(self, home: Path, changed):
         self._home = home
         self._changed = changed
@@ -45,7 +49,7 @@ class Look:
         display = Gdk.Display.get_default()
         if display is not None:
             Gtk.StyleContext.add_provider_for_display(
-                display, self._provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+                display, self._provider, self.PRIORITY)
         self.style = None
         self.scheme: GtkSource.StyleScheme | None = None
         self._monitors = [self._watch(Path(engine.STATE)),

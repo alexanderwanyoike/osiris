@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from osiris.skins.pack import SkinpackError, fill, gaps, read, sass_gaps
+from osiris.skins.pack import Look, SkinpackError, fill, gaps, read, sass_gaps
 
 LABEL = {
     "label": "Colloid",
@@ -36,6 +36,20 @@ def test_a_folder_without_a_label_is_not_a_skinpack(tmp_path: Path) -> None:
     (tmp_path / "empty").mkdir()
     with pytest.raises(SkinpackError, match=r"skin\.json"):
         read(tmp_path / "empty")
+
+
+@pytest.mark.parametrize(
+    "content",
+    [b"{not json", b"[]", b'"Colloid"', b'{"label": "Caf\xe9"}', b"{}"],
+)
+def test_a_malformed_label_is_a_skinpack_error(tmp_path: Path, content: bytes) -> None:
+    """Anything else escapes the listing that skips broken Skins, and with it
+    every Theme switch and login."""
+    root = tmp_path / "colloid"
+    root.mkdir()
+    (root / "skin.json").write_bytes(content)
+    with pytest.raises(SkinpackError, match=r"skin\.json"):
+        read(root)
 
 
 def test_a_label_missing_a_field_says_which(tmp_path: Path) -> None:
@@ -78,3 +92,52 @@ def test_sass_reads_the_gaps_as_variables() -> None:
     sass = sass_gaps(gaps(ROSE_PINE))
     assert "$gap-accent: #c4a7e7;" in sass
     assert "$gap-variant: 'dark';" in sass
+
+
+def test_a_pack_may_name_its_icons_cursor_and_font(tmp_path: Path) -> None:
+    look = {
+        "icons": {"light": "Colloid-Light", "dark": "Colloid-Dark"},
+        "cursor": "Colloid-cursors",
+        "font": "Inter 10",
+    }
+    pack = read(make_pack(tmp_path / "colloid", {**LABEL, "look": look}))
+    assert pack.look("dark") == Look("Colloid-Dark", "Colloid-cursors", "Inter 10")
+    assert pack.look("light").icons == "Colloid-Light"
+
+
+def test_a_pack_that_names_nothing_keeps_the_themes_choices(tmp_path: Path) -> None:
+    pack = read(make_pack(tmp_path / "colloid", LABEL))
+    assert pack.look("dark") == Look(None, None, None)
+
+
+def test_one_icon_set_may_serve_both_variants(tmp_path: Path) -> None:
+    pack = read(
+        make_pack(tmp_path / "colloid", {**LABEL, "look": {"icons": "Papirus"}})
+    )
+    assert pack.look("light").icons == pack.look("dark").icons == "Papirus"
+
+
+@pytest.mark.parametrize(
+    "look",
+    [
+        "Papirus",
+        {"font": 10},
+        {"icons": ["Papirus"]},
+        {"icons": {"dark": 3}},
+        {"font": "Inter\n10"},
+    ],
+)
+def test_a_malformed_look_is_refused_when_read(tmp_path: Path, look: object) -> None:
+    """A bad look would otherwise break every Theme switch, at login too."""
+    with pytest.raises(SkinpackError, match="look"):
+        read(make_pack(tmp_path / "colloid", {**LABEL, "look": look}))
+
+
+@pytest.mark.parametrize("name", ["osiris", "Colloid", "a b", "a\nb", "-x", ".hidden"])
+def test_a_skin_needs_a_plain_name_that_is_not_osiris(
+    tmp_path: Path, name: str
+) -> None:
+    """The name becomes a theme name and a settings value, and "osiris" is
+    Osiris's own look."""
+    with pytest.raises(SkinpackError, match="name"):
+        read(make_pack(tmp_path / name, LABEL))

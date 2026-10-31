@@ -1,0 +1,12 @@
+$variant: 'dark';
+$titlebar: 'dark';
+
+@import '../sass/colors';
+@import '../sass/variables';
+@import '../sass/gtk/drawing';
+@import '../sass/gtk/common-4.0';
+@import '../sass/gtk/apps-4.0';
+@import '../sass/gtk/libadwaita';
+// @import '../sass/gtk/granite';
+// @import '../sass/gtk/darksidebar_widgets';
+@import '../sass/gtk/colors-public';
