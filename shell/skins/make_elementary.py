@@ -15,9 +15,10 @@ entry per light and dark whose accent is the Theme's.
 import json
 import re
 import shutil
-import subprocess
 import sys
 from pathlib import Path
+
+from makers import replace, replace_once, revision, rewrite
 
 PACK = Path(__file__).resolve().parent / "elementary"
 VERSIONS = ("gtk-3.0", "gtk-4.0")
@@ -39,6 +40,45 @@ RAMP_FUNCTION = """\
 @function gap-ramp($colour, $level) {
     $steps: (100: 35%, 300: 12%, 500: -15%, 700: -40%, 900: -55%);
     @return scale-color($colour, $lightness: map-get($steps, $level));
+}
+
+// Upstream writes white on its fills; this is whichever of the Theme's inks
+// has the higher WCAG contrast. Sass has no pow(), so the 2.4 power of the
+// sRGB curve is x^2 times the fifth root of x^2, found by Newton's method.
+@function osiris-root5($a) {
+    $y: 1;
+    @for $i from 1 through 24 {
+        $y: (4 * $y + $a / ($y * $y * $y * $y)) / 5;
+    }
+    @return $y;
+}
+
+@function osiris-linear($channel) {
+    $c: $channel / 255;
+    @if $c <= 0.03928 {
+        @return $c / 12.92;
+    }
+    $t: ($c + 0.055) / 1.055;
+    @return $t * $t * osiris-root5($t * $t);
+}
+
+@function osiris-luminance($c) {
+    @return 0.2126 * osiris-linear(red($c)) + 0.7152 * osiris-linear(green($c))
+        + 0.0722 * osiris-linear(blue($c));
+}
+
+@function osiris-contrast($a, $b) {
+    $la: osiris-luminance($a) + 0.05;
+    $lb: osiris-luminance($b) + 0.05;
+    @return max($la, $lb) / min($la, $lb);
+}
+
+@function osiris-on($fill) {
+    $foreground: osiris-contrast($fill, $gap-foreground);
+    @if $foreground >= osiris-contrast($fill, $gap-background) {
+        @return $gap-foreground;
+    }
+    @return $gap-background;
 }
 
 """
@@ -78,6 +118,19 @@ $warning-icon-color: $gap-warning;
 }
 
 """
+# The white text upstream puts on the accent and on its danger red.
+ON_FILLS = {
+    "widgets/_checkbuttons.scss": (
+        "background-color: #{'@accent_color'};\n        color: white;",
+        "background-color: #{'@accent_color'};\n        color: osiris-on($gap-accent);",
+    ),
+    "widgets/_buttons.scss": (
+        "background-color: $STRAWBERRY_500;\n            color: white;",
+        "background-color: $STRAWBERRY_500;\n"
+        "            color: osiris-on($STRAWBERRY_500);",
+    ),
+}
+
 SURFACES_START = "// The default titlebar color"
 SURFACES_END = "// Disabled text, images, other foreground elements"
 
@@ -102,28 +155,22 @@ def palette(text: str) -> str:
 
 
 def entry(variant: str, version: str) -> str:
-    text = variant.replace(
-        "@import '../_palette.scss';", f"@import '../sass/{version}/palette';"
-    ).replace("@import '../index.scss';", f"@import '../sass/{version}/index';")
-    text, count = ACCENT.subn("@define-color accent_color #{$gap-accent};", text)
-    if count != 1 or "../sass/" not in text:
+    for theirs, ours in (("_palette", "palette"), ("index", "index")):
+        old = f"@import '../{theirs}.scss';"
+        new = f"@import '../sass/{version}/{ours}';"
+        variant = replace(variant, old, new, "a variant entry")
+    text, count = ACCENT.subn("@define-color accent_color #{$gap-accent};", variant)
+    if count != 1:
         raise SystemExit("upstream variant entry changed")
     return text
 
 
-def main() -> None:
-    upstream = Path(sys.argv[1]).resolve()
+def make(upstream: Path, pack: Path) -> None:
     src = upstream / "src"
-    commit = subprocess.run(
-        ["git", "-C", str(upstream), "log", "-1", "--format=%h %cs"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
-    shutil.rmtree(PACK, ignore_errors=True)
+    commit = revision(upstream)
 
     for version in VERSIONS:
-        sass = PACK / "sass" / version
+        sass = pack / "sass" / version
         shutil.copytree(
             src / version,
             sass,
@@ -131,18 +178,21 @@ def main() -> None:
         )
         own = sass / "_palette.scss"
         own.write_text(palette(own.read_text()))
+        for partial, (old, new) in ON_FILLS.items():
+            path = sass / partial
+            path.write_text(replace_once(path.read_text(), old, new, partial))
         index = sass / "_index.scss"
         index.write_text(
             between(index.read_text(), SURFACES_START, SURFACES_END, SURFACES)
         )
 
-        (PACK / version).mkdir()
+        (pack / version).mkdir()
         for variant, suffix in (("light", ""), ("dark", "-dark")):
             text = (src / version / "variants" / f"blueberry{suffix}.scss").read_text()
-            (PACK / version / f"gtk-{variant}.scss").write_text(entry(text, version))
+            (pack / version / f"gtk-{variant}.scss").write_text(entry(text, version))
 
         shutil.copytree(
-            src / version / "assets", PACK / "files" / "common" / version / "assets"
+            src / version / "assets", pack / "files" / "common" / version / "assets"
         )
 
     label = {
@@ -152,14 +202,20 @@ def main() -> None:
         "licence": "GPL-3.0",
         "source": "https://github.com/elementary/stylesheet",
     }
-    (PACK / "skin.json").write_text(json.dumps(label, indent=2) + "\n")
-    shutil.copy(upstream / "COPYING", PACK / "LICENSE")
-    (PACK / "SOURCES.md").write_text(
+    (pack / "skin.json").write_text(json.dumps(label, indent=2) + "\n")
+    shutil.copy(upstream / "COPYING", pack / "LICENSE")
+    (pack / "SOURCES.md").write_text(
         f"Made by shell/skins/make_elementary.py from elementary/stylesheet"
         f" {commit[0]} ({commit[1]}),\n{label['source']}, GPL-3.0. The Sass and"
-        " pictures are upstream's; the\naccent entries, the role ramps in each"
-        " `_palette.scss` and the surfaces in each\n`_index.scss` are Osiris's.\n"
+        " pictures are upstream's; the\naccent entries, the role ramps and text"
+        " inks in each `_palette.scss`, the\nsurfaces in each `_index.scss` and"
+        " the inks on checks and destructive buttons\nare Osiris's.\n"
     )
+
+
+def main() -> None:
+    upstream = Path(sys.argv[1]).resolve()
+    rewrite(PACK, lambda pack: make(upstream, pack))
     print("wrote", PACK)
 
 

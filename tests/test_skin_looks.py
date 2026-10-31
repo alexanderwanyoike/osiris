@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from osiris.skins.looks import cursor_themes, icon_themes
+from osiris.skins.looks import cursor_themes, icon_themes, installed_icon_set
 
 
 def theme(root: Path, name: str, index: str | None, cursors: bool = False) -> None:
@@ -47,3 +47,30 @@ def test_a_set_found_in_two_places_is_offered_once(tmp_path: Path) -> None:
     theme(mine, "Papirus", ICONS.format(name="Papirus"))
     theme(shipped, "Papirus", ICONS.format(name="Papirus"))
     assert icon_themes([mine, shipped]) == ["Papirus"]
+
+
+def test_an_installed_icon_set_is_worn(tmp_path: Path) -> None:
+    theme(tmp_path / "share", "Colloid-Dark", ICONS.format(name="Colloid-Dark"))
+    found = installed_icon_set("Colloid-Dark", [tmp_path / "home", tmp_path / "share"])
+    assert found == "Colloid-Dark"
+
+
+def test_an_icon_set_that_is_not_installed_leaves_the_themes(tmp_path: Path) -> None:
+    """Named anyway, every program would draw the bare fallback icons."""
+    theme(tmp_path, "junk", None)
+    assert installed_icon_set("Colloid-Dark", [tmp_path]) is None
+    assert installed_icon_set("junk", [tmp_path]) is None
+    assert installed_icon_set(None, [tmp_path]) is None
+
+
+def test_a_folder_that_cannot_be_read_is_passed_over(tmp_path: Path) -> None:
+    """Review of #134: listing a folder raised, and the Skin editor never
+    opened."""
+    locked, mine = tmp_path / "locked", tmp_path / "mine"
+    theme(mine, "Papirus", ICONS.format(name="Papirus"))
+    locked.mkdir()
+    locked.chmod(0)
+    try:
+        assert icon_themes([locked, mine]) == ["Papirus"]
+    finally:
+        locked.chmod(0o755)
