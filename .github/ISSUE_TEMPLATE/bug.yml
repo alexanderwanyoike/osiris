@@ -1,0 +1,30 @@
+name: Something is broken
+description: Osiris, or something in it, does not work the way it should.
+labels: ["bug", "needs-triage"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Say it in your own words. A screenshot helps.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can we see it happen?
+      description: The steps that lead to it, if you know them.
+  - type: input
+    id: version
+    attributes:
+      label: Which Osiris?
+      description: The name of the ISO you installed from, such as osiris-0.2.1-x86_64.iso, if you know it.
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Your computer
+      description: The make and model, and the graphics card, drawing tablet or audio interface involved, if any.
