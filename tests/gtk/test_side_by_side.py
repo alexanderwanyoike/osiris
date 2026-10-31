@@ -66,6 +66,7 @@ def app() -> tuple[App, FakeEngine]:
         unread=Unread(files, HOME),
         sent=[],
         withdrawn=[],
+        waiting=None,
     )
     stand_in.send_notification = lambda session, notification: stand_in.sent.append(
         (session, notification)

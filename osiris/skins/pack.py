@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from osiris.skins.check import problems
+
 LABEL_FILE = "skin.json"
 LABEL_FIELDS = ("label", "author", "version", "licence", "source")
 
@@ -36,7 +38,7 @@ class Skinpack:
     source: str
     root: Path
     choices: Mapping[str, Any] = field(default_factory=dict)
-    #: The shipped Skin a person's own was started from, if known.
+    #: The Skin a person's own took its style from, if known.
     style: str | None = None
 
     def look(self, variant: str) -> Look:
@@ -51,9 +53,19 @@ def read(root: Path) -> Skinpack:
         label = json.loads((root / LABEL_FILE).read_text())
     except FileNotFoundError:
         raise SkinpackError(f"{root.name}: no {LABEL_FILE}") from None
+    except (OSError, ValueError) as error:
+        raise SkinpackError(f"{root.name}: {LABEL_FILE}: {error}") from None
+    if not isinstance(label, dict):
+        raise SkinpackError(f"{root.name}: {LABEL_FILE} must be an object")
     missing = [field for field in LABEL_FIELDS if not isinstance(label.get(field), str)]
     if missing:
         raise SkinpackError(f"{root.name}: {LABEL_FILE} lacks {', '.join(missing)}")
+    if not _NAME.fullmatch(root.name) or root.name == "osiris":
+        raise SkinpackError(
+            f"{root.name!r}: a Skin's name is lower-case letters, digits, - and _,"
+            " and not osiris"
+        )
+    _check_look(root.name, label.get("look", {}))
     return Skinpack(
         name=root.name,
         label=label["label"],
@@ -65,6 +77,31 @@ def read(root: Path) -> Skinpack:
         choices=label.get("look", {}),
         style=label.get("style"),
     )
+
+
+#: Plain enough to be a folder, a theme name and a settings value.
+_NAME = re.compile(r"[a-z0-9][a-z0-9_-]*")
+_PRINTABLE = re.compile(r"[^\x00-\x1f\x7f]+")
+
+
+def _check_look(name: str, look: object) -> None:
+    """A look is a mapping of printable strings; icons may differ by variant."""
+
+    def plain(value: object) -> bool:
+        return isinstance(value, str) and bool(_PRINTABLE.fullmatch(value))
+
+    if not isinstance(look, Mapping):
+        raise SkinpackError(f"{name}: look must be a mapping")
+    for key, value in look.items():
+        if key == "icons" and isinstance(value, Mapping):
+            if all(
+                variant in ("light", "dark") and plain(v)
+                for variant, v in value.items()
+            ):
+                continue
+        elif plain(value):
+            continue
+        raise SkinpackError(f"{name}: look's {key} must be plain text")
 
 
 GAP = re.compile(r"\{\{(\w+)\}\}")
@@ -109,3 +146,10 @@ def sass_gaps(filled: Mapping[str, str]) -> str:
         for name, value in filled.items()
         if not name.endswith("_plank")
     )
+
+
+def refuse_programs(pack: Skinpack) -> None:
+    """Raise unless the Skin is data only."""
+    found = problems(pack.root)
+    if found:
+        raise SkinpackError(f"{pack.label}: " + "; ".join(found))

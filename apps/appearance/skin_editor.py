@@ -11,6 +11,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk, Pango  # noqa: E402
 
 THEMES_CHOICE = "Theme's choice"
+AS_IT_IS = "As it is"
 #: Icons that differ most between sets, so a row of them tells one from another.
 SAMPLE_ICONS = ("folder", "user-home", "text-x-generic", "image-x-generic",
                 "audio-x-generic", "user-trash")
@@ -44,6 +45,7 @@ def _heading(title: str, add: tuple[str, Callable[[], None]] | None) -> Gtk.Box:
     if add is not None:
         tooltip, clicked = add
         button = Gtk.Button(icon_name="list-add-symbolic", tooltip_text=tooltip)
+        button.update_property([Gtk.AccessibleProperty.LABEL], [tooltip])
         button.add_css_class("flat")
         button.connect("clicked", lambda _b: clicked())
         line.append(button)
@@ -114,11 +116,12 @@ class SkinEditor(Adw.Dialog):
                  icon_sets: Sequence[str], icons: str | None,
                  cursor_sets: Sequence[str],
                  cursor_pictures: Mapping[str, Sequence[str]], cursor: str | None,
-                 font: str | None, on_save: Callable[[Choice], None],
+                 font: str | None, on_save: Callable[[Choice], bool | None],
                  on_code: Callable[[], None] = _nothing,
                  on_add_icons: Callable[[], None] = _nothing,
                  on_add_cursors: Callable[[], None] = _nothing,
-                 on_add_fonts: Callable[[], None] = _nothing):
+                 on_add_fonts: Callable[[], None] = _nothing,
+                 theme_icons: str | None = None, theme_font: str = "Sans 11"):
         super().__init__(title="Edit Skin", content_width=880,
                          content_height=760)
         self._on_save = on_save
@@ -132,7 +135,12 @@ class SkinEditor(Adw.Dialog):
         page.append(names)
 
         box, self._styles = _section("Style")
-        self._style_names = [name for name, _label, _picture in styles]
+        self._style_names: list[str | None] = [name for name, _l, _p in styles]
+        if style not in self._style_names:
+            # A Skin whose style is unknown keeps its own sheets unless the
+            # person picks another.
+            self._style_names.insert(0, None)
+            self._styles.append(_card(AS_IT_IS, _style_picture(None)))
         for name, shown, picture in styles:
             self._styles.append(_card(shown, _style_picture(picture)))
         self._pick(self._styles, self._style_names, style)
@@ -140,13 +148,18 @@ class SkinEditor(Adw.Dialog):
 
         box, self._icons = _section("Icons", ("Add an icon set", on_add_icons))
         self._icon_names: list[str | None] = [None, *icon_sets]
+        if icons is not None and icons not in self._icon_names:
+            self._icon_names.append(icons)
         for name in self._icon_names:
-            self._icons.append(_card(name or THEMES_CHOICE, _icon_row(name)))
+            self._icons.append(_card(name or THEMES_CHOICE,
+                                     _icon_row(name or theme_icons)))
         self._pick(self._icons, self._icon_names, icons)
         page.append(box)
 
         box, self._cursors = _section("Cursor", ("Add a cursor set", on_add_cursors))
         self._cursor_names: list[str | None] = [None, *cursor_sets]
+        if cursor is not None and cursor not in self._cursor_names:
+            self._cursor_names.append(cursor)
         for name in self._cursor_names:
             pictures = cursor_pictures.get(name or "", [])
             self._cursors.append(_card(name or THEMES_CHOICE,
@@ -154,7 +167,7 @@ class SkinEditor(Adw.Dialog):
         self._pick(self._cursors, self._cursor_names, cursor)
         page.append(box)
 
-        page.append(self._font_section(font, on_add_fonts))
+        page.append(self._font_section(font, theme_font, on_add_fonts))
 
         code = Gtk.Button(label="Open in Code", halign=Gtk.Align.START)
         code.add_css_class("flat")
@@ -177,17 +190,17 @@ class SkinEditor(Adw.Dialog):
         toolbar.add_top_bar(header)
         self.set_child(toolbar)
 
-    def _font_section(self, font: str | None,
+    def _font_section(self, font: str | None, theme_font: str,
                       on_add: Callable[[], None]) -> Gtk.Box:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box.append(_heading("Font", ("Add fonts", on_add)))
         line = Gtk.Box(spacing=12)
-        self._keep_font = Gtk.CheckButton(label="Theme's font",
+        self._keep_font = Gtk.CheckButton(label=THEMES_CHOICE,
                                           active=font is None)
         self._font = Gtk.FontDialogButton(dialog=Gtk.FontDialog(),
                                           use_font=True, use_size=True)
         self._font.set_font_desc(Pango.FontDescription.from_string(
-            font or "Sans 11"))
+            font or theme_font))
         self._font.set_sensitive(font is not None)
         self._keep_font.connect(
             "toggled", lambda check: self._font.set_sensitive(not check.get_active()))
@@ -215,17 +228,22 @@ class SkinEditor(Adw.Dialog):
         children = flow.get_selected_children()
         return names[children[0].get_index()] if children else None
 
-    def _save(self) -> None:
+    def choice(self) -> Choice:
+        """What is chosen now, saved or not."""
         font = None if self._keep_font.get_active() else (
             self._font.get_font_desc().to_string())
-        self._on_save(Choice(
+        return Choice(
             label=self._name.get_text().strip(),
             style=self._selected(self._styles, self._style_names),
             icons=self._selected(self._icons, self._icon_names),
             cursor=self._selected(self._cursors, self._cursor_names),
             font=font,
-        ))
-        self.close()
+        )
+
+    def _save(self) -> None:
+        saved = self._on_save(self.choice())
+        if saved is not False:
+            self.close()
 
 
 def _font_attributes(desc: Pango.FontDescription | None) -> Pango.AttrList:

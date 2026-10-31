@@ -8,6 +8,7 @@ from pathlib import Path
 
 from osiris.model.author import as_osiris
 from osiris.platform.process import FakeRunner
+from osiris.skins.check import problems
 from osiris.skins.edit import Edit, save
 from osiris.skins.pack import read
 from osiris.skins.share import duplicate
@@ -83,8 +84,102 @@ def test_a_save_is_committed_as_osiris(tmp_path: Path) -> None:
     root, runner = mine(tmp_path), FakeRunner()
     save(read(root), keep("Sharp Night"), runner)
     assert runner.ran("git", "-C", str(root), "add", "-A")
-    assert runner.ran("git", "-C", str(root), *as_osiris(), "commit", "-q")
+    assert any(
+        call.argv[: 3 + len(as_osiris())] == ("git", "-C", str(root), *as_osiris())
+        and "commit" in call.argv
+        for call in runner.calls
+    )
 
 
 def test_a_copy_remembers_the_style_it_came_from(tmp_path: Path) -> None:
     assert read(mine(tmp_path)).style == "colloid"
+
+
+def test_a_skin_given_itself_as_its_style_keeps_everything(tmp_path: Path) -> None:
+    """Review of #134: a Skin opened from a shared copy of a shipped one could
+    resolve to itself as its style and was emptied."""
+    root = mine(tmp_path)
+    saved = save(read(root), Edit("Sharp", read(root), None, None, None), FakeRunner())
+    assert (root / "sass" / "_palette.scss").read_text() == "colloid"
+    assert saved.label == "Sharp"
+
+
+def test_a_skin_without_history_gets_one_before_saving(tmp_path: Path) -> None:
+    root = make_pack(tmp_path / "mine" / "opened", "Opened", "Someone", "opened")
+    runner = FakeRunner()
+    save(read(root), keep("Opened"), runner)
+    assert runner.ran("git", "-C", str(root), "init", "-q")
+
+
+def test_a_skin_with_history_is_not_initialised_again(tmp_path: Path) -> None:
+    root = mine(tmp_path)
+    (root / ".git").mkdir(exist_ok=True)
+    runner = FakeRunner()
+    save(read(root), keep(), runner)
+    assert not runner.ran("git", "-C", str(root), "init", "-q")
+
+
+def test_taking_a_style_copes_with_a_linked_folder_in_the_skin(tmp_path: Path) -> None:
+    root = mine(tmp_path)
+    (tmp_path / "elsewhere").mkdir()
+    (root / "linked").symlink_to(tmp_path / "elsewhere", target_is_directory=True)
+    graphite = read(
+        make_pack(tmp_path / "shipped" / "graphite", "Graphite", "V", "graphite")
+    )
+    save(read(root), Edit("Sharp", graphite, None, None, None), FakeRunner())
+    assert (root / "sass" / "_palette.scss").read_text() == "graphite"
+    assert not (root / "linked").exists()
+    assert (tmp_path / "elsewhere").is_dir()
+
+
+def test_icons_set_per_variant_survive_a_save_that_did_not_change_them(
+    tmp_path: Path,
+) -> None:
+    root = mine(tmp_path)
+    label = json.loads((root / "skin.json").read_text())
+    label["look"] = {"icons": {"light": "Papirus-Light", "dark": "Papirus-Dark"}}
+    (root / "skin.json").write_text(json.dumps(label))
+    saved = save(
+        read(root), Edit("Sharp", None, "Papirus-Dark", None, None), FakeRunner()
+    )
+    assert saved.look("light").icons == "Papirus-Light"
+    assert saved.look("dark").icons == "Papirus-Dark"
+
+
+def test_taking_a_persons_skin_as_style_records_that_skin(tmp_path: Path) -> None:
+    """Review of #137: the Skin taken was recorded as the style it was itself
+    started from, so the editor showed a different style than was chosen."""
+    root = mine(tmp_path)
+    shipped = read(tmp_path / "shipped" / "colloid")
+    other = duplicate(shipped, tmp_path / "mine", FakeRunner(), label="Soft")
+    saved = save(read(root), Edit("Sharp", other, None, None, None), FakeRunner())
+    assert saved.style == "soft"
+
+
+def test_taking_a_style_copies_only_a_skins_layout_and_data(tmp_path: Path) -> None:
+    """Review of #137: a person's Skin taken as a style brought everything in
+    it, programs and stray folders included."""
+    root = mine(tmp_path)
+    other = make_pack(tmp_path / "mine" / "loud", "Loud", "Me", "loud")
+    (other / "follow.py").write_text("print()")
+    (other / "notes").mkdir()
+    (other / "notes" / "plan.md").write_text("plan")
+    (other / "sass" / "build.sh").write_text("make")
+    (other / "sass" / ".draft.scss").write_text("draft")
+    (other / "sass" / "_palette.scss").chmod(0o755)
+    save(read(root), Edit("Sharp", read(other), None, None, None), FakeRunner())
+    assert sorted(p.name for p in root.iterdir()) == ["AGENTS.md", "sass", "skin.json"]
+    assert [p.name for p in (root / "sass").iterdir()] == ["_palette.scss"]
+    assert problems(root) == []
+
+
+def test_a_styles_credits_come_with_it(tmp_path: Path) -> None:
+    """Shipped Skins credit their authors in LICENSE and SOURCES.md beside the
+    layout; the licence travels with the sheets it covers."""
+    root = mine(tmp_path)
+    graphite = make_pack(tmp_path / "shipped" / "graphite", "Graphite", "V", "g")
+    (graphite / "LICENSE").write_text("GPL")
+    (graphite / "SOURCES.md").write_text("from upstream")
+    save(read(root), Edit("Sharp", read(graphite), None, None, None), FakeRunner())
+    assert (root / "LICENSE").read_text() == "GPL"
+    assert (root / "SOURCES.md").read_text() == "from upstream"

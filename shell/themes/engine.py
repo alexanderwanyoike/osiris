@@ -34,6 +34,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -43,12 +44,15 @@ from paths import home, use_osiris_package  # noqa: E402
 
 use_osiris_package()
 import osiris  # noqa: E402
+from osiris.model.names import is_slug  # noqa: E402
 from osiris.platform.process import CommandError, SubprocessRunner  # noqa: E402
 from osiris.provision.seeding import may_write  # noqa: E402
 from osiris.skins import (  # noqa: E402
-    carried, edit, imports, library as skins, looks, pictures, share, xcursor)
+    carried, edit, imports, library as skins, looks, pictures, share, wear,
+    xcursor)
 from osiris.skins.build import Built, build as build_skin_pack  # noqa: E402
-from osiris.skins.pack import Look, SkinpackError  # noqa: E402
+from osiris.skins.check import problems as check_programs  # noqa: E402
+from osiris.skins.pack import Look, SkinpackError, refuse_programs  # noqa: E402
 from osiris.themes import terminal  # noqa: E402
 from osiris.themes.at_login import theme_to_apply  # noqa: E402
 from osiris.themes.adwaita import adwaita_css  # noqa: E402
@@ -97,8 +101,9 @@ IMPORTED_FONTS = os.path.join(HOME, ".local", "share", "fonts", "imported")
 SKIN_WORK = os.path.join(HOME, ".cache", "osiris", "skins")
 SKIN_PICTURES = os.path.join(HOME, ".cache", "osiris", "skin-pictures")
 SAMPLER = "/usr/share/osiris/appearance/sampler.py"
+SYSTEM_ICONS = "/usr/share/icons"
 CURSOR_DIRS = [os.path.join(HOME, ".local", "share", "icons"),
-               os.path.join(HOME, ".icons"), "/usr/share/icons"]
+               os.path.join(HOME, ".icons"), SYSTEM_ICONS]
 # The shapes the editor shows for a cursor theme, each by its usual names.
 POINTER = ("left_ptr", "default")
 CURSOR_SHAPES = (POINTER, ("hand2", "pointer"), ("xterm", "text"))
@@ -130,6 +135,8 @@ def validate(theme: dict) -> None:
     Hand-written themes are expected, so a typo should say what is wrong rather
     than producing an unreadable desktop.
     """
+    if not isinstance(theme.get("name"), str) or not is_slug(theme["name"]):
+        raise ValueError(f"{theme.get('name')!r} is not a Theme's name")
     colors = theme.get("colors")
     if not isinstance(colors, dict):
         raise ValueError(f"{theme['name']}: no colors block")
@@ -289,6 +296,8 @@ def load(name: str) -> dict:
         raise KeyError(name)
     with open(path) as fh:
         theme = json.load(fh)
+    if not isinstance(theme, dict):
+        raise ValueError(f"{path}: a Theme is a JSON object")
     theme.setdefault("name", name)
     theme.setdefault("label", name)
     validate(theme)
@@ -740,6 +749,7 @@ def _drop_themes_but(name: str) -> None:
 
 def build_skin(theme: dict) -> tuple[Built, Look] | None:
     """Build the chosen Skin in this Theme's colours; None for Osiris's own look.
+    Raises SkinpackError when it cannot be built.
 
     What the pack carries (icon sets, cursors, fonts) is installed first, so the
     look it names exists by the time the settings point at it.
@@ -748,20 +758,13 @@ def build_skin(theme: dict) -> tuple[Built, Look] | None:
     pack = skins.find(folders, skins.chosen(Path(SKIN_CHOICE)))
     if pack is None:
         return None
-    runner = SubprocessRunner()
-    try:
-        if carried.install(pack, Path(ICONS_DIR), Path(FONTS_DIR)):
-            runner.run("fc-cache", "-f", FONTS_DIR, check=False, quiet=True)
-        built = build_skin_pack(pack, theme, Path(THEMES_DIR), Path(SKIN_WORK),
-                                runner)
-    except (CommandError, SkinpackError, OSError) as error:
-        # Osiris's own look rather than a half-built Skin.
-        print(f"osiris-theme: Skin {pack.name}: {error}", file=sys.stderr)
-        return None
-    if not built.cinnamon:
-        _osiris_cinnamon(theme, os.path.join(THEMES_DIR, built.theme))
-    _drop_themes_but(built.theme)
-    return built, pack.look("dark" if theme.get("dark", True) else "light")
+    places = wear.Places(themes=Path(THEMES_DIR), work=Path(SKIN_WORK),
+                         icons=Path(ICONS_DIR), fonts=Path(FONTS_DIR),
+                         system_icons=(Path(SYSTEM_ICONS),))
+    worn = wear.wear(pack, theme, places, SubprocessRunner(),
+                     lambda root: _osiris_cinnamon(theme, str(root)))
+    _drop_themes_but(worn[0].theme)
+    return worn
 
 
 def _link_adwaita_assets(skin: Built | None) -> None:
@@ -774,7 +777,8 @@ def _link_adwaita_assets(skin: Built | None) -> None:
     link = os.path.join(HOME, ".config", "gtk-4.0", "assets")
     if os.path.islink(link):
         os.remove(link)
-    pictures = os.path.join(THEMES_DIR, skin.theme, "gtk-4.0", "assets") if skin else ""
+    pictures = (os.path.join(THEMES_DIR, skin.theme, "gtk-4.0", "assets")
+                if skin and skin.adwaita else "")
     if pictures and os.path.isdir(pictures) and not os.path.exists(link):
         os.symlink(pictures, link)
 
@@ -783,7 +787,7 @@ def skin_choices() -> list[tuple[str, str, str]]:
     """Every Skin as (name, label, who made it), Osiris's own first."""
     packs = skins.available([Path(folder) for folder in SKIN_DIRS])
     return [(skins.OSIRIS, "Osiris", "Osiris's own look")] + [
-        (pack.name, pack.label, f"{pack.author}, {pack.licence}") for pack in packs
+        (pack.name, pack.label, skins.credit(pack)) for pack in packs
     ]
 
 
@@ -805,51 +809,87 @@ def _picture_sources(name: str, theme: dict) -> list[Path]:
         [Path(found)] if found else [])
 
 
-def _current_theme() -> dict:
-    return load(current() or DEFAULT_THEME)
+def current_theme() -> dict:
+    """The current Theme, or the default if its file is gone or unreadable."""
+    try:
+        return load(current() or DEFAULT_THEME)
+    except (KeyError, OSError, ValueError):
+        return load(DEFAULT_THEME)
+
+
+def _picture(name: str, theme: dict) -> Path | None:
+    """Where a Skin's picture in this Theme is kept; None if what it shows
+    cannot be read."""
+    try:
+        return pictures.picture_for(Path(SKIN_PICTURES) / "skins", name,
+                                    theme["name"], _picture_sources(name, theme))
+    except OSError:
+        return None
 
 
 def skin_pictures() -> dict[str, str]:
     """The pictures already drawn for the current Theme, by Skin."""
-    theme = _current_theme()
+    theme = current_theme()
     found = {}
     for name, _label, _credit in skin_choices():
-        picture = pictures.picture_for(Path(SKIN_PICTURES), name, theme["name"])
-        if pictures.is_fresh(picture, _picture_sources(name, theme)):
+        picture = _picture(name, theme)
+        if picture is not None and picture.is_file():
             found[name] = str(picture)
     return found
 
 
 def stale_skin_pictures() -> list[str]:
-    """The Skins whose picture for the current Theme is missing or out of date."""
-    drawn = skin_pictures()
-    return [name for name, _label, _credit in skin_choices() if name not in drawn]
+    """The Skins whose picture for the current Theme is still to be drawn."""
+    theme = current_theme()
+    stale = []
+    for name, _label, _credit in skin_choices():
+        picture = _picture(name, theme)
+        if picture is not None and pictures.needs_drawing(picture):
+            stale.append(name)
+    return stale
 
 
 def draw_skin_picture(name: str) -> str:
     """Draw a Skin's picture in the current Theme: its GTK 3 sheet built in the
     Theme's colours, shown by the sampler off-screen."""
-    theme = _current_theme()
+    theme = current_theme()
     cache = Path(SKIN_PICTURES)
-    themes = cache / "themes"
-    if name == skins.OSIRIS:
-        built = f"Osiris-osiris-{theme['name']}"
-        base = f"/usr/share/themes/{_ui(theme)['gtk']}/gtk-3.0/gtk.css"
-        _write(str(themes / built / "gtk-3.0" / "gtk.css"), palette_css(theme, base))
-    else:
-        built = build_skin_pack(_pack(name), theme, themes, cache / "work",
-                                SubprocessRunner(), only=("gtk-3.0",)).theme
-    picture = pictures.picture_for(cache, name, theme["name"])
-    look = _look_of(name, theme)
-    extra = ["--icons", look.icons, "--font", look.font]
-    pointer = _pointer(look.cursor or "", cache)
-    if pointer:
-        extra += ["--cursor", pointer]
-    # GTK finds the theme by name under $XDG_DATA_HOME/themes.
-    subprocess.run([sys.executable, _sampler(), built, str(picture), *extra],
-                   env={**os.environ, "XDG_DATA_HOME": str(cache)},
-                   check=True, capture_output=True, timeout=60)
+    picture = _picture(name, theme)
+    if picture is None:
+        raise OSError(f"cannot read what the picture of {name} shows")
+    try:
+        pictures.draw(picture, lambda out: _draw(name, theme, cache, out))
+    except Exception:
+        pictures.failed(picture)
+        raise
     return str(picture)
+
+
+def _draw(name: str, theme: dict, cache: Path, picture: Path) -> None:
+    # The theme built for a picture is thrown away after, or every Skin in
+    # every Theme would stay built in the cache.
+    cache.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=cache) as scratch:
+        themes = Path(scratch) / "themes"
+        if name == skins.OSIRIS:
+            built = f"Osiris-osiris-{theme['name']}"
+            base = f"/usr/share/themes/{_ui(theme)['gtk']}/gtk-3.0/gtk.css"
+            _write(str(themes / built / "gtk-3.0" / "gtk.css"),
+                   palette_css(theme, base))
+        else:
+            built = build_skin_pack(_pack(name), theme, themes,
+                                    Path(scratch) / "work", SubprocessRunner(),
+                                    only=("gtk-3.0",)).theme
+        look = _look_of(name, theme)
+        extra = ["--icons", look.icons, "--font", look.font]
+        pointer = _pointer(look.cursor or "", cache)
+        if pointer:
+            extra += ["--cursor", pointer]
+        argv = [sys.executable, _sampler(), built, str(picture), *extra]
+        done = subprocess.run(argv, env=pictures.sampler_env(os.environ, Path(scratch)),
+                              capture_output=True, text=True, timeout=60)
+        if done.returncode != 0:
+            raise CommandError(argv, done.returncode, done.stderr)
 
 
 def _look_of(name: str, theme: dict) -> Look:
@@ -864,6 +904,10 @@ def _look_of(name: str, theme: dict) -> Look:
 
 def _cursor_picture(cursor: str, shapes: tuple[str, ...], cache: Path) -> str | None:
     """One of a cursor theme's shapes as a picture, or None if none is found."""
+    try:
+        out = pictures.cursor_picture(cache, cursor, shapes[0])
+    except ValueError:
+        return None
     for folder in CURSOR_DIRS:
         for shape in shapes:
             path = os.path.join(folder, cursor, "cursors", shape)
@@ -874,9 +918,8 @@ def _cursor_picture(cursor: str, shapes: tuple[str, ...], cache: Path) -> str | 
                     image = xcursor.read(fh.read(), 32)
             except (OSError, xcursor.XcursorError):
                 continue
-            out = cache / f"cursor-{cursor}-{shapes[0]}.png"
-            out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_bytes(xcursor.png(image))
+            drawn = xcursor.png(image)
+            pictures.land(out, lambda partial: partial.write_bytes(drawn))
             return str(out)
     return None
 
@@ -901,21 +944,27 @@ def export_skin(name: str, folder: str) -> str:
     return str(share.export(_pack(name), Path(folder)))
 
 
+def _shipped_skin_dirs() -> list[Path]:
+    return [Path(folder) for folder in SKIN_DIRS[1:]]
+
+
 def open_skin(path: str) -> str:
     """Add a shared Skin to the person's own; returns its name."""
-    return share.open_file(Path(path), Path(SKIN_DIRS[0])).name
+    return share.open_file(Path(path), Path(SKIN_DIRS[0]), SubprocessRunner(),
+                           _shipped_skin_dirs()).name
 
 
 def duplicate_skin(name: str) -> str:
     """Copy a Skin into the person's own; returns the copy's name."""
-    copy = share.duplicate(_pack(name), Path(SKIN_DIRS[0]), SubprocessRunner())
+    copy = share.duplicate(_pack(name), Path(SKIN_DIRS[0]), SubprocessRunner(),
+                           shipped=_shipped_skin_dirs())
     return copy.name
 
 
 def create_skin(label: str, base: str) -> str:
     """A new Skin of the person's, named label, started from base."""
     made = share.duplicate(_pack(base), Path(SKIN_DIRS[0]), SubprocessRunner(),
-                           label=label)
+                           label=label, shipped=_shipped_skin_dirs())
     return made.name
 
 
@@ -938,36 +987,38 @@ def cursor_pictures(names: list[str]) -> dict[str, list[str]]:
     cache = Path(SKIN_PICTURES)
     found = {}
     # Under the empty name, the Theme's own cursor, for "Theme's choice".
-    for key, name in [("", _ui(_current_theme())["cursor"]), *zip(names, names)]:
+    for key, name in [("", _ui(current_theme())["cursor"]), *zip(names, names)]:
         shown = [_cursor_picture(name, shapes, cache) for shapes in CURSOR_SHAPES]
         found[key] = [path for path in shown if path]
     return found
 
 
-def skin_styles() -> list[tuple[str, str, str | None]]:
-    """The shipped Skins a person's Skin can take its style from."""
+def skin_styles(editing: str) -> list[tuple[str, str, str | None]]:
+    """The Skins the one being edited can take its style from, the person's
+    own included."""
     drawn = skin_pictures()
-    shipped = skins.available([Path(folder) for folder in SKIN_DIRS[1:]])
-    return [(pack.name, pack.label, drawn.get(pack.name)) for pack in shipped]
+    offered = skins.styles([Path(folder) for folder in SKIN_DIRS], editing)
+    return [(pack.name, pack.label, drawn.get(pack.name)) for pack in offered]
 
 
 def skin_details(name: str) -> dict:
     """What the editor starts from: a Skin's label, style and look."""
     pack = _pack(name)
-    look = pack.look(_variant_of(_current_theme()))
+    theme = current_theme()
+    look = pack.look(_variant_of(theme))
+    ui = _ui(theme)
     return {"label": pack.label, "style": pack.style, "icons": look.icons,
-            "cursor": look.cursor, "font": look.font}
+            "cursor": look.cursor, "font": look.font,
+            "theme_icons": ui["icons"], "theme_font": ui["font"]}
 
 
 def save_skin(name: str, label: str, style: str | None, icons: str | None,
               cursor: str | None, font: str | None) -> None:
-    """Save an edit to the person's Skin, and wear it again if it is worn."""
+    """Save an edit to the person's Skin; wearing it again is the caller's."""
     pack = _pack(name)
     taken = _pack(style) if style and style != pack.style else None
     edit.save(pack, edit.Edit(label, taken, icons, cursor, font),
               SubprocessRunner())
-    if chosen_skin() == name:
-        set_skin(name)
 
 
 def _variant_of(theme: dict) -> str:
@@ -991,20 +1042,66 @@ def import_fonts(paths: list[str]) -> list[str]:
 def import_gtk_theme(path: str) -> str:
     """A downloaded GTK theme as a new Skin of the person's; its name."""
     return imports.import_gtk_theme(Path(path), Path(SKIN_DIRS[0]),
-                                    SubprocessRunner()).name
+                                    SubprocessRunner(),
+                                    _shipped_skin_dirs()).name
+
+
+def check_skin(name: str) -> list[str]:
+    """Why a Skin would not be worn: not data only, or Sass that does not
+    compile in the current Theme, with the compiler's own errors."""
+    if name == skins.OSIRIS:
+        return []
+    pack = _pack(name)
+    found = check_programs(pack.root)
+    if found:
+        return found
+    with tempfile.TemporaryDirectory() as scratch:
+        try:
+            build_skin_pack(pack, current_theme(), Path(scratch) / "themes",
+                            Path(scratch) / "work", SubprocessRunner())
+        except CommandError as error:
+            return [error.output.strip() or str(error)]
+        except (SkinpackError, OSError) as error:
+            return [str(error)]
+    return []
+
+
+def remove_icon_sets(names: list[str]) -> None:
+    """Undo an install: only sets in the person's own icon folder."""
+    for name in names:
+        target = Path(ICONS_DIR) / name
+        if target.parent == Path(ICONS_DIR) and target.is_dir():
+            shutil.rmtree(target)
+
+
+def remove_fonts(names: list[str]) -> None:
+    for name in names:
+        target = Path(IMPORTED_FONTS) / name
+        if target.parent == Path(IMPORTED_FONTS) and target.is_file():
+            target.unlink()
+    SubprocessRunner().run("fc-cache", "-f", IMPORTED_FONTS, check=False,
+                           quiet=True)
 
 
 def delete_skin(name: str) -> None:
     """Delete one of the person's Skins, back to Osiris's look if it was worn."""
-    share.delete(_pack(name), Path(SKIN_DIRS[0]))
+    pack = _pack(name)
+    share.delete(pack, Path(SKIN_DIRS[0]))
+    if carried.remove_fonts(pack, Path(FONTS_DIR)):
+        SubprocessRunner().run("fc-cache", "-f", FONTS_DIR, check=False,
+                               quiet=True)
     if chosen_skin() == name:
         set_skin(skins.OSIRIS)
 
 
 def set_skin(name: str) -> list[str]:
-    """Choose a Skin and wear it in the current Theme."""
-    skins.choose(Path(SKIN_CHOICE), name)
-    return apply(current() or DEFAULT_THEME)
+    """Choose a Skin and wear it in the current Theme; raises SkinpackError
+    when it could not be worn, and Osiris's own look is worn instead."""
+    if name != skins.OSIRIS:
+        refuse_programs(_pack(name))
+    skins.wear_choice(Path(SKIN_CHOICE), name,
+                      lambda: _apply(current() or DEFAULT_THEME))
+    return []
 
 
 def apply(name: str) -> list[str]:
@@ -1015,6 +1112,12 @@ def apply(name: str) -> list[str]:
     Cinnamon panel, the wallpaper, running terminals - repaints in place, and
     the launcher reads its theme each time it opens.
     """
+    _apply(name)
+    return []
+
+
+def _apply(name: str) -> SkinpackError | None:
+    """Apply a theme; why the chosen Skin was not worn, if it was not."""
     theme = load(name)
     ui = _ui(theme)
     env = _session_env()
@@ -1024,13 +1127,20 @@ def apply(name: str) -> list[str]:
     # One theme name for every surface. Because the name differs per palette
     # this is an ordinary theme change, which GTK applications, Muffin's window
     # decorations and the Cinnamon shell all already reload on.
-    worn = build_skin(theme)
+    try:
+        worn, failed = build_skin(theme), None
+    except SkinpackError as error:
+        # Osiris's own look rather than a half-built Skin.
+        print(f"osiris-theme: Skin: {error}", file=sys.stderr)
+        worn, failed = None, error
     skin, look = worn if worn else (None, Look(None, None, None))
     applied = skin.theme if skin else build_theme(theme) or ui["gtk"]
     # Folders tinted to the accent, over the theme's declared icon set. Falls
     # back to that set when Papirus is absent rather than naming a theme that
     # does not exist.
-    icon_theme = look.icons or icons.build(theme, ui["icons"]) or ui["icons"]
+    icon_theme = (looks.installed_icon_set(look.icons,
+                                           [Path(d) for d in CURSOR_DIRS])
+                  or icons.build(theme, ui["icons"]) or ui["icons"])
     wallpaper = wallpaper_for(theme)
     # Plank reads its theme when the setting changes, so the name carries the
     # palette - the same reason the GTK theme does.
@@ -1072,7 +1182,7 @@ def apply(name: str) -> list[str]:
     _drift(theme)
     if frozen:
         _transition("Release", str(SETTLE_MS), str(FADE_MS), env=env)
-    return []
+    return failed
 
 
 def login() -> None:
@@ -1102,7 +1212,10 @@ def main() -> None:
     if args.login:
         login()
     elif args.skin:
-        set_skin(args.skin)
+        try:
+            set_skin(args.skin)
+        except SkinpackError as error:
+            sys.exit(f"osiris-theme: {error}")
     else:
         apply(args.apply)
 

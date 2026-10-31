@@ -6,9 +6,11 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
+
 from osiris.platform.process import FakeRunner
 from osiris.skins.build import Built, build
-from osiris.skins.pack import read
+from osiris.skins.pack import SkinpackError, read
 
 ROSE_PINE = {
     "name": "rose-pine",
@@ -145,6 +147,34 @@ def test_a_full_pack_brings_its_own_panel(tmp_path: Path) -> None:
     assert build_rose_pine(tmp_path, FakeRunner()).cinnamon is True
 
 
+def test_a_panel_sheet_among_a_skins_files_is_its_panel(tmp_path: Path) -> None:
+    """Review of #136: an imported theme's Cinnamon sheet was overwritten by
+    Osiris's own, because only a Sass entry counted as the Skin's panel."""
+    root = make_gtk_only_pack(tmp_path / "neon")
+    sheet = root / "files" / "common" / "cinnamon" / "cinnamon.css"
+    sheet.parent.mkdir(parents=True)
+    sheet.write_text("#panel {}")
+    built = build(
+        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
+    )
+    assert built.cinnamon is True
+
+
+def test_a_libadwaita_sheet_among_a_skins_files_reaches_libadwaita(
+    tmp_path: Path,
+) -> None:
+    """Review of #136: an imported theme's GTK 4 sheet never reached libadwaita,
+    which reads only the sheet Osiris installs for it."""
+    root = make_gtk_only_pack(tmp_path / "neon")
+    sheet = root / "files" / "common" / "libadwaita.css"
+    sheet.parent.mkdir(parents=True)
+    sheet.write_text("window {}")
+    built = build(
+        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
+    )
+    assert built.adwaita == tmp_path / "themes" / built.theme / "libadwaita.css"
+
+
 def test_a_picture_needs_only_the_gtk3_sheet(tmp_path: Path) -> None:
     """Pictures are drawn for every Skin in the Theme, so they build no more
     than they show."""
@@ -187,3 +217,54 @@ def test_a_pack_without_sass_still_builds(tmp_path: Path) -> None:
         read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
     )
     assert built.theme == "Osiris-neon-rose-pine"
+
+
+def test_a_skin_holding_a_program_is_not_built(tmp_path: Path) -> None:
+    root = make_pack(tmp_path / "colloid")
+    (root / "follow.py").write_text("print()")
+    runner = FakeRunner()
+    with pytest.raises(SkinpackError, match=r"follow\.py is not part of a Skin"):
+        build(read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", runner)
+    assert runner.count("sassc") == 0
+
+
+@pytest.mark.parametrize("picture", ["check.svg", "gtk.css"])
+def test_a_picture_that_is_not_utf8_is_a_skinpack_error(
+    tmp_path: Path, picture: str
+) -> None:
+    """Any other error escapes the fallback to Osiris's own look, and every
+    Theme switch fails."""
+    root = make_pack(tmp_path / "colloid")
+    (root / "files" / "common" / "gtk-3.0" / picture).write_bytes(b"\xff\xfe<svg/>")
+    with pytest.raises(SkinpackError, match=picture):
+        build(
+            read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
+        )
+
+
+def test_a_theme_whose_name_is_not_a_slug_is_not_built(tmp_path: Path) -> None:
+    """The name is joined into the theme folder that is removed first."""
+    outside = tmp_path / "themes" / "Osiris-colloid-x" / "keep"
+    outside.mkdir(parents=True)
+    theme = {**ROSE_PINE, "name": "x/../../themes/Osiris-colloid-x"}
+    with pytest.raises(SkinpackError, match="name"):
+        build(
+            read(make_pack(tmp_path / "colloid")),
+            theme,
+            tmp_path / "themes",
+            tmp_path / "work",
+            FakeRunner(),
+        )
+    assert outside.is_dir()
+
+
+def test_a_pack_without_a_gtk3_sheet_for_the_variant_is_refused(
+    tmp_path: Path,
+) -> None:
+    """Without it the theme is named but draws nothing of the Skin."""
+    root = make_gtk_only_pack(tmp_path / "elementary")
+    (root / "gtk-3.0" / "gtk-dark.scss").unlink()
+    with pytest.raises(SkinpackError, match=r"gtk-3\.0"):
+        build(
+            read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
+        )
