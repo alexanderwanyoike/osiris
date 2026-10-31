@@ -11,10 +11,11 @@ import copy
 import json
 import re
 import shutil
-import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+from makers import Recolour, plank, referenced, replace, revision, rewrite
 
 PACK = Path(__file__).resolve().parent / "orchis"
 
@@ -78,11 +79,19 @@ $button-min: #fdbe04;
 $fg-darker: lightness($gap-foreground) < lightness($gap-background);
 $ink-dark: if($fg-darker, $gap-foreground, $gap-background);
 $ink-light: if($fg-darker, $gap-background, $gap-foreground);
+
+@function osiris-brightness($c) {
+  @return (red($c) * 299 + green($c) * 587 + blue($c) * 114) / 1000;
+}
+
+$osiris-midpoint: (osiris-brightness($ink-dark) + osiris-brightness($ink-light)) / 2;
 """
 
-# Orchis's on() picks pure black or white text; these point it at the inks the
-# palette derives from the Theme.
+# Orchis's on() picks pure black or white text at a fixed brightness; these
+# point it at the inks the palette derives from the Theme, split where the
+# Theme's own inks split, so a fill gets whichever reads better.
 ON_GAPS = (
+    ("@if ($brightness >= 156) {", "@if ($brightness >= $osiris-midpoint) {"),
     ("@return rgba(black, 0.87);", "@return $ink-dark;"),
     ("rgba(black, ", "rgba($ink-dark, "),
     ("@return white;", "@return $ink-light;"),
@@ -113,24 +122,34 @@ STOP_GAPS = {
 }
 # The selected sidebar row's corners are filled with the view colour ($base),
 # which is the Theme's surface in both variants.
-ROW_GAPS = {
-    "#ffffff": "{{surface}}",
-    "#2c2c2c": "{{surface}}",
-    "#0f0f0f": "{{surface}}",
-}
+ROW_GAPS = Recolour(
+    {
+        "#ffffff": "{{surface}}",
+        "#2c2c2c": "{{surface}}",
+        "#0f0f0f": "{{surface}}",
+    }
+)
 
 # The colours Orchis's cinnamon/make-assets.sh swaps, plus the check and radio
 # green, which the Sass draws as $success ($check_radio 'default').
-CINNAMON_GAPS = {
-    "#1a73e8": "{{accent}}",
-    "#3281ea": "{{accent}}",
-    "#0f9d58": "{{success}}",
-    "#81c995": "{{success}}",
-}
+CINNAMON_GAPS = Recolour(
+    {
+        "#1a73e8": "{{accent}}",
+        "#3281ea": "{{accent}}",
+        "#0f9d58": "{{success}}",
+        "#81c995": "{{success}}",
+    }
+)
 CINNAMON_THEMED = ("add-workspace-active", "corner-ripple", "toggle-on")
 
 # Orchis's own default build: the light window uses its light header bar
 # (gtk-Light); Cinnamon has no such entry, so its light panel stays dark.
+# The dock's fill and badge take the Theme's colours.
+DOCK = {
+    "FillStartColor": "{{background_plank}}",
+    "FillEndColor": "{{background_plank}}",
+    "BadgeColor": "{{danger_plank}}",
+}
 ENTRIES = {
     "gtk-3.0": ("gtk/3.0/gtk-Light.scss", "gtk/3.0/gtk-Dark.scss"),
     "gtk-4.0": ("gtk/4.0/gtk-Light.scss", "gtk/4.0/gtk-Dark.scss"),
@@ -143,18 +162,6 @@ STEMS = {
     "libadwaita": "libadwaita",
     "cinnamon": "cinnamon",
 }
-
-
-def replace(text: str, old: str, new: str, where: str) -> str:
-    if old not in text:
-        raise SystemExit(f"upstream changed: {old!r} not in {where}")
-    return text.replace(old, new)
-
-
-def gaps(text: str, colours: dict[str, str]) -> str:
-    for colour, gap in colours.items():
-        text = re.sub(re.escape(colour), gap, text, flags=re.IGNORECASE)
-    return text
 
 
 def colours(sass: Path) -> None:
@@ -175,6 +182,9 @@ def svg_assets(gtk: Path, dst: Path) -> None:
     root = ET.parse(gtk / "assets.svg").getroot()
     ids = {el.get("id"): el for el in root.iter() if el.get("id")}
     defs = copy.deepcopy(root.find(f"{{{SVG}}}defs"))
+    gradients = {g.get("id") for g in defs.iter(f"{{{SVG}}}linearGradient")}
+    if missing := set(STOP_GAPS) - gradients:
+        raise SystemExit(f"upstream changed: no {', '.join(sorted(missing))}")
     for gradient in defs.iter(f"{{{SVG}}}linearGradient"):
         gap = STOP_GAPS.get(gradient.get("id", ""))
         if gap is None:
@@ -188,10 +198,13 @@ def svg_assets(gtk: Path, dst: Path) -> None:
         for key in [k for k in el.attrib if k.startswith("{") and k != HREF]:
             del el.attrib[key]
 
+    defined = {el.get("id"): el for el in defs.iter() if el.get("id")}
+
     dst.mkdir(parents=True, exist_ok=True)
     for name in (gtk / "assets.txt").read_text().split():
         group = ids[name]
         x, y, width, height = bounds(group, ids)
+        used = referenced(group, defined)
         for suffix, scale in (("", 1), ("@2", 2)):
             svg = ET.Element(
                 f"{{{SVG}}}svg",
@@ -201,9 +214,12 @@ def svg_assets(gtk: Path, dst: Path) -> None:
                     "viewBox": f"{x:g} {y:g} {width:g} {height:g}",
                 },
             )
-            svg.append(defs)
+            if used:
+                ET.SubElement(svg, f"{{{SVG}}}defs").extend(
+                    copy.deepcopy(defined[i]) for i in used
+                )
             svg.append(copy.deepcopy(group))
-            text = gaps(ET.tostring(svg, encoding="unicode"), ROW_GAPS)
+            text = ROW_GAPS(ET.tostring(svg, encoding="unicode"))
             (dst / f"{name}{suffix}.svg").write_text(text + "\n")
 
 
@@ -225,34 +241,14 @@ def bounds(group: ET.Element, ids: dict[str, ET.Element]) -> tuple[float, ...]:
 def svgs(src: Path, dst: Path) -> None:
     dst.mkdir(parents=True, exist_ok=True)
     for svg in src.glob("*.svg"):
-        (dst / svg.name).write_text(gaps(svg.read_text(), CINNAMON_GAPS))
+        (dst / svg.name).write_text(CINNAMON_GAPS(svg.read_text()))
 
 
-def plank(src: Path) -> str:
-    fills = {
-        "FillStartColor": "{{background_plank}}",
-        "FillEndColor": "{{background_plank}}",
-        "BadgeColor": "{{danger_plank}}",
-    }
-    lines = []
-    for line in src.read_text().splitlines():
-        key = line.split("=")[0]
-        lines.append(f"{key}={fills[key]}" if key in fills else line)
-    return "\n".join(lines) + "\n"
-
-
-def main() -> None:
-    upstream = Path(sys.argv[1]).resolve()
+def make(upstream: Path, pack: Path) -> None:
     src = upstream / "src"
-    commit = subprocess.run(
-        ["git", "-C", str(upstream), "log", "-1", "--format=%h %cs"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
-    shutil.rmtree(PACK, ignore_errors=True)
+    commit = revision(upstream)
 
-    sass = PACK / "sass"
+    sass = pack / "sass"
     shutil.copytree(src / "_sass", sass, ignore=shutil.ignore_patterns("gnome-shell"))
     tweaks = (sass / "_tweaks.scss").read_text()
     (sass / "_tweaks-temp.scss").write_text(
@@ -265,38 +261,44 @@ def main() -> None:
     )
     (sass / "_color-palette-osiris.scss").write_text(PALETTE)
     colours(sass)
+    pictures = 0
     for scss in (sass / "gtk").rglob("*.scss"):
-        text = scss.read_text()
-        scss.write_text(text.replace(".png'", ".svg'").replace('.png"', '.svg"'))
+        text, count = re.subn(r"""\.png(['"])""", r".svg\1", scss.read_text())
+        scss.write_text(text)
+        pictures += count
+    if not pictures:
+        raise SystemExit("upstream changed: the GTK Sass names no PNG pictures")
 
     for folder, (light, dark) in ENTRIES.items():
-        (PACK / folder).mkdir()
+        (pack / folder).mkdir()
         for variant, entry in (("light", light), ("dark", dark)):
             text = (src / entry).read_text()
-            text = text.replace("'../../_sass/", "'../sass/").replace(
-                "'../_sass/", "'../sass/"
-            )
-            (PACK / folder / f"{STEMS[folder]}-{variant}.scss").write_text(text)
+            text, count = re.subn(r"'(\.\./)+_sass/", "'../sass/", text)
+            if not count:
+                raise SystemExit(f"upstream changed: {entry} imports no _sass/")
+            (pack / folder / f"{STEMS[folder]}-{variant}.scss").write_text(text)
 
-    common = PACK / "files" / "common"
+    common = pack / "files" / "common"
     for version in ("gtk-3.0", "gtk-4.0"):
         svg_assets(src / "gtk", common / version / "assets")
         shutil.copytree(
             src / "gtk" / "scalable", common / version / "assets" / "scalable"
         )
+    ROW_GAPS.check("assets.svg")
     cinnamon = src / "cinnamon"
     svgs(cinnamon / "common-assets", common / "cinnamon" / "assets")
     for variant, suffix in (("light", ""), ("dark", "-Dark")):
-        dst = PACK / "files" / variant / "cinnamon" / "assets"
+        dst = pack / "files" / variant / "cinnamon" / "assets"
         svgs(cinnamon / f"assets{suffix}", dst)
         for name in CINNAMON_THEMED:
             svg = cinnamon / "theme" / f"{name}{suffix}.svg"
-            (dst / f"{name}.svg").write_text(gaps(svg.read_text(), CINNAMON_GAPS))
+            (dst / f"{name}.svg").write_text(CINNAMON_GAPS(svg.read_text()))
+    CINNAMON_GAPS.check("the Cinnamon pictures")
 
-    (PACK / "plank").mkdir()
-    dock = plank(src / "plank" / "dock.theme")
+    (pack / "plank").mkdir()
+    dock = plank(src / "plank" / "dock.theme", DOCK)
     for variant in ("light", "dark"):
-        (PACK / "plank" / f"dock-{variant}.theme").write_text(dock)
+        (pack / "plank" / f"dock-{variant}.theme").write_text(dock)
 
     label = {
         "label": "Orchis",
@@ -305,15 +307,20 @@ def main() -> None:
         "licence": "GPL-3.0",
         "source": "https://github.com/vinceliuice/Orchis-theme",
     }
-    (PACK / "skin.json").write_text(json.dumps(label, indent=2) + "\n")
-    shutil.copy(upstream / "COPYING", PACK / "LICENSE")
-    (PACK / "SOURCES.md").write_text(
+    (pack / "skin.json").write_text(json.dumps(label, indent=2) + "\n")
+    shutil.copy(upstream / "COPYING", pack / "LICENSE")
+    (pack / "SOURCES.md").write_text(
         f"Made by shell/skins/make_orchis.py from Orchis-theme {commit[0]}"
         f" ({commit[1]}),\n{label['source']}, GPL-3.0. The Sass and pictures are"
         " upstream's; the\npalette (`sass/_color-palette-osiris.scss`), the text"
         " colours in\n`sass/_colors.scss`, the SVGs cut from `src/gtk/assets.svg`"
         " in place of its\nPNGs, and the gap markers are Osiris's.\n"
     )
+
+
+def main() -> None:
+    upstream = Path(sys.argv[1]).resolve()
+    rewrite(PACK, lambda pack: make(upstream, pack))
     print("wrote", PACK)
 
 
