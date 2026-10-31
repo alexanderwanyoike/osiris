@@ -22,6 +22,7 @@ from .conftest import now
 class FakeDrawer:
     def __init__(self) -> None:
         self.entry = SimpleNamespace(grab_focus=lambda: None)
+        self.drafts: list[str] = []
         self.refreshes = 0
 
     def clear(self) -> None:
@@ -32,6 +33,9 @@ class FakeDrawer:
 
     def summon(self) -> None:
         pass
+
+    def draft(self, text: str) -> None:
+        self.drafts.append(text)
 
 
 class App(SimpleNamespace):
@@ -62,6 +66,7 @@ def app() -> tuple[App, FakeEngine]:
         unread=Unread(files, HOME),
         sent=[],
         withdrawn=[],
+        waiting=None,
     )
     stand_in.send_notification = lambda session, notification: stand_in.sent.append(
         (session, notification)

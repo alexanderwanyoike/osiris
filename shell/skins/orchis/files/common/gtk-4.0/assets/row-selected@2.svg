@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="288" height="108" viewBox="210 250 144 54"><g id="row-selected" transform="translate(138,17)">
+    <rect x="72" y="233" width="144" height="54" fill="{{surface}}" id="rect186" />
+    <path d="m216 233c0 4.986-4.014 9-9 9h-93c-9.972 0-18 8.028-18 18s8.028 18 18 18h93c4.986 0 9 4.014 9 9v-45z" fill="{{surface}}" id="path188" />
+  </g>
+  </svg>

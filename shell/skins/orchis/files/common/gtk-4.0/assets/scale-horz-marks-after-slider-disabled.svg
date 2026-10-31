@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24" height="24" viewBox="72 40 24 24"><defs><linearGradient id="color-text-secondary-disabled">
+      <stop stop-color="{{foreground}}" stop-opacity=".26" offset="1" id="stop8" />
+    </linearGradient>
+    <linearGradient id="color-background">
+      <stop stop-color="{{background}}" offset="1" id="stop20" />
+    </linearGradient>
+    <g id="base-scale-horz-marks-before-slider">
+      <rect width="24" height="24" fill="none" id="rect37" />
+      <path transform="rotate(45 12 12)" d="m6 6h6a6 6 0 1 1-6 6z" id="path39" />
+    </g>
+    <g id="base-scale-horz-marks-after-slider">
+      <use transform="rotate(180 12 12)" xlink:href="#base-scale-horz-marks-before-slider" id="use45" />
+    </g>
+    <linearGradient id="linearGradient992" x1="-3.5527e-15" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-background" />
+    <linearGradient id="linearGradient994" x1="-3.5527e-15" x2="24" gradientUnits="userSpaceOnUse" xlink:href="#color-text-secondary-disabled" />
+    </defs><g id="scale-horz-marks-after-slider-disabled" transform="translate(72,40)">
+    <use width="100%" height="100%" fill="url(#linearGradient992)" xlink:href="#base-scale-horz-marks-after-slider" id="use107" />
+    <use width="100%" height="100%" fill="url(#linearGradient994)" xlink:href="#base-scale-horz-marks-after-slider" id="use109" />
+  </g>
+  </svg>

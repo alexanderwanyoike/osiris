@@ -38,6 +38,20 @@ def test_a_folder_without_a_label_is_not_a_skinpack(tmp_path: Path) -> None:
         read(tmp_path / "empty")
 
 
+@pytest.mark.parametrize(
+    "content",
+    [b"{not json", b"[]", b'"Colloid"', b'{"label": "Caf\xe9"}', b"{}"],
+)
+def test_a_malformed_label_is_a_skinpack_error(tmp_path: Path, content: bytes) -> None:
+    """Anything else escapes the listing that skips broken Skins, and with it
+    every Theme switch and login."""
+    root = tmp_path / "colloid"
+    root.mkdir()
+    (root / "skin.json").write_bytes(content)
+    with pytest.raises(SkinpackError, match=r"skin\.json"):
+        read(root)
+
+
 def test_a_label_missing_a_field_says_which(tmp_path: Path) -> None:
     label = {k: v for k, v in LABEL.items() if k != "licence"}
     with pytest.raises(SkinpackError, match="licence"):
@@ -101,3 +115,29 @@ def test_one_icon_set_may_serve_both_variants(tmp_path: Path) -> None:
         make_pack(tmp_path / "colloid", {**LABEL, "look": {"icons": "Papirus"}})
     )
     assert pack.look("light").icons == pack.look("dark").icons == "Papirus"
+
+
+@pytest.mark.parametrize(
+    "look",
+    [
+        "Papirus",
+        {"font": 10},
+        {"icons": ["Papirus"]},
+        {"icons": {"dark": 3}},
+        {"font": "Inter\n10"},
+    ],
+)
+def test_a_malformed_look_is_refused_when_read(tmp_path: Path, look: object) -> None:
+    """A bad look would otherwise break every Theme switch, at login too."""
+    with pytest.raises(SkinpackError, match="look"):
+        read(make_pack(tmp_path / "colloid", {**LABEL, "look": look}))
+
+
+@pytest.mark.parametrize("name", ["osiris", "Colloid", "a b", "a\nb", "-x", ".hidden"])
+def test_a_skin_needs_a_plain_name_that_is_not_osiris(
+    tmp_path: Path, name: str
+) -> None:
+    """The name becomes a theme name and a settings value, and "osiris" is
+    Osiris's own look."""
+    with pytest.raises(SkinpackError, match="name"):
+        read(make_pack(tmp_path / name, LABEL))

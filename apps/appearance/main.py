@@ -11,6 +11,8 @@ Run directly, or install the .desktop file alongside it.
 """
 import os
 import sys
+import threading
+import time
 from pathlib import Path
 
 import gi
@@ -40,12 +42,25 @@ import drift  # noqa: E402
 import engine  # noqa: E402
 
 from creator import Creator  # noqa: E402
-from skins_page import SkinsPage  # noqa: E402
+from skin_editor import CSS as EDITOR_CSS, SkinEditor  # noqa: E402
+from skins_page import CSS as SKINS_CSS, SkinsPage, new_skin  # noqa: E402
 
 # creator has put the osiris package on sys.path.
+from osiris.apps.theme_scheme import ThemeScheme  # noqa: E402
 from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.model.names import slug  # noqa: E402
+from osiris.skins.imports import ARCHIVE_SUFFIXES, FONT_SUFFIXES  # noqa: E402
 from osiris.themes.library import Filter, arrange  # noqa: E402
+
+ARCHIVES = ARCHIVE_SUFFIXES
+FONTS = tuple(sorted(FONT_SUFFIXES))
+CONVERT = ("Convert this imported theme so it follows my Theme: replace its "
+           "written-in colours with the Theme's gaps, for light and dark, then "
+           "wear it.")
+HARNESS = "dev.osiris.Harness"
+HARNESS_PATH = "/dev/osiris/Harness"
+#: Long enough for D-Bus to start Osiris cold and for it to answer.
+HARNESS_START_MS = 60_000
 
 FILTERS = ((Filter.ALL, "All"), (Filter.DARK, "Dark"),
            (Filter.LIGHT, "Light"), (Filter.MINE, "Mine"))
@@ -468,10 +483,265 @@ class Window(Adw.ApplicationWindow):
         self.reload()
 
     def _show_skins(self) -> None:
+        self._show_drawn()
+        self._draw_pictures()
+
+    def edit_skin(self, name: str, kept=None) -> None:
+        """Rename a Skin and choose its style, icons, cursor and font; kept
+        is a Choice made before the editor was closed to add to the look."""
+        # Reading every icon and cursor set, and drawing each cursor, takes
+        # long enough to freeze the window.
+        def gather() -> None:
+            try:
+                cursors = engine.cursor_sets()
+                found = {"details": engine.skin_details(name),
+                         "styles": engine.skin_styles(name),
+                         "icon_sets": engine.icon_sets(), "cursor_sets": cursors,
+                         "cursor_pictures": engine.cursor_pictures(cursors)}
+            except Exception as error:                  # noqa: BLE001
+                GLib.idle_add(self._not_editable, str(error))
+                return
+            if kept is not None:
+                found["details"] = {**found["details"], "style": kept.style,
+                                    "icons": kept.icons, "cursor": kept.cursor,
+                                    "font": kept.font,
+                                    "label": kept.label or found["details"]["label"]}
+            GLib.idle_add(self._open_editor, name, found)
+
+        threading.Thread(target=gather, daemon=True).start()
+
+    def _not_editable(self, error: str) -> bool:
+        self._toast(f"Could not open the editor: {error}")
+        return False
+
+    def _open_editor(self, name: str, found: dict) -> bool:
+        details = found["details"]
+
+        def saved(choice) -> bool:
+            try:
+                engine.save_skin(name, choice.label or details["label"],
+                                 choice.style, choice.icons, choice.cursor,
+                                 choice.font)
+            except Exception as error:                  # noqa: BLE001
+                self.toasts.add_toast(Adw.Toast(title=f"Not saved: {error}",
+                                                timeout=6))
+                return False
+            if engine.chosen_skin() == name:
+                self.wear(name)
+            else:
+                self._show_skins()
+            return True
+
+        def adding(kind: str):
+            def add() -> None:
+                kept = editor.choice()
+                editor.close()
+                self._add_to_look(kind, lambda: self.edit_skin(name, kept))
+            return add
+
+        editor = SkinEditor(
+            label=details["label"], styles=found["styles"],
+            style=details["style"], icon_sets=found["icon_sets"],
+            icons=details["icons"], cursor_sets=found["cursor_sets"],
+            cursor_pictures=found["cursor_pictures"],
+            cursor=details["cursor"], font=details["font"],
+            theme_icons=details["theme_icons"],
+            theme_font=details["theme_font"], on_save=saved,
+            on_code=lambda: self.open_in_code(name),
+            on_add_icons=adding("icons"), on_add_cursors=adding("cursors"),
+            on_add_fonts=adding("fonts"),
+        )
+        editor.present(self)
+        return False
+
+    def _add_to_look(self, kind: str, then) -> None:
+        """Install downloaded icon sets, cursor sets or fonts, then reopen."""
+        def chosen(paths: list[str]) -> None:
+            try:
+                if paths and kind == "fonts":
+                    names = engine.import_fonts(paths)
+                    # GTK rereads fontconfig when this changes, so the font
+                    # chooser lists the new fonts without a restart.
+                    Gtk.Settings.get_default().set_property(
+                        "gtk-fontconfig-timestamp", int(time.time()))
+                elif paths:
+                    names = engine.import_icon_sets(paths[0])
+                else:
+                    names = []
+                if names:
+                    self._toast(f"Added {', '.join(names)}")
+            except Exception as error:                  # noqa: BLE001
+                self._toast(f"Not added: {error}")
+            then()
+
+        if kind == "fonts":
+            self._choose_files("Fonts", FONTS + ARCHIVES, chosen, many=True)
+        else:
+            self._choose_files("Icon and cursor sets", ARCHIVES, chosen)
+
+    def open_in_code(self, name: str) -> None:
+        """For those who would rather write the style sheets (ADR 0016)."""
+        try:
+            Gio.Subprocess.new(["code", engine.skin_folder(name)],
+                               Gio.SubprocessFlags.NONE)
+        except Exception as error:                      # noqa: BLE001
+            self.toasts.add_toast(Adw.Toast(title=f"Not opened: {error}",
+                                            timeout=6))
+
+    def create_skin(self) -> None:
+        bases = [skin for skin in engine.skin_choices() if skin[0] != "osiris"]
+
+        def create(label: str, base: str) -> None:
+            try:
+                made = engine.create_skin(label, base)
+            except Exception as error:                  # noqa: BLE001
+                self.toasts.add_toast(Adw.Toast(title=f"Not created: {error}",
+                                                timeout=6))
+                return
+            self._show_skins()
+            self.change_skin(made)
+
+        new_skin(bases, create).present(self)
+
+    def _draw_pictures(self) -> None:
+        """Draw the missing pictures off the main loop, showing each as it lands."""
+        if getattr(self, "_drawing", False):
+            return
+        stale = engine.stale_skin_pictures()
+        if not stale:
+            return
+        self._drawing = True
+
+        def draw() -> None:
+            for name in stale:
+                try:
+                    picture = engine.draw_skin_picture(name)
+                except Exception as error:              # noqa: BLE001
+                    print(f"appearance: picture of {name}: {error}",
+                          file=sys.stderr)
+                    continue
+                GLib.idle_add(self._landed, name, picture)
+            GLib.idle_add(self._drawn)
+
+        threading.Thread(target=draw, daemon=True).start()
+
+    def _landed(self, name: str, picture: str) -> bool:
+        page = self.skins.get_child()
+        # A picture of the Theme before a switch is not this page's.
+        if isinstance(page, SkinsPage) and engine.skin_pictures().get(name) == picture:
+            page.show_picture(name, picture)
+        return False
+
+    def _show_drawn(self) -> bool:
         self.skins.set_child(SkinsPage(
             engine.skin_choices(), engine.chosen_skin(), self.wear,
-            mine=engine.own_skins(), on_open=self.open_skin,
-            on_export=self.export_skin, on_delete=self.confirm_delete_skin))
+            mine=engine.own_skins(), previews=engine.skin_pictures(),
+            on_open=self.open_skin, on_export=self.export_skin,
+            on_delete=self.confirm_delete_skin,
+            on_duplicate=self.duplicate_skin, on_change=self.change_skin,
+            on_edit=self.edit_skin, on_create=self.create_skin,
+            on_import=self.import_gtk_theme))
+        return False
+
+    def _choose_files(self, title: str, suffixes: tuple[str, ...], chosen,
+                      many: bool = False) -> None:
+        """Ask for downloaded files; chosen gets their paths, or nothing."""
+        only = Gtk.FileFilter(name=title)
+        for suffix in suffixes:
+            only.add_suffix(suffix.lstrip("."))
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        filters.append(only)
+        dialog = Gtk.FileDialog(title=title, filters=filters)
+
+        def done(_dialog, result) -> None:
+            try:
+                if many:
+                    files = dialog.open_multiple_finish(result)
+                    paths = [files.get_item(i).get_path()
+                             for i in range(files.get_n_items())]
+                else:
+                    paths = [dialog.open_finish(result).get_path()]
+            except GLib.Error:
+                paths = []
+            chosen(paths)
+
+        if many:
+            dialog.open_multiple(self, None, done)
+        else:
+            dialog.open(self, None, done)
+
+    def _toast(self, title: str) -> None:
+        self.toasts.add_toast(Adw.Toast(title=title, timeout=5))
+
+    def import_gtk_theme(self) -> None:
+        def chosen(paths: list[str]) -> None:
+            if not paths:
+                return
+            try:
+                name = engine.import_gtk_theme(paths[0])
+            except Exception as error:                  # noqa: BLE001
+                self._toast(f"Not imported: {error}")
+                return
+            self._show_skins()
+            self._ask_osiris(name, CONVERT)
+
+        self._choose_files("GTK themes", ARCHIVES, chosen)
+
+    def _drawn(self) -> bool:
+        self._drawing = False
+        # A Theme picked while drawing leaves the new Theme's pictures to draw.
+        self._draw_pictures()
+        return False
+
+    def duplicate_skin(self, name: str) -> None:
+        try:
+            copy = engine.duplicate_skin(name)
+        except Exception as error:                      # noqa: BLE001
+            self.toasts.add_toast(Adw.Toast(title=f"Not copied: {error}",
+                                            timeout=6))
+            return
+        self._show_skins()
+        labels = {skin: label for skin, label, _c in engine.skin_choices()}
+        self.toasts.add_toast(Adw.Toast(
+            title=f"Copied as {labels.get(copy, copy)}", timeout=3))
+
+    def change_skin(self, name: str) -> None:
+        self._ask_osiris(name)
+
+    def _ask_osiris(self, name: str, draft: str | None = None) -> None:
+        """Open Osiris on a new Conversation in the Skin's folder, with a
+        request written in but not sent."""
+        try:
+            folder = engine.skin_folder(name)
+        except Exception as error:                      # noqa: BLE001
+            self._toast(f"Osiris did not open: {error}")
+            return
+        if draft:
+            action, parameter = ("new-conversation-in-with",
+                                 GLib.Variant("(ss)", (folder, draft)))
+        else:
+            action, parameter = "new-conversation-in", GLib.Variant("s", folder)
+
+        # Called rather than activated through a DBusActionGroup, which never
+        # says whether Osiris was there to hear it.
+        def answered(connection, result) -> None:
+            try:
+                connection.call_finish(result)
+            except GLib.Error as error:
+                self._toast(f"Osiris did not open: {error.message}")
+
+        def connected(_source, result) -> None:
+            try:
+                connection = Gio.bus_get_finish(result)
+            except GLib.Error as error:
+                self._toast(f"Osiris did not open: {error.message}")
+                return
+            connection.call(
+                HARNESS, HARNESS_PATH, "org.gtk.Actions", "Activate",
+                GLib.Variant("(sava{sv})", (action, [parameter], {})), None,
+                Gio.DBusCallFlags.NONE, HARNESS_START_MS, None, answered)
+
+        Gio.bus_get(Gio.BusType.SESSION, None, connected)
 
     def _skinpacks(self) -> Gio.ListStore:
         only = Gtk.FileFilter(name="Skinpacks")
@@ -494,7 +764,9 @@ class Window(Adw.ApplicationWindow):
                                                 timeout=6))
                 return
             self._show_skins()
-            self.toasts.add_toast(Adw.Toast(title=f"Added {name}", timeout=3))
+            labels = {skin: label for skin, label, _c in engine.skin_choices()}
+            self.toasts.add_toast(Adw.Toast(
+                title=f"Added {labels.get(name, name)}", timeout=3))
 
         dialog.open(self, None, chosen)
 
@@ -504,17 +776,36 @@ class Window(Adw.ApplicationWindow):
         def chosen(_dialog, result) -> None:
             try:
                 folder = dialog.select_folder_finish(result).get_path()
-                shared = engine.export_skin(name, folder)
             except GLib.Error:
                 return
-            except Exception as error:                  # noqa: BLE001
-                self.toasts.add_toast(Adw.Toast(title=f"Not exported: {error}",
-                                                timeout=6))
-                return
-            self.toasts.add_toast(Adw.Toast(
-                title=f"Saved {os.path.basename(shared)}", timeout=4))
+            shared = os.path.join(folder, f"{name}{engine.share.EXTENSION}")
+            if os.path.exists(shared):
+                self._confirm_replace(shared, lambda: self._export(name, folder))
+            else:
+                self._export(name, folder)
 
         dialog.select_folder(self, None, chosen)
+
+    def _confirm_replace(self, path: str, replace) -> None:
+        dialog = Adw.AlertDialog(
+            heading=f"Replace {os.path.basename(path)}?",
+            body="A file of that name is already in the folder.")
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("replace", "Replace")
+        dialog.set_response_appearance("replace",
+                                       Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_close_response("cancel")
+        dialog.connect("response", lambda _d, response:
+                       replace() if response == "replace" else None)
+        dialog.present(self)
+
+    def _export(self, name: str, folder: str) -> None:
+        try:
+            shared = engine.export_skin(name, folder)
+        except Exception as error:                      # noqa: BLE001
+            self._toast(f"Not exported: {error}")
+            return
+        self._toast(f"Saved {os.path.basename(shared)}")
 
     def confirm_delete_skin(self, name: str) -> None:
         dialog = Adw.AlertDialog(heading="Delete this Skin?",
@@ -543,9 +834,9 @@ class Window(Adw.ApplicationWindow):
         try:
             engine.set_skin(name)
         except Exception as error:                      # noqa: BLE001
-            self.toasts.add_toast(Adw.Toast(title=f"Failed: {error}",
+            # The desktop may have fallen back to Osiris's own look.
+            self.toasts.add_toast(Adw.Toast(title=f"Not worn: {error}",
                                             timeout=6))
-            return
         self.get_application().reload_user_css()
         self._show_skins()
 
@@ -562,10 +853,10 @@ class Window(Adw.ApplicationWindow):
             self.toasts.add_toast(Adw.Toast(title=f"Failed: {error}",
                                             timeout=6))
             return
-        Adw.StyleManager.get_default().set_color_scheme(
-            Adw.ColorScheme.FORCE_DARK if theme.get("dark", True)
-            else Adw.ColorScheme.FORCE_LIGHT)
+        # At once, rather than when the file monitor catches up.
+        self.get_application().theme_scheme.follow()
         self.get_application().reload_user_css()
+        self._show_skins()
         for card in self.cards:
             card.set_selected(card.theme["name"] == theme["name"])
         note = f"{theme['label']} applied"
@@ -585,29 +876,20 @@ class Application(Adw.Application):
         if self.user_css is not None:
             self.user_css.reload()
 
-    def do_activate(self):
-        # libadwaita normally takes light/dark from the XDG settings portal.
-        # Cinnamon does not serve that, so the app would always render light on
-        # a dark desktop. Follow the active Osiris theme instead.
-        active = engine.current()
-        dark = True
-        if active:
-            try:
-                dark = engine.load(active).get("dark", True)
-            except KeyError:
-                pass
-        Adw.StyleManager.get_default().set_color_scheme(
-            Adw.ColorScheme.FORCE_DARK if dark else Adw.ColorScheme.FORCE_LIGHT)
-
-        display = Gdk.Display.get_default()
+    def do_startup(self):
+        Adw.Application.do_startup(self)
+        self.theme_scheme = ThemeScheme(Path(engine.STATE), engine.load)
         self.user_css = UserCss(
             Path(engine.HOME) / ".config" / "gtk-4.0" / "gtk.css")
+        display = Gdk.Display.get_default()
         if display is not None:
             # Our widget styling above the user palette.
             provider = Gtk.CssProvider()
-            provider.load_from_data(CSS)
+            provider.load_from_data(CSS + SKINS_CSS + EDITOR_CSS)
             Gtk.StyleContext.add_provider_for_display(
                 display, provider, UserCss.PRIORITY + 1)
+
+    def do_activate(self):
         Window(self).present()
 
 

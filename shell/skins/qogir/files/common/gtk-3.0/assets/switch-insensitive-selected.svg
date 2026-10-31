@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink" width="50" height="20" viewBox="310 -146 50 20"><defs><linearGradient id="selected_fg_color" inkscape:swatch="solid">
+      <stop stop-color="#ffffffgit" offset="0" id="stop11" />
+    </linearGradient>
+    <linearGradient inkscape:collect="always" xlink:href="#selected_fg_color" id="linearGradient1636" gradientUnits="userSpaceOnUse" x1="-125" y1="-282.64001" x2="-125" y2="-302.64001" />
+    <linearGradient inkscape:collect="always" xlink:href="#selected_fg_color" id="linearGradient1638" gradientUnits="userSpaceOnUse" x1="-140" y1="-285.64001" x2="-140" y2="-299.64001" />
+    <linearGradient inkscape:collect="always" xlink:href="#selected_fg_color" id="linearGradient1640" gradientUnits="userSpaceOnUse" x1="-140" y1="-285.64001" x2="-140" y2="-299.64001" />
+    </defs><g transform="matrix(1 0 0 1 0 -76)"><g style="opacity:0.5" id="switch-insensitive-selected" transform="translate(460,232.64)">
+      <path d="m -140,-302.64 c -5.54,0 -10,4.46 -10,10 0,5.54 4.46,10 10,10 h 30 c 5.54,0 10,-4.46 10,-10 0,-5.54 -4.46,-10 -10,-10 z m 0,1 h 30 c 4.986,0 9,4.014 9,9 0,4.986 -4.014,9 -9,9 h -30 c -4.986,0 -9,-4.014 -9,-9 0,-4.986 4.014,-9 9,-9 z" style="opacity:0.75;fill:url(#linearGradient1636);paint-order:stroke fill markers" id="path255" inkscape:connector-curvature="0" />
+      <circle cx="-140" cy="-292.64001" r="7" style="opacity:0.15;fill:url(#linearGradient1638);paint-order:stroke fill markers" id="circle257" />
+      <path d="m -140,-299.64 a 7,7 0 0 0 -7,7 7,7 0 0 0 7,7 7,7 0 0 0 7,-7 7,7 0 0 0 -7,-7 z m 0,1 a 6,6 0 0 1 6,6 6,6 0 0 1 -6,6 6,6 0 0 1 -6,-6 6,6 0 0 1 6,-6 z" style="opacity:0.75;fill:url(#linearGradient1640);paint-order:stroke fill markers" id="path259" inkscape:connector-curvature="0" />
+    </g>
+    </g></svg>

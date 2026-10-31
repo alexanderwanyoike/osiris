@@ -1,0 +1,63 @@
+// Graphite's colours, rebuilt from the Theme's colours ($gap-* from _gaps.scss).
+@import 'gaps';
+
+$osiris-light: $gap-variant == 'light';
+$osiris-dark-ink: if($osiris-light, $gap-foreground, $gap-background);
+$osiris-light-ink: if($osiris-light, $gap-background, $gap-foreground);
+
+@function osiris-brightness($c) {
+  @return (red($c) * 299 + green($c) * 587 + blue($c) * 114) / 1000;
+}
+
+$osiris-midpoint: (
+  osiris-brightness($gap-foreground) + osiris-brightness($gap-background)
+) / 2;
+
+// Graphite is monochrome: its theme colour is its only accent.
+@function theme($color) {
+  @return $gap-accent;
+}
+
+// Upstream's two grey ramps: a-d the light end, e-h the dark end. The end on
+// the Theme's side is anchored to its background and surface; the far end
+// (Graphite's dark tooltips on a light window) comes from its foreground.
+$osiris-ramp: if($osiris-light, (
+  a: $gap-background,
+  b: $gap-surface,
+  c: $gap-surface,
+  d: mix($gap-foreground, $gap-background, 25%),
+  e: mix(#000, $gap-foreground, 10%),
+  f: mix(#000, $gap-foreground, 5%),
+  g: $gap-foreground,
+  h: mix($gap-background, $gap-foreground, 10%),
+), (
+  a: $gap-foreground,
+  b: mix($gap-background, $gap-foreground, 3%),
+  c: mix($gap-background, $gap-foreground, 6%),
+  d: mix($gap-background, $gap-foreground, 25%),
+  e: $gap-surface,
+  f: $gap-surface,
+  g: $gap-background,
+  h: mix($gap-foreground, $gap-surface, 9%),
+));
+
+@function background($type) {
+  @return map-get($osiris-ramp, $type);
+}
+
+// Upstream inks in black or white; these ink in the Theme's foreground and
+// background, keeping upstream's opacity for each state.
+$osiris-on-light: (primary: 1, secondary: 0.6, disabled: 0.38, secondary-disabled: 0.26,
+  track: 0.26, track-disabled: 0.12, divider: 0.12, secondary-fill: 0.08, fill: 0.04);
+$osiris-on-dark: (primary: 1, secondary: 0.7, disabled: 0.5, secondary-disabled: 0.3,
+  track: 0.3, track-disabled: 0.12, divider: 0.12, secondary-fill: 0.08, fill: 0.04);
+
+@function on($color, $state: 'primary') {
+  @if ($color == 'light') { $color: $osiris-light-ink; }
+  @if ($color == 'dark') { $color: $osiris-dark-ink; }
+
+  @if (osiris-brightness($color) >= $osiris-midpoint) {
+    @return rgba($osiris-dark-ink, map-get($osiris-on-light, $state));
+  }
+  @return rgba($osiris-light-ink, map-get($osiris-on-dark, $state));
+}
