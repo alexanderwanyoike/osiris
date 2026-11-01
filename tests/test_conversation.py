@@ -532,3 +532,14 @@ def test_a_conversation_with_a_card_open_waits_for_the_person() -> None:
     talk.apply(Allowed(S, "shell", ("ls /etc",), "call_1"))
     talk.needs_password(Request(("pacman", "-S", "cowsay")))
     assert talk.waits_for_person
+
+
+def test_a_question_can_be_gone_back_to_once_nothing_is_answering() -> None:
+    """Its message names it to the Engine, which refuses while it runs."""
+    talk = Conversation.restored([PastTurn("make x.txt", "Made it.", None, "msg_1")])
+    first = talk.turns[0]
+    assert first.message == "msg_1"
+    assert talk.can_go_back(first)
+    talk.asked("make y.txt")
+    assert not talk.can_go_back(first)
+    assert not talk.can_go_back(talk.turns[-1])
