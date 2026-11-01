@@ -196,6 +196,27 @@ def test_long_output_is_folded_until_asked_for() -> None:
     assert "line 39" in texts(step.get_child())
 
 
+def test_a_refused_step_shows_the_rule_that_refused_it() -> None:
+    turn = finished()
+    turn.steps = [
+        Step("shell", ("ls",), allowed=False, refused_by="Runs only with X on")
+    ]
+    step = find(find(drawn(turn), Gtk.Expander).get_child(), Gtk.Expander)
+    note = next(
+        w
+        for w in widgets(step.get_child())
+        if isinstance(w, Gtk.Label) and w.get_text() == "Runs only with X on"
+    )
+    assert "harness-step-note" in note.get_css_classes()
+
+
+def test_a_tool_shows_its_inputs() -> None:
+    turn = finished()
+    turn.steps = [Step("osiris_apply_theme", ("*",), input={"name": "calm-night"})]
+    step = find(find(drawn(turn), Gtk.Expander).get_child(), Gtk.Expander)
+    assert "name: calm-night" in texts(step.get_child())
+
+
 def test_an_answer_that_took_no_steps_keeps_no_record() -> None:
     view = drawn(finished())
     assert not any(text.startswith("Used") for text in shown(view))
