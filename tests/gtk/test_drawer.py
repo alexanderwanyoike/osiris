@@ -224,7 +224,9 @@ def button(window: object, label: str) -> object:
     from gi.repository import Gtk
 
     return next(
-        w for w in widgets(window) if isinstance(w, Gtk.Button) and w.get_label() == label
+        w
+        for w in widgets(window)
+        if isinstance(w, Gtk.Button) and w.get_label() == label
     )
 
 
