@@ -132,3 +132,13 @@ def said_of(state: State | None) -> tuple[str, str]:
     if state.status == "failed":
         return f"Failed: {state.error}" if state.error else "Failed", "danger"
     return _SAID.get(state.status, (state.status, "muted"))
+
+
+def connector_of(name: str, typed: str) -> Connector | None:
+    """What the form describes: a server reached at a web address, or one
+    started by a command; nothing while either part is missing or unfinished."""
+    name, typed = name.strip(), typed.strip()
+    if typed.startswith(("https://", "http://")):
+        return Connector(name, url=typed) if name else None
+    command = command_of(typed)
+    return Connector(name, command=command) if name and command else None
