@@ -137,7 +137,14 @@ class Engine(Protocol):
         model, or its own folder."""
         ...
 
-    def send(self, session: str, text: str) -> None: ...
+    def send(self, session: str, text: str) -> str:
+        """Send a message; while the session is busy it waits and steers the
+        model at its next step. Answers where it waits."""
+        ...
+
+    def withdraw(self, session: str, message: str) -> None:
+        """Take back a message that is still waiting."""
+        ...
 
     def events(self) -> Iterator[Event]:
         """Every session's events, for as long as the Engine runs."""

@@ -117,8 +117,18 @@ class OpencodeEngine:
         session: str = self._post("/api/session", body)["data"]["id"]
         return session
 
-    def send(self, session: str, text: str) -> None:
-        self._post(f"/api/session/{session}/prompt", {"text": text})
+    def send(self, session: str, text: str) -> str:
+        """opencode puts the message in the session's inbox, delivered at the
+        model's next step if it is busy, and answers with the item."""
+        item = self._post(f"/api/session/{session}/prompt", {"text": text})
+        return str((item or {}).get("data", {}).get("id", ""))
+
+    def withdraw(self, session: str, message: str) -> None:
+        self._http.request(
+            "DELETE",
+            self._service.url + f"/api/session/{session}/inbox/{message}",
+            headers=self._service.headers(),
+        )
 
     def reply(self, session: str, request: str, *, allow: bool, message: str) -> None:
         try:
