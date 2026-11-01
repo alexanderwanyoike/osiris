@@ -58,6 +58,7 @@ def app() -> tuple[App, FakeEngine]:
         conversation=Conversation(),
         backgrounded={},
         admin_pending={},
+        approvals={},
         drawer=FakeDrawer(),
         background=now,
         histories=0,
