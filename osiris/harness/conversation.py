@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from enum import Enum
@@ -85,6 +86,21 @@ class Waiting:
 _ACTIONS = {"write": "edit", "patch": "edit", "apply_patch": "edit", "bash": "shell"}
 #: The input naming what a tool works on, in the order looked for.
 _SUBJECT = ("command", "path", "filePath", "file_path", "pattern", "url", "query")
+
+
+#: A tool server's tool called from the catalogue's code:
+#: ``tools.osiris.apply_theme(`` or ``tools["osiris"].list_themes(``. Built-in
+#: tools, ``tools.shell(``, are reported as calls of their own.
+_SERVER_CALL = re.compile(r"tools(?:\.(\w+)|\[\"([^\"]+)\"\])\.(\w+)\s*\(")
+
+
+def _from_code(call: str, arguments: Mapping[str, object]) -> list[Step]:
+    """The tool servers' tools the catalogue's code runs, as steps."""
+    code = str(arguments.get("code", ""))
+    return [
+        Step(f"{dotted or quoted}_{tool}", ("*",), True, call, arguments)
+        for dotted, quoted, tool in _SERVER_CALL.findall(code)
+    ]
 
 
 def _ran(name: str, call: str, arguments: Mapping[str, object]) -> Step:
@@ -227,8 +243,11 @@ class Conversation:
                 ]
             case ToolCalled(_, call, arguments, _, name):
                 self._inputs[call] = arguments
-                if name:
-                    turn.steps.append(_ran(name, call, arguments))
+                ran = _from_code(call, arguments) if name == "execute" else None
+                if ran is None and name:
+                    ran = [_ran(name, call, arguments)]
+                if ran:
+                    turn.steps += ran
                     turn.doing = turn.steps[-1].doing
             case Allowed(_, action, resources, call):
                 if not any(step.call == call for step in turn.steps if call):
