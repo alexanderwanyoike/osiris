@@ -475,7 +475,9 @@ class Drawer(Gtk.ApplicationWindow):
         connectors = ConnectorsPage(
             read=self.app.read_connectors, save=self.app.save_connector,
             remove=self.app.remove_connector, states=self.app.connector_states,
-            background=self.app.background)
+            background=self.app.background,
+            later=lambda seconds, then: GLib.timeout_add_seconds(
+                seconds, lambda: then() or False))
         tabs = Adw.ViewStack(vhomogeneous=False)
         tabs.add_titled_with_icon(page, "providers", "Models",
                                   "preferences-system-symbolic")
