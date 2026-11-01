@@ -10,6 +10,7 @@ import pytest
 
 from osiris.harness.engine import (
     Answered,
+    Delivered,
     Failed,
     Finished,
     ModelRef,
@@ -368,6 +369,13 @@ class TestEvents:
         (request,) = self.events(asked)
         assert isinstance(request, ToolRequested)
         assert request.patterns == ("ls *", "head *")
+
+    def test_a_waiting_message_that_reaches_the_model_is_delivered(self) -> None:
+        delivered = {
+            "type": "session.inbox.delivered",
+            "data": {"sessionID": SESSION, "inboxID": "msg_1"},
+        }
+        assert self.events(delivered) == [Delivered(SESSION, "msg_1")]
 
     def test_a_refusal_is_a_failure_carrying_the_engines_message(self) -> None:
         assert self.events(FREE_TIER_REFUSAL) == [
