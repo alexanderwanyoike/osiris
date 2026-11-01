@@ -871,3 +871,37 @@ class TestConnectors:
         wiki = Entry("connector", "wiki", "wiki", "")
         engine(http).send(SESSION, "ask @wiki", (Reference(wiki, 4, 9),))
         assert http.requests == [("POST", path, {"text": "ask @wiki"})]
+
+
+class TestContext:
+    def test_what_fills_the_context_is_sized_by_kind_with_the_tokens_in_use(
+        self,
+    ) -> None:
+        from osiris.harness.context import ContextUse
+
+        messages = [
+            {"type": "system", "text": "i" * 400},
+            {"type": "user", "text": "q" * 40},
+            {
+                "type": "assistant",
+                "content": [
+                    {"type": "tool", "name": "read", "state": {"output": "x" * 70}},
+                    {"type": "text", "text": "a" * 80},
+                ],
+                "tokens": {
+                    "input": 2675,
+                    "output": 37,
+                    "reasoning": 0,
+                    "cache": {"read": 8448, "write": 0},
+                },
+            },
+            {"type": "idle", "outcome": "succeeded"},
+        ]
+        path = f"{URL}/api/session/{SESSION}/context"
+        http = FakeHttpClient(replies={("GET", path): {"data": messages}})
+        use = engine(http).context_use(SESSION)
+        assert use == ContextUse(
+            # About four characters a token; a tool call by all it carries.
+            {"instructions": 100, "questions": 10, "answers": 20, "tools": 31},
+            used=11_160,
+        )
