@@ -319,7 +319,7 @@ class Harness:
             always = answer is Answer.ALWAYS
             self._reply(session, request, Reply.ALWAYS if always else Reply.ONCE, "")
         self._log.write(
-            "answered",
+            "replied",
             session=session,
             action=asking.action,
             resources=list(asking.resources),
