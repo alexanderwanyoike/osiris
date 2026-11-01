@@ -198,7 +198,9 @@ class Drawer(Gtk.ApplicationWindow):
         # Expanded to the whole screen, lines stay a readable length.
         self.scroller = Gtk.ScrolledWindow(
             child=Adw.Clamp(maximum_size=READABLE, child=self.turns), vexpand=True,
-            hscrollbar_policy=Gtk.PolicyType.NEVER)
+            hscrollbar_policy=Gtk.PolicyType.NEVER,
+            # It scrolls; the rail at its edge shows where, in its place.
+            vscrollbar_policy=Gtk.PolicyType.EXTERNAL)
 
         self.entry = Gtk.TextView(wrap_mode=Gtk.WrapMode.WORD_CHAR, accepts_tab=False,
                                   hexpand=True, top_margin=6, bottom_margin=6)
