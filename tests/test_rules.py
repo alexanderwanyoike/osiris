@@ -46,3 +46,12 @@ def test_what_else_the_engines_config_says_is_kept() -> None:
     assert config["snapshots"] is True
     assert config["permissions"]
 
+
+
+def test_rules_the_person_has_are_never_overwritten() -> None:
+    """Not even an empty list, which keeps the Engine's own defaults."""
+    for theirs in ([], [{"action": "*", "resource": "*", "effect": "allow"}]):
+        files = FakeFileSystem()
+        files.write(ENGINE, json.dumps({"permissions": theirs}))
+        write_starting_rules(files, HOME)
+        assert json.loads(files.read(ENGINE))["permissions"] == theirs
