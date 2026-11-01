@@ -64,6 +64,9 @@ The first slice of ROADMAP P3.5:
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
   question. Every step it took, allowed or refused, is kept under the answer,
+  whether the person allowed it, auto mode did, or the Engine's rules ran it
+  without asking (named by the tool's `session.tool.input.started`; an Osiris
+  tool run from opencode's tool catalogue is read from the catalogue's code),
   folded away as "Used 4 tools", each in the past tense ("Edited
   pomodoro/main.py") or as "Not allowed to run ls /etc". Each step opens to
   what it asked for and what came back, drawn for its kind
