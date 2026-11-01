@@ -117,7 +117,6 @@ POMODORO = HOME / "Code" / "pomodoro"
 
 def harness(
     model: ModelRef | None = GPT,
-    tiers: dict[str, Tier] | None = None,
     allowed: list[bool] | None = None,
 ) -> tuple[Harness, FakeEngine, FakeFileSystem]:
     engine, files = FakeEngine(), FakeFileSystem()
@@ -126,9 +125,7 @@ def harness(
         engine,
         log,
         model,
-        tiers=tiers or {},
         directory=HOME,
-        may_touch=lambda path: path == POMODORO or POMODORO in path.parents,
         tools=("osiris", ["python3", "tool_server.py"]),
         allow_everything=lambda: bool(allowed and allowed[0]),
     )
@@ -220,7 +217,7 @@ def test_whatever_the_engine_asks_about_waits_for_the_person(
 ) -> None:
     """The Engine's rules decided it should ask, so no tier of the Harness's
     answers in the person's place (ADR 0020)."""
-    subject, engine, _ = harness(tiers={"osiris_apply_theme": Tier.UNDOABLE})
+    subject, engine, _ = harness()
     subject.ask("make it calm")
     decision = subject.handle(ToolRequested("ses_1", "per_1", action, resources))
     assert isinstance(decision, Asking)

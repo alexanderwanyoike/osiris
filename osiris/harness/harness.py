@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import posixpath
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path
@@ -55,14 +54,6 @@ class Refused:
     reason: str = ""
 
 
-#: The Engine's own file tools, allowed only on files inside a Program: reading
-#: is a look, and editing is undoable because a Program's changes are commits.
-FILE_TIERS = {
-    "read": Tier.LOOK,
-    "external_directory": Tier.LOOK,
-    "edit": Tier.UNDOABLE,
-}
-
 #: The Engine's tool for running a command: opencode 2.0 names it shell, and
 #: 1.x named it bash.
 COMMAND_ACTIONS = frozenset({"shell", "bash"})
@@ -106,23 +97,17 @@ class Harness:
         log: HarnessLog,
         model: ModelRef | None = None,
         *,
-        tiers: Mapping[str, Tier],
         directory: Path,
-        may_touch: Callable[[Path], bool],
         tools: tuple[str, list[str]] | None = None,
         allow_everything: Callable[[], bool] = lambda: False,
     ) -> None:
-        """``tiers`` names every action the Harness may take; it rejects the rest.
-        File actions are allowed only on paths ``may_touch`` accepts, read from
-        ``directory``, where the Harness's session runs."""
+        """``directory`` is where a Conversation with no Project runs."""
         self._engine = engine
         self._log = log
         self._model = model
-        self._tiers = tiers
         self._directory = directory
         #: Where a Conversation with no Project runs.
         self._home = directory
-        self._may_touch = may_touch
         #: The tool server, which the Engine keeps per folder.
         self._tools = tools
         self._tools_in: set[Path] = set()
@@ -235,27 +220,6 @@ class Harness:
     def stop(self) -> None:
         if self._session is not None:
             self._engine.stop(self._session)
-
-    def _tier(
-        self, session: str, action: str, resources: tuple[str, ...]
-    ) -> Tier | None:
-        if action in self._tiers:
-            return self._tiers[action]
-        folder = self._running.get(session, self._directory)
-        if (
-            action in FILE_TIERS
-            and resources
-            and all(self._inside(folder, resource) for resource in resources)
-        ):
-            return FILE_TIERS[action]
-        return Tier.ANYTHING if self._allow_everything() else None
-
-    def _inside(self, folder: Path, resource: str) -> bool:
-        """Whether a path the Engine names, relative to the session's folder or
-        absolute, and perhaps a folder pattern ending in ``*``, is one the
-        Harness may touch. ``..`` is resolved first, so it cannot climb out."""
-        path = posixpath.join(str(folder), resource.removesuffix("*"))
-        return self._may_touch(Path(posixpath.normpath(path)))
 
     def running_sudo(self) -> str | None:
         """The session an admin request is for: of those running, the one

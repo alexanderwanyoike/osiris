@@ -48,9 +48,7 @@ class App(SimpleNamespace):
 def app() -> tuple[App, FakeEngine]:
     engine, files = FakeEngine(), FakeFileSystem()
     log = HarnessLog(files, HOME / LOG_FILE)
-    harness = Harness(
-        engine, log, GPT, tiers={}, directory=HOME, may_touch=lambda _path: False
-    )
+    harness = Harness(engine, log, GPT, directory=HOME)
     stand_in = App(
         harness=harness,
         log=log,

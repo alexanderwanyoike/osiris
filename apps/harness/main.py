@@ -54,7 +54,7 @@ from skin_store import EngineSkinStore  # noqa: E402
 from theme_store import EngineStore, user_wallpapers  # noqa: E402
 
 from osiris.apps.user_css import UserCss  # noqa: E402
-from osiris.apps.tool_server import NAME as TOOLS, TIERS, undo  # noqa: E402
+from osiris.apps.tool_server import NAME as TOOLS, undo  # noqa: E402
 
 from osiris.harness import admin  # noqa: E402
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
@@ -1187,15 +1187,13 @@ class Application(Adw.Application):
                 service = locate(files, me, SubprocessRunner(sink=lambda _l: None))
                 self.engine_pid = service.pid
                 engine = OpencodeEngine(UrllibClient(), service)
-                tiers = {engine.action(TOOLS, tool): tier for tool, tier in TIERS.items()}
                 # A restarted service has a new password, so the Harness is
                 # rebuilt around the new connection; the next question opens
                 # a new session.
                 self.log = HarnessLog(files, me.home / LOG_FILE)
                 self.harness = Harness(engine, self.log, self.models.default,
-                                       tiers=tiers, directory=me.home,
+                                       directory=me.home,
                                        tools=(TOOLS, [sys.executable, TOOL_SERVER]),
-                                       may_touch=self.programs().holds,
                                        allow_everything=lambda: allows_everything(
                                            self.files, self.home))
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
