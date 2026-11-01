@@ -439,9 +439,9 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-canvas .navigation-sidebar row:selected { background-color: alpha(@harness_fg, 0.08); color: @harness_fg; }
 .harness-canvas .navigation-sidebar row:selected label { color: @harness_fg; }
 .harness-tree-heading label { color: @harness_muted; font-size: 0.75em; font-weight: 600; letter-spacing: 0.04em; padding-top: 8px; }
-.harness-added, .harness-removed { font-size: 0.8em; font-feature-settings: "tnum"; }
-.harness-added { color: @harness_success; }
-.harness-removed { color: @harness_danger; }
+.harness-count-added, .harness-count-removed { font-size: 0.8em; font-feature-settings: "tnum"; }
+.harness-count-added { color: @harness_success; }
+.harness-count-removed { color: @harness_danger; }
 .harness-page entry { min-height: 26px; font-size: 0.86em; border-radius: 7px; }
 .harness-canvas scrolledwindow, .harness-canvas viewport, .harness-canvas list, .harness-canvas .navigation-sidebar { background-color: transparent; box-shadow: none; }
 .harness-terminal { padding: 8px 12px; }

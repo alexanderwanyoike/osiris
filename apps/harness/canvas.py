@@ -413,8 +413,8 @@ class Canvas(Gtk.Box):
                                ellipsize=Pango.EllipsizeMode.START)
             folder.add_css_class("harness-meta")
             line.append(folder)
-            for text, kind in ((f"+{change.additions}", "harness-added"),
-                               (f"−{change.deletions}", "harness-removed")):
+            for text, kind in ((f"+{change.additions}", "harness-count-added"),
+                               (f"−{change.deletions}", "harness-count-removed")):
                 count = Gtk.Label(label=text)
                 count.add_css_class(kind)
                 line.append(count)
