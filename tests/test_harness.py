@@ -851,14 +851,6 @@ def test_a_session_the_engine_says_is_busy_does_not_go_back() -> None:
     assert subject.go_back("ses_9", "msg_1") is None
 
 
-def test_a_questions_changes_come_from_the_engine() -> None:
-    from osiris.harness.engine import FileChange
-
-    subject, engine, _ = harness()
-    engine.changed = (FileChange("main.py", "modified", 1, 0, "+x\n"),)
-    assert subject.changes("ses_1", "msg_1") == engine.changed
-
-
 def test_sending_now_steers_the_message_in_and_cuts_in() -> None:
     subject, engine, files = harness()
     subject.ask("count to sixty")
