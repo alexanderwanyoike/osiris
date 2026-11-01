@@ -25,3 +25,28 @@ def test_a_tab_already_open_is_selected_again_not_opened_twice() -> None:
     panels.open(MAIN)
     (code,) = panels.groups
     assert (code.tabs, code.selected) == ([MAIN, README], MAIN)
+
+
+def test_groups_tile_in_the_order_they_opened() -> None:
+    panels = Panels()
+    panels.open(TIDY)
+    panels.open(MAIN)
+    assert [group.kind for group in panels.groups] == [Kind.CHANGES, Kind.CODE]
+
+
+def test_closing_a_tab_selects_the_one_before_it() -> None:
+    panels = Panels()
+    panels.open(MAIN)
+    panels.open(README)
+    panels.close(README)
+    (code,) = panels.groups
+    assert (code.tabs, code.selected) == ([MAIN], MAIN)
+
+
+def test_closing_a_groups_last_tab_closes_the_group() -> None:
+    """The other groups take its room."""
+    panels = Panels()
+    panels.open(MAIN)
+    panels.open(TIDY)
+    panels.close(MAIN)
+    assert [group.kind for group in panels.groups] == [Kind.CHANGES]
