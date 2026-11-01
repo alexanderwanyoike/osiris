@@ -254,6 +254,16 @@ def test_stop_keeps_waiting_messages_in_the_composer_and_sends_none() -> None:
     assert text == "stop at ten"
 
 
+def test_the_answer_a_delivered_message_steered_stops_working() -> None:
+    from osiris.harness.engine import Delivered
+
+    window = waiting_drawer()
+    assert window.views[0].working.ticking
+    window.app.conversation.apply(Delivered("ses_1", "msg_2"))
+    window.refresh()
+    assert not window.views[0].working.ticking
+
+
 def test_the_composer_takes_more_than_one_line_and_sends_it() -> None:
     from gi.repository import Gtk
 
