@@ -186,3 +186,10 @@ class TestSkinChoice:
 
     def test_studio_is_the_look_when_none_is_chosen(self) -> None:
         assert skin_name(None) == "studio"
+
+
+class TestTokens:
+    def test_a_picked_token_is_the_accent_on_a_wash_of_it(self) -> None:
+        from osiris.harness.style import token_colours
+
+        assert token_colours(OBSIDIAN) == ("#7c8aeb", "#2e3048")
