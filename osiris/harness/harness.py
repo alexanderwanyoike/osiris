@@ -85,6 +85,11 @@ class Answer(Enum):
     """The person's answer to a card."""
 
     ONCE = "once"
+    DENY = "deny"
+
+
+#: The rule a step the person denied shows.
+DENIED = "You said no"
 
 
 #: What the Harness decided about a ``ToolRequested``, passed on in its place.
@@ -279,22 +284,32 @@ class Harness:
                 "reply-failed", session=session, request=request, error=str(error)
             )
 
-    def answer(self, session: str, request: str, answer: Answer) -> Decision | None:
-        """Answer a card; None when nothing is waiting under it."""
+    def answer(
+        self, session: str, request: str, answer: Answer, reply: str = ""
+    ) -> Decision | None:
+        """Answer a card; a typed reply refuses the action and is passed to the
+        model in its place. None when nothing is waiting under it."""
         asking = self._waiting.pop((session, request), None)
         if asking is None:
             return None
-        self._reply(session, request, allow=True, message="")
+        allow = answer is not Answer.DENY and not reply
+        self._reply(
+            session, request, allow=allow, message=reply or ("" if allow else REFUSED)
+        )
         self._log.write(
             "answered",
             session=session,
             action=asking.action,
             resources=list(asking.resources),
             answer=answer.value,
+            **({"reply": reply} if reply else {}),
         )
-        return Allowed(
-            session, asking.action, Tier.ANYTHING, asking.resources, asking.call
-        )
+        if allow:
+            return Allowed(
+                session, asking.action, Tier.ANYTHING, asking.resources, asking.call
+            )
+        reason = f"You replied: {reply}" if reply else DENIED
+        return Refused(session, asking.action, asking.resources, asking.call, reason)
 
     def handle(self, event: Event) -> Event | Decision | None:
         """Log what the Engine reports and apply policy; the event is passed on.
