@@ -45,8 +45,20 @@ CAREFUL = [
 ]
 
 
+#: Read by every Project below ~/Code, where Programs are made.
+CODE_CONFIG = "Code/.opencode/opencode.json"
+#: Edits inside a Project: a Program's changes are commits, so each has an Undo.
+CODE = [_rule("edit", "*", "allow")]
+
+
 def write_starting_rules(files: FileSystem, home: Path) -> None:
-    path = home / ENGINE_CONFIG
+    """Add the starting rules to each config that has none. A config with
+    rules, even none, or that is not plain JSON is the person's and is left."""
+    _start(files, home / ENGINE_CONFIG, CAREFUL)
+    _start(files, home / CODE_CONFIG, CODE)
+
+
+def _start(files: FileSystem, path: Path, rules: list[dict[str, str]]) -> None:
     if files.exists(path.with_suffix(".jsonc")):
         return
     try:
@@ -55,5 +67,5 @@ def write_starting_rules(files: FileSystem, home: Path) -> None:
         return
     if "permissions" in config:
         return
-    config["permissions"] = CAREFUL
+    config["permissions"] = rules
     files.write(path, json.dumps(config, indent=2) + "\n")
