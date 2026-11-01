@@ -180,6 +180,11 @@ class Conversation:
         and nothing is answering, which the Engine would refuse."""
         return bool(turn.message) and not self.busy
 
+    def can_try_again(self, turn: Turn) -> bool:
+        """Only the latest: trying an earlier one again would drop every
+        answer after it unasked."""
+        return self.can_go_back(turn) and turn is self.turns[-1]
+
     def losing(self, turn: Turn) -> str:
         """What going back to before ``turn`` loses, in words."""
         place = next(i for i, t in enumerate(self.turns) if t is turn)
