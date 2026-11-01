@@ -24,7 +24,6 @@ from osiris.harness.engine import (
     ToolRequested,
 )
 from osiris.harness.opencode import (
-    ASK_EVERYTHING,
     SERVICE_FILE,
     OpencodeEngine,
     Service,
@@ -151,15 +150,15 @@ class TestLocate:
 
 
 class TestSessions:
-    def test_a_session_asks_before_every_action(self) -> None:
+    def test_a_session_brings_no_rules_so_the_engines_own_decide(self) -> None:
+        """Rules sent with a session would override the person's (ADR 0020)."""
         http = FakeHttpClient(
             replies={("POST", f"{URL}/api/session"): {"data": {"id": SESSION}}}
         )
         assert engine(http).start() == SESSION
         _, _, body = http.requests[0]
         assert isinstance(body, dict)
-        assert body["permissions"] == ASK_EVERYTHING
-        assert ASK_EVERYTHING == [{"action": "*", "resource": "*", "effect": "ask"}]
+        assert "permissions" not in body
 
     def test_a_chosen_model_is_named_on_the_session(self) -> None:
         http = FakeHttpClient(
