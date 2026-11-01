@@ -80,7 +80,7 @@ apps/harness/main.py          the drawer: GTK only, draws the conversation
 apps/harness/render.py        a widget per block of an answer, one view per turn
 apps/harness/look.py          the Theme's colours and the chosen Skin, kept current
 apps/harness/providers.py     the Providers page
-apps/harness/skins/           Bubbles and Transcript
+apps/harness/skins/           Bubbles, Transcript and Studio
 apps/harness/harness-drawer@osiris   Cinnamon extension: right edge, full height, slide
 apps/harness/harness@osiris   Cinnamon applet: the panel button
 osiris/harness/conversation   what the drawer shows, from the Engine's events
@@ -190,8 +190,10 @@ The drawer follows the split CONTEXT.md draws: the **Theme** is colour, the
   colours so code looks as it will in ghostty. It is written to
   `~/.local/share/gtksourceview-5/styles/osiris.xml`.
 - A Skin is a stylesheet in `apps/harness/skins/` that refers only to those
-  variables. Two ship: **Bubbles** (the question in a tinted bubble, code in
-  cards) and **Transcript** (a flat document). `tests/test_skins.py` fails any
+  variables. Three ship: **Bubbles** (the question in a tinted bubble, code in
+  cards), **Transcript** (a flat document) and **Studio** (the sidebar, the
+  Conversation and the Canvas as rounded panels on the glass, the accent kept
+  for what acts). `tests/test_skins.py` fails any
   Skin that names a colour of its own or leaves part of the drawer unstyled.
 - The Skin is chosen by name in `~/.config/osiris/harness/skin`; anything else
   means Bubbles. Choosing Skins in Appearance comes with Skin sets (P3.4).
@@ -219,9 +221,10 @@ is minimised; without the extension the drawer minimises directly. Where the
 Harness sits will become the **Skin**'s choice.
 
 The drawer can be dragged wider from its left edge, and the Expand button in
-its header fills the work area. Expanded, it follows the desktop's rules like
-any maximised window: it covers the dock, which hides until the pointer
-reaches it (CONTEXT.md).
+its header (a chevron, ‹) asks the extension to maximise it, which Cinnamon
+animates as it does any window; › brings it back. Expanded, it follows the
+desktop's rules like any maximised window: it covers the dock, which hides
+until the pointer reaches it (CONTEXT.md).
 
 ### The opencode Engine
 
