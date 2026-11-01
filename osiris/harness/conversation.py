@@ -63,11 +63,6 @@ class Turn:
     note: str = ""
 
     @property
-    def edited(self) -> bool:
-        """Whether the answer changed files, so has changes to show."""
-        return any(step.action == "edit" and step.allowed for step in self.steps)
-
-    @property
     def commits(self) -> list[tuple[str, str]]:
         """Each Program commit the question made, as (Program, commit): the
         commit its Undo would revert."""

@@ -585,16 +585,6 @@ def test_going_back_says_what_will_be_lost(place: int, said: str) -> None:
     assert "files" in lost
 
 
-def test_an_answer_that_edited_files_has_changes_to_show() -> None:
-    talk = Conversation()
-    talk.asked("tidy main.py")
-    talk.apply(ToolCalled(S, "c1", {"path": "main.py"}, False, "read"))
-    turn = talk.turns[-1]
-    assert not turn.edited
-    talk.apply(ToolCalled(S, "c2", {"path": "main.py", "content": "x"}, False, "write"))
-    assert turn.edited
-
-
 def test_a_turn_knows_the_program_commits_its_question_made() -> None:
     """What its changes are shown from: a theme or a new folder has no commit."""
     turn = Turn(
