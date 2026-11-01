@@ -16,7 +16,7 @@ gi.require_version("GtkSource", "5")
 from gi.repository import GLib, Gtk, GtkSource, Pango  # noqa: E402
 
 from osiris.harness.activity import Step, elapsed, summary  # noqa: E402
-from osiris.harness.detail import Kind, detail  # noqa: E402
+from osiris.harness.detail import Kind, Line, detail  # noqa: E402
 from osiris.harness.admin import Request  # noqa: E402
 from osiris.harness.conversation import State, Turn  # noqa: E402
 from osiris.harness.markdown import (  # noqa: E402
@@ -270,8 +270,22 @@ def _step_detail(step: Step) -> Gtk.Widget:
         asked.add_css_class("monospace")
     box.append(asked)
     for line in shown.lines:
-        box.append(Gtk.Label(label=line.text, xalign=0, selectable=True))
+        box.append(_line(line))
     return box
+
+
+#: How each mark of a diff reads, and the class a Skin colours it by.
+MARKS = {"+": "harness-added", "-": "harness-removed"}
+
+
+def _line(line: Line) -> Gtk.Label:
+    marked = line.mark in MARKS
+    label = Gtk.Label(label=f"{line.mark} {line.text}" if marked else line.text,
+                      xalign=0, selectable=True)
+    label.add_css_class("monospace")
+    if marked:
+        label.add_css_class(MARKS[line.mark])
+    return label
 
 
 class TurnView(Gtk.Box):
