@@ -204,3 +204,38 @@ def test_with_every_group_closed_files_opens_the_code_group_again() -> None:
     )
     files.emit("clicked")
     assert titles(widget, Kind.CODE) == ["main.py"]
+
+
+def nested() -> Canvas:
+    widget = Canvas(read=lambda _path: "", open_in_code=lambda _f, _p: None)
+    widget.show([(program("timer", "Timer"), [Path("main.py"), Path("src/clock.py")])])
+    return widget
+
+
+def tree_row(widget: Canvas, name: str) -> Gtk.ListBoxRow:
+    return next(
+        row
+        for row in widgets(widget.tree)
+        if isinstance(row, Gtk.ListBoxRow) and name in texts(row)
+    )
+
+
+def test_a_folders_files_show_once_the_folder_is_opened() -> None:
+    widget = nested()
+    assert not tree_row(widget, "clock.py").get_visible()
+    widget.tree.emit("row-activated", tree_row(widget, "src"))
+    assert tree_row(widget, "clock.py").get_visible()
+    widget.tree.emit("row-activated", tree_row(widget, "src"))
+    assert not tree_row(widget, "clock.py").get_visible()
+
+
+def test_each_file_and_folder_shows_an_icon_for_its_kind() -> None:
+    widget = nested()
+    (folder,) = [
+        w for w in widgets(tree_row(widget, "src")) if isinstance(w, Gtk.Image)
+    ]
+    assert folder.get_icon_name() == "folder-symbolic"
+    (python,) = [
+        w for w in widgets(tree_row(widget, "main.py")) if isinstance(w, Gtk.Image)
+    ]
+    assert python.get_gicon() is not None
