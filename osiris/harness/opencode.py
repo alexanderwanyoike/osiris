@@ -34,6 +34,7 @@ from osiris.harness.engine import (
     ToolFinished,
     ToolRequested,
 )
+from osiris.harness.picker import Reference
 from osiris.harness.titles import title_of
 from osiris.platform import CommandRunner, FileSystem, HttpClient, HttpError, Identity
 
@@ -116,10 +117,13 @@ class OpencodeEngine:
         session: str = self._post("/api/session", body)["data"]["id"]
         return session
 
-    def send(self, session: str, text: str) -> str:
+    def send(
+        self, session: str, text: str, references: tuple[Reference, ...] = ()
+    ) -> str:
         """opencode puts the message in the session's inbox, delivered at the
         model's next step if it is busy, and answers with the item."""
-        item = self._post(f"/api/session/{session}/prompt", {"text": text})
+        body: dict[str, Any] = {"text": text, **_attachments(text, references)}
+        item = self._post(f"/api/session/{session}/prompt", body)
         return str((item or {}).get("data", {}).get("id", ""))
 
     def withdraw(self, session: str, message: str) -> None:
@@ -318,6 +322,32 @@ class OpencodeEngine:
             event = reader.read(json.loads(line.removeprefix("data:")))
             if event is not None:
                 yield event
+
+
+def _attachments(
+    text: str, references: tuple[Reference, ...]
+) -> dict[str, list[dict[str, Any]]]:
+    """Picked files and skills, each with where the text mentions it."""
+    found: dict[str, list[dict[str, Any]]] = {}
+    for ref in references:
+        mention = {
+            "start": ref.start,
+            "end": ref.end,
+            "text": text[ref.start : ref.end],
+        }
+        if ref.entry.kind == "file":
+            found.setdefault("files", []).append(
+                {
+                    "uri": f"file://{ref.entry.key}",
+                    "name": ref.entry.label,
+                    "mention": mention,
+                }
+            )
+        elif ref.entry.kind == "skill":
+            found.setdefault("skills", []).append(
+                {"id": ref.entry.key, "mention": mention}
+            )
+    return found
 
 
 def _file_changes(files: list[dict[str, Any]]) -> tuple[FileChange, ...]:

@@ -44,3 +44,12 @@ def matching(entries: list[Entry], query: str) -> list[Entry]:
     starts = [e for e in entries if e.label.lower().startswith(wanted)]
     contains = [e for e in entries if wanted in e.label.lower() and e not in starts]
     return starts + contains
+
+
+@dataclass(frozen=True)
+class Reference:
+    """An entry picked into a message, mentioned at ``start`` to ``end``."""
+
+    entry: Entry
+    start: int
+    end: int
