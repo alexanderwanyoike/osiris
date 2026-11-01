@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from osiris.harness.activity import Step
-from osiris.harness.detail import Kind, detail
+from osiris.harness.detail import FOLD, Kind, Line, detail, folded
 
 
 def test_a_command_shows_its_command_line_and_output() -> None:
@@ -102,3 +102,15 @@ def test_a_refused_step_says_which_rule_refused_it() -> None:
 def test_a_tool_that_failed_says_why() -> None:
     step = Step("read", ("notes.txt",), error="File not found")
     assert detail(step).note == "File not found"
+
+
+def test_long_output_is_folded_to_its_first_lines() -> None:
+    lines = tuple(Line(str(n)) for n in range(30))
+    kept, hidden = folded(lines)
+    assert [line.text for line in kept] == [str(n) for n in range(FOLD)]
+    assert hidden == 30 - FOLD
+
+
+def test_short_output_is_not_folded() -> None:
+    lines = tuple(Line(str(n)) for n in range(FOLD))
+    assert folded(lines) == (lines, 0)
