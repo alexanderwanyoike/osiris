@@ -160,9 +160,16 @@ class Conversation:
                     Step(action, resources, True, call, self._input(call))
                 )
                 turn.doing = turn.steps[-1].doing
-            case Refused(_, action, resources, call):
+            case Refused(_, action, resources, call, reason):
                 turn.steps.append(
-                    Step(action, resources, False, call, self._input(call))
+                    Step(
+                        action,
+                        resources,
+                        False,
+                        call,
+                        self._input(call),
+                        refused_by=reason,
+                    )
                 )
                 turn.doing = THINKING
 

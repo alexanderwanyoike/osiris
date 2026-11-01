@@ -98,6 +98,8 @@ class Step:
     output: str = ""
     error: str = ""
     exit: int | None = None
+    #: The Harness's rule that refused it.
+    refused_by: str = ""
 
     @property
     def doing(self) -> str:
