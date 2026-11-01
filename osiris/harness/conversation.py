@@ -20,7 +20,7 @@ from osiris.harness.engine import (
     ToolCalled,
     ToolFinished,
 )
-from osiris.harness.harness import Allowed, Decision, Refused
+from osiris.harness.harness import Allowed, Asking, Decision, Refused
 from osiris.harness.log import Change
 from osiris.harness.titles import title_of
 
@@ -47,6 +47,8 @@ class Turn:
     undone: bool = False
     #: A command of this answer's waiting for the administrator password.
     admin: Request | None = None
+    #: An action of this answer's waiting for the person to answer its card.
+    asking: Asking | None = None
 
     @property
     def programs(self) -> list[str]:
@@ -143,9 +145,15 @@ class Conversation:
         return self._inputs.pop(call, None) if call else None
 
     def _step(
-        self, turn: Turn, event: ToolCalled | Allowed | Refused | ToolFinished
+        self,
+        turn: Turn,
+        event: Asking | ToolCalled | Allowed | Refused | ToolFinished,
     ) -> None:
+        if isinstance(event, Allowed | Refused):
+            turn.asking = None
         match event:
+            case Asking():
+                turn.asking = event
             case ToolFinished(_, call, output, error, exit_status):
                 turn.steps = [
                     replace(step, output=output, error=error, exit=exit_status)
@@ -190,7 +198,7 @@ class Conversation:
                 turn.doing = THINKING
                 self._step_ended = True
                 self.tokens_spent += tokens.input + tokens.output + tokens.reasoning
-            case ToolCalled() | Allowed() | Refused() | ToolFinished():
+            case Asking() | ToolCalled() | Allowed() | Refused() | ToolFinished():
                 self._step(turn, event)
             case Finished():
                 turn.state = State.DONE
