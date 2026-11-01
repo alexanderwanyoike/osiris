@@ -1,8 +1,7 @@
-"""Action tiers: how far an action of the Harness reaches (CONTEXT.md).
+"""Action tiers: how far one of the Osiris tools reaches (CONTEXT.md).
 
-A look just happens and an undoable change happens with an Undo. A change that
-cannot be undone asks first; no action of that tier exists yet, so the Harness
-rejects anything without a tier.
+A hint on the tool for the model, not a decision: the Engine's permission
+rules decide what asks (ADR 0020).
 """
 
 from __future__ import annotations
@@ -13,5 +12,3 @@ from enum import Enum
 class Tier(Enum):
     LOOK = "look"
     UNDOABLE = "undoable"
-    #: Allowed only because the person allowed the Harness everything.
-    ANYTHING = "anything"

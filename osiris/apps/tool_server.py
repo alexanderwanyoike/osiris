@@ -60,7 +60,14 @@ folder, named as "icon" in its osiris-program.json; give one to any Program
 that lacks it. Keep its osiris-program.json true: build and run are lists of words run
 in its folder. Commit every change with commit_program, one atomic change per
 commit with a message saying what it does. check_program finds Python that does
-not compile. The person tries and installs a Program themselves, from the card
+not compile. Before you tell the person a Program is done, run check_program
+and the Program's own tests and fix what fails; then ask the reviewer subagent
+to review the change, giving it the Program's folder, the person's own words
+for what they asked, and the commit the change started from. End your answer
+with its verdict line as it gave it, pass, partial or fail, and keep its report
+for when the person asks. Never call a Program done on a partial or a fail:
+fix what it found and have it reviewed again, or tell the person what is left.
+The person tries and installs a Program themselves, from the card
 under your answer; a failed build comes back to you to fix.
 
 You can make and change Skins too: the shape of the desktop (windows, panel,
@@ -80,15 +87,16 @@ something cannot be done that way, tell the person."""
 #: What the model may touch beyond its tools, by the person's choice
 #: (osiris.harness.trust).
 REACH = {
-    False: "nothing outside that folder is\nyours to touch, and you cannot run "
-    "commands.",
-    True: "the person has allowed you\neverything: you may run commands and read "
-    "or change any file, though a\nProgram's code still belongs in its own folder.",
+    False: "a command, or a change\noutside that folder, asks the person first, "
+    "who may say no; ask only for\nwhat the request needs.",
+    True: "the person has turned on\nauto mode: commands and changes run without "
+    "asking unless their rules forbid\nthem, though a Program's code still belongs "
+    "in its own folder.",
 }
 
 
-def instructions(*, allow_everything: bool) -> str:
-    return INSTRUCTIONS.replace("{reach}", REACH[allow_everything])
+def instructions(*, auto_mode: bool) -> str:
+    return INSTRUCTIONS.replace("{reach}", REACH[auto_mode])
 
 
 #: How far each tool reaches, which decides how the Harness answers its requests.
@@ -231,14 +239,14 @@ def server(
     wallpapers: UserWallpapers,
     *,
     skins: SkinStore | None = None,
-    allow_everything: bool = False,
+    auto_mode: bool = False,
 ) -> MCPServer:
     """The tools, acting on ``store``; every change they make is written to
     ``log`` with the step that undoes it."""
     logged = _Logged(log)
     tools = _Tools(
         NAME,
-        instructions=instructions(allow_everything=allow_everything),
+        instructions=instructions(auto_mode=auto_mode),
         log_level="WARNING",
     )
 
