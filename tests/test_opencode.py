@@ -187,6 +187,41 @@ class TestSessions:
         engine(http).send(SESSION, "hello")
         assert http.requests == [("POST", path, {"text": "hello"})]
 
+    def test_files_and_skills_picked_go_with_the_text_as_attachments(self) -> None:
+        """As opencode 2.2.4 takes them: each with where it is mentioned."""
+        from osiris.harness.picker import Entry, Reference
+
+        path = f"{URL}/api/session/{SESSION}/prompt"
+        http = FakeHttpClient(replies={("POST", path): {"data": {}}})
+        readme = Entry("file", "/home/tester/Code/timer/README.md", "README.md", "")
+        review = Entry("skill", "review", "review", "Review a change")
+        text = "/review @README.md please"
+        engine(http).send(
+            SESSION, text, (Reference(review, 0, 7), Reference(readme, 8, 18))
+        )
+        assert http.requests == [
+            (
+                "POST",
+                path,
+                {
+                    "text": text,
+                    "files": [
+                        {
+                            "uri": "file:///home/tester/Code/timer/README.md",
+                            "name": "README.md",
+                            "mention": {"start": 8, "end": 18, "text": "@README.md"},
+                        }
+                    ],
+                    "skills": [
+                        {
+                            "id": "review",
+                            "mention": {"start": 0, "end": 7, "text": "/review"},
+                        }
+                    ],
+                },
+            )
+        ]
+
     def test_sending_gives_back_where_the_message_waits_until_delivered(self) -> None:
         """As opencode 2.2.4 answers a prompt: with the inbox item it made."""
         path = f"{URL}/api/session/{SESSION}/prompt"
