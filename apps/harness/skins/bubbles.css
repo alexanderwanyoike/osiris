@@ -362,7 +362,9 @@ popover.harness-picker-popover > contents {
 
 /* The Conversation rail: a compact column of short, faint ticks, one per
    question. Those on screen are a shade brighter and the current one longer;
-   the tick under the pointer grows most and its neighbours a little. */
+   the tick under the pointer grows most and its neighbours a little. A
+   question that changed something takes the Theme's accent; one waiting on
+   the person its warning colour. */
 .harness-rail-line {
     min-height: 2px;
     min-width: 7px;
@@ -374,8 +376,9 @@ popover.harness-picker-popover > contents {
 }
 .harness-rail-tick.lit .harness-rail-line { color: alpha(@harness_fg, 0.34); }
 .harness-rail-tick.current .harness-rail-line { min-width: 12px; color: alpha(@harness_fg, 0.85); }
-.harness-rail-tick.changed .harness-rail-line { color: alpha(@harness_success, 0.3); }
-.harness-rail-tick.changed.lit .harness-rail-line { color: alpha(@harness_success, 0.6); }
+.harness-rail-tick.changed .harness-rail-line { color: alpha(@harness_accent, 0.35); }
+.harness-rail-tick.changed.lit .harness-rail-line { color: alpha(@harness_accent, 0.7); }
+.harness-rail-tick.changed.current .harness-rail-line { color: @harness_accent; }
 .harness-rail-tick.waiting .harness-rail-line { color: alpha(@harness_warning, 0.6); }
 .harness-rail-tick.waiting.lit .harness-rail-line { color: @harness_warning; }
 .harness-rail-tick.near-2 .harness-rail-line { min-width: 9px; }
