@@ -41,6 +41,7 @@ class Allowed:
     action: str
     tier: Tier
     resources: tuple[str, ...]
+    call: str = ""
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,7 @@ class Refused:
     session: str
     action: str
     resources: tuple[str, ...]
+    call: str = ""
 
 
 #: The Engine's own file tools, allowed only on files inside a Program: reading
@@ -280,7 +282,7 @@ class Harness:
                     input=arguments,
                     executed=executed,
                 )
-            case ToolRequested(session, request, action, resources) if (
+            case ToolRequested(session, request, action, resources, call) if (
                 tier := self._tier(session, action, resources)
             ):
                 if action in COMMAND_ACTIONS:
@@ -293,8 +295,8 @@ class Harness:
                     tier=tier.value,
                     resources=list(resources),
                 )
-                return Allowed(session, action, tier, resources)
-            case ToolRequested(session, request, action, resources):
+                return Allowed(session, action, tier, resources, call)
+            case ToolRequested(session, request, action, resources, call):
                 self._reply(session, request, allow=False, message=REFUSED)
                 self._log.write(
                     "rejected",
@@ -302,7 +304,7 @@ class Harness:
                     action=action,
                     resources=list(resources),
                 )
-                return Refused(session, action, resources)
+                return Refused(session, action, resources, call)
             case Failed(session, message):
                 self._log.write("failed", session=session, message=message)
             case Stopped(session):
