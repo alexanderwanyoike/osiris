@@ -502,8 +502,7 @@ class Drawer(Gtk.ApplicationWindow):
                             try_again=lambda turn: self.app.ask_to_go_back(turn, True),
                             may_go_back=lambda turn: self.app.conversation.can_go_back(turn),
                             may_try_again=lambda turn:
-                                self.app.conversation.can_try_again(turn),
-                            show_changes=self.app.show_changes)
+                                self.app.conversation.can_try_again(turn))
             self.views.append(view)
             self.turns.append(view)
         newest = len(self.views) - 1
