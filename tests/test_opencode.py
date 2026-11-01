@@ -333,6 +333,24 @@ class TestEvents:
             ToolFinished(SESSION, "call_d376", "", error="File not found")
         ]
 
+    def test_a_permission_carries_the_patterns_that_would_allow_it_again(
+        self,
+    ) -> None:
+        """As opencode 2.2.4 does: ``save`` holds them, ``ls *`` for ``ls /etc``."""
+        asked = {
+            "type": "permission.asked",
+            "data": {
+                "id": "per_1",
+                "sessionID": SESSION,
+                "action": "shell",
+                "resources": ["ls /etc", "head -3"],
+                "save": ["ls *", "head *"],
+            },
+        }
+        (request,) = self.events(asked)
+        assert isinstance(request, ToolRequested)
+        assert request.patterns == ("ls *", "head *")
+
     def test_a_refusal_is_a_failure_carrying_the_engines_message(self) -> None:
         assert self.events(FREE_TIER_REFUSAL) == [
             Failed(
