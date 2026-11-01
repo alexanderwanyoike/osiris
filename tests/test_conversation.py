@@ -9,6 +9,7 @@ from osiris.harness.admin import Request
 from osiris.harness.conversation import Conversation, State
 from osiris.harness.engine import (
     Answered,
+    Delivered,
     Failed,
     Finished,
     ModelRef,
@@ -418,3 +419,22 @@ def test_a_conversation_with_no_question_shows_no_admin_request() -> None:
     talk = Conversation()
     talk.needs_password(PACMAN)
     assert talk.turns == []
+
+
+def test_a_message_sent_while_busy_waits_until_it_reaches_thoth() -> None:
+    talk = Conversation()
+    first = talk.asked("count to sixty")
+    talk.queued("msg_2", "stop at ten")
+    assert [w.text for w in talk.waiting] == ["stop at ten"]
+    talk.apply(Delivered(S, "msg_2"))
+    assert talk.waiting == []
+    assert talk.turns[-1].question == "stop at ten"
+    assert first.state is State.DONE
+
+
+def test_a_waiting_message_taken_back_gives_its_text_back() -> None:
+    talk = Conversation()
+    talk.asked("count to sixty")
+    talk.queued("msg_2", "stop at ten")
+    assert talk.unqueued("msg_2") == "stop at ten"
+    assert talk.waiting == []
