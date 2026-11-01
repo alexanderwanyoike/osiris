@@ -55,4 +55,3 @@ def test_a_server_by_command_is_saved_as_local_without_a_url() -> None:
         "type": "local",
         "command": ["npx", "wiki"],
     }
-
