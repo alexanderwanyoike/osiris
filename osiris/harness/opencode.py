@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,11 +20,13 @@ from osiris.harness.engine import (
     Delivered,
     Event,
     Failed,
+    FileChange,
     Finished,
     ModelRef,
     Past,
     PastTurn,
     Reply,
+    Revert,
     Stopped,
     Text,
     Tokens,
@@ -138,8 +141,30 @@ class OpencodeEngine:
             if error.status != 404:
                 raise
 
+    def revert(self, session: str, message: str) -> Revert:
+        staged = self._post(
+            f"/api/session/{session}/revert/stage",
+            {"messageID": message, "files": True},
+        )["data"]
+        return Revert(
+            _file_changes(staged.get("files", [])), restorable="snapshot" in staged
+        )
+
+    def keep_revert(self, session: str) -> None:
+        self._post(f"/api/session/{session}/revert/commit")
+
+    def cancel_revert(self, session: str) -> None:
+        self._http.request(
+            "DELETE",
+            self._service.url + f"/api/session/{session}/revert",
+            headers=self._service.headers(),
+        )
+
     def stop(self, session: str) -> None:
         self._post(f"/api/session/{session}/interrupt")
+
+    def cut_in(self, session: str) -> None:
+        self._post(f"/api/session/{session}/interrupt?resume=true")
 
     def switch_model(self, session: str, model: ModelRef) -> None:
         self._post(
@@ -207,7 +232,7 @@ class OpencodeEngine:
         found = []
         for session in sessions:
             metadata = session.get("metadata") or {}
-            if metadata.get("archived"):
+            if metadata.get("archived") or session.get("parentID"):
                 continue
             if metadata.get("osiris") != MINE["osiris"]:
                 if session.get("title") != UNMARKED_TITLE:
@@ -259,7 +284,9 @@ class OpencodeEngine:
         turns: list[PastTurn] = []
         for message in self._messages(session):
             if message.get("type") == "user":
-                turns.append(PastTurn(message.get("text", ""), "", None))
+                turns.append(
+                    PastTurn(message.get("text", ""), "", None, message.get("id", ""))
+                )
             elif message.get("type") == "assistant" and turns:
                 said = "".join(
                     part.get("text", "")
@@ -273,6 +300,7 @@ class OpencodeEngine:
                         last.question,
                         last.answer + said,
                         ModelRef(model["providerID"], model["id"]) if model else None,
+                        last.message,
                     )
         return turns
 
@@ -292,12 +320,30 @@ class OpencodeEngine:
                 yield event
 
 
+def _file_changes(files: list[dict[str, Any]]) -> tuple[FileChange, ...]:
+    return tuple(
+        FileChange(f["file"], f["status"], f["additions"], f["deletions"], f["patch"])
+        for f in files
+    )
+
+
+#: How a subagent's reply comes back: its child session's answer in a tag.
+_SUBAGENT = re.compile(r"\A<subagent [^>]*>\n?(.*?)\n?</subagent>\Z", re.DOTALL)
+
+
+def _unwrapped(output: str) -> str:
+    found = _SUBAGENT.match(output)
+    return found.group(1) if found else output
+
+
 def _finished(session: str, data: dict[str, Any]) -> ToolFinished:
     """The text a tool gave back; a file it gave is left out."""
-    output = "".join(
-        part.get("text", "")
-        for part in data.get("content") or []
-        if part.get("type") == "text"
+    output = _unwrapped(
+        "".join(
+            part.get("text", "")
+            for part in data.get("content") or []
+            if part.get("type") == "text"
+        )
     )
     exit_status = (data.get("metadata") or {}).get("exit")
     return ToolFinished(

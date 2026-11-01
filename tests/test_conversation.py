@@ -6,7 +6,7 @@ import pytest
 
 from osiris.harness.activity import Step
 from osiris.harness.admin import Request
-from osiris.harness.conversation import Conversation, State
+from osiris.harness.conversation import Conversation, State, Turn
 from osiris.harness.engine import (
     Answered,
     Delivered,
@@ -23,6 +23,7 @@ from osiris.harness.engine import (
 )
 from osiris.harness.harness import Allowed, Asking, Refused
 from osiris.harness.log import Change
+from osiris.harness.tasks import Progress, Task
 
 S = "ses_1"
 GPT = ModelRef("openai", "gpt-5.5")
@@ -105,6 +106,13 @@ def test_a_refused_action_is_shown_on_its_turn() -> None:
         ("edit", {"filePath": "main.py"}, "edit", ("main.py",)),
         ("shell", {"command": "uname -r"}, "shell", ("uname -r",)),
         ("websearch", {"query": "gtk 4"}, "websearch", ("gtk 4",)),
+        ("subagent", {"agent": "reviewer", "prompt": "x"}, "subagent", ("reviewer",)),
+        (
+            "patch",
+            {"patchText": "*** Begin Patch\n*** Update File: /c/main.py\n+x"},
+            "edit",
+            ("/c/main.py",),
+        ),
     ],
 )
 def test_a_tool_the_engine_ran_without_asking_is_a_step(
@@ -128,6 +136,15 @@ def test_a_tool_that_then_asks_is_held_and_shown_once_answered() -> None:
     assert talk.turns[-1].held is not None
     talk.apply(Allowed(S, "shell", ("ls /etc",), "c1"))
     assert [step.call for step in talk.turns[-1].steps] == ["c1"]
+
+
+def test_while_a_card_waits_the_answer_says_it_waits_for_the_person() -> None:
+    """Not that it runs the action: nothing runs until the person answers."""
+    talk = Conversation()
+    talk.asked("list /etc")
+    talk.apply(ToolCalled(S, "c1", {"command": "ls /etc"}, False, "shell"))
+    talk.apply(Asking(S, "per_1", "shell", ("ls /etc",), "c1"))
+    assert talk.turns[-1].doing == "Waiting for you"
 
 
 def test_what_auto_mode_allows_is_shown_once() -> None:
@@ -158,6 +175,26 @@ def test_osiris_tools_run_from_the_tool_catalogue_are_steps(
     talk.asked("make it calm")
     talk.apply(ToolCalled(S, "c1", {"code": code}, False, "execute"))
     assert [step.action for step in talk.turns[-1].steps] == actions
+
+
+def todos(*items: tuple[str, str]) -> dict[str, object]:
+    return {"todos": [{"content": c, "status": s} for c, s in items]}
+
+
+def test_the_engines_task_list_is_kept_on_its_turn_as_it_changes() -> None:
+    """As opencode 2.2.4 does: each todowrite call carries the whole list."""
+    talk = Conversation()
+    talk.asked("make two files")
+    first = todos(("Create c.txt", "in_progress"), ("Edit a.txt", "pending"))
+    talk.apply(ToolCalled(S, "c1", first, False, "todowrite"))
+    later = todos(("Create c.txt", "completed"), ("Edit a.txt", "in_progress"))
+    talk.apply(ToolCalled(S, "c2", later, False, "todowrite"))
+    turn = talk.turns[-1]
+    assert turn.tasks == [
+        Task("Create c.txt", Progress.DONE),
+        Task("Edit a.txt", Progress.UNDER_WAY),
+    ]
+    assert turn.steps == []
 
 
 def test_a_step_carries_the_input_of_its_tool_call() -> None:
@@ -511,3 +548,63 @@ def test_a_conversation_with_a_card_open_waits_for_the_person() -> None:
     talk.apply(Allowed(S, "shell", ("ls /etc",), "call_1"))
     talk.needs_password(Request(("pacman", "-S", "cowsay")))
     assert talk.waits_for_person
+
+
+def test_a_question_can_be_gone_back_to_once_nothing_is_answering() -> None:
+    """Its message names it to the Engine, which refuses while it runs."""
+    talk = Conversation.restored([PastTurn("make x.txt", "Made it.", None, "msg_1")])
+    first = talk.turns[0]
+    assert first.message == "msg_1"
+    assert talk.can_go_back(first)
+    talk.asked("make y.txt")
+    assert not talk.can_go_back(first)
+    assert not talk.can_go_back(talk.turns[-1])
+
+
+def test_only_the_latest_answer_can_be_tried_again() -> None:
+    """Trying an earlier one again would drop every answer after it unasked."""
+    talk = Conversation.restored(
+        [
+            PastTurn("make x.txt", "Made it.", None, "msg_1"),
+            PastTurn("make y.txt", "Made it.", None, "msg_2"),
+        ]
+    )
+    first, latest = talk.turns
+    assert not talk.can_try_again(first)
+    assert talk.can_try_again(latest)
+
+
+@pytest.mark.parametrize(
+    ("place", "said"),
+    [
+        (2, "This question and its answer"),
+        (0, "This question and the 2 after it, with their answers,"),
+        (1, "This question and the one after it, with their answers,"),
+    ],
+)
+def test_going_back_says_what_will_be_lost(place: int, said: str) -> None:
+    talk = Conversation.restored(
+        [PastTurn(q, "Done.", None, f"msg_{i}") for i, q in enumerate("abc")]
+    )
+    lost = talk.losing(talk.turns[place])
+    assert lost.startswith(said)
+    assert "files" in lost
+
+
+def test_a_turn_knows_the_program_commits_its_question_made() -> None:
+    """What its changes are shown from: a theme or a new folder has no commit."""
+    turn = Turn(
+        "build a coin flip",
+        "Made it.",
+        State.DONE,
+        changes=[
+            Change("Made coin-flip", {"action": "trash_program", "name": "coin-flip"}),
+            Change(
+                "coin-flip: Add a flip",
+                {"action": "revert_commit", "name": "coin-flip", "commit": "abc"},
+                "coin-flip",
+            ),
+            Change("Made Ember", {"action": "delete_theme", "name": "ember"}),
+        ],
+    )
+    assert turn.commits == [("coin-flip", "abc")]

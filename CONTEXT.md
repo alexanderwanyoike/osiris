@@ -158,6 +158,12 @@ How the **Harness** goes about a kind of task, written as instructions it
 follows. A **Skill** changes how the **Harness** works; it is not a **Program**.
 _Avoid_: program, prompt
 
+**Reviewer**:
+The **Engine** subagent that reviews a change to a **Program** before the
+**Harness** calls it done: it had no part in the building, can read but not
+change, and answers pass, partial or fail.
+_Avoid_: checker, critic
+
 **Program manifest**:
 What a **Program** is, what it may touch, and how it runs, read before it is
 installed.

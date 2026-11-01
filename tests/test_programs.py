@@ -163,6 +163,19 @@ class TestCommitting:
         subject.revert("pomodoro", "abc123")
         assert calls(runner) == [(*GIT, *AS_HARNESS, "revert", "--no-edit", "abc123")]
 
+    def test_a_commit_gives_back_its_changes_as_a_patch(self) -> None:
+        """What the Harness shows as one question's changes to a Program."""
+        patch = "diff --git a/main.py b/main.py\n@@ -1 +1 @@\n-a\n+b"
+        runner = FakeRunner(
+            results={
+                " ".join((*GIT, "show", "--format=", "--patch", "abc123")): answer(
+                    patch
+                )
+            }
+        )
+        subject, _, _ = programs(made(), runner)
+        assert subject.patch("pomodoro", "abc123") == patch
+
 
 class TestChecking:
     def test_python_that_does_not_compile_is_reported_with_its_line(self) -> None:

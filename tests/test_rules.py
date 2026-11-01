@@ -7,7 +7,7 @@ import json
 from fnmatch import fnmatchcase
 from pathlib import Path
 
-from osiris.harness.rules import write_starting_rules
+from osiris.harness.rules import switch_on_task_list, write_starting_rules
 from osiris.platform import FakeFileSystem
 
 HOME = Path("/home/tester")
@@ -85,3 +85,27 @@ def test_edits_inside_a_project_in_code_are_allowed() -> None:
     write_starting_rules(files, HOME)
     rules = json.loads(files.read(CODE))["permissions"]
     assert effect(rules, "edit", "main.py") == "allow"
+
+
+def test_the_engines_task_list_is_switched_on() -> None:
+    """opencode 2.2.4 keeps its task list behind a switch, off by default."""
+    files = FakeFileSystem()
+    switch_on_task_list(files, HOME)
+    assert json.loads(files.read(ENGINE))["experimental"]["todo"] is True
+
+
+def test_a_task_list_the_person_switched_off_stays_off() -> None:
+    files = FakeFileSystem()
+    files.write(ENGINE, json.dumps({"experimental": {"todo": False, "x": 1}}))
+    switch_on_task_list(files, HOME)
+    assert json.loads(files.read(ENGINE))["experimental"] == {"todo": False, "x": 1}
+
+
+def test_the_task_list_leaves_a_config_that_is_not_plain_json_alone() -> None:
+    files = FakeFileSystem()
+    commented = '{\n  // mine\n  "model": "openai/gpt-5.5"\n}\n'
+    files.write(ENGINE, commented)
+    switch_on_task_list(files, HOME)
+    files.write(ENGINE.with_suffix(".jsonc"), "{}")
+    switch_on_task_list(files, HOME)
+    assert files.read(ENGINE) == commented

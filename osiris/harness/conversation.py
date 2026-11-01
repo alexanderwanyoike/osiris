@@ -9,6 +9,7 @@ from enum import Enum
 
 from osiris.harness.activity import THINKING, WRITING, Step
 from osiris.harness.admin import Request
+from osiris.harness.detail import patched_file
 from osiris.harness.engine import (
     Answered,
     Delivered,
@@ -24,6 +25,8 @@ from osiris.harness.engine import (
 )
 from osiris.harness.harness import Allowed, Asking, Decision, Refused
 from osiris.harness.log import Change
+from osiris.harness.status import Status
+from osiris.harness.tasks import TASK_TOOL, Task, tasks_of
 from osiris.harness.titles import title_of
 
 
@@ -53,6 +56,22 @@ class Turn:
     #: and the step it would be, with the input the model gave it.
     asking: Asking | None = None
     held: Step | None = None
+    #: The Engine's plan for this answer, as it last reported it.
+    tasks: list[Task] = field(default_factory=list)
+    #: The question's message at the Engine, once it has been sent.
+    message: str = ""
+    #: A word from Thoth about this question, such as why it could not go back.
+    note: str = ""
+
+    @property
+    def commits(self) -> list[tuple[str, str]]:
+        """Each Program commit the question made, as (Program, commit): the
+        commit its Undo would revert."""
+        return [
+            (change.undo["name"], change.undo["commit"])
+            for change in self.changes
+            if change.undo and change.undo.get("action") == "revert_commit"
+        ]
 
     @property
     def programs(self) -> list[str]:
@@ -85,7 +104,16 @@ class Waiting:
 #: Tools whose action, the name the rules and steps use, differs from their own.
 _ACTIONS = {"write": "edit", "patch": "edit", "apply_patch": "edit", "bash": "shell"}
 #: The input naming what a tool works on, in the order looked for.
-_SUBJECT = ("command", "path", "filePath", "file_path", "pattern", "url", "query")
+_SUBJECT = (
+    "command",
+    "path",
+    "filePath",
+    "file_path",
+    "pattern",
+    "url",
+    "query",
+    "agent",
+)
 
 
 #: A tool server's tool called from the catalogue's code:
@@ -106,6 +134,8 @@ def _from_code(call: str, arguments: Mapping[str, object]) -> list[Step]:
 def _ran(name: str, call: str, arguments: Mapping[str, object]) -> Step:
     """A tool the Engine ran without asking, as the step it would have been."""
     subject = next((arguments[key] for key in _SUBJECT if key in arguments), None)
+    if subject is None and isinstance(patch := arguments.get("patchText"), str):
+        subject = patched_file(patch)
     resources = (str(subject),) if subject is not None else ()
     return Step(_ACTIONS.get(name, name), resources, True, call, arguments)
 
@@ -153,6 +183,31 @@ class Conversation:
         model = self.model or default
         return f"{model.provider} / {model.model}" if model else "default model"
 
+    def can_go_back(self, turn: Turn) -> bool:
+        """Whether going back to before ``turn`` can be offered: it was sent,
+        and nothing is answering, which the Engine would refuse."""
+        return bool(turn.message) and not self.busy
+
+    def can_try_again(self, turn: Turn) -> bool:
+        """Only the latest: trying an earlier one again would drop every
+        answer after it unasked."""
+        return self.can_go_back(turn) and turn is self.turns[-1]
+
+    def losing(self, turn: Turn) -> str:
+        """What going back to before ``turn`` loses, in words."""
+        place = next(i for i, t in enumerate(self.turns) if t is turn)
+        after = len(self.turns) - place - 1
+        if after == 0:
+            dropped = "This question and its answer"
+        elif after == 1:
+            dropped = "This question and the one after it, with their answers,"
+        else:
+            dropped = f"This question and the {after} after it, with their answers,"
+        return (
+            f"{dropped} leave the Conversation, and the files they changed in "
+            "this Project go back to how they were."
+        )
+
     def asked(self, question: str) -> Turn:
         turn = Turn(question)
         self.turns.append(turn)
@@ -173,7 +228,15 @@ class Conversation:
         talk = cls()
         talk.tokens_spent = tokens_spent
         for turn in past:
-            talk.turns.append(Turn(turn.question, turn.answer, State.DONE, turn.model))
+            talk.turns.append(
+                Turn(
+                    turn.question,
+                    turn.answer,
+                    State.DONE,
+                    turn.model,
+                    message=turn.message,
+                )
+            )
             talk.model = turn.model or talk.model
         undid = set(undone or [])
         for answer, made in zip(
@@ -220,6 +283,20 @@ class Conversation:
     def _input(self, call: str) -> Mapping[str, object] | None:
         return self._inputs.pop(call, None) if call else None
 
+    def _called(self, turn: Turn, event: ToolCalled) -> None:
+        """A tool call: the task list, or a step the Engine ran without asking."""
+        call, arguments, name = event.call, event.input, event.name
+        if name == TASK_TOOL:
+            turn.tasks = tasks_of(arguments)
+            return
+        self._inputs[call] = arguments
+        ran = _from_code(call, arguments) if name == "execute" else None
+        if ran is None and name:
+            ran = [_ran(name, call, arguments)]
+        if ran:
+            turn.steps += ran
+            turn.doing = turn.steps[-1].doing
+
     def _step(
         self,
         turn: Turn,
@@ -230,6 +307,7 @@ class Conversation:
         match event:
             case Asking(_, _, action, resources, call):
                 turn.steps = [step for step in turn.steps if step.call != call]
+                turn.doing = Status.WAITING.value
                 turn.asking = event
                 turn.held = Step(
                     action, resources, call=call, input=self._inputs.get(call)
@@ -241,14 +319,8 @@ class Conversation:
                     else step
                     for step in turn.steps
                 ]
-            case ToolCalled(_, call, arguments, _, name):
-                self._inputs[call] = arguments
-                ran = _from_code(call, arguments) if name == "execute" else None
-                if ran is None and name:
-                    ran = [_ran(name, call, arguments)]
-                if ran:
-                    turn.steps += ran
-                    turn.doing = turn.steps[-1].doing
+            case ToolCalled():
+                self._called(turn, event)
             case Allowed(_, action, resources, call):
                 if not any(step.call == call for step in turn.steps if call):
                     turn.steps.append(
