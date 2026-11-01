@@ -445,10 +445,14 @@ def test_the_model_is_told_how_a_wallpaper_shader_is_written() -> None:
         assert needed in described
 
 
-def test_the_model_is_told_it_may_do_anything_once_the_person_allows_it() -> None:
+def test_the_model_is_told_what_waits_for_the_person_and_what_auto_mode_lets_run(
+) -> None:
+    """Commands now ask rather than being out of reach (ADR 0020)."""
     from osiris.apps.tool_server import instructions
 
-    assert "you cannot run commands" in instructions(allow_everything=False)
-    allowed = instructions(allow_everything=True)
-    assert "you cannot run commands" not in allowed
-    assert "run commands" in allowed
+    careful = instructions(allow_everything=False)
+    assert "you cannot run commands" not in careful
+    assert "asks the person" in careful
+    auto = instructions(allow_everything=True)
+    assert "auto mode" in auto
+    assert "rules forbid" in auto
