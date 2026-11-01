@@ -530,7 +530,12 @@ class OpencodeAccounts:
             self._service.url + "/api/integration",
             headers=self._service.headers(),
         )
-        return [_provider(entry) for entry in reply["data"]]
+        # An MCP server's sign-in is listed too; it belongs to its connector.
+        return [
+            _provider(entry)
+            for entry in reply["data"]
+            if (entry.get("metadata") or {}).get("source") != "mcp"
+        ]
 
     def connect_key(self, provider: str, key: str) -> None:
         self._http.request(
