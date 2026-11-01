@@ -347,7 +347,8 @@ class TurnView(Gtk.Box):
                  clock: Callable[[], float] = time.monotonic,
                  admin_card: Callable[[Request], Gtk.Widget] | None = None,
                  approval_card: Callable[[Turn], Gtk.Widget] | None = None,
-                 go_back: Callable[[Turn], None] | None = None,
+                 edit: Callable[[Turn], None] | None = None,
+                 try_again: Callable[[Turn], None] | None = None,
                  may_go_back: Callable[[Turn], bool] = lambda _turn: False):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-turn")
@@ -355,7 +356,8 @@ class TurnView(Gtk.Box):
         self._program_card = program_card
         self._admin_card = admin_card
         self._approval_card = approval_card
-        self._go_back = go_back
+        self._edit = edit
+        self._try_again = try_again
         self._may_go_back = may_go_back
         question = Gtk.Label(label=turn.question, xalign=0, wrap=True,
                              wrap_mode=Pango.WrapMode.WORD_CHAR, selectable=True,
@@ -412,12 +414,21 @@ class TurnView(Gtk.Box):
         return chip
 
     def _going_back(self, turn: Turn) -> Gtk.Widget:
-        back = Gtk.Button(label="Go back", halign=Gtk.Align.START)
-        back.add_css_class("flat")
-        back.set_tooltip_text("Go back to before this question: its files, and "
-                              "everything said since")
-        back.connect("clicked", lambda _b: self._go_back(turn))
-        return back
+        """Edit and Try again, each going back to before the question first."""
+        row = Gtk.Box(spacing=4, halign=Gtk.Align.START)
+        for label, act, tip in (
+                ("Edit", self._edit, "Go back to before this question and change it"),
+                ("Try again", self._try_again,
+                 "Go back to before this question and send it again")):
+            if act is None:
+                continue
+            button = Gtk.Button(label=label)
+            button.add_css_class("flat")
+            button.set_tooltip_text(f"{tip}: its files, and everything said since, "
+                                    "go back too")
+            button.connect("clicked", lambda _b, a=act: a(turn))
+            row.append(button)
+        return row
 
     def _extras(self, turn: Turn) -> None:
         child = self.extras.get_first_child()
@@ -459,5 +470,5 @@ class TurnView(Gtk.Box):
             note = Gtk.Label(label=turn.note, xalign=0, wrap=True)
             note.add_css_class("harness-step-note")
             self.extras.append(note)
-        if self._go_back is not None and self._may_go_back(turn):
+        if self._may_go_back(turn):
             self.extras.append(self._going_back(turn))
