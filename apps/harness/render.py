@@ -16,6 +16,7 @@ gi.require_version("GtkSource", "5")
 from gi.repository import GLib, Gtk, GtkSource, Pango  # noqa: E402
 
 from osiris.harness.activity import Step, elapsed, summary  # noqa: E402
+from osiris.harness.detail import Kind, detail  # noqa: E402
 from osiris.harness.admin import Request  # noqa: E402
 from osiris.harness.conversation import State, Turn  # noqa: E402
 from osiris.harness.markdown import (  # noqa: E402
@@ -247,7 +248,22 @@ class ActivityRecord(Gtk.Expander):
                              else "changes-prevent-symbolic"))
         row.append(Gtk.Label(label=step.record, xalign=0,
                              ellipsize=Pango.EllipsizeMode.END))
-        return row
+        return Gtk.Expander(label_widget=row, child=_step_detail(step))
+
+
+def _step_detail(step: Step) -> Gtk.Widget:
+    """What a step asked for and what came back, as detail() decides it."""
+    shown = detail(step)
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+    box.add_css_class("harness-step-detail")
+    asked = Gtk.Label(label=shown.asked, xalign=0, wrap=True, selectable=True)
+    asked.add_css_class("harness-step-asked")
+    if shown.kind is Kind.COMMAND:
+        asked.add_css_class("monospace")
+    box.append(asked)
+    for line in shown.lines:
+        box.append(Gtk.Label(label=line.text, xalign=0, selectable=True))
+    return box
 
 
 class TurnView(Gtk.Box):
