@@ -26,6 +26,11 @@ class FakeDrawer:
         self.changes: list[tuple[str, object, Any]] = []
         self.pages: list[str] = []
         self.refreshes = 0
+        self.picker_refreshes = 0
+        self.picker = SimpleNamespace(refresh=self._picker_refreshed)
+
+    def _picker_refreshed(self) -> None:
+        self.picker_refreshes += 1
 
     def clear(self) -> None:
         pass

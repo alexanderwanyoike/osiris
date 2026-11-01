@@ -82,3 +82,13 @@ def test_a_folder_that_is_no_program_offers_no_files_and_no_problem() -> None:
     stand_in.refresh_offers()
     assert stand_in.offered("@") == []
     assert stand_in.problem is None
+
+
+def test_fresh_offers_reach_a_picker_already_open() -> None:
+    from types import SimpleNamespace
+
+    stand_in, _engine = app()
+    stand_in.programs = lambda: SimpleNamespace(files=lambda _name: [])
+    stand_in.skills = SimpleNamespace(skills=lambda _directory: [])
+    stand_in.refresh_offers()
+    assert stand_in.drawer.picker_refreshes == 1
