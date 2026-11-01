@@ -1114,9 +1114,31 @@ class Application(Adw.Application):
     def ask(self, text: str) -> None:
         if self.harness is None:
             return
+        if self.conversation.busy:
+            self._queue(text)
+            return
         self.conversation.asked(text)
         self.drawer.refresh()
         threading.Thread(target=self._send, args=(text,), daemon=True).start()
+
+    def _queue(self, text: str) -> None:
+        """Sent while busy: it waits in the Engine's inbox and steers the
+        answer at its next step."""
+        harness, conversation = self.harness, self.conversation
+
+        def queued(message: str) -> None:
+            conversation.queued(message, text)
+            self.drawer.refresh()
+
+        self.background(lambda: harness.ask(text), queued)
+
+    def unqueue(self, message: str) -> str:
+        """Take a waiting message back from the Engine; its text."""
+        text = self.conversation.unqueued(message)
+        if text and self.harness is not None:
+            threading.Thread(target=self.harness.withdraw, args=(message,),
+                             daemon=True).start()
+        return text
 
     def stop(self) -> None:
         if self.harness is not None:
