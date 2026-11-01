@@ -37,5 +37,6 @@ class Panels:
         if group is None:
             group = Group(tab.kind)
             self.groups.append(group)
-        group.tabs.append(tab)
+        if tab not in group.tabs:
+            group.tabs.append(tab)
         group.selected = tab
