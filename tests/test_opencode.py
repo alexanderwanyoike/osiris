@@ -826,3 +826,26 @@ class TestConnectors:
             "files": State("connected"),
             "tracker": State("needs_auth", "sign in", "mcp-tracker"),
         }
+
+    def test_the_servers_resources_are_offered_by_name(self) -> None:
+        catalog = {
+            "resources": [
+                {
+                    "server": "wiki",
+                    "name": "Home page",
+                    "uri": "wiki://home",
+                    "description": "The wiki's front page",
+                },
+                {"server": "files", "name": "notes.txt", "uri": "file:///n.txt"},
+            ],
+            "templates": [],
+        }
+        http = FakeHttpClient(
+            replies={("GET", f"{URL}/api/mcp/resource?{self.WHERE}"): {"data": catalog}}
+        )
+        assert engine(http).resources(Path("/home/tester")) == [
+            Entry(
+                "resource", "wiki://home", "Home page", "wiki: The wiki's front page"
+            ),
+            Entry("resource", "file:///n.txt", "notes.txt", "files"),
+        ]
