@@ -60,8 +60,8 @@ carry it on.
 
 - How it builds and runs is in `{manifest}` (`build` and `run`, each a list of
   words run in this folder). Keep them true when you change how it is built.
-- Every change is one atomic commit: it does exactly one thing, and a refactor
-  never shares a commit with a change in behaviour.
+- How code is written here is in `CODING_STANDARDS.md`. Follow it, and change
+  it when the person asks for something it does not say.
 - Windows use GTK 4 and libadwaita, so the Program follows the Osiris Theme.
   Never write colours: style only with libadwaita's named colours
   (`@accent_bg_color`, `@window_bg_color`, `@card_bg_color` and the rest).
