@@ -90,3 +90,12 @@ def test_a_commented_config_is_left_and_saving_says_so() -> None:
     files.write((HOME / ENGINE_CONFIG).with_suffix(".jsonc"), "// mine\n{}")
     assert not save_connector(files, HOME, Connector("wiki", url="https://w/mcp"))
     assert not files.exists(HOME / ENGINE_CONFIG)
+
+
+def test_a_removed_connector_is_gone_from_the_engines_config() -> None:
+    from osiris.harness.connectors import read_connectors, remove_connector
+
+    files = FakeFileSystem()
+    files.write(HOME / ENGINE_CONFIG, json.dumps(CONFIG))
+    assert remove_connector(files, HOME, "wiki")
+    assert [c.name for c in read_connectors(files, HOME)] == ["files"]
