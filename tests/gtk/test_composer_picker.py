@@ -274,8 +274,9 @@ def test_the_pointer_chooses_the_entry_it_rests_on() -> None:
     assert picker.list.get_selected_row() is second
 
 
-def test_one_match_makes_a_card_one_row_tall() -> None:
+def test_one_match_makes_a_card_no_taller_than_its_list() -> None:
     picker, _ = docked("@RE", [README, CLOCK])
-    row = picker.list.get_row_at_index(0)
-    _minimum, natural, _b, _c = picker.card.measure(Gtk.Orientation.VERTICAL, -1)
-    assert natural == row.get_height()
+    _minimum, card, _b, _c = picker.card.measure(Gtk.Orientation.VERTICAL, -1)
+    _minimum, rows, _b, _c = picker.list.measure(Gtk.Orientation.VERTICAL, -1)
+    assert len(shown(picker)) == 1
+    assert card == rows
