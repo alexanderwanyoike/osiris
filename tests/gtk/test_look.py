@@ -137,3 +137,28 @@ def test_a_working_connector_says_so_in_the_themes_success_colour_in_every_look(
         success.parse(look.theme["colors"]["success"])
         window.destroy()
         assert said.get_color().equal(success), skin
+
+
+def test_a_question_waiting_on_the_person_ticks_in_the_themes_warning_in_every_look(
+    tmp_path: Path,
+) -> None:
+    from gi.repository import Gdk
+    from rail import Rail
+
+    from osiris.harness.rail import Tick
+
+    for skin in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(skin)
+        look = Look(tmp_path, lambda: None)
+        shown = Rail(on_jump=lambda _i: None)
+        shown.show_ticks([Tick(0.5, True, "waiting", "list /etc")])
+        window = Gtk.Window(child=shown)
+        window.present()
+        line = next(
+            w for w in widgets(shown) if "harness-rail-line" in w.get_css_classes()
+        )
+        warning = Gdk.RGBA()
+        warning.parse(look.theme["colors"]["warning"])
+        window.destroy()
+        assert line.get_color().equal(warning), skin
