@@ -189,3 +189,20 @@ def test_sign_in_methods_opencode_marks_as_legacy_are_not_offered() -> None:
     labels = [m.label for m in accounts(http).providers()[0].methods]
     assert "Codex device code (legacy)" not in labels
     assert "Sign in with ChatGPT" in labels
+
+
+# As opencode 2.2.4 lists the sign-in an MCP server needs.
+LINEAR = {
+    "id": "mcp_27245be96d0b1111",
+    "name": "linear",
+    "metadata": {"source": "mcp"},
+    "methods": [{"id": "mcp_27245be96d0b1111", "type": "oauth", "label": "linear"}],
+    "connections": [],
+}
+
+
+def test_a_connectors_sign_in_is_not_offered_as_a_model_provider() -> None:
+    http = FakeHttpClient(
+        replies={("GET", f"{URL}/api/integration"): {"data": [OPENAI, LINEAR]}}
+    )
+    assert [p.id for p in accounts(http).providers()] == ["openai"]
