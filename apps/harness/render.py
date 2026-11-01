@@ -350,6 +350,7 @@ class TurnView(Gtk.Box):
                  edit: Callable[[Turn], None] | None = None,
                  try_again: Callable[[Turn], None] | None = None,
                  may_go_back: Callable[[Turn], bool] = lambda _turn: False,
+                 may_try_again: Callable[[Turn], bool] = lambda _turn: False,
                  show_changes: Callable[[Turn], None] | None = None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-turn")
@@ -360,6 +361,7 @@ class TurnView(Gtk.Box):
         self._edit = edit
         self._try_again = try_again
         self._may_go_back = may_go_back
+        self._may_try_again = may_try_again
         self._show_changes = show_changes
         question = Gtk.Label(label=turn.question, xalign=0, wrap=True,
                              wrap_mode=Pango.WrapMode.WORD_CHAR, selectable=True,
@@ -445,6 +447,22 @@ class TurnView(Gtk.Box):
             row.append(button)
         return row
 
+    def _meta_line(self, turn: Turn, said: str) -> Gtk.Widget:
+        """The model and time, with the quiet actions on this answer."""
+        line = Gtk.Box(spacing=6, halign=Gtk.Align.START)
+        meta = Gtk.Label(label=said, xalign=0)
+        meta.add_css_class("harness-meta")
+        line.append(meta)
+        if self._try_again is not None and self._may_try_again(turn):
+            again = Gtk.Button(icon_name="view-refresh-symbolic",
+                               tooltip_text="Try this question again: it goes back "
+                               "to before it, with its files, and is sent again")
+            again.add_css_class("flat")
+            again.add_css_class("harness-quiet")
+            again.connect("clicked", lambda _b: self._try_again and self._try_again(turn))
+            line.append(again)
+        return line
+
     def _extras(self, turn: Turn) -> None:
         child = self.extras.get_first_child()
         while child is not None:
@@ -480,9 +498,7 @@ class TurnView(Gtk.Box):
             if turn.state is State.STOPPED:
                 parts.append("stopped")
             parts.append(self._finished_at.strftime("%H:%M"))
-            meta = Gtk.Label(label="  ·  ".join(parts), xalign=0)
-            meta.add_css_class("harness-meta")
-            self.extras.append(meta)
+            self.extras.append(self._meta_line(turn, "  ·  ".join(parts)))
         if turn.note:
             note = Gtk.Label(label=turn.note, xalign=0, wrap=True)
             note.add_css_class("harness-step-note")
