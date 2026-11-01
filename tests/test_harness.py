@@ -185,6 +185,12 @@ def test_what_was_picked_goes_with_the_question() -> None:
     assert engine.referenced == [("ses_1", (REVIEW,))]
 
 
+def test_what_was_picked_goes_with_a_message_sent_now() -> None:
+    subject, engine, _ = harness()
+    subject.send_now("/review the timer", (REVIEW,))
+    assert engine.referenced == [("ses_1", (REVIEW,))]
+
+
 def test_the_session_starts_in_the_harnesss_folder() -> None:
     subject, engine, _ = harness()
     subject.ask("hello")
