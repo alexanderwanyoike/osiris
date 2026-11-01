@@ -143,3 +143,6 @@ class TestSkinChoice:
 
     def test_a_known_skin_is_chosen_ignoring_surrounding_whitespace(self) -> None:
         assert skin_name(" transcript\n") == "transcript"
+
+    def test_studio_can_be_chosen(self) -> None:
+        assert skin_name("studio") == "studio"

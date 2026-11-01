@@ -68,14 +68,26 @@ def drawer():
 
 
 def test_the_expand_button_asks_to_fill_the_screen_and_to_come_back() -> None:
-    """Expanding goes through the extension, which stops above the dock; the
-    window manager's maximise would cover Plank."""
+    """Expanding goes through the extension, which keeps the drawer at the
+    right edge and maximises it; without the extension the app maximises."""
     window, _ = drawer()
     asked: list[bool] = []
     window.app.expand = asked.append
     window.expand_button.emit("clicked")
     window.expand_button.emit("clicked")
     assert asked == [True, False]
+
+
+def test_the_expand_button_points_the_way_the_drawer_will_go() -> None:
+    """The drawer sits at the right edge: it widens to the left and comes
+    back to the right."""
+    window, _ = drawer()
+    window.app.expand = lambda _expanded: None
+    assert window.expand_button.get_icon_name() == "xsi-go-previous-symbolic"
+    window.expand_button.emit("clicked")
+    assert window.expand_button.get_icon_name() == "xsi-go-next-symbolic"
+    window.expand_button.emit("clicked")
+    assert window.expand_button.get_icon_name() == "xsi-go-previous-symbolic"
 
 
 def test_the_left_edge_is_a_handle_for_resizing_the_drawer() -> None:

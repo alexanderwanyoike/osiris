@@ -142,7 +142,7 @@ class Drawer(Gtk.ApplicationWindow):
         providers_button.connect("clicked", lambda _b: self.show_providers())
         # Deep agentic work wants the whole screen; the drawer comes back after.
         self.expanded = False
-        self.expand_button = Gtk.Button(icon_name="view-fullscreen-symbolic",
+        self.expand_button = Gtk.Button(icon_name="xsi-go-previous-symbolic",
                                         tooltip_text="Expand")
         self.expand_button.add_css_class("flat")
         self.expand_button.connect("clicked", self._toggle_expanded)
@@ -305,7 +305,7 @@ class Drawer(Gtk.ApplicationWindow):
         self.expanded = not self.expanded
         self.app.expand(self.expanded)
         self.expand_button.set_icon_name(
-            "view-restore-symbolic" if self.expanded else "view-fullscreen-symbolic")
+            "xsi-go-next-symbolic" if self.expanded else "xsi-go-previous-symbolic")
         self.expand_button.set_tooltip_text("Back to the drawer" if self.expanded
                                             else "Expand")
 
