@@ -658,3 +658,23 @@ def test_the_rail_has_a_tick_per_question_and_a_click_scrolls_to_it() -> None:
     window.rail_jump(0)
     settle()
     assert window.scroller.get_vadjustment().get_value() == 0
+
+
+def test_the_rails_ticks_stand_where_questions_do_however_far_it_is_scrolled() -> None:
+    from tests.gtk.test_composer_picker import settle
+
+    window, _ = drawer()
+    window.set_default_size(420, 700)
+    window.present()
+    for n in range(4):
+        turn = window.app.conversation.asked(f"question {n}")
+        turn.answer = "an answer that runs on\n\n" * 20
+    window.refresh()
+    settle()
+    view = window.scroller.get_vadjustment()
+    view.set_value(view.get_upper())
+    settle()
+    window.refresh()
+    at = [tick.at for tick in window.rail._ticks]
+    assert at[0] < 0.02
+    assert at == sorted(at) and at[-1] > 0.6
