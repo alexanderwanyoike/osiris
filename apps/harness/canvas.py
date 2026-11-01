@@ -194,14 +194,79 @@ class Canvas(Gtk.Box):
             return self.views[kind]
         view = Adw.TabView(vexpand=True, hexpand=True)
         view.connect("close-page", self._closing)
-        view.connect("notify::selected-page", lambda *_: setattr(self, "_focus", kind))
+        view.connect("notify::selected-page", lambda v, _p: self._chosen(kind, v))
         group = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         group.add_css_class("harness-canvas-group")
-        group.append(Adw.TabBar(view=view, autohide=False, expand_tabs=False))
+        group.append(self._header(kind, view))
         group.append(view)
         self.views[kind] = view
         self._groups[kind] = self._beside_tree(group) if kind is Kind.CODE else group
         return view
+
+    def _header(self, kind: Kind, view: Adw.TabView) -> Gtk.Widget:
+        """The group's tabs, small and left-aligned, and its own actions."""
+        header = Gtk.Box(spacing=2)
+        header.add_css_class("harness-group-header")
+        tabs = Gtk.Box(spacing=2, hexpand=True)
+        header.append(tabs)
+        new = _NEW.get(kind)
+        if new is not None:
+            icon, tip = new
+            more = Gtk.Button(icon_name=icon, tooltip_text=tip)
+            more.add_css_class("flat")
+            more.connect("clicked", lambda _b: self._new(kind))
+            header.append(more)
+        close = Gtk.Button(icon_name="window-close-symbolic", tooltip_text="Close")
+        close.add_css_class("flat")
+        close.connect("clicked", lambda _b: self._close_group(kind))
+        header.append(close)
+
+        def redraw(*_args) -> None:
+            while (child := tabs.get_first_child()) is not None:
+                tabs.remove(child)
+            for index in range(view.get_n_pages()):
+                tabs.append(self._header_tab(view, view.get_nth_page(index)))
+
+        for signal in ("page-attached", "page-detached", "notify::selected-page"):
+            view.connect(signal, redraw)
+        view.connect("page-attached",
+                     lambda _v, page, _i: page.connect("notify::title", redraw))
+        return header
+
+    def _header_tab(self, view: Adw.TabView, page: Adw.TabPage) -> Gtk.Widget:
+        tab = Gtk.Box()
+        tab.add_css_class("harness-group-tab")
+        if view.get_selected_page() is page:
+            tab.add_css_class("selected")
+        title = Gtk.Button(child=Gtk.Label(label=page.get_title(), max_width_chars=24,
+                                           ellipsize=Pango.EllipsizeMode.END))
+        title.add_css_class("flat")
+        title.connect("clicked", lambda _b: view.set_selected_page(page))
+        shut = Gtk.Button(icon_name="window-close-symbolic", tooltip_text="Close tab")
+        shut.add_css_class("flat")
+        shut.add_css_class("harness-tab-close")
+        shut.connect("clicked", lambda _b: view.close_page(page))
+        tab.append(title)
+        tab.append(shut)
+        return tab
+
+    def _new(self, kind: Kind) -> None:
+        if kind is Kind.TERMINAL:
+            self.open_terminal()
+        elif kind is Kind.BROWSER:
+            self.open_page("")
+
+    def _close_group(self, kind: Kind) -> None:
+        for tab in list(self._open(kind)):
+            self.close(tab)
+
+    def _chosen(self, kind: Kind, view: Adw.TabView) -> None:
+        """A tab chosen on screen is the group's selected one, and current."""
+        self._focus = kind
+        page = view.get_selected_page()
+        tab = next((t for t, p in self._pages.items() if p is page), None)
+        if tab is not None:
+            self.panels.open(tab)
 
     def _beside_tree(self, group: Gtk.Widget) -> Gtk.Widget:
         """The code group, with the Programs' files beside it."""
@@ -399,6 +464,13 @@ class Canvas(Gtk.Box):
         page.append(Gtk.ScrolledWindow(child=view, vexpand=True, hexpand=True,
                                        hscrollbar_policy=Gtk.PolicyType.NEVER))
         return page, view
+
+
+#: The group headers that open another tab of their kind: icon and tooltip.
+_NEW = {
+    Kind.TERMINAL: ("list-add-symbolic", "New terminal"),
+    Kind.BROWSER: ("list-add-symbolic", "New page"),
+}
 
 
 def _tree_line(node: Node, depth: int) -> Gtk.Widget:
