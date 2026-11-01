@@ -177,3 +177,13 @@ def test_each_entry_shows_an_icon_for_its_kind() -> None:
     ]
     assert icons == [ICONS["file"], ICONS["skill"]]
     assert ICONS["file"] != ICONS["skill"]
+
+
+def test_a_long_list_is_all_there_and_scrolls_rather_than_grows() -> None:
+    many = [Entry("file", f"/p/f{n}.py", f"f{n}.py", "") for n in range(40)]
+    picker, _ = docked("@", many)
+    _minimum, natural, _b, _c = picker.popover.get_child().measure(
+        Gtk.Orientation.VERTICAL, -1
+    )
+    assert len(shown(picker)) == 40
+    assert natural <= 320
