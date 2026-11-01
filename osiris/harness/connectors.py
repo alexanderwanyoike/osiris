@@ -7,6 +7,7 @@ opencode 2.2.4 offers no API that saves them.
 
 from __future__ import annotations
 
+import shlex
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -104,3 +105,12 @@ class Servers(Protocol):
     def connector_states(self, directory: Path) -> dict[str, State]: ...
 
     def resources(self, directory: Path) -> list[Entry]: ...
+
+
+def command_of(typed: str) -> tuple[str, ...]:
+    """The argv a typed command names, or none while a quote is open. Split
+    as a shell would but never given to one: the Engine runs the argv."""
+    try:
+        return tuple(shlex.split(typed))
+    except ValueError:
+        return ()
