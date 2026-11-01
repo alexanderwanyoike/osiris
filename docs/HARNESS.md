@@ -271,18 +271,22 @@ The event stream carries every session on the service, including any opened
 by opencode's own terminal app. The Harness acts only on its own sessions: the
 one on screen, and any still working on a question. The person can move to
 another Conversation while Osiris answers; the one left keeps being answered,
-its file requests judged against its own folder, and the sidebar shows a
-spinner beside it until it ends.
+its file requests judged against its own folder, and the sidebar says
+"Working" beside it until it ends.
 
 ### Unread and notifications
 
 An answer that ends, finished or failed, while the person is not looking at
 it leaves its Conversation unread: the drawer was put away, or another
-Conversation was on screen. One the person stopped is not. The sidebar sets an
-unread title in bold with a dot in the Theme's accent at the end of its row (a
-running one keeps its spinner), and the desktop gets a notification, "Osiris
-replied" or "Osiris could not finish", with the Conversation's title and the
-first line of the answer. Clicking it activates `app.open-conversation` with
+Conversation was on screen. One the person stopped is not. Each row in the
+sidebar says how its Conversation stands (`osiris/harness/status.py`):
+"Waiting for you" while an approval or admin password card is open, "Working"
+while it answers, "Done" with the title in bold while an answer is unread.
+The desktop gets a notification, "Osiris replied" or "Osiris could not
+finish", with the Conversation's title and the first line of the answer; a
+Conversation that starts waiting while the person is not looking gets "Osiris
+is waiting for you" with what it is asking. Working and Waiting come from the
+running Harness and are not kept across a restart; Done is. Clicking it activates `app.open-conversation` with
 the session, which brings the drawer in on that Conversation.
 
 Opening a Conversation, or bringing the drawer back to it, marks it read and
