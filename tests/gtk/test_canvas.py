@@ -496,7 +496,7 @@ def tab_icon(tab: Gtk.Widget) -> Gtk.Image:
 
 
 def test_each_tab_carries_an_icon_for_what_it_shows() -> None:
-    widget, made = with_terminals()
+    widget, _ = with_terminals()
     widget.show_changes("tidy", (), on_comment=lambda *_: None)
     widget.open_terminal()
     (code,) = header_tabs(widget, Kind.CODE)
