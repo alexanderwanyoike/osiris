@@ -60,7 +60,7 @@ def test_a_program_opens_on_its_code() -> None:
     widget, _ = canvas()
     assert code(widget) == "print('tick')\n"
     page = widget.views[Kind.CODE].get_selected_page().get_child()
-    assert "pomodoro / main.py" in texts(page)
+    assert "Pomodoro \u203a main.py" in texts(page)
 
 
 def test_editing_is_handed_to_code() -> None:
@@ -80,7 +80,7 @@ def test_showing_other_programs_closes_the_tabs_of_those_gone() -> None:
     widget.show([(program("notes", "Notes"), [Path("main.py")])])
     assert titles(widget, Kind.CODE) == ["main.py"]
     page = widget.views[Kind.CODE].get_selected_page().get_child()
-    assert "notes / main.py" in texts(page)
+    assert "Notes \u203a main.py" in texts(page)
 
 
 PATCH = (
