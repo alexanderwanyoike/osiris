@@ -72,7 +72,7 @@ from osiris.harness.history import (  # noqa: E402
 )
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
-from osiris.harness.picker import Reference  # noqa: E402
+from osiris.harness.picker import Entry, Reference, Skills, project_files  # noqa: E402
 from osiris.harness.engine import (  # noqa: E402
     Failed,
     Finished,
@@ -603,6 +603,9 @@ class Application(Adw.Application):
         self.pasts: list = []
         self.look: Look | None = None
         self.accounts: OpencodeAccounts | None = None
+        self.skills: Skills | None = None
+        #: What the message box's picker lists, by the sign that opens it.
+        self.offers: dict[str, list[Entry]] = {}
         self.files = RealFileSystem()
         self.home = SystemIdentity().home
         self.models: Models = load_models(self.files, self.home)
@@ -1053,6 +1056,29 @@ class Application(Adw.Application):
 
         self.background(gather, show)
 
+    def offered(self, sign: str) -> list[Entry]:
+        return self.offers.get(sign, [])
+
+    def refresh_offers(self) -> None:
+        """Gather what the picker lists for where the Conversation runs: the
+        Project's files, and the skills a session there can load."""
+        if self.harness is None:
+            return
+        directory = self.harness.directory
+        here = project_program(directory, self.home)
+        programs, skills = self.programs(), self.skills
+
+        def gather() -> dict[str, list[Entry]]:
+            files = programs.files(here) if here else []
+            return {"@": project_files(directory, files),
+                    "/": skills.skills(directory) if skills else []}
+
+        def found(offers: dict[str, list[Entry]]) -> None:
+            if self.harness is not None and self.harness.directory == directory:
+                self.offers = offers
+
+        self.background(gather, found)
+
     def update_canvas(self) -> None:
         # What this run changed, and what the Conversation changed before, as
         # the log has it: a reopened Conversation brings its Canvas back.
@@ -1369,6 +1395,7 @@ class Application(Adw.Application):
                                        auto_mode=lambda: auto_mode_on(
                                            self.files, self.home))
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
+                self.skills = engine
                 GLib.idle_add(self._refresh)
                 GLib.idle_add(self.start_waiting)
                 GLib.idle_add(lambda: self.load_history() or False)
