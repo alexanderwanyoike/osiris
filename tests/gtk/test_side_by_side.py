@@ -243,3 +243,20 @@ def test_an_engine_error_while_going_back_is_told_on_the_question() -> None:
     engine.revert = broken
     stand_in.go_back(stand_in.conversation.turns[0])
     assert "snapshot store unavailable" in stand_in.conversation.turns[0].note
+
+
+def test_trying_again_goes_back_then_sends_the_question_again() -> None:
+    stand_in, engine = app()
+    engine.past = [
+        PastTurn("make x.txt", "Made it.", GPT, "msg_1"),
+        PastTurn("make y.txt", "Made it.", GPT, "msg_2"),
+    ]
+    stand_in.open_past("ses_9")
+    engine.past = engine.past[:1]
+    stand_in.go_back(stand_in.conversation.turns[1], again=True)
+    assert engine.reverted == [("ses_9", "msg_2")]
+    assert [turn.question for turn in stand_in.conversation.turns] == [
+        "make x.txt",
+        "make y.txt",
+    ]
+    assert stand_in.drawer.drafts == []
