@@ -173,3 +173,34 @@ def test_choosing_a_file_in_the_tree_opens_it_as_a_tab_of_its_own() -> None:
     widget.tree.emit("row-activated", readme)
     assert titles(widget, Kind.CODE) == ["main.py", "README.md"]
     assert code(widget) == "# Pomodoro\n"
+
+
+def test_two_groups_sit_side_by_side_with_a_line_to_resize_them() -> None:
+    widget, _ = changed()
+    tiled = widget._tiles.get_first_child()
+    assert isinstance(tiled, Gtk.Paned)
+    assert tiled.get_orientation() is Gtk.Orientation.HORIZONTAL
+
+
+def test_closing_a_groups_last_tab_gives_its_room_to_the_others() -> None:
+    widget, _ = changed()
+    (tidy,) = widget.panels.groups[1].tabs
+    widget.close(tidy)
+    assert [g.kind for g in widget.panels.groups] == [Kind.CODE]
+    assert not isinstance(widget._tiles.get_first_child(), Gtk.Paned)
+
+
+def test_with_every_group_closed_files_opens_the_code_group_again() -> None:
+    """The toolbar stays, so the files are always one click away."""
+    widget, _ = canvas()
+    for tab in list(widget.panels.groups[0].tabs):
+        widget.close(tab)
+    assert widget.panels.groups == []
+    assert widget.toolbar.get_parent() is widget
+    files = next(
+        w
+        for w in widgets(widget.toolbar)
+        if isinstance(w, Gtk.Button) and w.get_icon_name() == "folder-symbolic"
+    )
+    files.emit("clicked")
+    assert titles(widget, Kind.CODE) == ["main.py"]
