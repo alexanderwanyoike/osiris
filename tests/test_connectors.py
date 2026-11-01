@@ -114,3 +114,21 @@ def test_only_connected_servers_are_offered_and_not_osiris_own() -> None:
     assert offered_servers(states, own="osiris") == [
         Entry("connector", "wiki", "wiki", "Connector")
     ]
+
+
+def test_a_typed_command_is_split_as_a_shell_would_without_running_one() -> None:
+    from osiris.harness.connectors import command_of
+
+    assert command_of('npx -y "@acme/server files" --root ~/Notes') == (
+        "npx",
+        "-y",
+        "@acme/server files",
+        "--root",
+        "~/Notes",
+    )
+
+
+def test_a_command_with_an_unclosed_quote_is_no_command() -> None:
+    from osiris.harness.connectors import command_of
+
+    assert command_of('npx "server') == ()
