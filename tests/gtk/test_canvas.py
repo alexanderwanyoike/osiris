@@ -518,3 +518,24 @@ def test_with_no_program_a_terminal_opens_in_the_home_folder() -> None:
     widget.open_terminal()
     assert [t.folder for t in made] == [Path("/home/tester")]
     assert titles(widget, Kind.TERMINAL) == ["tester"]
+
+
+def test_an_empty_canvas_shows_where_to_start() -> None:
+    made: list[Gtk.Widget] = []
+    widget = Canvas(
+        read=lambda _p: "",
+        open_in_code=lambda _f, _p: None,
+        terminal=lambda folder: made.append(FakeTerminal(folder)) or made[-1],
+        page=lambda at, on_title: made.append(FakePage(at, on_title)) or made[-1],
+        home=Path("/home/tester"),
+    )
+    start = widget._tiles.get_first_child()
+    assert "harness-canvas-start" in start.get_css_classes()
+    find(start, Gtk.Button, "Open a terminal").emit("clicked")
+    assert [g.kind for g in widget.panels.groups] == [Kind.TERMINAL]
+    assert (
+        "harness-canvas-start" not in widget._tiles.get_first_child().get_css_classes()
+    )
+    widget.close(widget.panels.groups[0].tabs[0])
+    find(widget._tiles.get_first_child(), Gtk.Button, "Open a page").emit("clicked")
+    assert [g.kind for g in widget.panels.groups] == [Kind.BROWSER]
