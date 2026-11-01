@@ -195,7 +195,8 @@ class Canvas(Gtk.Box):
         view = Adw.TabView(vexpand=True, hexpand=True)
         view.connect("close-page", self._closing)
         view.connect("notify::selected-page", lambda v, _p: self._chosen(kind, v))
-        group = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        group = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
+                        overflow=Gtk.Overflow.HIDDEN)
         group.add_css_class("harness-canvas-group")
         group.append(self._header(kind, view))
         group.append(view)
