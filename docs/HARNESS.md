@@ -47,6 +47,14 @@ The first slice of ROADMAP P3.5:
   string shown whole and labelled, a script marked as not shown. The password
   typed there goes to sudo and nowhere else; Deny fails the command. See
   [Admin passwords](#admin-passwords).
+- **It can be steered.** A message sent while Osiris answers waits in
+  opencode's inbox, shown as pending above the composer with Edit and Remove,
+  and reaches the model at its next step (opencode's default `steer`
+  delivery); `session.inbox.delivered` turns it into the next question, and the
+  answer it steered ends there. Edit and Remove withdraw it
+  (`DELETE /api/session/{id}/inbox/{item}`), Edit putting its text back in the
+  composer; Stop withdraws every waiting message and puts them back in the
+  composer, so none is sent.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
