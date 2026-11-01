@@ -101,3 +101,9 @@ def test_tokens_take_the_colours_they_are_given() -> None:
     picker.restyle(("#7c8aeb", "#2e3048"))
     assert picker.token.props.foreground_rgba.to_string() == "rgb(124,138,235)"
     assert picker.token.props.background_rgba.to_string() == "rgb(46,48,72)"
+
+
+def test_clicking_an_entry_puts_it_in_the_message() -> None:
+    picker = typed("fix @")
+    picker.list.emit("row-activated", picker.list.get_row_at_index(1))
+    assert text(picker) == "fix @clock.py "
