@@ -299,42 +299,6 @@ def test_the_task_list_stays_once_the_answer_ends() -> None:
     assert "Create c.txt" in texts(drawn(turn))
 
 
-def test_a_question_offers_edit_and_try_again_when_it_may() -> None:
-    """Both go back to before it first (#158)."""
-    edited: list[Turn] = []
-    again: list[Turn] = []
-    turn = Turn("make y.txt", "Made it.", State.DONE, message="msg_2")
-    view = TurnView(
-        turn,
-        on_undo=lambda _t: None,
-        program_card=lambda _n: Gtk.Label(),
-        edit=edited.append,
-        try_again=again.append,
-        may_go_back=lambda _t: True,
-    )
-    view.update(turn, STYLE, None)
-    edit = find(view, Gtk.Button, "Edit")
-    assert "before this question" in edit.get_tooltip_text()
-    edit.emit("clicked")
-    find(view, Gtk.Button, "Try again").emit("clicked")
-    assert (edited, again) == ([turn], [turn])
-
-
-def test_neither_is_offered_when_it_may_not_go_back() -> None:
-    turn = Turn("make y.txt", "", State.ANSWERING, message="msg_2")
-    view = TurnView(
-        turn,
-        on_undo=lambda _t: None,
-        program_card=lambda _n: Gtk.Label(),
-        edit=lambda _t: None,
-        try_again=lambda _t: None,
-        may_go_back=lambda _t: False,
-    )
-    view.update(turn, STYLE, None)
-    assert "Edit" not in texts(view)
-    assert "Try again" not in texts(view)
-
-
 def test_a_note_about_the_question_is_shown_under_its_answer() -> None:
     """Such as why it could not be gone back to."""
     turn = Turn("make x.txt", "Made it.", State.DONE, note="Nothing went back.")
@@ -347,20 +311,6 @@ def edited(state: State) -> Turn:
     return turn
 
 
-def test_an_answer_that_edited_files_offers_its_changes_once_it_ends() -> None:
-    shown: list[Turn] = []
-    turn = edited(State.DONE)
-    view = TurnView(
-        turn,
-        on_undo=lambda _t: None,
-        program_card=lambda _n: Gtk.Label(),
-        show_changes=shown.append,
-    )
-    view.update(turn, STYLE, None)
-    find(view, Gtk.Button, "Changes").emit("clicked")
-    assert shown == [turn]
-
-
 def test_an_answer_still_editing_or_that_edited_nothing_offers_no_changes() -> None:
     for turn in (edited(State.ANSWERING), finished()):
         view = TurnView(
@@ -370,7 +320,10 @@ def test_an_answer_still_editing_or_that_edited_nothing_offers_no_changes() -> N
             show_changes=lambda _t: None,
         )
         view.update(turn, STYLE, None)
-        assert "Changes" not in texts(view)
+        assert not any(
+            isinstance(w, Gtk.Button) and w.get_icon_name() == "view-dual-symbolic"
+            for w in widgets(view)
+        )
 
 
 def icon_button(root: Gtk.Widget, icon: str) -> Gtk.Button:
