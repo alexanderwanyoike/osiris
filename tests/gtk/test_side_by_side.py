@@ -216,3 +216,15 @@ def test_where_the_files_cannot_go_back_the_person_is_told_and_nothing_moves() -
     assert [turn.question for turn in stand_in.conversation.turns] == ["make x.txt"]
     assert "git" in stand_in.problem
     assert stand_in.drawer.drafts == []
+
+
+def test_a_question_sent_now_names_its_message_so_it_can_be_gone_back_to() -> None:
+    from gi.repository import GLib
+
+    stand_in, _ = app()
+    turn = stand_in.conversation.asked("make it calm")
+    stand_in._send("make it calm", turn)
+    context = GLib.MainContext.default()
+    for _ in range(50):
+        context.iteration(False)
+    assert turn.message == "msg_1"
