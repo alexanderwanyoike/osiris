@@ -266,20 +266,72 @@ def test_trying_again_goes_back_then_sends_the_question_again() -> None:
     assert stand_in.drawer.drafts == []
 
 
-def test_a_questions_changes_are_shown_and_a_comment_on_them_reaches_thoth() -> None:
+def test_a_questions_changes_come_from_its_commits_and_a_comment_reaches_thoth() -> (
+    None
+):
     from osiris.harness.engine import FileChange
+    from osiris.harness.log import Change
+    from osiris.platform import FakeRunner
+    from osiris.platform.process import Result
+    from osiris.programs.programs import Programs
 
+    patch = "diff --git a/main.py b/main.py\n@@ -1 +1 @@\n-a\n+b"
+    runner = FakeRunner(
+        results={
+            f"git -C {HOME}/Code/coin-flip show --format= --patch abc": Result(
+                (), 0, patch
+            )
+        }
+    )
     stand_in, engine = app()
+    stand_in.programs = lambda: Programs(FakeFileSystem(), runner, HOME)
     engine.past = [PastTurn("tidy main.py", "Tidied.", GPT, "msg_1")]
     stand_in.open_past("ses_9")
-    engine.changed = (FileChange("main.py", "modified", 1, 0, "+x\n"),)
-    stand_in.show_changes(stand_in.conversation.turns[0])
-    question, files, on_comment = stand_in.drawer.changes[-1]
-    assert (question, files) == ("tidy main.py", engine.changed)
-    on_comment("main.py", (3, 4), "Name it better.")
-    assert stand_in.conversation.turns[-1].question == (
-        "About main.py, lines 3 to 4:\n\nName it better."
+    turn = stand_in.conversation.turns[0]
+    turn.changes.append(
+        Change(
+            "coin-flip: Tidy",
+            {"action": "revert_commit", "name": "coin-flip", "commit": "abc"},
+            "coin-flip",
+        )
     )
+    stand_in.show_changes(turn)
+    question, files, on_comment = stand_in.drawer.changes[-1]
+    assert (question, files) == (
+        "tidy main.py",
+        (FileChange("coin-flip/main.py", "modified", 1, 1, patch),),
+    )
+    on_comment("coin-flip/main.py", (3, 4), "Name it better.")
+    assert stand_in.conversation.turns[-1].question == (
+        "About coin-flip/main.py, lines 3 to 4:\n\nName it better."
+    )
+
+
+def test_changes_whose_program_is_gone_say_so_on_their_question() -> None:
+    """As after an Undo trashed the Program the question made."""
+    from osiris.harness.log import Change
+    from osiris.platform import CommandError, FakeRunner
+    from osiris.programs.programs import Programs
+
+    show = f"git -C {HOME}/Code/coin-flip show --format= --patch abc"
+    runner = FakeRunner(
+        results={show: CommandError(tuple(show.split()), 128, "not a git repository")}
+    )
+    stand_in, engine = app()
+    stand_in.programs = lambda: Programs(FakeFileSystem(), runner, HOME)
+    engine.past = [PastTurn("make a coin flip", "Made it.", GPT, "msg_1")]
+    stand_in.open_past("ses_9")
+    turn = stand_in.conversation.turns[0]
+    turn.changes.append(
+        Change(
+            "coin-flip: Add a flip",
+            {"action": "revert_commit", "name": "coin-flip", "commit": "abc"},
+            "coin-flip",
+        )
+    )
+    stand_in.show_changes(turn)
+    assert stand_in.drawer.changes == []
+    assert "coin-flip" in turn.note
 
 
 def test_a_message_sent_now_waits_shown_while_the_engine_cuts_in() -> None:

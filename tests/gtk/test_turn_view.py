@@ -308,6 +308,13 @@ def test_a_note_about_the_question_is_shown_under_its_answer() -> None:
 def edited(state: State) -> Turn:
     turn = Turn("tidy main.py", "Tidied.", state, message="msg_3")
     turn.steps.append(Step("edit", ("main.py",)))
+    turn.changes.append(
+        Change(
+            "pomodoro: Tidy",
+            {"action": "revert_commit", "name": "pomodoro", "commit": "abc"},
+            "pomodoro",
+        )
+    )
     return turn
 
 
@@ -442,3 +449,30 @@ def test_an_answer_has_no_row_of_text_buttons_for_going_back_or_changes() -> Non
     view.update(turn, STYLE, None)
     labels = {w.get_label() for w in widgets(view) if isinstance(w, Gtk.Button)}
     assert not labels & {"Edit", "Try again", "Changes"}
+
+
+def test_a_reopened_answer_whose_question_made_commits_still_shows_its_changes() -> (
+    None
+):
+    """Its commits come from the Harness log, which outlives the Engine's
+    steps."""
+    turn = Turn(
+        "tidy main.py",
+        "Tidied.",
+        State.DONE,
+        changes=[
+            Change(
+                "coin-flip: Tidy",
+                {"action": "revert_commit", "name": "coin-flip", "commit": "abc"},
+                "coin-flip",
+            )
+        ],
+    )
+    view = TurnView(
+        turn,
+        on_undo=lambda _t: None,
+        program_card=lambda _n: Gtk.Label(),
+        show_changes=lambda _t: None,
+    )
+    view.update(turn, STYLE, None)
+    icon_button(view, "view-dual-symbolic")

@@ -12,6 +12,7 @@ from render import TurnView
 
 from osiris.harness.activity import Step
 from osiris.harness.conversation import State, Turn
+from osiris.harness.log import Change
 from osiris.harness.markdown import InlineStyle
 
 from .conftest import widgets
@@ -23,6 +24,13 @@ STYLE = InlineStyle(code_foreground="#ffffff", code_background="#000000")
 def icons() -> dict[str, Gtk.Button]:
     turn = Turn("tidy main.py", "Tidied.", State.DONE, message="msg_3")
     turn.steps.append(Step("edit", ("main.py",)))
+    turn.changes.append(
+        Change(
+            "pomodoro: Tidy",
+            {"action": "revert_commit", "name": "pomodoro", "commit": "abc"},
+            "pomodoro",
+        )
+    )
     view = TurnView(
         turn,
         on_undo=lambda _t: None,
