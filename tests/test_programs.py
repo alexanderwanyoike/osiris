@@ -76,8 +76,17 @@ class TestCreating:
             "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
         )
         agents = files.read(SOURCE / "AGENTS.md")
-        assert "atomic commit" in agents
         assert MANIFEST_FILE in agents
+        assert "CODING_STANDARDS.md" in agents
+
+    def test_its_commit_rule_lives_only_in_the_coding_standards(self) -> None:
+        """One rule, one place: the person changes it there and nowhere else."""
+        subject, files, _ = programs()
+        subject.create(
+            "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+        )
+        assert "commit" not in files.read(SOURCE / "AGENTS.md")
+        assert "does one thing" in files.read(SOURCE / "CODING_STANDARDS.md")
 
     def test_it_starts_with_coding_standards_the_person_can_change(self) -> None:
         """What a reviewer judges the Program against: what no linter checks."""
