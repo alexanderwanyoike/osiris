@@ -71,3 +71,10 @@ def _start(files: FileSystem, path: Path, rules: list[dict[str, str]]) -> None:
         return
     config["permissions"] = rules
     files.write(path, json.dumps(config, indent=2) + "\n")
+
+
+def switch_on_task_list(files: FileSystem, home: Path) -> None:
+    path = home / ENGINE_CONFIG
+    config = json.loads(files.read(path)) if files.exists(path) else {"$schema": SCHEMA}
+    config.setdefault("experimental", {})["todo"] = True
+    files.write(path, json.dumps(config, indent=2) + "\n")
