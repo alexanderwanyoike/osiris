@@ -5,10 +5,14 @@ from __future__ import annotations
 
 import re
 from fnmatch import fnmatchcase
+from pathlib import Path
 
+from osiris.platform import FakeFileSystem
 from osiris.resources.loader import Resources
 
 AGENT = "engine/agents/reviewer.md"
+HOME = Path("/home/tester")
+ENGINE = HOME / ".config/opencode"
 
 _RULE = re.compile(
     r"- action: \"?([^\"\n]+)\"?\n\s+resource: \"?([^\"\n]+)\"?\n\s+effect: (\w+)"
@@ -74,3 +78,29 @@ def test_the_skills_it_is_adapted_from_are_credited_under_their_licences() -> No
     notice = resources.read("engine/skills/review/NOTICE.md")
     assert "https://github.com/mattpocock/skills" in notice
     assert "https://github.com/anthropics/claude-plugins-official" in notice
+
+
+def test_the_reviewer_and_its_skill_are_given_to_the_engine() -> None:
+    from osiris.harness.reviewer import write_reviewer
+
+    files = FakeFileSystem()
+    write_reviewer(files, HOME)
+    resources = Resources()
+    for name in (
+        "agents/reviewer.md",
+        "skills/review/SKILL.md",
+        "skills/review/NOTICE.md",
+        "skills/review/LICENSE-MIT",
+        "skills/review/LICENSE-APACHE",
+    ):
+        assert files.read(ENGINE / name) == resources.read(f"engine/{name}")
+
+
+def test_a_reviewer_the_person_changed_is_kept() -> None:
+    """What Osiris gives is the person's to change, and no upgrade undoes it."""
+    from osiris.harness.reviewer import write_reviewer
+
+    files = FakeFileSystem()
+    files.write(ENGINE / "skills/review/SKILL.md", "my own review")
+    write_reviewer(files, HOME)
+    assert files.read(ENGINE / "skills/review/SKILL.md") == "my own review"
