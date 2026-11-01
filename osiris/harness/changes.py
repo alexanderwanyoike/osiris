@@ -31,7 +31,8 @@ def _change(program: str, section: str) -> FileChange:
         status = "deleted"
     else:
         status = "modified"
-    body = lines[next(i for i, line in enumerate(lines) if line.startswith("@@")) :]
+    hunks = next((i for i, line in enumerate(lines) if line.startswith("@@")), None)
+    body = lines[hunks:] if hunks is not None else []
     return FileChange(
         f"{program}/{path.group(2)}",
         status,
