@@ -176,3 +176,20 @@ def test_the_log_says_which_answers_changes_were_undone() -> None:
     subject.write("changed", summary="Made Harbour", undo=None)
     subject.write("undone", changes=["Made Harbour", "Applied Harbour"])
     assert subject.undone() == [("Made Harbour", "Applied Harbour")]
+
+
+def test_a_change_goes_to_the_question_of_the_session_that_made_it() -> None:
+    subject = log()
+    subject.write("sent", session="ses_A", text="build a timer")
+    subject.write("sent", session="ses_B", text="make it calm")
+    subject.write(
+        "changed",
+        session="ses_A",
+        summary="Made Pomodoro",
+        undo=None,
+        program="pomodoro",
+    )
+    assert subject.changes_by_question("ses_A") == [
+        [Change("Made Pomodoro", None, "pomodoro")]
+    ]
+    assert subject.changes_by_question("ses_B") == [[]]

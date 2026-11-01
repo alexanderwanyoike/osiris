@@ -94,3 +94,13 @@ def test_the_strip_ends_with_a_list_of_every_tab() -> None:
     widget, _ = canvas()
     assert isinstance(widget.strip, Adw.TabBar)
     find(widget, Gtk.MenuButton)
+
+
+def test_showing_again_replaces_the_tabs() -> None:
+    widget, _ = canvas()
+    widget.show([(program("notes", "Notes"), [Path("main.py")])])
+    titles = [
+        widget.tabs.get_nth_page(i).get_title()
+        for i in range(widget.tabs.get_n_pages())
+    ]
+    assert titles == ["Notes"]

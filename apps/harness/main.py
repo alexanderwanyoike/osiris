@@ -916,7 +916,15 @@ class Application(Adw.Application):
             return [(known[name], programs.files(name))
                     for name in names if name in known]
 
-        self.background(gather, self.drawer.show_canvas)
+        # Gathered off the main loop: by the time it is back another
+        # Conversation may be on screen, and its Canvas is not this one.
+        session = self.session
+
+        def show(found) -> None:
+            if self.session == session:
+                self.drawer.show_canvas(found)
+
+        self.background(gather, show)
 
     def archive(self, session: str) -> None:
         if self.harness is None:
@@ -957,6 +965,7 @@ class Application(Adw.Application):
             self.conversation = Conversation()
             self.drawer.clear()
             self.drawer.refresh()
+            self.update_canvas()
         self.load_history()
 
     def open_past(self, session: str) -> None:
@@ -1133,7 +1142,8 @@ class Application(Adw.Application):
         self.admin_answer(session, None)
         self.backgrounded.pop(session, None)
         if conversation is self.conversation and self.log is not None:
-            changes = self.log.last_changes()
+            asked = self.log.changes_by_question(session)
+            changes = asked[-1] if asked else []
             conversation.changed(changes)
             worked_on = [c.program for c in changes if c.program]
             if worked_on and self.harness is not None:

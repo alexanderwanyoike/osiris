@@ -47,7 +47,7 @@ class Canvas(Gtk.Box):
         selected = self.tabs.get_selected_page()
         keep = selected.get_title() if selected is not None else None
         for index in reversed(range(self.tabs.get_n_pages())):
-            self.tabs.close_page_finish(self.tabs.get_nth_page(index), True)
+            self.tabs.close_page(self.tabs.get_nth_page(index))
         self._views = {}
         self._items.remove_all()
         for program, files in programs:
