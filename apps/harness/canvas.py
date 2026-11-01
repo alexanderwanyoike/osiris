@@ -376,11 +376,19 @@ class Canvas(Gtk.Box):
         listing.add_css_class("navigation-sidebar")
         for change in files:
             line = Gtk.Box(spacing=8)
-            line.append(Gtk.Label(label=change.path, xalign=0, hexpand=True,
-                                  ellipsize=Pango.EllipsizeMode.MIDDLE))
-            counts = Gtk.Label(label=f"+{change.additions} −{change.deletions}")
-            counts.add_css_class("harness-meta")
-            line.append(counts)
+            path = Path(change.path)
+            line.append(_file_icon(path.name))
+            line.append(Gtk.Label(label=path.name, xalign=0))
+            folder = Gtk.Label(label=str(path.parent) if path.parent != Path() else "",
+                               xalign=0, hexpand=True,
+                               ellipsize=Pango.EllipsizeMode.START)
+            folder.add_css_class("harness-meta")
+            line.append(folder)
+            for text, kind in ((f"+{change.additions}", "harness-added"),
+                               (f"−{change.deletions}", "harness-removed")):
+                count = Gtk.Label(label=text)
+                count.add_css_class(kind)
+                line.append(count)
             row = Gtk.ListBoxRow(child=line)
             row.change = change
             listing.append(row)
