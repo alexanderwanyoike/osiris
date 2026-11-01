@@ -273,3 +273,55 @@ def test_changes_in_the_toolbar_asks_for_every_questions_changes() -> None:
     assert button.get_tooltip_text() == "Changes"
     button.emit("clicked")
     assert asked == ["changes"]
+
+
+class FakeTerminal(Gtk.Box):
+    def __init__(self, folder: Path) -> None:
+        super().__init__()
+        self.folder = folder
+        self.closed = False
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def with_terminals() -> tuple[Canvas, list[FakeTerminal]]:
+    made: list[FakeTerminal] = []
+
+    def terminal(folder: Path) -> FakeTerminal:
+        made.append(FakeTerminal(folder))
+        return made[-1]
+
+    widget = Canvas(
+        read=lambda path: SOURCES[path.name],
+        open_in_code=lambda _f, _p: None,
+        terminal=terminal,
+    )
+    widget.show([(program("pomodoro", "Pomodoro"), [Path("main.py")])])
+    return widget, made
+
+
+def toolbar_button(widget: Canvas, icon: str) -> Gtk.Button:
+    return next(
+        w
+        for w in widgets(widget.toolbar)
+        if isinstance(w, Gtk.Button) and w.get_icon_name() == icon
+    )
+
+
+def test_terminal_opens_a_shell_in_the_programs_folder_as_a_tab() -> None:
+    widget, made = with_terminals()
+    button = toolbar_button(widget, "utilities-terminal-symbolic")
+    assert button.get_tooltip_text() == "Terminal"
+    button.emit("clicked")
+    button.emit("clicked")
+    assert [t.folder for t in made] == [Path("/home/tester/Code/pomodoro")] * 2
+    assert len(titles(widget, Kind.TERMINAL)) == 2
+
+
+def test_closing_a_terminals_tab_ends_its_shell() -> None:
+    widget, made = with_terminals()
+    toolbar_button(widget, "utilities-terminal-symbolic").emit("clicked")
+    (terminals,) = [g for g in widget.panels.groups if g.kind is Kind.TERMINAL]
+    widget.close(terminals.tabs[0])
+    assert made[0].closed
