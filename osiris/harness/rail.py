@@ -3,7 +3,21 @@ edge, for its length and the part on screen at a glance."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from osiris.harness.conversation import Turn
+from osiris.harness.titles import title_of
+
+
+@dataclass(frozen=True)
+class Tick:
+    #: Where its question starts, as a share of the Conversation's height.
+    at: float
+    #: Whether any of it is on screen.
+    lit: bool
+    tone: str
+    #: The start of its question, shown on hover.
+    label: str
 
 
 def tone_of(turn: Turn) -> str:
@@ -29,4 +43,20 @@ def on_screen(tops: list[float], total: float, top: float, height: float) -> lis
     return [
         start < top + height and end > top
         for start, end in zip(tops, ends, strict=True)
+    ]
+
+
+def ticks(
+    turns: list[Turn], tops: list[float], total: float, top: float, height: float
+) -> list[Tick]:
+    """A tick for each question, from where each starts in a Conversation
+    ``total`` tall, scrolled to show ``height`` from ``top``."""
+    return [
+        Tick(at, lit, tone_of(turn), title_of(turn.question))
+        for turn, at, lit in zip(
+            turns,
+            placed(tops, total),
+            on_screen(tops, total, top, height),
+            strict=True,
+        )
     ]
