@@ -467,7 +467,9 @@ class Drawer(Gtk.ApplicationWindow):
                             on_undo=self.app.undo,
                             program_card=self.app.program_card,
                             admin_card=self.app.admin_card,
-                            approval_card=self.app.approval_card)
+                            approval_card=self.app.approval_card,
+                            go_back=self.app.go_back,
+                            may_go_back=lambda turn: self.app.conversation.can_go_back(turn))
             self.views.append(view)
             self.turns.append(view)
         newest = len(self.views) - 1
@@ -1078,6 +1080,35 @@ class Application(Adw.Application):
             self.update_canvas()
 
         self.background(lambda: harness.resume(session), opened)
+
+    def go_back(self, turn: Turn) -> None:
+        """Go back to before a question: the Engine puts its files back and
+        drops what came after, and the question returns to the composer."""
+        if self.harness is None or self.session is None:
+            return
+        harness, session = self.harness, self.session
+
+        def work():
+            revert = harness.go_back(session, turn.message)
+            kept = revert is not None and revert.restorable
+            return revert, harness.resume(session) if kept else None
+
+        def went(result) -> None:
+            revert, past = result
+            if revert is None:
+                self.problem = "Osiris is still answering; go back once it is done."
+            elif past is None:
+                self.problem = ("Nothing went back: this folder is not a git "
+                                "repository, so its files cannot be put back.")
+            else:
+                self.problem = None
+                self.conversation = self._restored(session, past)
+                self.drawer.clear()
+                self.drawer.draft(turn.question)
+                self.update_canvas()
+            self.drawer.refresh()
+
+        self.background(work, went)
 
     @property
     def in_auto_mode(self) -> bool:
