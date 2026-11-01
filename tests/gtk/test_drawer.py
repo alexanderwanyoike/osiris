@@ -11,6 +11,8 @@ from gi.repository import Adw  # noqa: E402
 from osiris.harness.conversation import Conversation  # noqa: E402
 from osiris.harness.settings import Models  # noqa: E402
 
+from .conftest import texts  # noqa: E402
+
 
 class FakeApp(Adw.Application):
     def __init__(self) -> None:
@@ -48,6 +50,11 @@ class FakeApp(Adw.Application):
         from gi.repository import Gtk
 
         return Gtk.Box()
+
+    def approval_card(self, _turn: object) -> object:
+        from gi.repository import Gtk
+
+        return Gtk.Label(label="approval card")
 
     def new_conversation(self) -> None:
         self.new_conversations += 1
@@ -173,6 +180,16 @@ def test_the_top_bar_names_the_conversation() -> None:
     window.app.conversation.asked("Make me a calm theme")
     window.refresh()
     assert window.title.get_text() == "Make me a calm theme"
+
+
+def test_a_held_action_is_drawn_with_the_apps_approval_card() -> None:
+    from osiris.harness.activity import Step
+
+    window, _ = drawer()
+    turn = window.app.conversation.asked("list /etc")
+    turn.held = Step("shell", ("ls /etc",))
+    window.refresh()
+    assert "approval card" in texts(window)
 
 
 def test_the_composer_takes_more_than_one_line_and_sends_it() -> None:
