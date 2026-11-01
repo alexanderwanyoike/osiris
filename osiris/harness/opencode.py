@@ -203,7 +203,7 @@ class OpencodeEngine:
             headers=self._service.headers(),
         )
         return [
-            Entry("skill", skill["id"], skill["name"], skill.get("description", ""))
+            Entry("skill", skill["id"], skill["id"], skill.get("description", ""))
             for skill in reply["data"]
         ]
 
