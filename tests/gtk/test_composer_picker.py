@@ -280,3 +280,19 @@ def test_one_match_makes_a_card_no_taller_than_its_list() -> None:
     _minimum, rows, _b, _c = picker.list.measure(Gtk.Orientation.VERTICAL, -1)
     assert len(shown(picker)) == 1
     assert card == rows
+
+
+def test_a_resource_and_a_server_each_have_an_icon_of_their_own() -> None:
+    from composer_picker import ICONS
+
+    from .conftest import widgets
+
+    home = Entry("resource", "wiki://home", "Home", "wiki")
+    wiki = Entry("connector", "wiki", "wiki", "MCP server")
+    picker, _ = docked("@", [home, wiki])
+    icons = [
+        next(w.get_icon_name() for w in widgets(row) if isinstance(w, Gtk.Image))
+        for row in (picker.list.get_row_at_index(0), picker.list.get_row_at_index(1))
+    ]
+    assert icons == [ICONS["resource"], ICONS["connector"]]
+    assert len(set(ICONS.values())) == len(ICONS)
