@@ -60,6 +60,14 @@ The first slice of ROADMAP P3.5:
   (`DELETE /api/session/{id}/inbox/{item}`), Edit putting its text back in the
   composer; Stop withdraws every waiting message and puts them back in the
   composer, so none is sent.
+- **It can be cut into.** While Osiris answers, Send now beside Stop sends the
+  message the same way and then interrupts with `resume=true`
+  (`POST /api/session/{id}/interrupt?resume=true`): opencode stops the step
+  under way and goes on at once with the steering input waiting, as its
+  documentation for opencode 2.2.4 describes. The interruption ends the answer
+  as stopped, keeping what it had said, and is logged (`cut-in`); the Harness
+  keeps the session working through that stop, since opencode resumes it.
+  With nothing working, Send now sends without cutting in.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
