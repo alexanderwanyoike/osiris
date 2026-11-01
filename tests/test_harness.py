@@ -687,6 +687,16 @@ def test_an_admin_request_belongs_to_the_session_whose_last_command_ran_sudo() -
     assert subject.running_sudo() == "ses_1"
 
 
+def test_a_sudo_command_the_engines_rules_allowed_still_finds_its_session() -> None:
+    """Such a command never asks, so the Harness knows it only as a tool call."""
+    subject, _, _ = harness()
+    subject.ask("install cowsay")
+    subject.handle(
+        ToolCalled("ses_1", "call_1", {"command": "sudo pacman -S cowsay"}, False)
+    )
+    assert subject.running_sudo() == "ses_1"
+
+
 def test_a_session_whose_last_command_did_not_run_sudo_has_no_admin_request() -> None:
     subject, _, _ = everything_allowed()
     subject.ask("install cowsay")
