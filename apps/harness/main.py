@@ -477,7 +477,11 @@ class Drawer(Gtk.ApplicationWindow):
             remove=self.app.remove_connector, states=self.app.connector_states,
             background=self.app.background,
             later=lambda seconds, then: GLib.timeout_add_seconds(
-                seconds, lambda: then() or False))
+                seconds, lambda: then() or False),
+            sign_in=self.app.accounts.connector_sign_in,
+            sign_in_state=lambda attempt: self.app.accounts.sign_in_state(
+                attempt.provider, attempt.attempt),
+            open_page=self.app.open_page)
         tabs = Adw.ViewStack(vhomogeneous=False)
         tabs.add_titled_with_icon(page, "providers", "Models",
                                   "preferences-system-symbolic")
