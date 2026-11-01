@@ -239,6 +239,7 @@ class Drawer(Gtk.ApplicationWindow):
         chat.append(Adw.Clamp(maximum_size=READABLE, child=bottom))
         self.canvas = Canvas(read=lambda path: path.read_text(errors="replace"),
                              open_in_code=open_in_code,
+                             on_changes=lambda: self.app.show_all_changes(),
                              scheme=app.look.scheme if app.look is not None else None)
         self.canvas.set_visible(False)
         body = Gtk.Paned(start_child=chat, end_child=self.canvas,
@@ -1114,6 +1115,12 @@ class Application(Adw.Application):
             self.update_canvas()
 
         self.background(lambda: harness.resume(session), opened)
+
+    def show_all_changes(self) -> None:
+        """Every question's changes that made commits, newest first."""
+        for turn in reversed(self.conversation.turns):
+            if turn.commits:
+                self.show_changes(turn)
 
     def show_changes(self, turn: Turn) -> None:
         """What a question changed, on the Canvas; a comment on it is asked."""
