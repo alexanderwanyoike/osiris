@@ -339,3 +339,35 @@ def test_a_note_about_the_question_is_shown_under_its_answer() -> None:
     """Such as why it could not be gone back to."""
     turn = Turn("make x.txt", "Made it.", State.DONE, note="Nothing went back.")
     assert "Nothing went back." in texts(drawn(turn))
+
+
+def edited(state: State) -> Turn:
+    turn = Turn("tidy main.py", "Tidied.", state, message="msg_3")
+    turn.steps.append(Step("edit", ("main.py",)))
+    return turn
+
+
+def test_an_answer_that_edited_files_offers_its_changes_once_it_ends() -> None:
+    shown: list[Turn] = []
+    turn = edited(State.DONE)
+    view = TurnView(
+        turn,
+        on_undo=lambda _t: None,
+        program_card=lambda _n: Gtk.Label(),
+        show_changes=shown.append,
+    )
+    view.update(turn, STYLE, None)
+    find(view, Gtk.Button, "Changes").emit("clicked")
+    assert shown == [turn]
+
+
+def test_an_answer_still_editing_or_that_edited_nothing_offers_no_changes() -> None:
+    for turn in (edited(State.ANSWERING), finished()):
+        view = TurnView(
+            turn,
+            on_undo=lambda _t: None,
+            program_card=lambda _n: Gtk.Label(),
+            show_changes=lambda _t: None,
+        )
+        view.update(turn, STYLE, None)
+        assert "Changes" not in texts(view)
