@@ -26,6 +26,8 @@ class ConnectorsPage(Gtk.Box):
     POLL_SECONDS = 2
     #: How often to ask before leaving a server to say it has not started.
     POLLS = 15
+    #: The longest state shown whole, in characters: "Needs signing in".
+    SHORT = 16
 
     def __init__(self, read: Callable[[], list[Connector]],
                  save: Callable[[Connector], bool], remove: Callable[[str], bool],
@@ -178,6 +180,8 @@ class ConnectorsPage(Gtk.Box):
             label = self._said[connector.name]
             label.set_text(words)
             label.set_tooltip_text(words)
+            # Room for a short state whole; a long one is cut, never below that.
+            label.set_width_chars(min(len(words), self.SHORT))
             label.set_css_classes(["harness-connector-state", f"harness-{tone}"])
         if unsettled and self._polls < self.POLLS:
             self._later(self.POLL_SECONDS, self._ask_states)
