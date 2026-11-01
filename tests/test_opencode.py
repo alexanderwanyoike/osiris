@@ -286,6 +286,22 @@ class TestEvents:
             ),
         ]
 
+    def test_a_permission_names_the_tool_call_it_is_for(self) -> None:
+        """As opencode 2.2.4 does: ``source.id`` is the call's id."""
+        asked = {
+            "type": "permission.asked",
+            "data": {
+                "id": "per_1",
+                "sessionID": SESSION,
+                "action": "read",
+                "resources": ["/etc/hostname"],
+                "source": {"type": "tool", "messageID": STEP, "id": "call_d376"},
+            },
+        }
+        assert self.events(asked) == [
+            ToolRequested(SESSION, "per_1", "read", ("/etc/hostname",), "call_d376")
+        ]
+
     def test_a_refusal_is_a_failure_carrying_the_engines_message(self) -> None:
         assert self.events(FREE_TIER_REFUSAL) == [
             Failed(
