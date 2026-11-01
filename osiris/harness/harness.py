@@ -27,11 +27,11 @@ from osiris.harness.log import HarnessLog
 from osiris.harness.titles import title_of
 from osiris.platform import HttpError
 
-#: Passed to the model with every rejected tool, so it finds another way.
+#: Passed to the model with every action the person denies.
 REFUSED = (
-    "Osiris cannot do that: it cannot run commands or read files, "
-    "and changes this machine only through the Osiris tools. Answer in words, "
-    "or with those tools."
+    "The person said no to this. Do not try it another way without asking "
+    "them; tell them what you wanted to do and why, and ask how Osiris should "
+    "go on."
 )
 
 
