@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from osiris.harness.picker import Trigger, trigger
+from osiris.harness.picker import Entry, Reference, Trigger, references, trigger
 
 
 @pytest.mark.parametrize(
@@ -49,3 +49,25 @@ def test_a_programs_files_are_offered_by_where_they_are_in_it() -> None:
         Entry("file", "/home/tester/Code/timer/README.md", "README.md", ""),
         Entry("file", "/home/tester/Code/timer/timer/clock.py", "timer/clock.py", ""),
     ]
+
+
+README = Entry("file", "/home/tester/Code/timer/README.md", "README.md", "")
+REVIEW = Entry("skill", "review", "review", "")
+
+
+@pytest.mark.parametrize(
+    ("text", "found"),
+    [
+        ("/review @README.md", ((REVIEW, 0, 7), (README, 8, 18))),
+        ("see @README.md.", ((README, 4, 14),)),
+        ("@README.md then @README.md", ((README, 0, 10),)),
+        ("mail@README.md /reviewer", ()),
+        ("the token was deleted", ()),
+    ],
+)
+def test_what_was_picked_is_found_where_it_still_stands_in_the_text(
+    text: str, found: tuple[tuple[Entry, int, int], ...]
+) -> None:
+    assert references(text, [README, REVIEW]) == tuple(
+        Reference(entry, start, end) for entry, start, end in found
+    )
