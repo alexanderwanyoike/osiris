@@ -33,4 +33,7 @@ def detail(step: Step) -> Detail:
     command = (step.input or {}).get("command")
     asked = command if isinstance(command, str) else " ".join(step.resources)
     lines = tuple(Line(text) for text in step.output.splitlines())
-    return Detail(Kind.COMMAND, asked, lines)
+    failed = step.exit is not None and step.exit != 0
+    return Detail(
+        Kind.COMMAND, asked, lines, f"Exited with status {step.exit}" if failed else ""
+    )
