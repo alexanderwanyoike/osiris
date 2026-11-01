@@ -94,15 +94,17 @@ The first slice of ROADMAP P3.5:
   Harness switches on unless the person has switched it themselves; being
   experimental, it is one to watch when opencode is upgraded. A Conversation
   reopened from the Engine's history does not bring its task list back.
-- **It can go back.** Under each question, once nothing is answering, Edit and
-  Try again each return to before it: opencode's own snapshots put the
-  Project's files back and the Conversation drops that question and those
-  after it. Edit puts the question in the composer to change; Try again sends
-  it as it was. Both first say what will be lost (how many questions, and that
+- **It can go back.** Once nothing is answering, a pencil beside a question,
+  shown while the pointer is on it, and an arrow beside the latest answer's
+  model and time each return to before that question: opencode's own snapshots
+  put the Project's files back and the Conversation drops that question and
+  those after it. The pencil puts the question in the composer to change; the
+  arrow sends it again as it was. Only the latest answer has the arrow, since
+  trying an earlier one again would drop every answer after it unasked. Both first say what will be lost (how many questions, and that
   their files go back) and wait for a yes. Osiris keeps no copies of its own
   (ADR 0005, ADR 0012). See [Going back](#going-back).
-- **It shows what an answer changed.** Under an answer that edited files,
-  once it has ended, Changes opens a tab on the Canvas with that question's
+- **It shows what an answer changed.** Beside the model and time of an answer
+  that edited files, once it has ended, an icon opens a tab on the Canvas with that question's
   changes from opencode (`GET /api/session/{id}/diff?from=<message>&context=3`):
   each changed file with its lines added and removed, opening to its diff,
   coloured by the Theme's code scheme. Lines picked in a diff and a comment
