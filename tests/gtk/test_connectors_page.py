@@ -54,3 +54,15 @@ def test_each_connector_shows_what_it_runs_and_whether_it_works() -> None:
     assert "files" in shown and "npx files" in shown
     assert "Failed: connection refused" in shown
     assert "Off" in shown
+
+
+def test_a_connector_added_by_name_and_command_is_saved_and_listed() -> None:
+    store = Store()
+    shown = page(store)
+    shown.add.emit("clicked")
+    shown.name.set_text("files")
+    shown.reach.set_text("npx -y files")
+    shown.done.emit("clicked")
+    assert store.saved == {"files": Connector("files", command=("npx", "-y", "files"))}
+    assert "npx -y files" in texts(shown)
+    assert not shown.form.get_visible()
