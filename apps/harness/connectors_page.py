@@ -11,7 +11,7 @@ import gi
 
 gi.require_version("Adw", "1")
 gi.require_version("Gtk", "4.0")
-from gi.repository import Adw, Gtk  # noqa: E402
+from gi.repository import Adw, Gtk, Pango  # noqa: E402
 
 from osiris.harness.connectors import (  # noqa: E402
     Connector,
@@ -134,7 +134,8 @@ class ConnectorsPage(Gtk.Box):
         row = Adw.ActionRow(title=connector.name, use_markup=False,
                             subtitle=_reach(connector), activatable=True)
         row.connect("activated", lambda _r: self._open_form(connector))
-        said = Gtk.Label(valign=Gtk.Align.CENTER)
+        said = Gtk.Label(valign=Gtk.Align.CENTER, max_width_chars=22,
+                         ellipsize=Pango.EllipsizeMode.END)
         said.add_css_class("harness-connector-state")
         row.add_suffix(said)
         row.switch = Gtk.Switch(active=connector.on, valign=Gtk.Align.CENTER,
@@ -176,6 +177,7 @@ class ConnectorsPage(Gtk.Box):
             unsettled |= state is None or state.status == "pending"
             label = self._said[connector.name]
             label.set_text(words)
+            label.set_tooltip_text(words)
             label.set_css_classes(["harness-connector-state", f"harness-{tone}"])
         if unsettled and self._polls < self.POLLS:
             self._later(self.POLL_SECONDS, self._ask_states)
