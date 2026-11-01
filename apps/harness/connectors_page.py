@@ -22,13 +22,17 @@ from osiris.harness.connectors import (  # noqa: E402
 
 
 class ConnectorsPage(Gtk.Box):
+    #: Seconds between asking again about a server still starting.
+    POLL_SECONDS = 2
+
     def __init__(self, read: Callable[[], list[Connector]],
                  save: Callable[[Connector], bool], remove: Callable[[str], bool],
-                 states: Callable[[], dict[str, State]], background):
+                 states: Callable[[], dict[str, State]], background,
+                 later: Callable[[int, Callable[[], None]], None] = lambda _s, _t: None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         self.add_css_class("harness-connectors")
         self._read, self._save, self._remove = read, save, remove
-        self._states, self._background = states, background
+        self._states, self._background, self._later = states, background, later
         self._connectors: list[Connector] = []
         #: The connector the form is changing, if it is not adding one.
         self._editing: Connector | None = None
@@ -113,7 +117,7 @@ class ConnectorsPage(Gtk.Box):
         self._connectors = self._read()
         for connector in self._connectors:
             self._list.append(self._row(connector))
-        self._background(self._states, self._show_states)
+        self._ask_states()
 
     def _row(self, connector: Connector) -> Gtk.Widget:
         row = Adw.ActionRow(title=connector.name, use_markup=False,
@@ -147,15 +151,22 @@ class ConnectorsPage(Gtk.Box):
         if self._save(replace(connector, on=on)):
             self.reload()
 
+    def _ask_states(self) -> None:
+        self._background(self._states, self._show_states)
+
     def _show_states(self, states: dict[str, State]) -> None:
+        unsettled = False
         for connector in self._connectors:
             # Switched off here, it is off before the Engine has reloaded.
             state = (states.get(connector.name) if connector.on
                      else State("disabled"))
             words, tone = said_of(state)
+            unsettled |= state is None or state.status == "pending"
             label = self._said[connector.name]
             label.set_text(words)
             label.set_css_classes(["harness-connector-state", f"harness-{tone}"])
+        if unsettled:
+            self._later(self.POLL_SECONDS, self._ask_states)
 
 
 def _reach(connector: Connector) -> str:
