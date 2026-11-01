@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from osiris.harness.accounts import Method, ModelInfo, Provider, SignIn, SignInState
+from osiris.harness.connectors import State
 from osiris.harness.engine import (
     Answered,
     Delivered,
@@ -194,6 +195,22 @@ class OpencodeEngine:
             body={"config": {"type": "local", "command": command}},
             headers=self._service.headers(),
         )
+
+    def connector_states(self, directory: Path) -> dict[str, State]:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/mcp"
+            f"?location%5Bdirectory%5D={_quoted(str(directory))}",
+            headers=self._service.headers(),
+        )
+        return {
+            server["name"]: State(
+                server["status"]["status"],
+                server["status"].get("error", ""),
+                server.get("integrationID", ""),
+            )
+            for server in reply["data"]
+        }
 
     def skills(self, directory: Path) -> list[Entry]:
         reply: Any = self._http.request(

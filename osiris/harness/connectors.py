@@ -24,6 +24,18 @@ class Connector:
     on: bool = True
 
 
+@dataclass(frozen=True)
+class State:
+    """How the Engine finds a server: "connected", "pending", "disabled",
+    "failed" or "needs_auth"."""
+
+    status: str
+    #: Why it failed or needs signing in to.
+    error: str = ""
+    #: The Engine's integration a sign-in goes through.
+    integration: str = ""
+
+
 def connectors(config: dict[str, Any]) -> list[Connector]:
     servers: dict[str, dict[str, Any]] = config.get("mcp", {}).get("servers", {})
     return [
