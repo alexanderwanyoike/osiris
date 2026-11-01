@@ -49,6 +49,7 @@ from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
 from browser import Page  # noqa: E402
 from canvas import Canvas, open_in_code  # noqa: E402
+from composer_picker import Picker  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
 from render import TurnView  # noqa: E402
 from sidebar import Sidebar  # noqa: E402
@@ -196,6 +197,7 @@ class Drawer(Gtk.ApplicationWindow):
         enter = Gtk.EventControllerKey()
         enter.connect("key-pressed", self._composer_key)
         self.entry.add_controller(enter)
+        self.picker = Picker(self.entry, self.app.offered)
         typed = Gtk.Overlay(child=self.entry)
         typed.add_overlay(placeholder)
 
@@ -372,7 +374,7 @@ class Drawer(Gtk.ApplicationWindow):
         text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
         if text.strip():
             buffer.set_text("")
-            self.app.ask(text.strip())
+            self.app.ask(text.strip(), self.picker.references(text.strip()))
 
     def _composer_key(self, _controller, keyval, _code, state) -> bool:
         # Enter asks; Shift+Enter starts a new line.
