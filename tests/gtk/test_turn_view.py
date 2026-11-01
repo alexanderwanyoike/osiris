@@ -13,6 +13,7 @@ from osiris.harness.activity import Step
 from osiris.harness.admin import Request
 from osiris.harness.conversation import State, Turn
 from osiris.harness.detail import FOLD
+from osiris.harness.harness import Asking
 from osiris.harness.log import Change
 from osiris.harness.markdown import InlineStyle
 
@@ -215,6 +216,27 @@ def test_a_tool_shows_its_inputs() -> None:
     turn.steps = [Step("osiris_apply_theme", ("*",), input={"name": "calm-night"})]
     step = find(find(drawn(turn), Gtk.Expander).get_child(), Gtk.Expander)
     assert "name: calm-night" in texts(step.get_child())
+
+
+def test_an_action_held_for_the_person_shows_its_card_under_the_answer() -> None:
+    turn = Turn("list /etc", "Looking.", State.ANSWERING)
+    turn.asking = Asking("ses_1", "per_1", "shell", ("ls /etc",))
+    turn.held = Step("shell", ("ls /etc",))
+    asked: list[Turn] = []
+
+    def approval_card(held: Turn) -> Gtk.Widget:
+        asked.append(held)
+        return Gtk.Label(label="approval card")
+
+    view = TurnView(
+        turn,
+        on_undo=lambda _t: None,
+        program_card=lambda _n: Gtk.Box(),
+        approval_card=approval_card,
+    )
+    view.update(turn, STYLE, None)
+    assert asked == [turn]
+    assert "approval card" in texts(view)
 
 
 def test_an_answer_that_took_no_steps_keeps_no_record() -> None:
