@@ -1222,6 +1222,8 @@ class Application(Adw.Application):
         if conversation is None:
             return False
         conversation.apply(event)
+        if isinstance(event, Asking):
+            self._waiting(event.session, conversation)
         if isinstance(event, Finished | Stopped | Failed):
             looking = self.open and conversation is self.conversation
             if self.unread.ended(event, looking=looking):
@@ -1233,6 +1235,13 @@ class Application(Adw.Application):
     def _mark_read(self, session: str) -> None:
         self.unread.read(session)
         self.withdraw_notification(session)
+
+    def _waiting(self, session: str, conversation: Conversation) -> None:
+        """A card opened: the sidebar says so, and so does the desktop when
+        the person is not looking at it."""
+        if not (self.open and conversation is self.conversation):
+            self._notify(session, conversation)
+        self.load_history()
 
     def _notify(self, session: str, conversation: Conversation) -> None:
         notice = notice_of(conversation)
