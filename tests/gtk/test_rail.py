@@ -59,3 +59,20 @@ def test_ticks_stand_down_the_rail_where_their_questions_do() -> None:
     tops = [mark.compute_point(shown, Graphene.Point())[1].y for mark in marks(shown)]
     window.destroy()
     assert tops == [0, 200, 360]
+
+
+def test_a_band_marks_the_part_on_screen() -> None:
+    from gi.repository import Graphene, Gtk
+
+    from .test_composer_picker import settle
+
+    shown = rail()
+    shown.show_view(0.25, 0.5)
+    window = Gtk.Window(child=shown, default_height=400)
+    window.present()
+    settle()
+    band = shown.band
+    top = band.compute_point(shown, Graphene.Point())[1].y
+    height = band.get_height()
+    window.destroy()
+    assert (top, height) == (100, 200)
