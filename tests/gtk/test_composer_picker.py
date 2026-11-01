@@ -211,3 +211,25 @@ def test_the_card_stands_clear_of_the_message_box() -> None:
     picker, _ = docked("@", [README])
     assert picker.popover.get_offset() == (0, -GAP)
     assert GAP >= 6
+
+
+def test_the_card_lines_up_with_the_message_boxs_edges_padding_and_all() -> None:
+    from composer_picker import Picker
+    from gi.repository import Gdk
+
+    padded = Gtk.CssProvider()
+    padded.load_from_string(".padded-composer { padding: 10px 8px 8px 14px; }")
+    Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), padded, 900)
+    entry = Gtk.TextView(hexpand=True)
+    composer = Gtk.Box(width_request=600, css_classes=["padded-composer"])
+    composer.append(entry)
+    window = Gtk.Window(child=composer)
+    window.present()
+    settle()
+    picker = Picker(entry, lambda _sign: [README], anchor=composer)
+    entry.get_buffer().set_text("@")
+    settle()
+    _found, edges = composer.compute_bounds(composer)
+    minimum, _natural, _b, _c = picker.card.measure(Gtk.Orientation.HORIZONTAL, -1)
+    Gtk.StyleContext.remove_provider_for_display(Gdk.Display.get_default(), padded)
+    assert minimum == edges.get_width()
