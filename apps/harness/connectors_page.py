@@ -109,12 +109,21 @@ class ConnectorsPage(Gtk.Box):
         row.switch.connect("notify::active", lambda switch, _p: self._switched(
             connector, switch.get_active()))
         row.add_suffix(row.switch)
+        row.trash = Gtk.Button(icon_name="user-trash-symbolic", valign=Gtk.Align.CENTER,
+                               tooltip_text="Remove this connector")
+        row.trash.add_css_class("flat")
+        row.trash.connect("clicked", lambda _b: self._removed(connector.name))
+        row.add_suffix(row.trash)
         self._said[connector.name] = said
         self._rows[connector.name] = row
         return row
 
     def row(self, name: str) -> Adw.ActionRow:
         return self._rows[name]
+
+    def _removed(self, name: str) -> None:
+        if self._remove(name):
+            self.reload()
 
     def _switched(self, connector: Connector, on: bool) -> None:
         if self._save(replace(connector, on=on)):
