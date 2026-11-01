@@ -163,10 +163,6 @@ class Canvas(Gtk.Box):
             return
         tab = Tab(Kind.CONVERSATION, "conversation", "Conversation")
         if tab not in self._pages:
-            # Kept between openings, so it is taken from the tab it was in.
-            held = self._conversation.get_parent()
-            if isinstance(held, Gtk.ScrolledWindow):
-                held.set_child(None)
             self._add(tab, Gtk.ScrolledWindow(child=self._conversation,
                                               hscrollbar_policy=Gtk.PolicyType.NEVER),
                       None)
