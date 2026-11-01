@@ -57,6 +57,8 @@ class Canvas(Gtk.Box):
         self._shells = 0
         #: What each tab shows, ended when its tab closes.
         self._contents: dict[Tab, Gtk.Widget] = {}
+        #: Redraw each group's header, by kind.
+        self._redraws: dict[Kind, Callable[[], None]] = {}
         self.tree = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
         self.tree.add_css_class("navigation-sidebar")
         self.tree.connect("row-activated", self._tree_activated)
@@ -179,6 +181,8 @@ class Canvas(Gtk.Box):
         page.set_title(tab.title)
         self._pages[tab] = page
         self._contents[tab] = content
+        # Drawn before the tab was known, the header's tab had no icon.
+        self._redraws[tab.kind]()
         if view is not None:
             self._sources[tab] = view
 
@@ -232,6 +236,7 @@ class Canvas(Gtk.Box):
 
         for signal in ("page-attached", "page-detached", "notify::selected-page"):
             view.connect(signal, redraw)
+        self._redraws[kind] = redraw
         view.connect("page-attached",
                      lambda _v, page, _i: page.connect("notify::title", redraw))
         return header
@@ -241,8 +246,11 @@ class Canvas(Gtk.Box):
         tab.add_css_class("harness-group-tab")
         if view.get_selected_page() is page:
             tab.add_css_class("selected")
-        title = Gtk.Button(child=Gtk.Label(label=page.get_title(), max_width_chars=24,
-                                           ellipsize=Pango.EllipsizeMode.END))
+        named = Gtk.Box(spacing=6)
+        named.append(self._tab_icon(page))
+        named.append(Gtk.Label(label=page.get_title(), max_width_chars=24,
+                               ellipsize=Pango.EllipsizeMode.END))
+        title = Gtk.Button(child=named)
         title.add_css_class("flat")
         title.connect("clicked", lambda _b: view.set_selected_page(page))
         shut = Gtk.Button(icon_name="window-close-symbolic", tooltip_text="Close tab")
@@ -252,6 +260,13 @@ class Canvas(Gtk.Box):
         tab.append(title)
         tab.append(shut)
         return tab
+
+    def _tab_icon(self, page: Adw.TabPage) -> Gtk.Image:
+        tab = next((t for t, p in self._pages.items() if p is page), None)
+        if tab is not None and tab.kind is Kind.CODE:
+            return _file_icon(tab.title)
+        return Gtk.Image(icon_name=_TAB_ICONS.get(tab.kind if tab else Kind.CODE,
+                                                   "text-x-generic-symbolic"))
 
     def _new(self, kind: Kind) -> None:
         if kind is Kind.TERMINAL:
@@ -487,6 +502,13 @@ class Canvas(Gtk.Box):
                                        hscrollbar_policy=Gtk.PolicyType.NEVER))
         return page, view
 
+
+#: The icon on each kind of tab but code, whose files show their own.
+_TAB_ICONS = {
+    Kind.CHANGES: "osiris-changes-symbolic",
+    Kind.TERMINAL: "utilities-terminal-symbolic",
+    Kind.BROWSER: "web-browser-symbolic",
+}
 
 #: The group headers that open another tab of their kind: icon and tooltip.
 _NEW = {
