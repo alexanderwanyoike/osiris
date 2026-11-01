@@ -305,16 +305,18 @@ class Canvas(Gtk.Box):
                               right_margin=12, top_margin=12, bottom_margin=12,
                               wrap_mode=Gtk.WrapMode.WORD_CHAR)
         view.add_css_class("harness-code")
-        where = Gtk.Label(label=f"{program.manifest.name} / {relative}", xalign=0,
-                          hexpand=True, ellipsize=Pango.EllipsizeMode.START)
+        trail = " \u203a ".join((program.manifest.label, *relative.parts))
+        where = Gtk.Label(label=trail, xalign=0, hexpand=True,
+                          ellipsize=Pango.EllipsizeMode.START)
         where.add_css_class("harness-meta")
         open_code = Gtk.Button(icon_name="document-edit-symbolic",
                                tooltip_text="Open in Code")
         open_code.add_css_class("flat")
         open_code.connect("clicked",
                           lambda _b: self._open_in_code(program.source, relative))
-        bar = Gtk.Box(spacing=6)
+        bar = Gtk.Box(spacing=8)
         bar.add_css_class("harness-path")
+        bar.append(_file_icon(relative.name))
         bar.append(where)
         bar.append(open_code)
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -336,6 +338,12 @@ def _tree_line(node: Node, depth: int) -> Gtk.Widget:
     line.append(Gtk.Label(label=node.name, xalign=0,
                           ellipsize=Pango.EllipsizeMode.MIDDLE))
     return line
+
+
+def _file_icon(name: str) -> Gtk.Image:
+    """GTK's own symbolic icon for the file's content type."""
+    kind, _uncertain = Gio.content_type_guess(name, None)
+    return Gtk.Image(gicon=Gio.content_type_get_symbolic_icon(kind))
 
 
 def _show_inside(rows: list[Gtk.ListBoxRow], shown: bool) -> None:
