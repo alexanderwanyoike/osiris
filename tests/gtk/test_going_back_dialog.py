@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from going_back import going_back_dialog
 from gi.repository import Adw
+from going_back import going_back_dialog
 
 LOST = "This question and its answer leave the Conversation."
 
@@ -14,9 +14,7 @@ def test_it_says_what_will_be_lost_before_editing() -> None:
     assert dialog.get_body() == LOST
     assert dialog.get_response_label("back") == "Go back and edit"
     assert dialog.get_close_response() == "cancel"
-    assert (
-        dialog.get_response_appearance("back") == Adw.ResponseAppearance.DESTRUCTIVE
-    )
+    assert dialog.get_response_appearance("back") == Adw.ResponseAppearance.DESTRUCTIVE
 
 
 def test_trying_again_says_so() -> None:
