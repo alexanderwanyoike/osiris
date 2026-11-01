@@ -43,9 +43,12 @@ Osiris unless the person asks otherwise.
 
 An ordinary project that any editor or coding agent can carry on: the
 language's standard build files (`pyproject.toml`, `meson.build` or
-`CMakeLists.txt`, `Cargo.toml`, `go.mod`, `package.json`), a README, and an
-AGENTS.md saying what the Program is and how it is built and changed, atomic
-commits included.
+`CMakeLists.txt`, `Cargo.toml`, `go.mod`, `package.json`), a README, an
+AGENTS.md saying what the Program is and how it is built, and a
+CODING_STANDARDS.md saying how its code is written: style, testing,
+architecture (design patterns and domain-driven design where they fit) and
+atomic commits. The standards hold only what no linter checks, and they are the
+person's to change; a review of the Program judges it against them.
 Someone who started a Program in the Harness can open it in Code - OSS, Claude
 Code, opencode or Codex and keep going.
 
