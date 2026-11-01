@@ -54,7 +54,7 @@ class ConnectorsPage(Gtk.Box):
         fields.add_css_class("boxed-list")
         fields.append(self.name)
         fields.append(self.reach)
-        self.done = Gtk.Button(label="Save", halign=Gtk.Align.END)
+        self.done = Gtk.Button(label="Save")
         self.done.add_css_class("suggested-action")
         self.done.connect("clicked", lambda _b: self._finish())
         self.form = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
@@ -63,8 +63,14 @@ class ConnectorsPage(Gtk.Box):
         self.problem = Gtk.Label(xalign=0, wrap=True, visible=False)
         self.problem.add_css_class("harness-problem")
         self.form.append(fields)
+        self.cancel = Gtk.Button(label="Cancel")
+        self.cancel.add_css_class("flat")
+        self.cancel.connect("clicked", lambda _b: self._close_form())
+        buttons = Gtk.Box(spacing=6, halign=Gtk.Align.END)
+        buttons.append(self.cancel)
+        buttons.append(self.done)
         self.form.append(self.problem)
-        self.form.append(self.done)
+        self.form.append(buttons)
         return self.form
 
     def _say(self, problem: str) -> None:
@@ -93,9 +99,13 @@ class ConnectorsPage(Gtk.Box):
         self._say("")
         if self._editing is not None and self._editing.name != connector.name:
             self._remove(self._editing.name)
+        self._close_form()
+        self.reload()
+
+    def _close_form(self) -> None:
+        self._say("")
         self.form.set_visible(False)
         self.add.set_visible(True)
-        self.reload()
 
     def reload(self) -> None:
         self._list.remove_all()
