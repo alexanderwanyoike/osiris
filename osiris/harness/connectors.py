@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from osiris.harness.engine_config import ENGINE_CONFIG, edit, read
+from osiris.harness.picker import Entry
 from osiris.platform import FileSystem
 
 
@@ -87,3 +88,13 @@ def save_connector(files: FileSystem, home: Path, connector: Connector) -> bool:
 
 def remove_connector(files: FileSystem, home: Path, name: str) -> bool:
     return edit(files, home / ENGINE_CONFIG, lambda config: bool(removed(config, name)))
+
+
+def offered_servers(states: dict[str, State], own: str) -> list[Entry]:
+    """The servers @ offers: those working now, but not ``own``, the tool
+    server Osiris attaches for itself."""
+    return [
+        Entry("connector", name, name, "Connector")
+        for name, state in sorted(states.items())
+        if state.status == "connected" and name != own
+    ]
