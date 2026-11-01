@@ -126,7 +126,6 @@ def test_the_app_keeps_connectors_in_the_engines_config_and_asks_their_state() -
     from osiris.harness.connectors import Connector, State
     from osiris.harness.harness import Harness
     from osiris.platform import FakeFileSystem
-
     from tests.test_harness import GPT, HOME
 
     project = HOME / "Code" / "timer"

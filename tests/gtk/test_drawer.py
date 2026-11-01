@@ -621,10 +621,9 @@ def test_opening_the_picker_fetches_what_it_offers_afresh() -> None:
 
 
 def test_settings_hold_the_persons_connectors_beside_their_providers() -> None:
+    from osiris.harness.connectors import Connector, State
     from tests.gtk.conftest import now, texts
     from tests.gtk.test_providers_page import FakeAccounts
-
-    from osiris.harness.connectors import Connector, State
 
     window, _ = drawer()
     app = window.app
