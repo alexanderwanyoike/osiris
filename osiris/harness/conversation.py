@@ -111,6 +111,14 @@ class Conversation:
             State.ANSWERING,
         )
 
+    @property
+    def waits_for_person(self) -> bool:
+        """An approval or admin password card is open on its latest answer."""
+        if not self.turns:
+            return False
+        turn = self.turns[-1]
+        return turn.asking is not None or turn.admin is not None
+
     def model_label(self, default: ModelRef | None) -> str:
         """The model in play: the last that answered, else the one chosen."""
         model = self.model or default
