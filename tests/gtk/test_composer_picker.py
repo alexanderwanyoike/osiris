@@ -74,3 +74,14 @@ def test_a_completed_entry_is_sent_as_a_reference_where_it_stands() -> None:
     picker = typed("fix @")
     press(picker, Gdk.KEY_Tab)
     assert picker.references(text(picker)) == (Reference(README, 4, 14),)
+
+
+def test_a_completed_entry_shows_as_a_token_and_what_follows_does_not() -> None:
+    from gi.repository import Gdk
+
+    picker = typed("fix @")
+    press(picker, Gdk.KEY_Tab)
+    buffer = picker.popover.get_parent().get_buffer()
+    buffer.insert(buffer.get_end_iter(), "please")
+    marked = [buffer.get_iter_at_offset(at).has_tag(picker.token) for at in range(23)]
+    assert marked == [False] * 4 + [True] * 10 + [False] * 9
