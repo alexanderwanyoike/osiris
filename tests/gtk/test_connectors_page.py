@@ -144,3 +144,22 @@ def test_cancel_closes_the_form_and_saves_nothing() -> None:
     shown.cancel.emit("clicked")
     assert store.saved == {}
     assert not shown.form.get_visible()
+
+
+def test_a_server_still_starting_is_asked_about_again_until_it_settles() -> None:
+    from connectors_page import ConnectorsPage
+
+    answers = [{}, {"wiki": State("pending")}, {"wiki": State("connected")}]
+    waits: list[object] = []
+    shown = ConnectorsPage(
+        read=Store(WIKI).read,
+        save=lambda _c: True,
+        remove=lambda _n: True,
+        states=lambda: answers.pop(0),
+        background=now,
+        later=lambda _seconds, then: waits.append(then),
+    )
+    while waits:
+        waits.pop(0)()
+    assert "Connected" in texts(shown)
+    assert answers == []
