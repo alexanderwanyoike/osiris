@@ -342,9 +342,11 @@ class Harness:
     def _ended(self, event: Event) -> None:
         """A session that ends is no longer running, unless it was cut in on:
         the Engine goes on with the message at once."""
-        if isinstance(event, Stopped) and event.session in self._cutting_in:
-            self._cutting_in.discard(event.session)
-        elif isinstance(event, Finished | Stopped | Failed):
+        if not isinstance(event, Finished | Stopped | Failed):
+            return
+        cut_in = event.session in self._cutting_in
+        self._cutting_in.discard(event.session)
+        if not (cut_in and isinstance(event, Stopped)):
             self._running.pop(event.session, None)
 
     def handle(self, event: Event) -> Event | Decision | None:
