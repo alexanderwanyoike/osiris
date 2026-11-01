@@ -26,13 +26,10 @@ from osiris.harness.engine import (
     ToolRequested,
 )
 from osiris.harness.harness import (
-    ONLY_IN_PROGRAMS,
-    ONLY_WITH_EVERYTHING,
     REFUSED,
     Allowed,
     Asking,
     Harness,
-    Refused,
 )
 from osiris.harness.log import LOG_FILE, HarnessLog
 from osiris.harness.tiers import Tier
@@ -190,13 +187,13 @@ def test_an_answer_is_logged_with_the_model_that_gave_it() -> None:
     }
 
 
-def test_an_action_without_a_tier_is_rejected_and_logged() -> None:
+def test_an_action_without_a_tier_is_held_and_logged_as_asked() -> None:
     subject, engine, files = harness()
     subject.ask("hello")
     subject.handle(ToolRequested("ses_1", "per_1", "shell", ("ls /etc",)))
-    assert engine.replies == [("ses_1", "per_1", False, REFUSED)]
+    assert engine.replies == []
     entry = entries(files)[-1]
-    assert entry["kind"] == "rejected"
+    assert entry["kind"] == "asked"
     assert entry["action"] == "shell"
     assert entry["resources"] == ["ls /etc"]
 
@@ -219,9 +216,9 @@ def test_the_decision_is_passed_on_in_place_of_the_request() -> None:
     allowed = subject.handle(
         ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",))
     )
-    refused = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls",)))
+    asked = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls",)))
     assert allowed == Allowed("ses_1", "osiris_apply_theme", Tier.UNDOABLE, ("*",))
-    assert refused == Refused("ses_1", "bash", ("ls",), reason=ONLY_WITH_EVERYTHING)
+    assert asked == Asking("ses_1", "per_2", "bash", ("ls",))
 
 
 def test_a_decision_names_the_tool_call_it_was_for() -> None:
@@ -230,23 +227,10 @@ def test_a_decision_names_the_tool_call_it_was_for() -> None:
     allowed = subject.handle(
         ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",), "call_1")
     )
-    refused = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls",), "call_2"))
+    asked = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls",), "call_2"))
     assert isinstance(allowed, Allowed)
-    assert isinstance(refused, Refused)
-    assert (allowed.call, refused.call) == ("call_1", "call_2")
-
-
-def test_a_refusal_says_which_rule_refused_it() -> None:
-    subject, _, _ = harness()
-    subject.ask("tidy up")
-    command = subject.handle(ToolRequested("ses_1", "per_1", "bash", ("ls",)))
-    outside = subject.handle(
-        ToolRequested("ses_1", "per_2", "read", ("/etc/hostname",))
-    )
-    assert isinstance(command, Refused)
-    assert isinstance(outside, Refused)
-    assert command.reason == ONLY_WITH_EVERYTHING
-    assert outside.reason == ONLY_IN_PROGRAMS
+    assert isinstance(asked, Asking)
+    assert (allowed.call, asked.call) == ("call_1", "call_2")
 
 
 def test_an_action_outside_the_tier_waits_for_the_person() -> None:
@@ -385,13 +369,14 @@ def test_files_inside_a_program_may_be_read_and_edited(
         ("bash", ("Code/pomodoro",)),
     ],
 )
-def test_files_anywhere_else_are_refused(
+def test_files_anywhere_else_are_asked_about(
     action: str, resources: tuple[str, ...]
 ) -> None:
     subject, engine, _ = harness()
     subject.ask("add a pause button")
-    subject.handle(ToolRequested("ses_1", "per_1", action, resources))
-    assert engine.replies == [("ses_1", "per_1", False, REFUSED)]
+    decision = subject.handle(ToolRequested("ses_1", "per_1", action, resources))
+    assert isinstance(decision, Asking)
+    assert engine.replies == []
 
 
 def test_a_new_conversation_opens_a_new_session_on_its_first_question() -> None:
@@ -616,15 +601,17 @@ def test_a_reply_the_engine_cannot_take_is_logged_and_the_conversation_goes_on()
 ):
     from osiris.platform import HttpError
 
-    subject, engine, files = harness()
+    subject, engine, files = harness(tiers={"osiris_apply_theme": Tier.UNDOABLE})
     subject.ask("hello")
 
     def broken(*_args: object, **_kwargs: object) -> None:
         raise HttpError(500, "busy")
 
     engine.reply = broken  # type: ignore[method-assign]
-    decision = subject.handle(ToolRequested("ses_1", "per_1", "bash", ("ls",)))
-    assert decision == Refused("ses_1", "bash", ("ls",), reason=ONLY_WITH_EVERYTHING)
+    decision = subject.handle(
+        ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",))
+    )
+    assert decision == Allowed("ses_1", "osiris_apply_theme", Tier.UNDOABLE, ("*",))
     assert "reply-failed" in [entry["kind"] for entry in entries(files)]
 
 
@@ -635,17 +622,15 @@ def test_a_refusal_names_the_ai_as_the_person_knows_it() -> None:
     assert "Osiris" in REFUSED
 
 
-def test_once_the_person_allows_everything_nothing_is_refused() -> None:
+def test_once_the_person_allows_everything_nothing_waits() -> None:
     allowed = [False]
     subject, engine, _ = harness(allowed=allowed)
     subject.ask("what is in /etc")
-    subject.handle(ToolRequested("ses_1", "per_1", "bash", ("ls /etc",)))
+    asked = subject.handle(ToolRequested("ses_1", "per_1", "bash", ("ls /etc",)))
     allowed[0] = True
     decision = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls /etc",)))
-    assert engine.replies == [
-        ("ses_1", "per_1", False, REFUSED),
-        ("ses_1", "per_2", True, ""),
-    ]
+    assert isinstance(asked, Asking)
+    assert engine.replies == [("ses_1", "per_2", True, "")]
     assert decision == Allowed("ses_1", "bash", Tier.ANYTHING, ("ls /etc",))
 
 
