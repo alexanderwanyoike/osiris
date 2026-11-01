@@ -85,3 +85,12 @@ def test_a_completed_entry_shows_as_a_token_and_what_follows_does_not() -> None:
     buffer.insert(buffer.get_end_iter(), "please")
     marked = [buffer.get_iter_at_offset(at).has_tag(picker.token) for at in range(23)]
     assert marked == [False] * 4 + [True] * 10 + [False] * 9
+
+
+def test_a_completed_entry_is_a_token_the_moment_it_is_put_in() -> None:
+    from gi.repository import Gdk
+
+    picker = typed("fix @")
+    press(picker, Gdk.KEY_Tab)
+    buffer = picker.popover.get_parent().get_buffer()
+    assert buffer.get_iter_at_offset(4).has_tag(picker.token)
