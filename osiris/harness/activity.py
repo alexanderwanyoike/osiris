@@ -112,6 +112,12 @@ class Step:
         return f"{self._phrase.done} {self._what}"
 
     @property
+    def question(self) -> str:
+        """How the person is asked whether it may go ahead."""
+        phrase = self._phrase
+        return f"{phrase.plain.capitalize()} {phrase.what or phrase.unnamed}?"
+
+    @property
     def _phrase(self) -> Phrase:
         if self.action in PHRASES:
             return PHRASES[self.action]
