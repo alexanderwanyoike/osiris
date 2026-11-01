@@ -110,6 +110,14 @@ def test_a_web_search_is_named_by_its_query() -> None:
     assert step.doing == "Searching the web for gtk4 css animation"
 
 
+def test_a_subagent_is_named_as_the_helper_asked() -> None:
+    step = Step("subagent", ("reviewer",))
+    assert (step.doing, step.record) == (
+        "Asking the reviewer",
+        "Asked the reviewer",
+    )
+
+
 def test_a_folder_outside_the_project_is_named_by_its_last_two_parts() -> None:
     step = Step("external_directory", ("/home/tester/Code/pomodoro/*",))
     assert (step.doing, step.record) == (

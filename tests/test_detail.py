@@ -114,3 +114,32 @@ def test_long_output_is_folded_to_its_first_lines() -> None:
 def test_short_output_is_not_folded() -> None:
     lines = tuple(Line(str(n)) for n in range(FOLD))
     assert folded(lines) == (lines, 0)
+
+
+def test_a_patch_shows_its_file_and_the_lines_it_removed_and_added() -> None:
+    """As GPT-6 edits through opencode 2.2.4's patch tool."""
+    step = Step(
+        "edit",
+        (),
+        input={
+            "patchText": "\n".join(
+                (
+                    "*** Begin Patch",
+                    "*** Update File: /home/tester/Code/coin-flip/coin_flip.py",
+                    "@@",
+                    " import random",
+                    "-print(1)",
+                    "+print(2)",
+                    "*** End Patch",
+                )
+            )
+        },
+    )
+    shown = detail(step)
+    assert shown.kind is Kind.CHANGE
+    assert shown.asked == "/home/tester/Code/coin-flip/coin_flip.py"
+    assert shown.lines == (
+        Line("import random", " "),
+        Line("print(1)", "-"),
+        Line("print(2)", "+"),
+    )

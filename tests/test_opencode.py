@@ -12,11 +12,13 @@ from osiris.harness.engine import (
     Answered,
     Delivered,
     Failed,
+    FileChange,
     Finished,
     ModelRef,
     Past,
     PastTurn,
     Reply,
+    Revert,
     Stopped,
     Text,
     Tokens,
@@ -199,6 +201,14 @@ class TestSessions:
         engine(http).withdraw(SESSION, "msg_1")
         assert http.requests == [("DELETE", path, None)]
 
+    def test_cutting_in_interrupts_and_resumes_with_what_is_waiting(self) -> None:
+        """As opencode 2.2.4 documents it: resume=true goes on at once with
+        the steering input still waiting."""
+        path = f"{URL}/api/session/{SESSION}/interrupt?resume=true"
+        http = FakeHttpClient(replies={("POST", path): {"interrupted": True}})
+        engine(http).cut_in(SESSION)
+        assert [(m, u) for m, u, _ in http.requests] == [("POST", path)]
+
     def test_stopping_interrupts_the_session(self) -> None:
         path = f"{URL}/api/session/{SESSION}/interrupt"
         http = FakeHttpClient(replies={("POST", path): {"interrupted": True}})
@@ -273,6 +283,60 @@ class TestSessions:
         assert http.requests == [
             ("POST", path, {"decision": decision, "message": "why"})
         ]
+
+
+class TestGoingBack:
+    STAGE = f"{URL}/api/session/{SESSION}/revert/stage"
+    PATCH = "--- a/y.txt\n+++ /dev/null\n@@ -1 +0,0 @@\n-y\n"
+
+    def test_going_back_stages_the_engines_revert_and_names_what_it_restores(
+        self,
+    ) -> None:
+        """As opencode 2.2.4 does: staging puts the files back at once and
+        lists each, with the snapshot it restored from."""
+        reply = {
+            "data": {
+                "messageID": "msg_2",
+                "snapshot": "116a7001",
+                "files": [
+                    {
+                        "file": "y.txt",
+                        "patch": self.PATCH,
+                        "additions": 0,
+                        "deletions": 1,
+                        "status": "deleted",
+                    }
+                ],
+            }
+        }
+        http = FakeHttpClient(replies={("POST", self.STAGE): reply})
+        staged = engine(http).revert(SESSION, "msg_2")
+        assert http.requests == [
+            ("POST", self.STAGE, {"messageID": "msg_2", "files": True})
+        ]
+        assert staged == Revert(
+            files=(FileChange("y.txt", "deleted", 0, 1, self.PATCH),),
+            restorable=True,
+        )
+
+    def test_a_staged_revert_is_kept_or_cancelled(self) -> None:
+        """Kept, it drops the later questions; cancelled, the files return."""
+        commit = f"{URL}/api/session/{SESSION}/revert/commit"
+        clear = f"{URL}/api/session/{SESSION}/revert"
+        http = FakeHttpClient(replies={("POST", commit): None, ("DELETE", clear): None})
+        engine(http).keep_revert(SESSION)
+        engine(http).cancel_revert(SESSION)
+        assert [(m, u) for m, u, _ in http.requests] == [
+            ("POST", commit),
+            ("DELETE", clear),
+        ]
+
+    def test_outside_a_git_repository_the_files_cannot_be_restored(self) -> None:
+        """As opencode 2.2.4 does there: no snapshot, and no files, even though
+        the question changed some."""
+        reply = {"data": {"messageID": "msg_2", "files": []}}
+        http = FakeHttpClient(replies={("POST", self.STAGE): reply})
+        assert engine(http).revert(SESSION, "msg_2") == Revert((), restorable=False)
 
 
 class TestEvents:
@@ -359,6 +423,36 @@ class TestEvents:
         }
         assert self.events(ran) == [
             ToolFinished(SESSION, "call_e29c", "NetworkManager\nUPower\n", exit=0)
+        ]
+
+    def test_a_subagent_gives_back_its_answer_without_the_engines_wrapper(
+        self,
+    ) -> None:
+        """As opencode 2.2.4 reports the reviewer's answer: the child session's
+        reply, wrapped in a tag naming it."""
+        answered = {
+            "type": "session.tool.success",
+            "data": {
+                "sessionID": SESSION,
+                "id": "call_DL72",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": '<subagent sessionID="ses_child" state="completed">\n'
+                        "Verdict: pass - It works.\n\n## Spec\nNothing found.\n"
+                        "</subagent>",
+                    }
+                ],
+                "metadata": {"sessionID": "ses_child", "status": "completed"},
+                "executed": False,
+            },
+        }
+        assert self.events(answered) == [
+            ToolFinished(
+                SESSION,
+                "call_DL72",
+                "Verdict: pass - It works.\n\n## Spec\nNothing found.",
+            )
         ]
 
     def test_a_tool_that_failed_says_why(self) -> None:
@@ -463,6 +557,28 @@ class TestHistory:
             Past("ses_a", "Calm theme", Path("/home/tester"), 1.0),
         ]
 
+    def test_a_subagents_session_is_no_conversation_of_its_own(self) -> None:
+        """As opencode 2.2.4 lists the reviewer's: a child of the session that
+        asked it, carrying the Harness's mark."""
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{URL}/api/session?limit=200"): {
+                    "data": [
+                        {
+                            "id": "ses_child",
+                            "parentID": "ses_a",
+                            "agent": "reviewer",
+                            "title": "Review coin-flip",
+                            "location": {"directory": "/home/tester"},
+                            "time": {"created": 990, "updated": 1000},
+                            "metadata": {"osiris": "harness"},
+                        }
+                    ]
+                }
+            }
+        )
+        assert engine(http).conversations() == []
+
     def test_a_past_conversation_is_rebuilt_from_its_messages(self) -> None:
         model = {"id": "gpt-6.1-sol", "providerID": "openai"}
         http = FakeHttpClient(
@@ -493,8 +609,10 @@ class TestHistory:
             }
         )
         assert engine(http).history(SESSION) == [
-            PastTurn("make a timer", "Made it.", ModelRef("openai", "gpt-6.1-sol")),
-            PastTurn("thanks", "", None),
+            PastTurn(
+                "make a timer", "Made it.", ModelRef("openai", "gpt-6.1-sol"), "m1"
+            ),
+            PastTurn("thanks", "", None, "m6"),
         ]
 
     def test_sessions_from_before_the_harness_marked_its_own_are_adopted(

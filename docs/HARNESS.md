@@ -39,7 +39,7 @@ The first slice of ROADMAP P3.5:
   reaches the model as guidance; Deny tells the model the person said no and
   not to try it another way unasked. A card waits without holding up any other
   Conversation, goes when its answer ends, and every answer is logged
-  (`answered`).
+  (`replied`).
 - **Unless the person turns on auto mode.** A switch on the Providers page
   (`osiris.harness.trust`) has the Harness answer every request once without a
   card, logged as `allowed` by `auto mode`, and restarts the tool server so the
@@ -60,6 +60,14 @@ The first slice of ROADMAP P3.5:
   (`DELETE /api/session/{id}/inbox/{item}`), Edit putting its text back in the
   composer; Stop withdraws every waiting message and puts them back in the
   composer, so none is sent.
+- **It can be cut into.** While Osiris answers, Send now beside Stop sends the
+  message the same way and then interrupts with `resume=true`
+  (`POST /api/session/{id}/interrupt?resume=true`): opencode stops the step
+  under way and goes on at once with the steering input waiting, as its
+  documentation for opencode 2.2.4 describes. The interruption ends the answer
+  as stopped, keeping what it had said, and is logged (`cut-in`); the Harness
+  keeps the session working through that stop, since opencode resumes it.
+  With nothing working, Send now sends without cutting in.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
@@ -86,6 +94,28 @@ The first slice of ROADMAP P3.5:
   Harness switches on unless the person has switched it themselves; being
   experimental, it is one to watch when opencode is upgraded. A Conversation
   reopened from the Engine's history does not bring its task list back.
+- **It can go back.** Once nothing is answering, a pencil beside a question,
+  shown while the pointer is on it, and an arrow beside the latest answer's
+  model and time each return to before that question: opencode's own snapshots
+  put the Project's files back and the Conversation drops that question and
+  those after it. The pencil puts the question in the composer to change; the
+  arrow sends it again as it was. Only the latest answer has the arrow, since
+  trying an earlier one again would drop every answer after it unasked. Both first say what will be lost (how many questions, and that
+  their files go back) and wait for a yes. Osiris keeps no copies of its own
+  (ADR 0005, ADR 0012). See [Going back](#going-back).
+- **It shows what an answer changed.** Beside the model and time of an answer
+  whose question made commits to Programs, once it has ended, an icon opens a
+  tab on the Canvas with that question's changes: the commits the Harness log
+  records with the question (the ones its Undo would revert), each read with
+  `git show` (`Programs.patch`) and split into files named under their Program
+  (`osiris/harness/changes.py`), each with its lines added and removed, opening
+  to its diff, coloured by the Theme's code scheme. Because the log outlives
+  the Engine's steps, a Conversation reopened from history offers them too, and
+  a Program made from a plain Conversation, which opencode tracks no changes
+  for outside a git Project, still has them. Lines picked in a diff and a
+  comment typed under it are sent to Thoth as a question naming the file and
+  its lines as they are now (`osiris/harness/review.py`), queued if Thoth is
+  busy.
 - **The Harness log** keeps everything: each question before it is sent, each
   answer with the model that gave it and its tokens, every tool call whether or
   not it asked, every answer to a card, everything auto mode allowed, every change with
@@ -326,6 +356,33 @@ changes.
 Checked against opencode 2.2.4: a saved `always` beats any `ask` and loses to a
 config `deny`; it is listed at `GET /api/permission/saved` and removed with
 `DELETE /api/permission/saved/{id}`, which Thoth does not offer yet.
+
+### Going back
+
+`Harness.go_back` stages opencode's revert to before the question's message
+(`POST /api/session/{id}/revert/stage` with `files: true`), which puts the files
+back at once and names each with its diff, then keeps it
+(`POST .../revert/commit`), which drops the later questions from the
+Conversation. Checked against opencode 2.2.4:
+
+- A snapshot covers the session's folder inside a git worktree: tracked files
+  and untracked ones up to 2 MiB. Ignored files, files outside the folder and
+  git metadata are not covered. What was staged in git is left as it was.
+- Outside a git repository opencode restores no files and stages no snapshot.
+  Thoth then cancels the revert (`DELETE .../revert`) and says the files cannot
+  be put back, rather than going back with the files still changed
+  (`could-not-go-back` in the log).
+- opencode refuses while the session runs, so Go back is offered only once
+  nothing is answering.
+- Snapshots live in opencode's own object store under its data folder; it
+  documents no rule for pruning them (opencode.ai/v2/docs/snapshots), and
+  `"snapshots": false` in its config stops new ones.
+- Osiris's own changes, a Theme or a Skin, are not in the snapshot; each keeps
+  its own Undo.
+
+Each go back is logged as `went-back` with the message, the files put back and
+how many questions were dropped, so a reopened Conversation matches the log's
+changes to the answers still there.
 
 ### Unread and notifications
 

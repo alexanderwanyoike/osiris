@@ -170,6 +170,8 @@ def source_scheme(theme: Mapping[str, Any]) -> str:
         "def:net-address": {"foreground": c["accent"], "underline": "single"},
         "def:insertion": {"foreground": c["success"]},
         "def:deletion": {"foreground": c["danger"]},
+        "diff:added-line": {"foreground": c["success"]},
+        "diff:removed-line": {"foreground": c["danger"]},
     }
     body = "\n".join(
         "  <style name={}{}/>".format(
