@@ -12,6 +12,7 @@ from render import TurnView
 from osiris.harness.activity import Step
 from osiris.harness.admin import Request
 from osiris.harness.conversation import State, Turn
+from osiris.harness.detail import FOLD
 from osiris.harness.log import Change
 from osiris.harness.markdown import InlineStyle
 
@@ -181,6 +182,18 @@ def test_an_edit_step_marks_the_lines_it_removed_and_added() -> None:
     }
     assert "harness-removed" in marked["- a = 1"]
     assert "harness-added" in marked["+ a = 2"]
+
+
+def test_long_output_is_folded_until_asked_for() -> None:
+    turn = finished()
+    output = "".join(f"line {n}\n" for n in range(40))
+    turn.steps = [Step("shell", ("seq",), input={"command": "seq"}, output=output)]
+    step = find(find(drawn(turn), Gtk.Expander).get_child(), Gtk.Expander)
+    assert "line 39" not in texts(step.get_child())
+    more = find(step.get_child(), Gtk.Button)
+    assert more.get_label() == f"Show {40 - FOLD} more lines"
+    more.emit("clicked")
+    assert "line 39" in texts(step.get_child())
 
 
 def test_an_answer_that_took_no_steps_keeps_no_record() -> None:
