@@ -133,6 +133,25 @@ def test_what_osiris_did_is_kept_folded_under_the_answer() -> None:
     assert icons == ["object-select-symbolic", "changes-prevent-symbolic"]
 
 
+def test_a_step_opens_to_show_what_it_asked_and_what_came_back() -> None:
+    turn = finished()
+    turn.steps = [
+        Step(
+            "shell",
+            ("ls /etc",),
+            input={"command": "ls /etc | head -2"},
+            output="NetworkManager\nUPower\n",
+        )
+    ]
+    record = find(drawn(turn), Gtk.Expander)
+    step = find(record.get_child(), Gtk.Expander)
+    assert texts(step.get_label_widget()) == ["Ran ls /etc"]
+    assert not step.get_expanded()
+    assert {"ls /etc | head -2", "NetworkManager", "UPower"} <= set(
+        texts(step.get_child())
+    )
+
+
 def test_an_answer_that_took_no_steps_keeps_no_record() -> None:
     view = drawn(finished())
     assert not any(text.startswith("Used") for text in shown(view))
