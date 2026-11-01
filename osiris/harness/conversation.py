@@ -10,6 +10,7 @@ from osiris.harness.activity import THINKING, WRITING, Step
 from osiris.harness.admin import Request
 from osiris.harness.engine import (
     Answered,
+    Delivered,
     Event,
     Failed,
     Finished,
@@ -72,6 +73,14 @@ class Turn:
         return [change.undo for change in reversed(self.changes) if change.undo]
 
 
+@dataclass(frozen=True)
+class Waiting:
+    """A message sent while Thoth worked, not yet taken in."""
+
+    message: str
+    text: str
+
+
 class Conversation:
     def __init__(self) -> None:
         self.turns: list[Turn] = []
@@ -81,6 +90,8 @@ class Conversation:
         self._step_ended = False
         #: What the model gave each tool call, kept until a decision names it.
         self._inputs: dict[str, Mapping[str, object]] = {}
+        #: Messages sent while busy, in order, until each reaches the model.
+        self.waiting: list[Waiting] = []
 
     @property
     def title(self) -> str | None:
@@ -134,6 +145,27 @@ class Conversation:
             answer.changes = made
             answer.undone = bool(made) and tuple(c.summary for c in made) in undid
         return talk
+
+    def queued(self, message: str, text: str) -> None:
+        self.waiting.append(Waiting(message, text))
+
+    def unqueued(self, message: str) -> str:
+        """Take a waiting message back; its text, or nothing if it has gone."""
+        for waiting in self.waiting:
+            if waiting.message == message:
+                self.waiting.remove(waiting)
+                return waiting.text
+        return ""
+
+    def _delivered(self, message: str) -> None:
+        """A waiting message the model took in starts the next question; the
+        answer it steered goes on under it."""
+        text = self.unqueued(message)
+        if not text:
+            return
+        if self.busy:
+            self.turns[-1].end(State.DONE)
+        self.asked(text)
 
     def needs_password(self, request: Request) -> None:
         if self.turns:
@@ -210,6 +242,8 @@ class Conversation:
                 self.tokens_spent += tokens.input + tokens.output + tokens.reasoning
             case Asking() | ToolCalled() | Allowed() | Refused() | ToolFinished():
                 self._step(turn, event)
+            case Delivered(_, message):
+                self._delivered(message)
             case Finished():
                 turn.end(State.DONE)
             case Stopped():
