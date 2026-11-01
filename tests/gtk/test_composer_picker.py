@@ -243,7 +243,10 @@ def test_opening_the_picker_says_so_once_not_at_every_key() -> None:
     window.present()
     opened: list[str] = []
     picker = Picker(entry, lambda _sign: [README, CLOCK], on_open=opened.append)
-    for text in ("@", "@R", "@RE", "fix", "fix /"):
-        entry.get_buffer().set_text(text)
+    buffer = entry.get_buffer()
+    for key in "@RE":
+        buffer.insert_at_cursor(key)
+    buffer.set_text("fix")
+    buffer.insert_at_cursor(" /")
     assert opened == ["@", "/"]
     assert picker.popover.get_visible()
