@@ -253,3 +253,21 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
     transition: background-color 140ms ease-out;
 }
 .harness-drawer paned > separator:hover { background-color: alpha(@harness_accent, 0.22); }
+
+/* The / and @ picker: a raised card of quiet rows over the message box, the
+   chosen one lit with the accent. */
+popover.harness-picker-popover > contents {
+    background-color: @harness_raised;
+    color: @harness_fg;
+    border: 1px solid alpha(@harness_fg, 0.10);
+    border-radius: 8px;
+    padding: 4px;
+    min-width: 300px;
+    box-shadow: 0 8px 24px alpha(@harness_sunken, 0.45);
+}
+.harness-picker { background-color: transparent; }
+.harness-picker row { min-height: 30px; padding: 0 10px; border-radius: 4px; }
+.harness-picker row:hover { background-color: alpha(@harness_fg, 0.05); }
+.harness-picker row:selected { background-color: alpha(@harness_accent, 0.14); }
+.harness-picker-label { color: @harness_fg; font-weight: 500; }
+.harness-picker row:selected .harness-picker-label { color: @harness_accent; }
