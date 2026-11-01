@@ -184,6 +184,20 @@ class TestSessions:
         engine(http).send(SESSION, "hello")
         assert http.requests == [("POST", path, {"text": "hello"})]
 
+    def test_sending_gives_back_where_the_message_waits_until_delivered(self) -> None:
+        """As opencode 2.2.4 answers a prompt: with the inbox item it made."""
+        path = f"{URL}/api/session/{SESSION}/prompt"
+        http = FakeHttpClient(
+            replies={("POST", path): {"data": {"id": "msg_1", "delivery": "steer"}}}
+        )
+        assert engine(http).send(SESSION, "stop at ten") == "msg_1"
+
+    def test_a_waiting_message_can_be_withdrawn(self) -> None:
+        path = f"{URL}/api/session/{SESSION}/inbox/msg_1"
+        http = FakeHttpClient(replies={("DELETE", path): None})
+        engine(http).withdraw(SESSION, "msg_1")
+        assert http.requests == [("DELETE", path, None)]
+
     def test_stopping_interrupts_the_session(self) -> None:
         path = f"{URL}/api/session/{SESSION}/interrupt"
         http = FakeHttpClient(replies={("POST", path): {"interrupted": True}})
