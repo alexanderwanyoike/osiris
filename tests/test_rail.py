@@ -73,3 +73,18 @@ def test_the_first_question_on_screen_is_the_current_one() -> None:
     turns = [Turn("one"), Turn("two"), Turn("three")]
     made = ticks(turns, [0, 400, 900], 1500, top=500, height=600)
     assert [tick.current for tick in made] == [False, True, False]
+
+
+def test_ticks_stand_evenly_in_a_column_centred_on_the_rail() -> None:
+    from osiris.harness.rail import column
+
+    # Five ticks 10 apart on a rail 400 tall: a column 50 tall, centred.
+    assert column(5, 400) == (175.0, 10.0)
+
+
+def test_many_ticks_draw_closer_rather_than_run_past_half_the_rail() -> None:
+    from osiris.harness.rail import column
+
+    top, pitch = column(100, 400)
+    assert pitch * 100 <= 400 * 0.55
+    assert top == (400 - pitch * 100) / 2
