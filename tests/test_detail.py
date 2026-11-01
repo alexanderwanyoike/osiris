@@ -44,3 +44,20 @@ def test_a_file_edit_shows_the_change_as_a_diff() -> None:
         ("+", "minutes = 50"),
         (" ", "print(minutes)"),
     ]
+
+
+def test_a_read_shows_what_was_looked_at_and_what_was_found() -> None:
+    step = Step(
+        "read",
+        ("/etc/hostname",),
+        input={"path": "/etc/hostname"},
+        output="1: osiris",
+    )
+    shown = detail(step)
+    assert (shown.kind, shown.asked) == (Kind.LOOK, "/etc/hostname")
+    assert [line.text for line in shown.lines] == ["1: osiris"]
+
+
+def test_a_search_shows_its_pattern() -> None:
+    step = Step("grep", ("TODO",), input={"pattern": "TODO", "path": "src"})
+    assert detail(step).asked == "TODO in src"
