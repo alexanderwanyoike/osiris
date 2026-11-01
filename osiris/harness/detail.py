@@ -73,14 +73,12 @@ def patched_file(patch: str) -> str | None:
 
 def _patch(step: Step, patch: str) -> Detail:
     """A change made with the patch tool: its first file, and its lines."""
-    named = _PATCHED.search(patch)
     lines = tuple(
         Line(row[1:], row[0])
         for row in patch.splitlines()
         if row[:1] in ("+", "-", " ") and not row.startswith("***")
     )
-    path = named.group(1) if named else " ".join(step.resources)
-    return Detail(Kind.CHANGE, path, lines)
+    return Detail(Kind.CHANGE, patched_file(patch) or " ".join(step.resources), lines)
 
 
 def _change(step: Step) -> Detail:
