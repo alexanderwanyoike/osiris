@@ -3,8 +3,9 @@
 group of tabs, code read-only in the Theme's colours, editing handed to Code
 (ADR 0016).
 """
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
+from typing import Any
 
 import gi
 
@@ -328,10 +329,15 @@ class Canvas(Gtk.Box):
             return None
         return self._sources.get(group.selected)
 
-    def restyle(self, scheme: GtkSource.StyleScheme | None) -> None:
+    def restyle(self, scheme: GtkSource.StyleScheme | None,
+                theme: Mapping[str, Any] | None = None) -> None:
         self._scheme = scheme
         for view in self._sources.values():
             view.get_buffer().set_style_scheme(scheme)
+        for content in self._contents.values():
+            follow = getattr(content, "restyle", None)
+            if theme is not None and callable(follow):
+                follow(theme)
 
     def _code_page(self, program: Program,
                    relative: Path) -> tuple[Gtk.Widget, GtkSource.View]:
