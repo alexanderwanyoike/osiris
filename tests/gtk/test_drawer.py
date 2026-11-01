@@ -579,7 +579,6 @@ def test_tokens_in_the_message_box_follow_the_theme() -> None:
     import main
 
     from osiris.harness.style import token_colours
-
     from tests.test_style import DAWN, OBSIDIAN
 
     app = FakeApp()

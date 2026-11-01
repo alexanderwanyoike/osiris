@@ -45,7 +45,6 @@ def test_the_picker_offers_the_projects_files_and_the_skills_there() -> None:
     from types import SimpleNamespace
 
     from osiris.harness.harness import Harness
-
     from tests.test_harness import GPT, HOME
 
     project = HOME / "Code" / "timer"
@@ -69,14 +68,15 @@ def test_a_folder_that_is_no_program_offers_no_files_and_no_problem() -> None:
 
     from osiris.harness.harness import Harness
     from osiris.programs.programs import ProgramError
-
     from tests.test_harness import GPT, HOME
 
     def no_program(name: str) -> list[object]:
         raise ProgramError(f"There is no Program called {name}")
 
     stand_in, engine = app()
-    stand_in.harness = Harness(engine, stand_in.log, GPT, directory=HOME / "Code" / "notes")
+    stand_in.harness = Harness(
+        engine, stand_in.log, GPT, directory=HOME / "Code" / "notes"
+    )
     stand_in.programs = lambda: SimpleNamespace(files=no_program)
     stand_in.skills = None
     stand_in.refresh_offers()
