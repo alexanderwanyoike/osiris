@@ -85,7 +85,9 @@ class Canvas(Gtk.Box):
         self.toolbar.append(globe)
         self._tiles = Gtk.Box(vexpand=True, hexpand=True)
         self._paneds: list[Gtk.Paned] = []
+        self._start = self._start_page()
         self.append(self._tiles)
+        self._tile()
 
     def show(self, programs: list[tuple[Program, list[Path]]]) -> None:
         """The Programs whose files can be opened; tabs of any gone close, and
@@ -324,9 +326,26 @@ class Canvas(Gtk.Box):
         while (child := self._tiles.get_first_child()) is not None:
             self._tiles.remove(child)
         shown = [self._groups[group.kind] for group in self.panels.groups]
-        if not shown:
-            return
-        self._tiles.append(self._side_by_side(shown))
+        self._tiles.append(self._side_by_side(shown) if shown else self._start)
+
+    def _start_page(self) -> Gtk.Widget:
+        """With nothing open: what can be, and two ways to start."""
+        start = Adw.StatusPage(icon_name="view-dual-symbolic",
+                               title="Nothing open yet",
+                               description="Files, changes, terminals and pages open "
+                               "here, from the toolbar or as Osiris works.",
+                               vexpand=True, hexpand=True)
+        start.add_css_class("compact")
+        start.add_css_class("harness-canvas-start")
+        ways = Gtk.Box(spacing=8, halign=Gtk.Align.CENTER)
+        for label, act in (("Open a terminal", self.open_terminal),
+                           ("Open a page", lambda: self.open_page(""))):
+            button = Gtk.Button(label=label)
+            button.add_css_class("pill")
+            button.connect("clicked", lambda _b, a=act: a())
+            ways.append(button)
+        start.set_child(ways)
+        return start
 
     def _side_by_side(self, shown: list[Gtk.Widget]) -> Gtk.Widget:
         if len(shown) == 1:
