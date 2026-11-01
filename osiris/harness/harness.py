@@ -285,6 +285,19 @@ class Harness:
         reason = f"You replied: {reply}" if reply else DENIED
         return Refused(session, asking.action, asking.resources, asking.call, reason)
 
+    def _called(self, event: ToolCalled) -> None:
+        """Log a tool call; a command is noted even if the Engine's rules ran
+        it without asking, so its sudo finds its session."""
+        self._log.write(
+            "tool",
+            session=event.session,
+            call=event.call,
+            input=event.input,
+            executed=event.executed,
+        )
+        if isinstance(command := event.input.get("command"), str):
+            self._allowed_command(event.session, (command,))
+
     def handle(self, event: Event) -> Event | Decision | None:
         """Log what the Engine reports and apply policy; the event is passed on.
 
@@ -304,14 +317,8 @@ class Harness:
                     tokens=asdict(tokens),
                     cost=cost,
                 )
-            case ToolCalled(session, call, arguments, executed):
-                self._log.write(
-                    "tool",
-                    session=session,
-                    call=call,
-                    input=arguments,
-                    executed=executed,
-                )
+            case ToolCalled():
+                self._called(event)
             case ToolRequested(session, request, action, resources, call) if (
                 self._allow_everything()
             ):
