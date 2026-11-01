@@ -443,3 +443,11 @@ def test_a_changed_file_shows_its_name_its_folder_and_coloured_counts() -> None:
     assert "harness-meta" in labels["coin-flip/src"].get_css_classes()
     assert "harness-added" in labels["+2"].get_css_classes()
     assert "harness-removed" in labels["\u22121"].get_css_classes()
+
+
+def test_a_panel_clips_its_contents_to_its_rounded_corners() -> None:
+    widget, _ = canvas()
+    group = next(
+        w for w in widgets(widget) if "harness-canvas-group" in w.get_css_classes()
+    )
+    assert group.get_overflow() is Gtk.Overflow.HIDDEN
