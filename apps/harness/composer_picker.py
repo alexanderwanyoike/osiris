@@ -47,6 +47,9 @@ class Picker:
         if keyval in COMPLETES:
             self._complete(self.list.get_selected_row().entry)
             return True
+        if keyval == Gdk.KEY_Escape:
+            self.popover.popdown()
+            return True
         return False
 
     def _move(self, step: int) -> None:
