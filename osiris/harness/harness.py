@@ -323,6 +323,7 @@ class Harness:
                     session=session,
                     action=action,
                     resources=list(resources),
+                    by="auto mode",
                 )
                 return Allowed(session, action, resources, call)
             case ToolRequested(session, request, action, resources, call, patterns):
