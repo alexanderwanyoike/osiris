@@ -1163,9 +1163,9 @@ class Application(Adw.Application):
         if self.conversation.busy:
             self._queue(text)
             return
-        self.conversation.asked(text)
+        turn = self.conversation.asked(text)
         self.drawer.refresh()
-        threading.Thread(target=self._send, args=(text,), daemon=True).start()
+        threading.Thread(target=self._send, args=(text, turn), daemon=True).start()
 
     def _queue(self, text: str) -> None:
         """Sent while busy: it waits in the Engine's inbox and steers the
@@ -1190,12 +1190,14 @@ class Application(Adw.Application):
         if self.harness is not None:
             threading.Thread(target=self.harness.stop, daemon=True).start()
 
-    def _send(self, text: str) -> None:
+    def _send(self, text: str, turn: Turn | None = None) -> None:
         try:
-            self.harness.ask(text)
+            message = self.harness.ask(text)
         except HttpError as error:
             GLib.idle_add(self._failed_to_send, str(error))
             return
+        if turn is not None:
+            GLib.idle_add(lambda: setattr(turn, "message", message) or False)
         GLib.idle_add(lambda: self.load_history() or False)
         GLib.idle_add(self.start_waiting)
 
