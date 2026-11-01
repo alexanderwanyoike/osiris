@@ -24,8 +24,7 @@ from osiris.harness.connectors import (  # noqa: E402
 class ConnectorsPage(Gtk.Box):
     #: Seconds between asking again about a server still starting.
     POLL_SECONDS = 2
-    #: How often to ask before leaving a server to say it has not started; a
-    #: server starts only for a folder a session runs in.
+    #: How often to ask before leaving a server to say it has not started.
     POLLS = 15
 
     def __init__(self, read: Callable[[], list[Connector]],
