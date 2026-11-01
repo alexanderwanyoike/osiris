@@ -140,9 +140,10 @@ class Harness:
     def send_now(self, text: str) -> str:
         """Send while the session works, stopping its step at once so the
         model takes this next. Answers where it waits until then."""
-        message = self.ask(text)
         session = self._session
-        if session is not None:
+        working = session is not None and session in self._running
+        message = self.ask(text)
+        if session is not None and working:
             self._cutting_in.add(session)
             self._engine.cut_in(session)
             self._log.write("cut-in", session=session)
