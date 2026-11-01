@@ -18,6 +18,8 @@ class Tick:
     tone: str
     #: The start of its question, shown on hover.
     label: str
+    #: The first question on screen, whose tick stands out.
+    current: bool = False
 
 
 def tone_of(turn: Turn) -> str:
@@ -51,12 +53,11 @@ def ticks(
 ) -> list[Tick]:
     """A tick for each question, from where each starts in a Conversation
     ``total`` tall, scrolled to show ``height`` from ``top``."""
+    seen = on_screen(tops, total, top, height)
+    first = seen.index(True) if True in seen else -1
     return [
-        Tick(at, lit, tone_of(turn), title_of(turn.question))
-        for turn, at, lit in zip(
-            turns,
-            placed(tops, total),
-            on_screen(tops, total, top, height),
-            strict=True,
+        Tick(at, lit, tone_of(turn), title_of(turn.question), index == first)
+        for index, (turn, at, lit) in enumerate(
+            zip(turns, placed(tops, total), seen, strict=True)
         )
     ]
