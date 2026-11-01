@@ -24,6 +24,7 @@ class FakeDrawer:
         self.entry = SimpleNamespace(grab_focus=lambda: None)
         self.drafts: list[str] = []
         self.changes: list[tuple[str, object, Any]] = []
+        self.pages: list[str] = []
         self.refreshes = 0
 
     def clear(self) -> None:
@@ -40,6 +41,9 @@ class FakeDrawer:
 
     def show_changes(self, question: str, files: object, on_comment: Any) -> None:
         self.changes.append((question, files, on_comment))
+
+    def open_page(self, at: str) -> None:
+        self.pages.append(at)
 
 
 class App(SimpleNamespace):
@@ -367,6 +371,18 @@ def test_changes_whose_program_is_gone_say_so_on_their_question() -> None:
     stand_in.show_changes(turn)
     assert stand_in.drawer.changes == []
     assert "coin-flip" in turn.note
+
+
+def test_a_page_thoth_reads_opens_in_the_browser_group() -> None:
+    """So the person can follow its sources (#197)."""
+    from osiris.harness.engine import ToolCalled
+
+    stand_in, _ = app()
+    asked(stand_in, "what is a GtkLabel?")
+    page = "https://docs.gtk.org/gtk4/class.Label.html"
+    heard(stand_in, ToolCalled("ses_1", "call_1", {"url": page}, False, "webfetch"))
+    heard(stand_in, ToolCalled("ses_1", "call_2", {"path": "/etc/x"}, False, "read"))
+    assert stand_in.drawer.pages == [page]
 
 
 def test_a_message_sent_now_waits_shown_while_the_engine_cuts_in() -> None:
