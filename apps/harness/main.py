@@ -349,9 +349,18 @@ class Drawer(Gtk.ApplicationWindow):
 
     def _send_or_stop(self, _button) -> None:
         if self.app.conversation.busy:
+            self._hold_back()
             self.app.stop()
         else:
             self._ask()
+
+    def _hold_back(self) -> None:
+        """Messages still waiting go back to the composer, sent to no one."""
+        held = [self.app.unqueue(waiting.message)
+                for waiting in list(self.app.conversation.waiting)]
+        if held:
+            self.entry.get_buffer().set_text("\n\n".join(held))
+        self.refresh()
 
     def _models_shown(self, button, _spec) -> None:
         if not button.get_active():
