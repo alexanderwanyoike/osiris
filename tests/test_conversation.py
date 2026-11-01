@@ -96,6 +96,14 @@ def test_a_refused_action_is_shown_on_its_turn() -> None:
     assert talk.turns[-1].steps == [Step("shell", ("ls /etc",), allowed=False)]
 
 
+def test_a_step_carries_the_input_of_its_tool_call() -> None:
+    talk = Conversation()
+    talk.asked("list /etc")
+    talk.apply(ToolCalled(S, "call_1", {"command": "ls /etc"}, executed=False))
+    talk.apply(Allowed(S, "shell", Tier.ANYTHING, ("ls /etc",), "call_1"))
+    assert talk.turns[-1].steps[0].input == {"command": "ls /etc"}
+
+
 def test_an_allowed_action_is_not_shown_as_refused() -> None:
     talk = Conversation()
     talk.asked("make it calm")
