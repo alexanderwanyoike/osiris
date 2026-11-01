@@ -311,7 +311,8 @@ def test_a_questions_changes_come_from_its_commits_and_a_comment_reaches_thoth()
     )
 
 
-def test_changes_from_the_toolbar_open_each_questions_newest_first() -> None:
+def test_changes_from_the_toolbar_open_each_questions_in_order_newest_last() -> None:
+    """The newest, opened last, is the one on screen."""
     from osiris.harness.log import Change
     from osiris.platform import FakeRunner
     from osiris.platform.process import Result
@@ -341,8 +342,8 @@ def test_changes_from_the_toolbar_open_each_questions_newest_first() -> None:
         )
     stand_in.show_all_changes()
     assert [question for question, _, _ in stand_in.drawer.changes] == [
-        "add --times",
         "make a coin flip",
+        "add --times",
     ]
 
 
