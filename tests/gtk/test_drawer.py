@@ -686,3 +686,22 @@ def test_the_rail_stands_in_for_the_conversations_scrollbar() -> None:
     window, _ = drawer()
     _across, down = window.scroller.get_policy()
     assert down == Gtk.PolicyType.EXTERNAL
+
+
+def test_one_long_answer_still_shows_where_it_is_scrolled_to() -> None:
+    from tests.gtk.test_composer_picker import settle
+
+    window, _ = drawer()
+    window.set_default_size(420, 700)
+    window.present()
+    turn = window.app.conversation.asked("tell me a long story")
+    turn.answer = "a story that runs on\n\n" * 60
+    window.refresh()
+    settle()
+    view = window.scroller.get_vadjustment()
+    view.set_value(0)
+    settle()
+    window.refresh()
+    top, shown = window.rail._view
+    assert window.rail.get_visible()
+    assert top == 0 and 0 < shown < 1
