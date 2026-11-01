@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Callable, Mapping
+from contextvars import ContextVar
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
-from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
-from mcp.types import ToolAnnotations
+from mcp.types import CallToolResult, InputRequiredResult, ToolAnnotations
 from pydantic import Field
 
 from osiris.harness.log import HarnessLog
@@ -59,7 +60,14 @@ folder, named as "icon" in its osiris-program.json; give one to any Program
 that lacks it. Keep its osiris-program.json true: build and run are lists of words run
 in its folder. Commit every change with commit_program, one atomic change per
 commit with a message saying what it does. check_program finds Python that does
-not compile. The person tries and installs a Program themselves, from the card
+not compile. Before you tell the person a Program is done, run check_program
+and the Program's own tests and fix what fails; then ask the reviewer subagent
+to review the change, giving it the Program's folder, the person's own words
+for what they asked, and the commit the change started from. End your answer
+with its verdict line as it gave it, pass, partial or fail, and keep its report
+for when the person asks. Never call a Program done on a partial or a fail:
+fix what it found and have it reviewed again, or tell the person what is left.
+The person tries and installs a Program themselves, from the card
 under your answer; a failed build comes back to you to fix.
 
 You can make and change Skins too: the shape of the desktop (windows, panel,
@@ -79,15 +87,16 @@ something cannot be done that way, tell the person."""
 #: What the model may touch beyond its tools, by the person's choice
 #: (osiris.harness.trust).
 REACH = {
-    False: "nothing outside that folder is\nyours to touch, and you cannot run "
-    "commands.",
-    True: "the person has allowed you\neverything: you may run commands and read "
-    "or change any file, though a\nProgram's code still belongs in its own folder.",
+    False: "a command, or a change\noutside that folder, asks the person first, "
+    "who may say no; ask only for\nwhat the request needs.",
+    True: "the person has turned on\nauto mode: commands and changes run without "
+    "asking unless their rules forbid\nthem, though a Program's code still belongs "
+    "in its own folder.",
 }
 
 
-def instructions(*, allow_everything: bool) -> str:
-    return INSTRUCTIONS.replace("{reach}", REACH[allow_everything])
+def instructions(*, auto_mode: bool) -> str:
+    return INSTRUCTIONS.replace("{reach}", REACH[auto_mode])
 
 
 #: How far each tool reaches, which decides how the Harness answers its requests.
@@ -180,6 +189,49 @@ SKIN_UNDO: dict[str, Callable[[SkinStore, Mapping[str, str]], None]] = {
 }
 
 
+#: Where the Engine names, on each tool call, the session it makes it for.
+SESSION_META = "ai.opencode/sessionID"
+
+_asking: ContextVar[str | None] = ContextVar("asking", default=None)
+
+
+def _session_of(context: Context | None) -> str | None:
+    try:
+        meta = context.request_context.meta if context is not None else None
+    except ValueError:  # called outside a request, as the tests do
+        return None
+    session = meta.get(SESSION_META) if meta else None
+    return session if isinstance(session, str) else None
+
+
+class _Tools(MCPServer):
+    """Keeps, for the length of each call, the session that made it: one
+    server serves every Conversation in a Project."""
+
+    async def call_tool(
+        self,
+        name: str,
+        arguments: dict[str, Any],
+        context: Context | None = None,
+    ) -> CallToolResult | InputRequiredResult:
+        token = _asking.set(_session_of(context))
+        try:
+            return await super().call_tool(name, arguments, context)
+        finally:
+            _asking.reset(token)
+
+
+class _Logged:
+    """The log, each entry naming the session whose call wrote it."""
+
+    def __init__(self, log: HarnessLog) -> None:
+        self._log = log
+
+    def write(self, kind: str, **fields: object) -> None:
+        session = _asking.get()
+        self._log.write(kind, **({"session": session} if session else {}), **fields)
+
+
 def server(
     store: ThemeStore,
     programs: Programs,
@@ -187,13 +239,14 @@ def server(
     wallpapers: UserWallpapers,
     *,
     skins: SkinStore | None = None,
-    allow_everything: bool = False,
+    auto_mode: bool = False,
 ) -> MCPServer:
     """The tools, acting on ``store``; every change they make is written to
     ``log`` with the step that undoes it."""
-    tools = MCPServer(
+    logged = _Logged(log)
+    tools = _Tools(
         NAME,
-        instructions=instructions(allow_everything=allow_everything),
+        instructions=instructions(auto_mode=auto_mode),
         log_level="WARNING",
     )
 
@@ -228,7 +281,7 @@ def server(
             mood=mood.value,
             dark=dark,
         )
-        log.write(
+        logged.write(
             "changed",
             summary=f"Made {label}",
             undo={"action": "delete_theme", "name": name},
@@ -240,7 +293,7 @@ def server(
     def apply_theme(name: str) -> str:
         """Apply a theme to the whole desktop, by its name from list_themes."""
         previous = actions.apply_theme(store, name)
-        log.write(
+        logged.write(
             "changed",
             summary=f"Applied {actions.find(store, name)['label']}",
             undo={"action": "apply_theme", "name": previous} if previous else None,
@@ -295,7 +348,7 @@ def server(
             terminal=terminal,
             icon_svg=icon_svg,
         )
-        log.write(
+        logged.write(
             "changed",
             summary=f"Made {label}",
             undo={"action": "trash_program", "name": manifest.name},
@@ -316,7 +369,7 @@ def server(
         """
         commit = programs.commit(name, message)
         label = programs.manifest(name).label
-        log.write(
+        logged.write(
             "changed",
             summary=f"{label}: {message}",
             undo={"action": "revert_commit", "name": name, "commit": commit},
@@ -357,19 +410,19 @@ def server(
         the errors by its own line numbers; fix it and call again.
         """
         name = wallpapers.write(label, shader)
-        log.write(
+        logged.write(
             "changed",
             summary=f"Made the {label} wallpaper",
             undo={"action": "delete_wallpaper", "name": name},
         )
         theme, previous = actions.use_wallpaper(store, name, label)
         theme_label = actions.find(store, theme)["label"]
-        log.write(
+        logged.write(
             "changed",
             summary=f"Made {theme_label}",
             undo={"action": "delete_theme", "name": theme},
         )
-        log.write(
+        logged.write(
             "changed",
             summary=f"Applied {theme_label}",
             undo={"action": "apply_theme", "name": previous},
@@ -377,11 +430,11 @@ def server(
         return f"Made the {label} wallpaper and applied it as {theme_label}."
 
     if skins is not None:
-        _skin_tools(tools, skins, log)
+        _skin_tools(tools, skins, logged)
     return tools
 
 
-def _skin_tools(tools: MCPServer, skins: SkinStore, log: HarnessLog) -> None:
+def _skin_tools(tools: MCPServer, skins: SkinStore, logged: _Logged) -> None:
     @tools.tool(annotations=ANNOTATIONS[TIERS["list_skins"]])
     @explained
     def list_skins() -> list[dict[str, object]]:
@@ -397,7 +450,7 @@ def _skin_tools(tools: MCPServer, skins: SkinStore, log: HarnessLog) -> None:
         base: the name, from list_skins, of the Skin it starts as.
         """
         folder = skins.create(label, base)
-        log.write(
+        logged.write(
             "changed",
             summary=f"Made the {label} Skin",
             undo={"action": "delete_skin", "name": folder.name},
@@ -424,7 +477,7 @@ def _skin_tools(tools: MCPServer, skins: SkinStore, log: HarnessLog) -> None:
             raise SkinpackError("Not worn: " + "; ".join(problems))
         previous = skins.worn()
         skins.wear(name)
-        log.write(
+        logged.write(
             "changed",
             summary=f"Wore the {name} Skin",
             undo={"action": "wear_skin", "name": previous},
@@ -438,7 +491,7 @@ def _skin_tools(tools: MCPServer, skins: SkinStore, log: HarnessLog) -> None:
         path) a Skin of the person's, worn in its own colours until you convert
         them to the Theme's gaps."""
         name = skins.import_gtk_theme(Path(path))
-        log.write(
+        logged.write(
             "changed",
             summary=f"Imported {Path(path).name} as a Skin",
             undo={"action": "delete_skin", "name": name},
@@ -451,7 +504,7 @@ def _skin_tools(tools: MCPServer, skins: SkinStore, log: HarnessLog) -> None:
         """Install the icon or cursor sets in a downloaded archive, by its
         absolute path; name them in a Skin's skin.json to wear them."""
         names = skins.install_icon_sets(Path(path))
-        log.write(
+        logged.write(
             "changed",
             summary=f"Installed {', '.join(names)}",
             undo={"action": "remove_icon_sets", "names": "\n".join(names)},
@@ -463,7 +516,7 @@ def _skin_tools(tools: MCPServer, skins: SkinStore, log: HarnessLog) -> None:
     def install_fonts(paths: list[str]) -> str:
         """Install fonts, as font files or archives of them, by absolute path."""
         names = skins.install_fonts([Path(path) for path in paths])
-        log.write(
+        logged.write(
             "changed",
             summary=f"Installed {', '.join(names)}",
             undo={"action": "remove_fonts", "names": "\n".join(names)},

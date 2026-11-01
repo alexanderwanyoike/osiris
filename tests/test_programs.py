@@ -76,8 +76,29 @@ class TestCreating:
             "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
         )
         agents = files.read(SOURCE / "AGENTS.md")
-        assert "atomic commit" in agents
         assert MANIFEST_FILE in agents
+        assert "CODING_STANDARDS.md" in agents
+
+    def test_its_commit_rule_lives_only_in_the_coding_standards(self) -> None:
+        """One rule, one place: the person changes it there and nowhere else."""
+        subject, files, _ = programs()
+        subject.create(
+            "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+        )
+        assert "commit" not in files.read(SOURCE / "AGENTS.md")
+        assert "does one thing" in files.read(SOURCE / "CODING_STANDARDS.md")
+
+    def test_it_starts_with_coding_standards_the_person_can_change(self) -> None:
+        """What a reviewer judges the Program against: what no linter checks."""
+        subject, files, _ = programs()
+        subject.create(
+            "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+        )
+        standards = files.read(SOURCE / "CODING_STANDARDS.md")
+        for heading in ("## Style", "## Testing", "## Architecture", "## Commits"):
+            assert heading in standards
+        assert "Design patterns" in standards
+        assert "Domain-driven design" in standards
 
     def test_a_program_names_its_maker_as_the_person_knows_it(self) -> None:
         subject, files, _ = programs()
@@ -162,6 +183,19 @@ class TestCommitting:
         subject, _, runner = programs(made())
         subject.revert("pomodoro", "abc123")
         assert calls(runner) == [(*GIT, *AS_HARNESS, "revert", "--no-edit", "abc123")]
+
+    def test_a_commit_gives_back_its_changes_as_a_patch(self) -> None:
+        """What the Harness shows as one question's changes to a Program."""
+        patch = "diff --git a/main.py b/main.py\n@@ -1 +1 @@\n-a\n+b"
+        runner = FakeRunner(
+            results={
+                " ".join((*GIT, "show", "--format=", "--patch", "abc123")): answer(
+                    patch
+                )
+            }
+        )
+        subject, _, _ = programs(made(), runner)
+        assert subject.patch("pomodoro", "abc123") == patch
 
 
 class TestChecking:
@@ -296,32 +330,6 @@ class TestTrashing:
         subject, _, runner = programs(made())
         subject.trash("pomodoro")
         assert calls(runner) == [("gio", "trash", str(SOURCE))]
-
-
-class TestHolding:
-    @pytest.mark.parametrize(
-        "path",
-        [SOURCE, SOURCE / "main.py", SOURCE / "ui" / "window.py"],
-    )
-    def test_a_path_inside_a_programs_source_is_held_by_it(self, path: Path) -> None:
-        subject, _, _ = programs(made())
-        assert subject.holds(path)
-
-    @pytest.mark.parametrize(
-        "path",
-        [
-            HOME / ".ssh" / "id_ed25519",
-            HOME / "Code",
-            HOME / "Code" / "notes" / "todo.md",
-            HOME / "Code" / "pomodoro-evil" / "main.py",
-            INSTALLED / "main.py",
-        ],
-    )
-    def test_anywhere_else_is_not(self, path: Path) -> None:
-        files = made()
-        files.write(HOME / "Code" / "notes" / "todo.md", "x")
-        subject, _, _ = programs(files)
-        assert not subject.holds(path)
 
 
 class TestState:

@@ -43,9 +43,12 @@ Osiris unless the person asks otherwise.
 
 An ordinary project that any editor or coding agent can carry on: the
 language's standard build files (`pyproject.toml`, `meson.build` or
-`CMakeLists.txt`, `Cargo.toml`, `go.mod`, `package.json`), a README, and an
-AGENTS.md saying what the Program is and how it is built and changed, atomic
-commits included.
+`CMakeLists.txt`, `Cargo.toml`, `go.mod`, `package.json`), a README, an
+AGENTS.md saying what the Program is and how it is built, and a
+CODING_STANDARDS.md saying how its code is written: style, testing,
+architecture (design patterns and domain-driven design where they fit) and
+atomic commits. The standards hold only what no linter checks, and they are the
+person's to change; a review of the Program judges it against them.
 Someone who started a Program in the Harness can open it in Code - OSS, Claude
 Code, opencode or Codex and keep going.
 
@@ -83,6 +86,25 @@ The menu entry is generated from the manifest; the manifest is the truth.
   build on Try is the check), and `list_programs` (a look: what is in `~/Code`,
   and which commit of each is installed).
 - It knows its Programs only from `~/Code`; there is no other record.
+- Before it calls a Program done (#161) it runs `check_program` and the
+  Program's own tests, then asks the **Reviewer**: one of the Engine's own
+  subagents, `~/.config/opencode/agents/reviewer.md`, which follows the
+  `review` skill beside it in `~/.config/opencode/skills/review/`. Thoth gives it
+  the Program's folder, the person's own words and the commit the change started
+  from. It runs in a fresh child session that had no part in the building, and
+  its own rules let it read, search and use git's read-only commands, nothing
+  else. It reports Spec, Standards (against the Program's `CODING_STANDARDS.md`
+  and a fixed baseline of code smells the Program's rules override) and Bugs
+  (the change only, confidence-scored, kept at 80 and over) side by side,
+  under one verdict: fail for a confident bug or the main ask missing, partial
+  for a gap in the ask or a standards breach, pass otherwise. The answer ends
+  with the verdict line; the step "Asked the reviewer" opens to the whole
+  report. A partial or a fail is never called done.
+- Thoth writes the reviewer's files when it connects, only where the person
+  has none, so a reviewer they changed is theirs and no upgrade replaces it.
+  The skill is adapted from mattpocock/skills (MIT) and the code-review plugin
+  in anthropics/claude-plugins-official (Apache-2.0); both licences and a
+  notice of the changes ship beside it (`osiris/resources/engine/`).
 
 ## Not in v0
 

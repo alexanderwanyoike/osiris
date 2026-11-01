@@ -1,6 +1,7 @@
 // Keeps the Harness at the right edge of the screen, full height, above other
 // windows, and slides it in and out. A width the person drags to is kept;
-// expanded, it fills the work area, which the dock already keeps clear of. GTK4 on X11 gives an application no way
+// expanded, it is maximised: the dock keeps the work area clear, and
+// Cinnamon animates a maximise as it resizes. GTK4 on X11 gives an application no way
 // to place its own window; where the Harness sits will become the Skin's
 // choice (CONTEXT.md).
 //
@@ -36,7 +37,6 @@ class Drawer {
     constructor() {
         this._windows = new Map();
         this._widths = new Map();
-        this._expanded = new Set();
         this._created = global.display.connect(
             'window-created', (_display, window) => this._adopt(window));
         for (let actor of global.get_window_actors())
@@ -60,7 +60,6 @@ class Drawer {
             window.connect('unmanaged', () => {
                 this._windows.delete(window);
                 this._widths.delete(window);
-                this._expanded.delete(window);
             }),
         ]);
         window.make_above();
@@ -73,7 +72,7 @@ class Drawer {
     }
 
     _remember(window) {
-        if (window.get_maximized() || window.minimized || this._expanded.has(window))
+        if (window.get_maximized() || window.minimized)
             return;
         this._widths.set(window, window.get_frame_rect().width);
     }
@@ -82,8 +81,7 @@ class Drawer {
         if (window.get_maximized())
             return;
         let area = window.get_work_area_for_monitor(window.get_monitor());
-        let width = this._expanded.has(window)
-            ? area.width : (this._widths.get(window) || WIDTH);
+        let width = this._widths.get(window) || WIDTH;
         window.move_resize_frame(
             true, area.x + area.width - width, area.y, width, area.height);
     }
@@ -92,10 +90,9 @@ class Drawer {
         let [expanded] = params;
         for (let window of this._windows.keys()) {
             if (expanded)
-                this._expanded.add(window);
+                window.maximize(Meta.MaximizeFlags.BOTH);
             else
-                this._expanded.delete(window);
-            this._place(window);
+                window.unmaximize(Meta.MaximizeFlags.BOTH);
         }
         invocation.return_value(null);
     }

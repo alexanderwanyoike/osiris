@@ -97,9 +97,23 @@ What tests were written, and what was checked by hand (on a VM, for example).
 Tech Debt (optional): what this leaves to do later.
 ```
 
-## Reporting a problem
+## Reporting a problem or an idea
 
-Open an issue with what you did, what you expected, and what happened. For a
-problem on an installed system, include the Osiris version
-(`~/.config/osiris/version`) and the output of `journalctl --user -b` around the
-time it happened.
+[Open an issue](https://github.com/alexanderwanyoike/osiris/issues/new/choose)
+and pick a form: **Something is broken** or **An idea**. Write it in your own
+words; you do not need to know how Osiris works inside. Questions go to
+[Discussions](https://github.com/alexanderwanyoike/osiris/discussions) instead.
+
+For a problem on an installed system, it also helps to include the Osiris
+version (`pacman -Q osiris`) and the output of `journalctl --user -b` around
+the time it happened.
+
+### What happens next
+
+A maintainer reads every new issue (`needs-triage`) and moves it on: asks you
+for more (`needs-info`), marks it ready to build (`ready-for-agent` or
+`ready-for-human`), or explains why it will not be done (`wontfix`). An `area:`
+label says which part of Osiris it touches. Work that is planned sits in a
+[milestone](https://github.com/alexanderwanyoike/osiris/milestones), one per
+piece of the [roadmap](docs/ROADMAP.md). Issues marked `good first issue` are a
+good place to start contributing.

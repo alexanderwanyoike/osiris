@@ -81,3 +81,12 @@ def test_a_long_failure_is_told_on_one_line_too() -> None:
     assert line == (
         "The request to the provider failed after three attempts because the…"
     )
+
+
+def test_a_conversation_waiting_says_what_osiris_is_asking() -> None:
+    from osiris.harness.harness import Asking
+
+    talk = answered("List /etc", Asking("ses_1", "per_1", "shell", ("ls /etc",)))
+    assert notice_of(talk) == Notice(
+        "Osiris is waiting for you", "List /etc\nRun a command?"
+    )

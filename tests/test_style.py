@@ -124,6 +124,15 @@ class TestScheme:
         assert comment["foreground"] == "#a0a0a8"
         assert comment["italic"] == "true"
 
+    def test_a_diffs_added_and_removed_lines_take_success_and_danger(self) -> None:
+        """GtkSourceView's diff language names its own styles and maps them
+        to no def: style, so a scheme without them draws a diff plain."""
+        found = styles(source_scheme(OBSIDIAN))
+        colours = OBSIDIAN["colors"]
+        assert isinstance(colours, dict)
+        assert found["diff:added-line"]["foreground"] == colours["success"]
+        assert found["diff:removed-line"]["foreground"] == colours["danger"]
+
 
 class TestInline:
     def test_inline_code_uses_the_raised_surface(self) -> None:
@@ -143,3 +152,9 @@ class TestSkinChoice:
 
     def test_a_known_skin_is_chosen_ignoring_surrounding_whitespace(self) -> None:
         assert skin_name(" transcript\n") == "transcript"
+
+    def test_studio_can_be_chosen(self) -> None:
+        assert skin_name("studio") == "studio"
+
+    def test_studio_is_the_look_when_none_is_chosen(self) -> None:
+        assert skin_name(None) == "studio"

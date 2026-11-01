@@ -4,7 +4,7 @@ spinner while Osiris works and a dot for an answer not yet seen.
 
 The grouping is decided in osiris/harness/history.py, where it is tested.
 """
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 import gi
@@ -15,6 +15,7 @@ from gi.repository import Adw, Gtk, Pango  # noqa: E402
 
 from osiris.harness.engine import Past  # noqa: E402
 from osiris.harness.history import Project  # noqa: E402
+from osiris.harness.status import Status  # noqa: E402
 
 #: How far a Conversation is set in under its Project.
 INDENT = 26
@@ -36,11 +37,10 @@ class Sidebar(Gtk.Box):
         self.list.connect("row-activated", self._activated)
         self.append(Gtk.ScrolledWindow(child=self.list, vexpand=True,
                                        hscrollbar_policy=Gtk.PolicyType.NEVER))
-        self.show_history([], [], None, frozenset(), frozenset())
+        self.show_history([], [], None, {})
 
     def show_history(self, projects: list[Project], loose: list[Past],
-                     current: str | None, running: frozenset[str],
-                     unread: frozenset[str]) -> None:
+                     current: str | None, statuses: Mapping[str, Status]) -> None:
         self.list.remove_all()
         self._row("New conversation", icon="list-add-symbolic", action="new")
         if projects:
@@ -53,12 +53,11 @@ class Sidebar(Gtk.Box):
                 start.connect("clicked", lambda _b, f=project.folder: self._on_new_in(f))
                 row.get_child().append(start)
                 for past in project.conversations:
-                    self._conversation(past, current, running, unread,
-                                       indent=INDENT)
+                    self._conversation(past, current, statuses, indent=INDENT)
         if loose:
             self._heading("Conversations")
             for past in loose:
-                self._conversation(past, current, running, unread, indent=0)
+                self._conversation(past, current, statuses, indent=0)
 
     def _row(self, text: str, *, icon: str | None, action: str | None,
              indent: int = 0) -> Gtk.ListBoxRow:
@@ -81,20 +80,18 @@ class Sidebar(Gtk.Box):
         row.add_css_class("harness-sidebar-heading")
         self.list.append(row)
 
-    def _conversation(self, past: Past, current: str | None, running: frozenset[str],
-                      unread: frozenset[str], *, indent: int) -> None:
+    def _conversation(self, past: Past, current: str | None,
+                      statuses: Mapping[str, Status], *, indent: int) -> None:
         title = past.title or "Untitled"
         row = self._row(title, icon=None, action=past.session, indent=indent)
-        if past.session in unread:
+        status = statuses.get(past.session)
+        if status is Status.DONE:
             row.get_child().get_first_child().add_css_class("harness-unread")
-        if past.session in running:
-            spinner = Adw.Spinner(tooltip_text="Osiris is working on this")
-            spinner.add_css_class("harness-running")
-            row.get_child().append(spinner)
-        elif past.session in unread:
-            dot = Gtk.Box(valign=Gtk.Align.CENTER, tooltip_text="New answer")
-            dot.add_css_class("harness-unread-dot")
-            row.get_child().append(dot)
+        if status is not None:
+            shown = Gtk.Label(label=status.value, valign=Gtk.Align.CENTER)
+            shown.add_css_class("harness-status")
+            shown.add_css_class(status.name.lower())
+            row.get_child().append(shown)
         actions = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         for label, act in (("Archive", lambda: self._on_archive(past.session)),
                            ("Delete…", lambda: self._on_delete(past.session, title))):

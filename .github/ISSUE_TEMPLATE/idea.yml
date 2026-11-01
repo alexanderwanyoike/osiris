@@ -1,0 +1,20 @@
+name: An idea
+description: Something you want Osiris to do, or to do better.
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: want
+    attributes:
+      label: What do you want to do?
+      description: The thing you are trying to get done, not how Osiris should build it.
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What do you do today instead?
+      description: On Osiris, or on the system you came from.
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else

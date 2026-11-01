@@ -29,6 +29,13 @@ class Change:
     program: str | None = None
 
 
+def _made_by(change: Mapping[str, Any], asking: str) -> str:
+    """The session a change was made for; one logged before changes named
+    their session belongs to the session asked last."""
+    session = change.get("session", asking)
+    return session if isinstance(session, str) else asking
+
+
 def _now() -> datetime:
     return datetime.now(UTC)
 
@@ -100,16 +107,22 @@ class HarnessLog:
         return [json.loads(line) for line in self._files.read(self._path).splitlines()]
 
     def changes_by_question(self, session: str) -> list[list[Change]]:
-        """For each question the session was asked, in order, the changes
-        logged after it until the next question to any session."""
+        """For each question the session was asked, in order, the changes it
+        led to: those naming the session, logged after it."""
         questions: list[list[Change]] = []
-        collecting = False
+        asking = ""
         for entry in self._entries():
             if entry["kind"] == "sent":
-                collecting = entry.get("session") == session
-                if collecting:
+                asking = entry.get("session", "")
+                if asking == session:
                     questions.append([])
-            elif entry["kind"] == "changed" and collecting:
+            elif entry["kind"] == "went-back" and entry.get("session") == session:
+                del questions[len(questions) - entry.get("questions", 0) :]
+            elif (
+                entry["kind"] == "changed"
+                and questions
+                and _made_by(entry, asking) == session
+            ):
                 questions[-1].append(
                     Change(entry["summary"], entry["undo"], entry.get("program"))
                 )

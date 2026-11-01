@@ -22,8 +22,8 @@ SCHEME_FILE = ".local/share/gtksourceview-5/styles/osiris.xml"
 #: Relative to the home: the chosen Skin's name, as plain text.
 SKIN_FILE = ".config/osiris/harness/skin"
 
-SKINS = ("bubbles", "transcript")
-DEFAULT_SKIN = "bubbles"
+SKINS = ("bubbles", "transcript", "studio")
+DEFAULT_SKIN = "studio"
 
 #: The colours a Skin may refer to, and nothing else.
 VARIABLES = (
@@ -170,6 +170,8 @@ def source_scheme(theme: Mapping[str, Any]) -> str:
         "def:net-address": {"foreground": c["accent"], "underline": "single"},
         "def:insertion": {"foreground": c["success"]},
         "def:deletion": {"foreground": c["danger"]},
+        "diff:added-line": {"foreground": c["success"]},
+        "diff:removed-line": {"foreground": c["danger"]},
     }
     body = "\n".join(
         "  <style name={}{}/>".format(

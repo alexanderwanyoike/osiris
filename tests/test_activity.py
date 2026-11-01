@@ -110,6 +110,14 @@ def test_a_web_search_is_named_by_its_query() -> None:
     assert step.doing == "Searching the web for gtk4 css animation"
 
 
+def test_a_subagent_is_named_as_the_helper_asked() -> None:
+    step = Step("subagent", ("reviewer",))
+    assert (step.doing, step.record) == (
+        "Asking the reviewer",
+        "Asked the reviewer",
+    )
+
+
 def test_a_folder_outside_the_project_is_named_by_its_last_two_parts() -> None:
     step = Step("external_directory", ("/home/tester/Code/pomodoro/*",))
     assert (step.doing, step.record) == (
@@ -175,3 +183,15 @@ def test_the_steps_of_an_answer_are_summed_up_as_tools_used(
 )
 def test_time_spent_is_said_in_seconds_then_minutes(seconds: float, said: str) -> None:
     assert elapsed(seconds) == said
+
+
+@pytest.mark.parametrize(
+    ("action", "question"),
+    [
+        ("shell", "Run a command?"),
+        ("read", "Read a file?"),
+        ("osiris_apply_theme", "Apply a theme?"),
+    ],
+)
+def test_a_held_step_is_asked_about_in_plain_words(action: str, question: str) -> None:
+    assert Step(action, ("x",)).question == question

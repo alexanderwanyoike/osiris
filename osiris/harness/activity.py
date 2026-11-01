@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 
 
@@ -67,6 +67,9 @@ PHRASES = {
         "search the web for",
         shown=_as_written,
     ),
+    "subagent": Phrase(
+        "Asking", "Asked", "ask", shown=lambda agent: f"the {agent}", unnamed="a helper"
+    ),
     "bash": _COMMAND,
     "shell": _COMMAND,
     "osiris_list_themes": Phrase(
@@ -91,6 +94,15 @@ class Step:
     action: str
     resources: tuple[str, ...]
     allowed: bool = True
+    #: The Engine's tool call this step decided on, and what the model gave it.
+    call: str = ""
+    input: Mapping[str, object] | None = None
+    #: What the tool gave back once it ran, or why it failed.
+    output: str = ""
+    error: str = ""
+    exit: int | None = None
+    #: The Harness's rule that refused it.
+    refused_by: str = ""
 
     @property
     def doing(self) -> str:
@@ -101,6 +113,12 @@ class Step:
         if not self.allowed:
             return f"Not allowed to {self._phrase.plain} {self._what}"
         return f"{self._phrase.done} {self._what}"
+
+    @property
+    def question(self) -> str:
+        """How the person is asked whether it may go ahead."""
+        phrase = self._phrase
+        return f"{phrase.plain.capitalize()} {phrase.what or phrase.unnamed}?"
 
     @property
     def _phrase(self) -> Phrase:

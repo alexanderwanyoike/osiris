@@ -4,10 +4,13 @@ can call."""
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from typing import Any
 
 import pytest
+from mcp.server.context import ServerRequestContext
+from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
 from osiris.apps.tool_server import TIERS, server, undo
@@ -159,6 +162,32 @@ def test_making_a_theme_is_logged_as_a_change_undone_by_deleting_it() -> None:
     assert log.last_changes() == [
         Change("Made Harbour", {"action": "delete_theme", "name": "harbour"})
     ]
+
+
+def asked_by(session: str, subject: MCPServer) -> Context:
+    """A tool call as the Engine makes it for one of its sessions."""
+    request = ServerRequestContext(
+        session=None,
+        lifespan_context=None,
+        protocol_version="2025-06-18",
+        method="tools/call",
+        meta={"ai.opencode/sessionID": session},
+    )
+    return Context(request_context=request, mcp_server=subject)
+
+
+def test_a_change_is_logged_with_the_conversation_that_asked_for_it() -> None:
+    files = FakeFileSystem()
+    subject = server(
+        FakeThemeStore(),
+        new_programs(),
+        HarnessLog(files, HOME / LOG_FILE),
+        new_wallpapers(),
+    )
+    asyncio.run(subject.call_tool("create_theme", HARBOUR, asked_by("ses_A", subject)))
+    entry = json.loads(files.read(HOME / LOG_FILE).splitlines()[-1])
+    assert entry["kind"] == "changed"
+    assert entry["session"] == "ses_A"
 
 
 def test_applying_is_logged_as_a_change_undone_by_the_theme_it_replaced() -> None:
@@ -358,6 +387,19 @@ def test_the_model_is_told_the_person_knows_it_as_osiris() -> None:
     assert "you are osiris" in INSTRUCTIONS.lower()
 
 
+def test_the_model_checks_then_has_a_program_reviewed_before_calling_it_done() -> None:
+    """#161: the quick checks first, then the reviewer, and a partial or a fail
+    is never reported as done."""
+    from osiris.apps.tool_server import INSTRUCTIONS
+
+    text = " ".join(INSTRUCTIONS.split())
+    assert text.index("check_program") < text.index("reviewer subagent")
+    assert "the person's own words" in text
+    assert "the commit the change started from" in text
+    assert "pass, partial or fail" in text
+    assert "Never call a Program done on a partial or a fail" in text
+
+
 def test_making_a_wallpaper_wears_it_and_logs_each_step_to_undo() -> None:
     log = new_log()
     store = FakeThemeStore(
@@ -416,10 +458,15 @@ def test_the_model_is_told_how_a_wallpaper_shader_is_written() -> None:
         assert needed in described
 
 
-def test_the_model_is_told_it_may_do_anything_once_the_person_allows_it() -> None:
+def test_the_model_is_told_what_waits_for_the_person_and_what_auto_mode_lets_run() -> (
+    None
+):
+    """Commands now ask rather than being out of reach (ADR 0020)."""
     from osiris.apps.tool_server import instructions
 
-    assert "you cannot run commands" in instructions(allow_everything=False)
-    allowed = instructions(allow_everything=True)
-    assert "you cannot run commands" not in allowed
-    assert "run commands" in allowed
+    careful = instructions(auto_mode=False)
+    assert "you cannot run commands" not in careful
+    assert "asks the person" in careful
+    auto = instructions(auto_mode=True)
+    assert "auto mode" in auto
+    assert "rules forbid" in auto
