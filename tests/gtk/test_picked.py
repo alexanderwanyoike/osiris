@@ -118,3 +118,29 @@ def test_at_offers_the_projects_files_then_its_servers_and_their_resources() -> 
         "wiki",
         "Home",
     ]
+
+
+def test_the_app_keeps_connectors_in_the_engines_config_and_asks_their_state() -> None:
+    from types import SimpleNamespace
+
+    from osiris.harness.connectors import Connector, State
+    from osiris.harness.harness import Harness
+    from osiris.platform import FakeFileSystem
+
+    from tests.test_harness import GPT, HOME
+
+    project = HOME / "Code" / "timer"
+    stand_in, engine = app()
+    stand_in.files = FakeFileSystem()
+    stand_in.harness = Harness(engine, stand_in.log, GPT, directory=project)
+    asked_in: list[object] = []
+    stand_in.servers = SimpleNamespace(
+        connector_states=lambda d: asked_in.append(d) or {"wiki": State("connected")}
+    )
+    wiki = Connector("wiki", url="https://w.example/mcp")
+    assert stand_in.save_connector(wiki)
+    assert stand_in.read_connectors() == [wiki]
+    assert stand_in.connector_states() == {"wiki": State("connected")}
+    assert asked_in == [project]
+    assert stand_in.remove_connector("wiki")
+    assert stand_in.read_connectors() == []
