@@ -849,3 +849,13 @@ def test_a_questions_changes_come_from_the_engine() -> None:
     subject, engine, _ = harness()
     engine.changed = (FileChange("main.py", "modified", 1, 0, "+x\n"),)
     assert subject.changes("ses_1", "msg_1") == engine.changed
+
+
+def test_sending_now_steers_the_message_in_and_cuts_in() -> None:
+    subject, engine, files = harness()
+    subject.ask("count to sixty")
+    message = subject.send_now("stop, count to ten")
+    assert message == "msg_2"
+    assert engine.sent[-1] == ("ses_1", "stop, count to ten")
+    assert engine.cut == ["ses_1"]
+    assert [e["kind"] for e in entries(files)[-2:]] == ["sent", "cut-in"]
