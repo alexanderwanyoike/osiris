@@ -124,3 +124,17 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-running { color: @harness_accent; }
 .harness-unread { font-weight: 600; }
 .harness-unread-dot { min-width: 6px; min-height: 6px; margin: 0 5px; border-radius: 1px; background-color: @harness_accent; }
+
+/* A step opened: what it asked for, then what came back. */
+.harness-step-detail {
+    margin: 2px 0 6px 20px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    background-color: alpha(@harness_sunken, 0.5);
+}
+.harness-step-asked { color: @harness_fg; }
+.harness-step-input { color: @harness_muted; font-size: 0.9em; }
+.harness-step-note { color: @harness_warning; font-size: 0.9em; }
+.harness-step-detail .monospace { font-size: 0.88em; }
+.harness-added { color: @harness_success; background-color: alpha(@harness_success, 0.10); }
+.harness-removed { color: @harness_danger; background-color: alpha(@harness_danger, 0.10); }
