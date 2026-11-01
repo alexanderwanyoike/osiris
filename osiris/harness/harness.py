@@ -216,7 +216,12 @@ class Harness:
         session is still answering, which the Engine refuses."""
         if session in self._running:
             return None
-        revert = self._engine.revert(session, message)
+        try:
+            revert = self._engine.revert(session, message)
+        except HttpError as error:
+            if error.status == 409:
+                return None
+            raise
         if not revert.restorable:
             self._engine.cancel_revert(session)
             self._log.write("could-not-go-back", session=session, message=message)
