@@ -57,7 +57,13 @@ def test_each_question_makes_a_tick_with_where_it_stands_and_how_it_starts() -> 
     turns = [Turn("what is a theme?"), calm]
     assert ticks(turns, [0, 500], 1000, top=600, height=400) == [
         Tick(0.0, False, "plain", "what is a theme?"),
-        Tick(0.5, True, "changed", "make the desktop calm and quiet, with a soft…"),
+        Tick(
+            0.5,
+            True,
+            "changed",
+            "make the desktop calm and quiet, with a soft…",
+            current=True,
+        ),
     ]
 
 
