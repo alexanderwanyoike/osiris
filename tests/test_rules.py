@@ -19,7 +19,8 @@ def effect(rules: list[dict[str, str]], action: str, resource: str) -> str:
     matching = [
         rule["effect"]
         for rule in rules
-        if fnmatchcase(action, rule["action"]) and fnmatchcase(resource, rule["resource"])
+        if fnmatchcase(action, rule["action"])
+        and fnmatchcase(resource, rule["resource"])
     ]
     return matching[-1]
 
@@ -45,7 +46,6 @@ def test_what_else_the_engines_config_says_is_kept() -> None:
     assert config["model"] == "openai/gpt-5.5"
     assert config["snapshots"] is True
     assert config["permissions"]
-
 
 
 def test_rules_the_person_has_are_never_overwritten() -> None:

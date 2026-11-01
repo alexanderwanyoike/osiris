@@ -62,7 +62,9 @@ def _start(files: FileSystem, path: Path, rules: list[dict[str, str]]) -> None:
     if files.exists(path.with_suffix(".jsonc")):
         return
     try:
-        config = json.loads(files.read(path)) if files.exists(path) else {"$schema": SCHEMA}
+        config = (
+            json.loads(files.read(path)) if files.exists(path) else {"$schema": SCHEMA}
+        )
     except json.JSONDecodeError:
         return
     if "permissions" in config:
