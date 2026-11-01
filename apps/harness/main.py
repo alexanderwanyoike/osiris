@@ -69,7 +69,7 @@ from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
-from osiris.harness.rules import write_starting_rules  # noqa: E402
+from osiris.harness.rules import switch_on_task_list, write_starting_rules  # noqa: E402
 from osiris.harness.status import Status, status_of  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.harness.trust import auto_mode_on, turn_auto_mode  # noqa: E402
@@ -1186,6 +1186,7 @@ class Application(Adw.Application):
         # The Engine reloads its config when it changes, so this holds for a
         # service already running too.
         write_starting_rules(files, me.home)
+        switch_on_task_list(files, me.home)
         while True:
             try:
                 service = locate(files, me, SubprocessRunner(sink=lambda _l: None))
