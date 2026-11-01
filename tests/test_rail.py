@@ -47,3 +47,15 @@ def test_where_each_tick_stands_along_the_rail() -> None:
     from osiris.harness.rail import placed
 
     assert placed([0, 400, 900], 1600) == [0.0, 0.25, 0.5625]
+
+
+def test_each_question_makes_a_tick_with_where_it_stands_and_how_it_starts() -> None:
+    from osiris.harness.rail import Tick, ticks
+
+    calm = Turn("make the desktop calm and quiet, with a soft dark theme please")
+    calm.changes.append(Change("Applied Nord", None))
+    turns = [Turn("what is a theme?"), calm]
+    assert ticks(turns, [0, 500], 1000, top=600, height=400) == [
+        Tick(0.0, False, "plain", "what is a theme?"),
+        Tick(0.5, True, "changed", "make the desktop calm and quiet, with a soft…"),
+    ]
