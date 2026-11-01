@@ -62,13 +62,13 @@ class ConnectorsPage(Gtk.Box):
         self.form.add_css_class("harness-connector-form")
         self.problem = Gtk.Label(xalign=0, wrap=True, visible=False)
         self.problem.add_css_class("harness-problem")
-        self.form.append(fields)
         self.cancel = Gtk.Button(label="Cancel")
         self.cancel.add_css_class("flat")
         self.cancel.connect("clicked", lambda _b: self._close_form())
         buttons = Gtk.Box(spacing=6, halign=Gtk.Align.END)
         buttons.append(self.cancel)
         buttons.append(self.done)
+        self.form.append(fields)
         self.form.append(self.problem)
         self.form.append(buttons)
         return self.form
@@ -96,7 +96,6 @@ class ConnectorsPage(Gtk.Box):
             self._say("Your opencode config has comments in it, so Osiris leaves "
                       "it for you to edit by hand.")
             return
-        self._say("")
         if self._editing is not None and self._editing.name != connector.name:
             self._remove(self._editing.name)
         self._close_form()
