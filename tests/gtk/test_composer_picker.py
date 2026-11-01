@@ -264,3 +264,11 @@ def test_an_open_picker_lists_afresh_when_told_its_offers_changed() -> None:
     offers = [README, CLOCK]
     picker.refresh()
     assert shown(picker) == ["README.md", "clock.py"]
+
+
+def test_the_pointer_chooses_the_entry_it_rests_on() -> None:
+    picker, _ = docked("@", [README, CLOCK])
+    second = picker.list.get_row_at_index(1)
+    _ok, at = second.compute_point(picker.list, Graphene.Point())
+    picker.pointed(None, 10, at.y + second.get_height() / 2)
+    assert picker.list.get_selected_row() is second
