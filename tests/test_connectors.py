@@ -156,3 +156,31 @@ def test_each_state_is_said_in_plain_words_with_a_tone(
     from osiris.harness.connectors import said_of
 
     assert said_of(state) == said
+
+
+@pytest.mark.parametrize(
+    ("typed", "made"),
+    [
+        (
+            "https://mcp.example.com/mcp",
+            Connector("wiki", url="https://mcp.example.com/mcp"),
+        ),
+        (
+            "  http://localhost:8000/mcp ",
+            Connector("wiki", url="http://localhost:8000/mcp"),
+        ),
+        ("npx -y wiki-server", Connector("wiki", command=("npx", "-y", "wiki-server"))),
+        ("npx 'wiki", None),
+        ("   ", None),
+    ],
+)
+def test_one_field_takes_a_url_or_a_command(typed: str, made: Connector | None) -> None:
+    from osiris.harness.connectors import connector_of
+
+    assert connector_of("wiki", typed) == made
+
+
+def test_a_connector_needs_a_name() -> None:
+    from osiris.harness.connectors import connector_of
+
+    assert connector_of("  ", "npx wiki") is None
