@@ -307,6 +307,41 @@ def test_a_questions_changes_come_from_its_commits_and_a_comment_reaches_thoth()
     )
 
 
+def test_changes_from_the_toolbar_open_each_questions_newest_first() -> None:
+    from osiris.harness.log import Change
+    from osiris.platform import FakeRunner
+    from osiris.platform.process import Result
+    from osiris.programs.programs import Programs
+
+    def show(commit: str) -> str:
+        return f"git -C {HOME}/Code/coin-flip show --format= --patch {commit}"
+
+    patch = "diff --git a/main.py b/main.py\n@@ -1 +1 @@\n-a\n+b"
+    runner = FakeRunner(results={show(c): Result((), 0, patch) for c in ("aaa", "bbb")})
+    stand_in, engine = app()
+    stand_in.programs = lambda: Programs(FakeFileSystem(), runner, HOME)
+    engine.past = [
+        PastTurn("make a coin flip", "Made it.", GPT, "msg_1"),
+        PastTurn("thanks", "You're welcome.", GPT, "msg_2"),
+        PastTurn("add --times", "Added it.", GPT, "msg_3"),
+    ]
+    stand_in.open_past("ses_9")
+    first, _, third = stand_in.conversation.turns
+    for turn, commit in ((first, "aaa"), (third, "bbb")):
+        turn.changes.append(
+            Change(
+                "coin-flip: change",
+                {"action": "revert_commit", "name": "coin-flip", "commit": commit},
+                "coin-flip",
+            )
+        )
+    stand_in.show_all_changes()
+    assert [question for question, _, _ in stand_in.drawer.changes] == [
+        "add --times",
+        "make a coin flip",
+    ]
+
+
 def test_changes_whose_program_is_gone_say_so_on_their_question() -> None:
     """As after an Undo trashed the Program the question made."""
     from osiris.harness.log import Change
