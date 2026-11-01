@@ -228,3 +228,18 @@ def test_a_question_sent_now_names_its_message_so_it_can_be_gone_back_to() -> No
     for _ in range(50):
         context.iteration(False)
     assert turn.message == "msg_1"
+
+
+def test_an_engine_error_while_going_back_is_told_on_the_question() -> None:
+    from osiris.platform import HttpError
+
+    stand_in, engine = app()
+    engine.past = [PastTurn("make x.txt", "Made it.", GPT, "msg_1")]
+    stand_in.open_past("ses_9")
+
+    def broken(*_args: object) -> None:
+        raise HttpError(500, "snapshot store unavailable")
+
+    engine.revert = broken
+    stand_in.go_back(stand_in.conversation.turns[0])
+    assert "snapshot store unavailable" in stand_in.conversation.turns[0].note
