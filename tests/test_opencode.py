@@ -19,6 +19,7 @@ from osiris.harness.engine import (
     Text,
     Tokens,
     ToolCalled,
+    ToolFinished,
     ToolRequested,
 )
 from osiris.harness.opencode import (
@@ -300,6 +301,36 @@ class TestEvents:
         }
         assert self.events(asked) == [
             ToolRequested(SESSION, "per_1", "read", ("/etc/hostname",), "call_d376")
+        ]
+
+    def test_a_tool_that_ran_gives_back_its_output_and_exit_status(self) -> None:
+        """As opencode 2.2.4 reports a shell command that ran."""
+        ran = {
+            "type": "session.tool.success",
+            "data": {
+                "sessionID": SESSION,
+                "id": "call_e29c",
+                "content": [{"type": "text", "text": "NetworkManager\nUPower\n"}],
+                "metadata": {"status": "completed", "truncated": False, "exit": 0},
+                "executed": False,
+            },
+        }
+        assert self.events(ran) == [
+            ToolFinished(SESSION, "call_e29c", "NetworkManager\nUPower\n", exit=0)
+        ]
+
+    def test_a_tool_that_failed_says_why(self) -> None:
+        failed = {
+            "type": "session.tool.failed",
+            "data": {
+                "sessionID": SESSION,
+                "id": "call_d376",
+                "error": {"type": "unknown", "message": "File not found"},
+                "executed": False,
+            },
+        }
+        assert self.events(failed) == [
+            ToolFinished(SESSION, "call_d376", "", error="File not found")
         ]
 
     def test_a_refusal_is_a_failure_carrying_the_engines_message(self) -> None:
