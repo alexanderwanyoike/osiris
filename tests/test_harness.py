@@ -38,6 +38,7 @@ from osiris.harness.harness import (
     Refused,
 )
 from osiris.harness.log import LOG_FILE, HarnessLog
+from osiris.harness.picker import Entry, Reference
 from osiris.platform import FakeFileSystem
 
 HOME = Path("/home/tester")
@@ -66,6 +67,7 @@ class FakeEngine:
     deleted: list[str] = field(default_factory=list)
     attached: list[tuple[str, Path]] = field(default_factory=list)
     past: list[PastTurn] = field(default_factory=list)
+    referenced: list[tuple[str, tuple[Reference, ...]]] = field(default_factory=list)
 
     def start(
         self, model: ModelRef | None = None, directory: Path | None = None
@@ -74,8 +76,12 @@ class FakeEngine:
         self.directories.append(directory)
         return f"ses_{len(self.started)}"
 
-    def send(self, session: str, text: str) -> str:
+    def send(
+        self, session: str, text: str, references: tuple[Reference, ...] = ()
+    ) -> str:
         self.sent.append((session, text))
+        if references:
+            self.referenced.append((session, references))
         return f"msg_{len(self.sent)}"
 
     def withdraw(self, session: str, message: str) -> None:
@@ -168,6 +174,15 @@ def test_later_questions_continue_the_same_conversation() -> None:
     subject.ask("and again")
     assert engine.started == [GPT]
     assert engine.sent == [("ses_1", "hello"), ("ses_1", "and again")]
+
+
+REVIEW = Reference(Entry("skill", "review", "review", ""), start=0, end=7)
+
+
+def test_what_was_picked_goes_with_the_question() -> None:
+    subject, engine, _ = harness()
+    subject.ask("/review the timer", (REVIEW,))
+    assert engine.referenced == [("ses_1", (REVIEW,))]
 
 
 def test_the_session_starts_in_the_harnesss_folder() -> None:
