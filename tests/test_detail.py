@@ -90,3 +90,15 @@ def test_an_osiris_tool_shows_its_name_inputs_and_result_in_words() -> None:
     assert (shown.kind, shown.asked) == (Kind.TOOL, "apply theme")
     assert shown.inputs == (("name", "calm-night"), ("dark", "yes"))
     assert [line.text for line in shown.lines] == ["Applied Calm Night."]
+
+
+def test_a_refused_step_says_which_rule_refused_it() -> None:
+    step = Step(
+        "shell", ("ls",), allowed=False, refused_by="Runs only with Allow everything on"
+    )
+    assert detail(step).note == "Runs only with Allow everything on"
+
+
+def test_a_tool_that_failed_says_why() -> None:
+    step = Step("read", ("notes.txt",), error="File not found")
+    assert detail(step).note == "File not found"
