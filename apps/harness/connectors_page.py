@@ -40,9 +40,16 @@ class ConnectorsPage(Gtk.Box):
         self._editing: Connector | None = None
         self._said: dict[str, Gtk.Label] = {}
         self._rows: dict[str, Adw.ActionRow] = {}
-        self._list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
-        self._list.add_css_class("boxed-list")
-        self.append(self._list)
+        intro = Gtk.Label(
+            label="Connectors give Osiris other tools and data: an MCP server it "
+                  "starts with a command, or one it reaches at a web address. "
+                  "They are kept in your opencode config.",
+            xalign=0, wrap=True)
+        intro.add_css_class("harness-meta")
+        self.append(intro)
+        self.connectors = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        self.connectors.add_css_class("boxed-list")
+        self.append(self.connectors)
         face = Gtk.Box(spacing=8)
         face.append(Gtk.Image(icon_name="list-add-symbolic"))
         face.append(Gtk.Label(label="Add a connector"))
@@ -113,13 +120,14 @@ class ConnectorsPage(Gtk.Box):
         self.add.set_visible(True)
 
     def reload(self) -> None:
-        self._list.remove_all()
+        self.connectors.remove_all()
         self._said.clear()
         self._rows.clear()
         self._connectors = self._read()
         self._polls = 0
         for connector in self._connectors:
-            self._list.append(self._row(connector))
+            self.connectors.append(self._row(connector))
+        self.connectors.set_visible(bool(self._connectors))
         self._ask_states()
 
     def _row(self, connector: Connector) -> Gtk.Widget:
