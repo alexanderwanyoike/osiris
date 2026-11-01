@@ -273,7 +273,7 @@ def test_allowing_once_runs_the_action_and_is_logged() -> None:
     assert engine.replies == [("ses_1", "per_1", Reply.ONCE, "")]
     assert decision == Allowed("ses_1", "shell", ("ls /etc",), "call_1")
     entry = entries(files)[-1]
-    assert (entry["kind"], entry["answer"]) == ("answered", "once")
+    assert (entry["kind"], entry["answer"]) == ("replied", "once")
 
 
 def test_a_card_answered_leaves_the_tokens_spent_readable() -> None:
