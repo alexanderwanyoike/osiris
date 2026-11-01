@@ -676,6 +676,8 @@ def test_the_current_tick_follows_the_scroll() -> None:
     settle()
     window.refresh()
     at_foot = [tick.current for tick in window.rail._ticks]
+    # A refresh near the foot keeps to the newest answer once the loop runs.
+    settle()
     view.set_value(0)
     settle()
     window.refresh()
