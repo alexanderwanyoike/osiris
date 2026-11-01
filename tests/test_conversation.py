@@ -131,6 +131,15 @@ def test_a_tool_that_then_asks_is_held_and_shown_once_answered() -> None:
     assert [step.call for step in talk.turns[-1].steps] == ["c1"]
 
 
+def test_while_a_card_waits_the_answer_says_it_waits_for_the_person() -> None:
+    """Not that it runs the action: nothing runs until the person answers."""
+    talk = Conversation()
+    talk.asked("list /etc")
+    talk.apply(ToolCalled(S, "c1", {"command": "ls /etc"}, False, "shell"))
+    talk.apply(Asking(S, "per_1", "shell", ("ls /etc",), "c1"))
+    assert talk.turns[-1].doing == "Waiting for you"
+
+
 def test_what_auto_mode_allows_is_shown_once() -> None:
     talk = Conversation()
     talk.asked("list /etc")
