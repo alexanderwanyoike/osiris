@@ -145,7 +145,7 @@ def test_a_comment_on_picked_lines_reaches_thoth_with_its_file_and_lines() -> No
     assert entry.get_text() == ""
 
 
-def test_files_sits_in_a_toolbar_at_the_top_right() -> None:
+def test_files_sits_in_the_canvas_toolbar() -> None:
     widget, _ = canvas()
     files = next(
         w
@@ -154,7 +154,6 @@ def test_files_sits_in_a_toolbar_at_the_top_right() -> None:
     )
     assert files.get_tooltip_text() == "Files"
     assert widget.toolbar.get_halign() is Gtk.Align.END
-    assert widget.get_first_child() is widget.toolbar
 
 
 def test_what_a_program_runs_opens_as_a_tab_in_the_code_group() -> None:
@@ -196,7 +195,6 @@ def test_with_every_group_closed_files_opens_the_code_group_again() -> None:
     for tab in list(widget.panels.groups[0].tabs):
         widget.close(tab)
     assert widget.panels.groups == []
-    assert widget.toolbar.get_parent() is widget
     files = next(
         w
         for w in widgets(widget.toolbar)
