@@ -25,3 +25,14 @@ def test_a_sign_at_the_start_of_the_word_being_typed_opens_the_picker(
     typed: str, found: Trigger | None
 ) -> None:
     assert trigger(typed, len(typed)) == found
+
+
+def test_what_is_typed_filters_starts_first_then_contains_ignoring_case() -> None:
+    from osiris.harness.picker import Entry, matching
+
+    readme = Entry("file", "README.md", "README.md", "")
+    main = Entry("file", "src/main.py", "main.py", "src")
+    domain = Entry("file", "src/domain.py", "domain.py", "src")
+    assert matching([readme, domain, main], "ma") == [main, domain]
+    assert matching([readme, domain, main], "READ") == [readme]
+    assert matching([readme, domain, main], "") == [readme, domain, main]
