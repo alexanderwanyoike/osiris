@@ -41,3 +41,31 @@ def test_with_no_connectors_it_says_where_to_add_one() -> None:
     shown = panel()
     shown.show_connectors({})
     assert any("Settings" in text for text in texts(shown))
+
+
+def test_context_is_a_grid_of_squares_with_a_legend_marked_approximate() -> None:
+    from conversation_panel import SQUARES
+
+    from osiris.harness.context import Slice
+
+    from .conftest import widgets
+
+    shown = panel()
+    shown.show_context(
+        [
+            Slice("instructions", 6000),
+            Slice("questions", 1000),
+            Slice("answers", 2000),
+            Slice("tools", 1000),
+            Slice("free", 90_000),
+        ],
+        used=10_000,
+        window=100_000,
+    )
+    squares = [w for w in widgets(shown) if w.has_css_class("harness-context-square")]
+    assert len(squares) == SQUARES
+    assert sum(s.has_css_class("instructions") for s in squares) == SQUARES * 6 // 100
+    words = texts(shown)
+    assert "10,000 of 100,000 tokens" in words
+    assert "Instructions" in words and "6%" in words
+    assert any("pproximate" in text for text in words)
