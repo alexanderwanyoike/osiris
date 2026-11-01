@@ -1234,6 +1234,19 @@ class Application(Adw.Application):
 
         self.background(lambda: harness.ask(text), queued)
 
+    def send_now(self, text: str) -> None:
+        """Sent while busy, cutting in: it waits shown until the Engine,
+        having stopped the step under way, takes it next."""
+        if self.harness is None:
+            return
+        harness, conversation = self.harness, self.conversation
+
+        def sent(message: str) -> None:
+            conversation.queued(message, text)
+            self.drawer.refresh()
+
+        self.background(lambda: harness.send_now(text), sent)
+
     def unqueue(self, message: str) -> str:
         """Take a waiting message back from the Engine; its text."""
         text = self.conversation.unqueued(message)
