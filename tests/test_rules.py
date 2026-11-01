@@ -55,3 +55,13 @@ def test_rules_the_person_has_are_never_overwritten() -> None:
         files.write(ENGINE, json.dumps({"permissions": theirs}))
         write_starting_rules(files, HOME)
         assert json.loads(files.read(ENGINE))["permissions"] == theirs
+
+
+def test_a_config_that_is_not_plain_json_is_left_alone() -> None:
+    """The Engine also reads JSON with comments, which cannot be rewritten
+    without losing them."""
+    files = FakeFileSystem()
+    commented = '{\n  // my model\n  "model": "openai/gpt-5.5"\n}\n'
+    files.write(ENGINE, commented)
+    write_starting_rules(files, HOME)
+    assert files.read(ENGINE) == commented
