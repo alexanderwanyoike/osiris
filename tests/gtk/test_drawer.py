@@ -492,3 +492,27 @@ def test_a_canvas_opened_in_a_narrow_drawer_is_shown_once_it_is_wide() -> None:
     assert window.canvas_toggle.get_visible()
     assert window.canvas_toggle.get_active()
     assert window.canvas.get_visible()
+
+
+def test_an_answers_changes_are_left_to_the_canvas_toolbar() -> None:
+    """No icon by its time: Changes is opened from the Canvas (#195)."""
+    from osiris.harness.conversation import State
+    from osiris.harness.log import Change
+
+    window, _ = drawer()
+    turn = window.app.conversation.asked("add --times")
+    turn.state = State.DONE
+    turn.changes.append(
+        Change(
+            "coin-flip: change",
+            {"action": "revert_commit", "name": "coin-flip", "commit": "abc"},
+            "coin-flip",
+        )
+    )
+    window.refresh()
+    from gi.repository import Gtk
+
+    assert not any(
+        isinstance(w, Gtk.Button) and w.get_icon_name() == "view-dual-symbolic"
+        for w in widgets(window)
+    )
