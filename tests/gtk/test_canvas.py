@@ -10,6 +10,7 @@ gi.require_version("Adw", "1")
 from canvas import Canvas  # noqa: E402
 from gi.repository import Adw, Gtk  # noqa: E402
 
+from osiris.harness.panels import Kind  # noqa: E402
 from osiris.programs.manifest import parse  # noqa: E402
 from osiris.programs.programs import Program  # noqa: E402
 
@@ -182,3 +183,26 @@ def test_files_sits_in_a_toolbar_at_the_top_right() -> None:
     assert files.get_tooltip_text() == "Files"
     assert widget.toolbar.get_halign() is Gtk.Align.END
     assert widget.get_first_child() is widget.toolbar
+
+
+def titles(widget: Canvas, kind: Kind) -> list[str]:
+    view = widget.views[kind]
+    return [view.get_nth_page(i).get_title() for i in range(view.get_n_pages())]
+
+
+def test_what_a_program_runs_opens_as_a_tab_in_the_code_group() -> None:
+    widget, _ = canvas()
+    assert titles(widget, Kind.CODE) == ["main.py"]
+    assert code(widget) == "print('tick')\n"
+
+
+def test_choosing_a_file_in_the_tree_opens_it_as_a_tab_of_its_own() -> None:
+    widget, _ = canvas()
+    readme = next(
+        row
+        for row in widgets(widget.tree)
+        if isinstance(row, Gtk.ListBoxRow) and "README.md" in texts(row)
+    )
+    widget.tree.emit("row-activated", readme)
+    assert titles(widget, Kind.CODE) == ["main.py", "README.md"]
+    assert code(widget) == "# Pomodoro\n"
