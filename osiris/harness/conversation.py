@@ -213,6 +213,7 @@ class Conversation:
             turn.asking, turn.held = None, None
         match event:
             case Asking(_, _, action, resources, call):
+                turn.steps = [step for step in turn.steps if step.call != call]
                 turn.asking = event
                 turn.held = Step(
                     action, resources, call=call, input=self._inputs.get(call)
@@ -230,9 +231,10 @@ class Conversation:
                     turn.steps.append(_ran(name, call, arguments))
                     turn.doing = turn.steps[-1].doing
             case Allowed(_, action, resources, call):
-                turn.steps.append(
-                    Step(action, resources, True, call, self._input(call))
-                )
+                if not any(step.call == call for step in turn.steps if call):
+                    turn.steps.append(
+                        Step(action, resources, True, call, self._input(call))
+                    )
                 turn.doing = turn.steps[-1].doing
             case Refused(_, action, resources, call, reason):
                 turn.steps.append(
