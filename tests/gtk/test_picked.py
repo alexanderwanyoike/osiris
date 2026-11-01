@@ -31,3 +31,10 @@ def test_what_was_picked_goes_with_a_message_sent_while_osiris_works() -> None:
     asked(stand_in, "make it calm")
     stand_in.ask("/review the timer", (REVIEW,))
     assert engine.referenced == [("ses_1", (REVIEW,))]
+
+
+def test_what_was_picked_goes_with_a_message_sent_now() -> None:
+    stand_in, engine = app()
+    asked(stand_in, "make it calm")
+    stand_in.send_now("/review the timer", (REVIEW,))
+    assert engine.referenced == [("ses_1", (REVIEW,))]

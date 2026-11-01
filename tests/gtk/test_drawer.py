@@ -58,8 +58,9 @@ class FakeApp(Adw.Application):
     def show_changes(self, turn: object) -> None:
         self.shown_changes.append(turn)
 
-    def send_now(self, text: str) -> None:
+    def send_now(self, text: str, references: tuple[object, ...] = ()) -> None:
         self.sent_now.append(text)
+        self.referenced.append(references)
 
     def program_card(self, name: str) -> object:
         from gi.repository import Gtk
@@ -555,4 +556,19 @@ def test_what_is_picked_in_the_message_box_goes_with_the_question() -> None:
     none = Gdk.ModifierType(0)
     window.picker.key(None, Gdk.KEY_Tab, 0, none)
     window._composer_key(None, Gdk.KEY_Return, 0, none)
+    assert window.app.referenced == [(Reference(readme, 4, 14),)]
+
+
+def test_what_is_picked_in_the_message_box_goes_with_a_message_sent_now() -> None:
+    from gi.repository import Gdk
+
+    from osiris.harness.picker import Entry, Reference
+
+    readme = Entry("file", "/home/tester/Code/timer/README.md", "README.md", "")
+    window, _ = drawer()
+    window.present()
+    window.app.offers["@"] = [readme]
+    window.entry.get_buffer().set_text("fix @RE")
+    window.picker.key(None, Gdk.KEY_Tab, 0, Gdk.ModifierType(0))
+    window._cut_in(None)
     assert window.app.referenced == [(Reference(readme, 4, 14),)]
