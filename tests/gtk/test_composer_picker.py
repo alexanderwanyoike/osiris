@@ -94,3 +94,10 @@ def test_a_completed_entry_is_a_token_the_moment_it_is_put_in() -> None:
     press(picker, Gdk.KEY_Tab)
     buffer = picker.popover.get_parent().get_buffer()
     assert buffer.get_iter_at_offset(4).has_tag(picker.token)
+
+
+def test_tokens_take_the_colours_they_are_given() -> None:
+    picker = typed("")
+    picker.restyle(("#7c8aeb", "#2e3048"))
+    assert picker.token.props.foreground_rgba.to_string() == "rgb(124,138,235)"
+    assert picker.token.props.background_rgba.to_string() == "rgb(46,48,72)"
