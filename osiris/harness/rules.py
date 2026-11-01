@@ -5,7 +5,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from osiris.platform import FileSystem
 
@@ -54,27 +56,38 @@ CODE = [_rule("edit", "*", "allow")]
 def write_starting_rules(files: FileSystem, home: Path) -> None:
     """Add the starting rules to each config that has none. A config with
     rules, even none, or that is not plain JSON is the person's and is left."""
-    _start(files, home / ENGINE_CONFIG, CAREFUL)
-    _start(files, home / CODE_CONFIG, CODE)
-
-
-def _start(files: FileSystem, path: Path, rules: list[dict[str, str]]) -> None:
-    if files.exists(path.with_suffix(".jsonc")):
-        return
-    try:
-        config = (
-            json.loads(files.read(path)) if files.exists(path) else {"$schema": SCHEMA}
-        )
-    except json.JSONDecodeError:
-        return
-    if "permissions" in config:
-        return
-    config["permissions"] = rules
-    files.write(path, json.dumps(config, indent=2) + "\n")
+    _edit(
+        files, home / ENGINE_CONFIG, lambda config: _add(config, "permissions", CAREFUL)
+    )
+    _edit(files, home / CODE_CONFIG, lambda config: _add(config, "permissions", CODE))
 
 
 def switch_on_task_list(files: FileSystem, home: Path) -> None:
-    path = home / ENGINE_CONFIG
-    config = json.loads(files.read(path)) if files.exists(path) else {"$schema": SCHEMA}
-    config.setdefault("experimental", {})["todo"] = True
-    files.write(path, json.dumps(config, indent=2) + "\n")
+    """Unless the person has switched it themselves."""
+    _edit(
+        files,
+        home / ENGINE_CONFIG,
+        lambda config: _add(config.setdefault("experimental", {}), "todo", True),
+    )
+
+
+def _add(config: dict[str, Any], key: str, value: object) -> bool:
+    if key in config:
+        return False
+    config[key] = value
+    return True
+
+
+def _edit(
+    files: FileSystem, path: Path, change: Callable[[dict[str, Any]], bool]
+) -> None:
+    """Change a config the Engine reads, if it is plain JSON and ``change`` says
+    it changed anything; a commented one, or one kept as .jsonc, is left."""
+    if files.exists(path.with_suffix(".jsonc")):
+        return
+    try:
+        config = json.loads(files.read(path)) if files.exists(path) else {}
+    except json.JSONDecodeError:
+        return
+    if change(config):
+        files.write(path, json.dumps({"$schema": SCHEMA, **config}, indent=2) + "\n")
