@@ -68,9 +68,10 @@ class ProvidersPage(Gtk.Box):
         model_line.append(self._picker)
         allow_line = Gtk.Box(spacing=8)
         allow_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
-        allow_text.append(Gtk.Label(label="Allow everything", xalign=0))
-        warning = Gtk.Label(label="Let Osiris run commands and change any file, "
-                                  "without refusing.", xalign=0, wrap=True)
+        allow_text.append(Gtk.Label(label="Auto mode", xalign=0))
+        warning = Gtk.Label(label="Allow everything Osiris asks for without a card, "
+                                  "unless one of your rules denies it.",
+                            xalign=0, wrap=True)
         warning.add_css_class("harness-meta")
         allow_text.append(warning)
         allow_switch = Gtk.Switch(active=allows_everything, valign=Gtk.Align.CENTER)
