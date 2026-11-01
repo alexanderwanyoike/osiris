@@ -58,6 +58,11 @@ class Turn:
         named = (change.program for change in self.changes if change.program)
         return list(dict.fromkeys(named))
 
+    def end(self, state: State) -> None:
+        """An answer that ends leaves no card waiting: the Engine has moved on."""
+        self.state = state
+        self.asking = self.held = None
+
     @property
     def undoable(self) -> bool:
         return not self.undone and bool(self.undo_steps())
@@ -206,9 +211,9 @@ class Conversation:
             case Asking() | ToolCalled() | Allowed() | Refused() | ToolFinished():
                 self._step(turn, event)
             case Finished():
-                turn.state = State.DONE
+                turn.end(State.DONE)
             case Stopped():
-                turn.state = State.STOPPED
+                turn.end(State.STOPPED)
             case Failed(_, message):
-                turn.state = State.FAILED
+                turn.end(State.FAILED)
                 turn.error = message
