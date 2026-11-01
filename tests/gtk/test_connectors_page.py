@@ -115,3 +115,12 @@ def test_a_chosen_connector_opens_in_the_form_and_saves_its_change() -> None:
     shown.reach.set_text("https://new.example.com/mcp")
     shown.done.emit("clicked")
     assert store.saved == {"wiki": Connector("wiki", url="https://new.example.com/mcp")}
+
+
+def test_a_connector_renamed_in_the_form_is_kept_only_by_its_new_name() -> None:
+    store = Store(WIKI)
+    shown = page(store)
+    shown.row("wiki").emit("activated")
+    shown.name.set_text("docs")
+    shown.done.emit("clicked")
+    assert list(store.saved) == ["docs"]
