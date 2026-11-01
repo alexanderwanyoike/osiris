@@ -236,7 +236,7 @@ class OpencodeEngine:
         found = []
         for session in sessions:
             metadata = session.get("metadata") or {}
-            if metadata.get("archived"):
+            if metadata.get("archived") or session.get("parentID"):
                 continue
             if metadata.get("osiris") != MINE["osiris"]:
                 if session.get("title") != UNMARKED_TITLE:
