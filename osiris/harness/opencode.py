@@ -146,14 +146,12 @@ class OpencodeEngine:
             {"messageID": message, "files": True},
         )["data"]
         return Revert(
-            tuple(
-                FileChange(
-                    f["file"], f["status"], f["additions"], f["deletions"], f["patch"]
-                )
-                for f in staged.get("files", [])
-            ),
-            restorable="snapshot" in staged,
+            _file_changes(staged.get("files", [])), restorable="snapshot" in staged
         )
+
+    def changes(self, session: str, message: str) -> tuple[FileChange, ...]:
+        diff = self._get(f"/api/session/{session}/diff?from={message}&context=3")
+        return _file_changes(diff["data"])
 
     def keep_revert(self, session: str) -> None:
         self._post(f"/api/session/{session}/revert/commit")
@@ -320,6 +318,13 @@ class OpencodeEngine:
             event = reader.read(json.loads(line.removeprefix("data:")))
             if event is not None:
                 yield event
+
+
+def _file_changes(files: list[dict[str, Any]]) -> tuple[FileChange, ...]:
+    return tuple(
+        FileChange(f["file"], f["status"], f["additions"], f["deletions"], f["patch"])
+        for f in files
+    )
 
 
 def _finished(session: str, data: dict[str, Any]) -> ToolFinished:

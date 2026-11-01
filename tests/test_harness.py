@@ -15,6 +15,7 @@ from osiris.harness.engine import (
     Answered,
     Event,
     Failed,
+    FileChange,
     Finished,
     ModelRef,
     Past,
@@ -55,6 +56,7 @@ class FakeEngine:
     stopped: list[str] = field(default_factory=list)
     reverted: list[tuple[str, str]] = field(default_factory=list)
     reverts_kept: list[str] = field(default_factory=list)
+    changed: tuple[FileChange, ...] = ()
     reverts_cancelled: list[str] = field(default_factory=list)
     revert_gives: Revert = field(default_factory=lambda: Revert((), restorable=True))
     switched: list[tuple[str, ModelRef]] = field(default_factory=list)
@@ -91,6 +93,9 @@ class FakeEngine:
     def revert(self, session: str, message: str) -> Revert:
         self.reverted.append((session, message))
         return self.revert_gives
+
+    def changes(self, session: str, message: str) -> tuple[FileChange, ...]:
+        return self.changed
 
     def keep_revert(self, session: str) -> None:
         self.reverts_kept.append(session)
