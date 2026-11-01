@@ -26,3 +26,21 @@ def trigger(text: str, cursor: int) -> Trigger | None:
     if not word or word[0] not in SIGNS:
         return None
     return Trigger(word[0], start, word[1:])
+
+
+@dataclass(frozen=True)
+class Entry:
+    #: "file", "skill" or "command".
+    kind: str
+    #: What it names to the Engine: a path in the Project, a skill's id, a name.
+    key: str
+    label: str
+    description: str
+
+
+def matching(entries: list[Entry], query: str) -> list[Entry]:
+    """Those whose label starts with ``query``, then those containing it."""
+    wanted = query.lower()
+    starts = [e for e in entries if e.label.lower().startswith(wanted)]
+    contains = [e for e in entries if wanted in e.label.lower() and e not in starts]
+    return starts + contains
