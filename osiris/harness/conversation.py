@@ -9,6 +9,7 @@ from enum import Enum
 
 from osiris.harness.activity import THINKING, WRITING, Step
 from osiris.harness.admin import Request
+from osiris.harness.detail import patched_file
 from osiris.harness.engine import (
     Answered,
     Delivered,
@@ -63,9 +64,14 @@ class Turn:
     note: str = ""
 
     @property
-    def edited(self) -> bool:
-        """Whether the answer changed files, so has changes to show."""
-        return any(step.action == "edit" and step.allowed for step in self.steps)
+    def commits(self) -> list[tuple[str, str]]:
+        """Each Program commit the question made, as (Program, commit): the
+        commit its Undo would revert."""
+        return [
+            (change.undo["name"], change.undo["commit"])
+            for change in self.changes
+            if change.undo and change.undo.get("action") == "revert_commit"
+        ]
 
     @property
     def programs(self) -> list[str]:
@@ -128,6 +134,8 @@ def _from_code(call: str, arguments: Mapping[str, object]) -> list[Step]:
 def _ran(name: str, call: str, arguments: Mapping[str, object]) -> Step:
     """A tool the Engine ran without asking, as the step it would have been."""
     subject = next((arguments[key] for key in _SUBJECT if key in arguments), None)
+    if subject is None and isinstance(patch := arguments.get("patchText"), str):
+        subject = patched_file(patch)
     resources = (str(subject),) if subject is not None else ()
     return Step(_ACTIONS.get(name, name), resources, True, call, arguments)
 
@@ -179,6 +187,11 @@ class Conversation:
         """Whether going back to before ``turn`` can be offered: it was sent,
         and nothing is answering, which the Engine would refuse."""
         return bool(turn.message) and not self.busy
+
+    def can_try_again(self, turn: Turn) -> bool:
+        """Only the latest: trying an earlier one again would drop every
+        answer after it unasked."""
+        return self.can_go_back(turn) and turn is self.turns[-1]
 
     def losing(self, turn: Turn) -> str:
         """What going back to before ``turn`` loses, in words."""

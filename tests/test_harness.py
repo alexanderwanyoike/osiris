@@ -57,7 +57,6 @@ class FakeEngine:
     cut: list[str] = field(default_factory=list)
     reverted: list[tuple[str, str]] = field(default_factory=list)
     reverts_kept: list[str] = field(default_factory=list)
-    changed: tuple[FileChange, ...] = ()
     reverts_cancelled: list[str] = field(default_factory=list)
     revert_gives: Revert = field(default_factory=lambda: Revert((), restorable=True))
     switched: list[tuple[str, ModelRef]] = field(default_factory=list)
@@ -97,9 +96,6 @@ class FakeEngine:
     def revert(self, session: str, message: str) -> Revert:
         self.reverted.append((session, message))
         return self.revert_gives
-
-    def changes(self, session: str, message: str) -> tuple[FileChange, ...]:
-        return self.changed
 
     def keep_revert(self, session: str) -> None:
         self.reverts_kept.append(session)
@@ -282,6 +278,14 @@ def test_a_card_answered_leaves_the_tokens_spent_readable() -> None:
     subject.answer("ses_1", "per_1", Answer.ONCE)
     subject.handle(Answered("ses_1", GPT, TOKENS, cost=0.0))
     assert HarnessLog(files, HOME / LOG_FILE).tokens_spent("ses_1") == 16
+
+
+def test_a_card_left_open_when_its_answer_ends_answers_nothing() -> None:
+    """The Engine has dropped the request; replying to it would only fail."""
+    subject, engine, _ = asked_to_list_etc()
+    subject.handle(Finished("ses_1"))
+    assert subject.answer("ses_1", "per_1", Answer.ONCE) is None
+    assert engine.replies == []
 
 
 def test_denying_refuses_the_action_and_thoth_is_told() -> None:
@@ -790,7 +794,6 @@ def test_a_sudo_command_is_known_before_the_engine_is_told_to_run_it() -> None:
 
 
 def test_going_back_keeps_the_engines_revert_and_is_logged() -> None:
-    from osiris.harness.engine import FileChange
 
     subject, engine, files = harness()
     subject.ask("make y.txt")
@@ -851,14 +854,6 @@ def test_a_session_the_engine_says_is_busy_does_not_go_back() -> None:
     assert subject.go_back("ses_9", "msg_1") is None
 
 
-def test_a_questions_changes_come_from_the_engine() -> None:
-    from osiris.harness.engine import FileChange
-
-    subject, engine, _ = harness()
-    engine.changed = (FileChange("main.py", "modified", 1, 0, "+x\n"),)
-    assert subject.changes("ses_1", "msg_1") == engine.changed
-
-
 def test_sending_now_steers_the_message_in_and_cuts_in() -> None:
     subject, engine, files = harness()
     subject.ask("count to sixty")
@@ -877,6 +872,18 @@ def test_the_stop_cutting_in_causes_leaves_the_session_working() -> None:
     subject.send_now("stop, count to ten")
     subject.handle(Stopped("ses_1"))
     assert subject.running == {"ses_1"}
+    subject.handle(Stopped("ses_1"))
+    assert subject.running == frozenset()
+
+
+def test_an_answer_that_ends_before_the_cut_in_lands_takes_no_later_stop() -> None:
+    """The answer finished on its own as the person cut in: the next stop the
+    person makes must still end the session."""
+    subject, _, _ = harness()
+    subject.ask("count to sixty")
+    subject.send_now("stop, count to ten")
+    subject.handle(Finished("ses_1"))
+    subject.ask("count to five")
     subject.handle(Stopped("ses_1"))
     assert subject.running == frozenset()
 

@@ -150,10 +150,6 @@ class OpencodeEngine:
             _file_changes(staged.get("files", [])), restorable="snapshot" in staged
         )
 
-    def changes(self, session: str, message: str) -> tuple[FileChange, ...]:
-        diff = self._get(f"/api/session/{session}/diff?from={message}&context=3")
-        return _file_changes(diff["data"])
-
     def keep_revert(self, session: str) -> None:
         self._post(f"/api/session/{session}/revert/commit")
 
