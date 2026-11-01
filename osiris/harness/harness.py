@@ -344,6 +344,8 @@ class Harness:
         the Engine goes on with the message at once."""
         if not isinstance(event, Finished | Stopped | Failed):
             return
+        for held in [key for key in self._waiting if key[0] == event.session]:
+            del self._waiting[held]
         cut_in = event.session in self._cutting_in
         self._cutting_in.discard(event.session)
         if not (cut_in and isinstance(event, Stopped)):
