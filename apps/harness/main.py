@@ -617,14 +617,17 @@ class Drawer(Gtk.ApplicationWindow):
 
     def _update_rail(self) -> None:
         turns = self.app.conversation.turns
-        # One question has no length to show.
-        shown = len(turns) > 1 and len(self.views) == len(turns)
+        view = self.scroller.get_vadjustment()
+        total, top, height = view.get_upper(), view.get_value(), view.get_page_size()
+        # Shown where there is a length to show: questions to tell apart, or
+        # more than fits.
+        shown = (len(self.views) == len(turns) > 0
+                 and (len(turns) > 1 or total > height))
         self.rail.set_visible(shown)
         if not shown:
             return
-        view = self.scroller.get_vadjustment()
-        self.rail.show_ticks(ticks(turns, self._tops(), view.get_upper(),
-                                   view.get_value(), view.get_page_size()))
+        self.rail.show_ticks(ticks(turns, self._tops(), total, top, height))
+        self.rail.show_view(top / total, min(height / total, 1.0))
 
     def rail_jump(self, index: int) -> None:
         self.scroller.get_vadjustment().set_value(max(self._tops()[index] - 12, 0))
