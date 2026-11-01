@@ -84,6 +84,8 @@ class ConnectorsPage(Gtk.Box):
             self._say("Give it a name, and the command that starts it or the "
                       "web address it answers at.")
             return
+        if self._editing is not None:
+            connector = replace(connector, on=self._editing.on)
         if not self._save(connector):
             self._say("Your opencode config has comments in it, so Osiris leaves "
                       "it for you to edit by hand.")
