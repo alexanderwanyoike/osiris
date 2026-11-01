@@ -135,6 +135,16 @@ class Harness:
         self._log.write("sent", session=session, text=text)
         return self._engine.send(session, text)
 
+    def send_now(self, text: str) -> str:
+        """Send while the session works, stopping its step at once so the
+        model takes this next. Answers where it waits until then."""
+        message = self.ask(text)
+        session = self._session
+        if session is not None:
+            self._engine.cut_in(session)
+            self._log.write("cut-in", session=session)
+        return message
+
     def withdraw(self, message: str) -> None:
         """Take back a message still waiting in the session on screen."""
         if self._session is None:
