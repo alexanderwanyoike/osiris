@@ -134,6 +134,22 @@ class TestScheme:
         assert found["diff:removed-line"]["foreground"] == colours["danger"]
 
 
+class TestCodeFont:
+    def test_code_is_set_in_the_themes_terminal_font_with_its_ligatures(self) -> None:
+        """The font ghostty uses, so code reads the same in both."""
+        from osiris.harness.style import code_font_css
+
+        css = code_font_css(OBSIDIAN)
+        assert 'font-family: "FiraCode Nerd Font"' in css
+        assert 'font-feature-settings: "calt", "liga"' in css
+
+    def test_a_theme_naming_no_terminal_font_falls_back_to_monospace(self) -> None:
+        from osiris.harness.style import code_font_css
+
+        plain = {key: value for key, value in OBSIDIAN.items() if key != "ui"}
+        assert 'font-family: "monospace"' in code_font_css(plain)
+
+
 class TestInline:
     def test_inline_code_uses_the_raised_surface(self) -> None:
         assert inline_style(OBSIDIAN) == InlineStyle(
