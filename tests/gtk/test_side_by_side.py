@@ -66,6 +66,7 @@ def app() -> tuple[App, FakeEngine]:
         sent=[],
         withdrawn=[],
         waiting=None,
+        problem=None,
     )
     stand_in.send_notification = lambda session, notification: stand_in.sent.append(
         (session, notification)
@@ -187,3 +188,31 @@ def test_a_conversation_deleted_while_working_off_screen_is_let_go() -> None:
     stand_in.harness.delete("ses_1")
     stand_in._deleted("ses_1", on_screen=False)
     assert stand_in.backgrounded == {}
+
+
+def test_going_back_reloads_the_conversation_and_puts_the_question_back() -> None:
+    """As opencode's own undo does, so it can be sent again or changed."""
+    stand_in, engine = app()
+    engine.past = [
+        PastTurn("make x.txt", "Made it.", GPT, "msg_1"),
+        PastTurn("make y.txt", "Made it.", GPT, "msg_2"),
+    ]
+    stand_in.open_past("ses_9")
+    engine.past = engine.past[:1]
+    stand_in.go_back(stand_in.conversation.turns[1])
+    assert engine.reverted == [("ses_9", "msg_2")]
+    assert [turn.question for turn in stand_in.conversation.turns] == ["make x.txt"]
+    assert stand_in.drawer.drafts == ["make y.txt"]
+
+
+def test_where_the_files_cannot_go_back_the_person_is_told_and_nothing_moves() -> None:
+    from osiris.harness.engine import Revert
+
+    stand_in, engine = app()
+    engine.past = [PastTurn("make x.txt", "Made it.", GPT, "msg_1")]
+    stand_in.open_past("ses_9")
+    engine.revert_gives = Revert((), restorable=False)
+    stand_in.go_back(stand_in.conversation.turns[0])
+    assert [turn.question for turn in stand_in.conversation.turns] == ["make x.txt"]
+    assert "git" in stand_in.problem
+    assert stand_in.drawer.drafts == []
