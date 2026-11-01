@@ -201,3 +201,10 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-question-row .harness-quiet { opacity: 0; }
 .harness-question-row:hover .harness-quiet,
 .harness-question-row .harness-quiet:focus { opacity: 1; }
+/* The Canvas's toolbar, its groups side by side, and each Program's name over
+   its files in the tree. */
+.harness-canvas-toolbar { padding: 6px 8px 2px; }
+.harness-canvas-toolbar button { color: @harness_muted; min-height: 28px; min-width: 28px; }
+.harness-canvas-toolbar button:hover { color: @harness_fg; }
+.harness-canvas paned > separator { background-color: alpha(@harness_fg, 0.08); min-width: 1px; min-height: 1px; }
+.harness-tree-heading label { color: @harness_muted; font-size: 0.82em; font-weight: 600; padding-top: 6px; }
