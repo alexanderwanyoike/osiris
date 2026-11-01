@@ -555,6 +555,19 @@ def test_a_question_can_be_gone_back_to_once_nothing_is_answering() -> None:
     assert not talk.can_go_back(talk.turns[-1])
 
 
+def test_only_the_latest_answer_can_be_tried_again() -> None:
+    """Trying an earlier one again would drop every answer after it unasked."""
+    talk = Conversation.restored(
+        [
+            PastTurn("make x.txt", "Made it.", None, "msg_1"),
+            PastTurn("make y.txt", "Made it.", None, "msg_2"),
+        ]
+    )
+    first, latest = talk.turns
+    assert not talk.can_try_again(first)
+    assert talk.can_try_again(latest)
+
+
 @pytest.mark.parametrize(
     ("place", "said"),
     [
