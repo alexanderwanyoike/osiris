@@ -213,7 +213,7 @@ class Conversation:
                 ]
             case ToolCalled(_, call, arguments, _):
                 self._inputs[call] = arguments
-            case Allowed(_, action, _, resources, call):
+            case Allowed(_, action, resources, call):
                 turn.steps.append(
                     Step(action, resources, True, call, self._input(call))
                 )

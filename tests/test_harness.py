@@ -36,7 +36,6 @@ from osiris.harness.harness import (
     Refused,
 )
 from osiris.harness.log import LOG_FILE, HarnessLog
-from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem
 
 HOME = Path("/home/tester")
@@ -248,7 +247,7 @@ def test_allowing_once_runs_the_action_and_is_logged() -> None:
     subject, engine, files = asked_to_list_etc()
     decision = subject.answer("ses_1", "per_1", Answer.ONCE)
     assert engine.replies == [("ses_1", "per_1", Reply.ONCE, "")]
-    assert decision == Allowed("ses_1", "shell", Tier.ANYTHING, ("ls /etc",), "call_1")
+    assert decision == Allowed("ses_1", "shell", ("ls /etc",), "call_1")
     entry = entries(files)[-1]
     assert (entry["kind"], entry["answer"]) == ("answered", "once")
 
@@ -655,7 +654,7 @@ def test_once_the_person_allows_everything_nothing_waits() -> None:
     decision = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls /etc",)))
     assert isinstance(asked, Asking)
     assert engine.replies == [("ses_1", "per_2", Reply.ONCE, "")]
-    assert decision == Allowed("ses_1", "bash", Tier.ANYTHING, ("ls /etc",))
+    assert decision == Allowed("ses_1", "bash", ("ls /etc",))
 
 
 def test_restarting_the_tools_attaches_them_again_where_they_run() -> None:

@@ -24,7 +24,6 @@ from osiris.harness.engine import (
     ToolRequested,
 )
 from osiris.harness.log import HarnessLog
-from osiris.harness.tiers import Tier
 from osiris.harness.titles import title_of
 from osiris.platform import HttpError
 
@@ -40,7 +39,6 @@ REFUSED = (
 class Allowed:
     session: str
     action: str
-    tier: Tier
     resources: tuple[str, ...]
     call: str = ""
 
@@ -283,9 +281,7 @@ class Harness:
             **({"reply": reply} if reply else {}),
         )
         if allow:
-            return Allowed(
-                session, asking.action, Tier.ANYTHING, asking.resources, asking.call
-            )
+            return Allowed(session, asking.action, asking.resources, asking.call)
         reason = f"You replied: {reply}" if reply else DENIED
         return Refused(session, asking.action, asking.resources, asking.call, reason)
 
@@ -319,7 +315,6 @@ class Harness:
             case ToolRequested(session, request, action, resources, call) if (
                 self._allow_everything()
             ):
-                tier = Tier.ANYTHING
                 if action in COMMAND_ACTIONS:
                     self._allowed_command(session, resources)
                 self._reply(session, request, Reply.ONCE, "")
@@ -327,10 +322,9 @@ class Harness:
                     "allowed",
                     session=session,
                     action=action,
-                    tier=tier.value,
                     resources=list(resources),
                 )
-                return Allowed(session, action, tier, resources, call)
+                return Allowed(session, action, resources, call)
             case ToolRequested(session, request, action, resources, call, patterns):
                 asking = Asking(session, request, action, resources, call, patterns)
                 self._waiting[(session, request)] = asking
