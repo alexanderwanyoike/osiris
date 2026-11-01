@@ -387,6 +387,19 @@ def test_the_model_is_told_the_person_knows_it_as_osiris() -> None:
     assert "you are osiris" in INSTRUCTIONS.lower()
 
 
+def test_the_model_checks_then_has_a_program_reviewed_before_calling_it_done() -> None:
+    """#161: the quick checks first, then the reviewer, and a partial or a fail
+    is never reported as done."""
+    from osiris.apps.tool_server import INSTRUCTIONS
+
+    text = " ".join(INSTRUCTIONS.split())
+    assert text.index("check_program") < text.index("reviewer subagent")
+    assert "the person's own words" in text
+    assert "the commit the change started from" in text
+    assert "pass, partial or fail" in text
+    assert "Never call a Program done on a partial or a fail" in text
+
+
 def test_making_a_wallpaper_wears_it_and_logs_each_step_to_undo() -> None:
     log = new_log()
     store = FakeThemeStore(

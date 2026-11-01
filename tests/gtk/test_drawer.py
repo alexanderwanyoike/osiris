@@ -456,3 +456,39 @@ def test_with_nothing_working_there_is_nothing_to_cut_into() -> None:
     window, _ = drawer()
     window.refresh()
     assert not window.send_now.get_visible()
+
+
+def test_a_canvas_opened_in_a_narrow_drawer_is_shown_once_it_is_wide() -> None:
+    """The narrow drawer hides the Canvas; widening it must bring it back."""
+    from pathlib import Path
+
+    from gi.repository import GLib
+
+    from osiris.programs.manifest import parse
+    from osiris.programs.programs import Program
+
+    window, _ = drawer()
+    context = GLib.MainContext.default()
+
+    def settle(width: int) -> None:
+        import time
+
+        window.set_default_size(width, 800)
+        window.present()
+        deadline = time.monotonic() + 5
+        while window.get_width() != width and time.monotonic() < deadline:
+            context.iteration(False)
+        for _ in range(100):
+            context.iteration(False)
+
+    settle(440)
+    manifest = parse(
+        '{"name": "pomodoro", "label": "Pomodoro", "description": "x",'
+        ' "run": ["python3", "main.py"]}'
+    )
+    window.show_canvas([(Program(manifest, Path("/nonexistent"), "a", None), [])])
+    settle(1600)
+    assert window.get_width() == 1600
+    assert window.canvas_toggle.get_visible()
+    assert window.canvas_toggle.get_active()
+    assert window.canvas.get_visible()

@@ -14,7 +14,6 @@ from osiris.harness.engine import (
     Engine,
     Event,
     Failed,
-    FileChange,
     Finished,
     ModelRef,
     Past,
@@ -62,7 +61,8 @@ _SUDO = re.compile(r"\bsudo\b")
 
 @dataclass(frozen=True)
 class Asking:
-    """An action outside the tier, held until the person answers its card."""
+    """An action the Engine's rules ask about, held until the person answers its
+    card."""
 
     session: str
     request: str
@@ -225,10 +225,6 @@ class Harness:
     def move(self, session: str, folder: Path) -> None:
         self._engine.move(session, folder)
 
-    def changes(self, session: str, message: str) -> tuple[FileChange, ...]:
-        """What a question changed, file by file, as the Engine has it."""
-        return self._engine.changes(session, message)
-
     def go_back(self, session: str, message: str, questions: int = 1) -> Revert | None:
         """Go back to before ``message``: its files and the Conversation, which
         drops ``questions``, that one and those after it. None while the
@@ -319,7 +315,7 @@ class Harness:
             always = answer is Answer.ALWAYS
             self._reply(session, request, Reply.ALWAYS if always else Reply.ONCE, "")
         self._log.write(
-            "answered",
+            "replied",
             session=session,
             action=asking.action,
             resources=list(asking.resources),
@@ -347,9 +343,13 @@ class Harness:
     def _ended(self, event: Event) -> None:
         """A session that ends is no longer running, unless it was cut in on:
         the Engine goes on with the message at once."""
-        if isinstance(event, Stopped) and event.session in self._cutting_in:
-            self._cutting_in.discard(event.session)
-        elif isinstance(event, Finished | Stopped | Failed):
+        if not isinstance(event, Finished | Stopped | Failed):
+            return
+        for held in [key for key in self._waiting if key[0] == event.session]:
+            del self._waiting[held]
+        cut_in = event.session in self._cutting_in
+        self._cutting_in.discard(event.session)
+        if not (cut_in and isinstance(event, Stopped)):
             self._running.pop(event.session, None)
 
     def handle(self, event: Event) -> Event | Decision | None:
