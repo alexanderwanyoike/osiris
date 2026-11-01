@@ -10,7 +10,9 @@ from osiris.resources.loader import Resources
 
 AGENT = "engine/agents/reviewer.md"
 
-_RULE = re.compile(r"- action: (\S+)\n\s+resource: \"?([^\"\n]+)\"?\n\s+effect: (\w+)")
+_RULE = re.compile(
+    r"- action: \"?([^\"\n]+)\"?\n\s+resource: \"?([^\"\n]+)\"?\n\s+effect: (\w+)"
+)
 
 
 def effect(action: str, resource: str) -> str:
