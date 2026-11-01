@@ -79,6 +79,20 @@ The first slice of ROADMAP P3.5:
   (`files` with a `file://` URI, or `skills` by id), each with where it is
   mentioned. Tokens are found again when the message is sent, so one edited
   or deleted since is not sent.
+- **It can use connectors.** Settings has a Connectors tab beside Models: the
+  person's MCP servers, each added by a name and either the command that
+  starts it or the web address it answers at, switched on or off, changed or
+  removed there. They are kept in the Engine's own config under
+  `mcp.servers`, which the Engine reloads (opencode 2.2.4 has no API that
+  saves them); a commented config is left for the person to edit, and the tab
+  says so. Each server shows how the Engine finds it (`GET /api/mcp`):
+  connected, starting, off, failed with the reason, or a Sign in button for
+  one that needs it, which opens the server's own sign-in page through its
+  integration (`metadata.source` "mcp", left out of the model providers). A
+  working server and its resources (`GET /api/mcp/resource`) are offered
+  under `@`: a resource goes with the message by its own URI, a server is
+  named so the model reaches for its tools, and those tool calls ask on the
+  approval card like any other.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
