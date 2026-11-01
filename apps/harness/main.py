@@ -1090,6 +1090,7 @@ class Application(Adw.Application):
         def found(offers: dict[str, list[Entry]]) -> None:
             if self.harness is not None and self.harness.directory == directory:
                 self.offers = offers
+                self.drawer.picker.refresh()
 
         self.background(gather, found)
 
