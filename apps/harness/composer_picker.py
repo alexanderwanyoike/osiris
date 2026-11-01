@@ -1,8 +1,8 @@
 """The / and @ picker on the message box (#153).
 
 What opens it, what it lists and where picked entries stand in the text are
-decided in osiris/harness/picker.py; this draws the list at the cursor and
-puts the chosen entry into the message.
+decided in osiris/harness/picker.py; this draws the list as a card over the
+message box and puts the chosen entry into the message.
 """
 from collections.abc import Callable
 
@@ -22,28 +22,27 @@ from osiris.harness.picker import (  # noqa: E402
 
 #: Rows shown at once; typing narrows the rest.
 SHOWN = 8
-WIDTH = 440
 MOVES = {Gdk.KEY_Down: 1, Gdk.KEY_Up: -1}
 COMPLETES = (Gdk.KEY_Tab, Gdk.KEY_Return, Gdk.KEY_KP_Enter)
 
 
 class Picker:
-    def __init__(self, entry: Gtk.TextView, offered: Callable[[str], list[Entry]]):
+    def __init__(self, entry: Gtk.TextView, offered: Callable[[str], list[Entry]],
+                 anchor: Gtk.Widget | None = None):
         self._entry = entry
+        #: What the card sits over, at its full width: the whole message box.
+        self._anchor = anchor or entry
         self._offered = offered
         self._picked: list[Entry] = []
         self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.BROWSE)
         self.list.add_css_class("harness-picker")
-        # One width whatever is listed, so the card holds still while typing
-        # narrows it; descriptions are cut to fit rather than widen it.
-        self.list.set_size_request(WIDTH, -1)
         self.list.connect("row-activated", lambda _l, row: self._complete(row.entry))
         # Without autohide the popover leaves the keyboard with the message
         # box, so typing carries on filtering while it is open.
         self.popover = Gtk.Popover(child=self.list, autohide=False, has_arrow=False,
                                    position=Gtk.PositionType.TOP)
         self.popover.add_css_class("harness-picker-popover")
-        self.popover.set_parent(entry)
+        self.popover.set_parent(self._anchor)
         self.token = entry.get_buffer().create_tag("harness-token", weight=500)
         entry.get_buffer().connect("changed", lambda _b: self._typed())
         # Captured before the message box sees them, so Enter picks an entry
@@ -108,7 +107,9 @@ class Picker:
         for entry in entries[:SHOWN]:
             self.list.append(_row(entry))
         self.list.select_row(self.list.get_row_at_index(0))
-        self._point_at(buffer.get_iter_at_offset(found.start))
+        # The anchor's width, whatever is listed, so the card holds still
+        # while typing narrows it; descriptions are cut to fit.
+        self.list.set_size_request(self._anchor.get_width(), -1)
         self.popover.popup()
 
     def _mark(self, buffer: Gtk.TextBuffer, text: str) -> None:
@@ -118,14 +119,6 @@ class Picker:
         for found in self.references(text):
             buffer.apply_tag(self.token, buffer.get_iter_at_offset(found.start),
                              buffer.get_iter_at_offset(found.end))
-
-    def _point_at(self, where: Gtk.TextIter) -> None:
-        place = self._entry.get_iter_location(where)
-        x, y = self._entry.buffer_to_window_coords(
-            Gtk.TextWindowType.WIDGET, place.x, place.y)
-        point = Gdk.Rectangle()
-        point.x, point.y, point.width, point.height = x, y, 1, place.height
-        self.popover.set_pointing_to(point)
 
 
 def _row(entry: Entry) -> Gtk.ListBoxRow:
