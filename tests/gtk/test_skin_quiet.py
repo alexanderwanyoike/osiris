@@ -89,3 +89,19 @@ def test_dividers_hide_until_the_pointer_is_on_them(sheet: Path) -> None:
     assert not re.search(
         r"\.harness-canvas paned > separator\s*\{[^}]*background-color:\s*alpha", text
     )
+
+
+@pytest.mark.parametrize("sheet", SKINS, ids=lambda s: s.stem)
+def test_the_pickers_shadow_stays_on_the_screen_the_drawer_sits_against(
+    sheet: Path,
+) -> None:
+    """The drawer is flush with the screen's edge; a shadow reaching past it
+    makes GTK shrink the card to fit, narrower than the message box."""
+    rule = re.search(
+        r"popover\.harness-picker-popover > contents\s*\{[^}]*box-shadow:\s*"
+        r"(-?\d+)(?:px)?\s+(-?\d+)(?:px)?\s+(\d+)px",
+        sheet.read_text(),
+    )
+    assert rule is not None
+    across, _down, blur = (int(n) for n in rule.groups())
+    assert abs(across) + blur <= 12
