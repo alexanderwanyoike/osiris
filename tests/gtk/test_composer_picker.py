@@ -107,3 +107,12 @@ def test_clicking_an_entry_puts_it_in_the_message() -> None:
     picker = typed("fix @")
     picker.list.emit("row-activated", picker.list.get_row_at_index(1))
     assert text(picker) == "fix @clock.py "
+
+
+def test_after_a_click_typing_carries_on_in_the_message() -> None:
+    picker = typed("fix @")
+    entry = picker.popover.get_parent()
+    row = picker.list.get_row_at_index(0)
+    row.grab_focus()
+    picker.list.emit("row-activated", row)
+    assert entry.get_root().get_focus() is entry
