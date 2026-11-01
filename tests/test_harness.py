@@ -30,6 +30,7 @@ from osiris.harness.harness import (
     ONLY_WITH_EVERYTHING,
     REFUSED,
     Allowed,
+    Asking,
     Harness,
     Refused,
 )
@@ -246,6 +247,17 @@ def test_a_refusal_says_which_rule_refused_it() -> None:
     assert isinstance(outside, Refused)
     assert command.reason == ONLY_WITH_EVERYTHING
     assert outside.reason == ONLY_IN_PROGRAMS
+
+
+def test_an_action_outside_the_tier_waits_for_the_person() -> None:
+    subject, engine, files = harness()
+    subject.ask("tidy up")
+    decision = subject.handle(
+        ToolRequested("ses_1", "per_1", "bash", ("ls",), "call_1", ("ls *",))
+    )
+    assert decision == Asking("ses_1", "per_1", "bash", ("ls",), "call_1", ("ls *",))
+    assert engine.replies == []
+    assert entries(files)[-1]["kind"] == "asked"
 
 
 def test_an_allowed_action_is_passed_on_with_what_it_touches() -> None:
