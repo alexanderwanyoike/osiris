@@ -59,6 +59,8 @@ CLASSES = (
     "harness-removed",
     "harness-admin",
     "harness-admin-command",
+    "harness-approval",
+    "harness-approval-input",
 )
 
 
