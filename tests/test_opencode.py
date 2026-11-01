@@ -261,9 +261,10 @@ class TestSessions:
         )
 
     @pytest.mark.parametrize(
-        ("answer", "decision"), [(Reply.ONCE, "once"), (Reply.REJECT, "reject")]
+        ("answer", "decision"),
+        [(Reply.ONCE, "once"), (Reply.ALWAYS, "always"), (Reply.REJECT, "reject")],
     )
-    def test_a_tool_request_is_answered_once_or_rejected(
+    def test_a_tool_request_is_answered_once_always_or_rejected(
         self, answer: Reply, decision: str
     ) -> None:
         path = f"{URL}/api/session/{SESSION}/permission/per_1/reply"
