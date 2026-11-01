@@ -160,17 +160,8 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 }
 
 .harness-canvas { background-color: @harness_sunken; border-left: 1px solid alpha(@harness_border, 0.6); }
-.harness-canvas tabbar, .harness-canvas tabbar .box,
-.harness-canvas scrolledwindow, .harness-canvas viewport, .harness-canvas list,
-.harness-canvas .navigation-sidebar { background-color: transparent; box-shadow: none; }
-.harness-canvas tabbar tab, .harness-canvas tabbar tab:backdrop { color: @harness_muted; border-radius: 8px; }
-.harness-canvas tabbar tab:selected, .harness-canvas tabbar tab:selected:backdrop {
-    color: @harness_fg;
-    background-color: alpha(@harness_fg, 0.08);
-}
 .harness-canvas .sidebar-pane { background-color: @harness_sunken; color: @harness_fg; border-right: 1px solid alpha(@harness_border, 0.6); }
 .harness-canvas .sidebar-pane label { color: @harness_fg; }
-.harness-path { padding: 6px 12px; border-bottom: 1px solid alpha(@harness_border, 0.6); }
 
 /* Row controls appear where the pointer is, keeping the sidebar quiet. */
 .harness-sidebar row > box > button,
@@ -274,10 +265,40 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-question-row .harness-quiet { opacity: 0; }
 .harness-question-row:hover .harness-quiet,
 .harness-question-row .harness-quiet:focus { opacity: 1; }
-/* The Canvas's toolbar, its groups side by side, and each Program's name over
-   its files in the tree. */
-.harness-canvas-toolbar { padding: 6px 8px 2px; }
-.harness-canvas-toolbar button { color: @harness_muted; min-height: 28px; min-width: 28px; }
-.harness-canvas-toolbar button:hover { color: @harness_fg; }
+
+/* Bubbles: the panels sit flush on the sunken colour, a hairline between. */
 .harness-canvas paned > separator { background-color: alpha(@harness_fg, 0.08); min-width: 1px; min-height: 1px; }
-.harness-tree-heading label { color: @harness_muted; font-size: 0.82em; font-weight: 600; padding-top: 6px; }
+
+/* The Canvas's panels (#194): a compact header per panel with small tabs and
+   its own actions, a close that shows where the pointer is, counts in the
+   Theme's success and danger. One scale: 0.86em for tabs and rows, 0.8em for
+   what is muted, rows 28px. */
+.harness-canvas-toolbar { padding: 0; }
+.harness-canvas-toolbar button { color: @harness_muted; min-height: 28px; min-width: 28px; padding: 0; }
+.harness-canvas-toolbar button:hover { color: @harness_fg; }
+.harness-group-header { min-height: 36px; padding: 0 6px; border-bottom: 1px solid alpha(@harness_fg, 0.06); }
+.harness-group-header > button { color: @harness_muted; min-height: 26px; min-width: 26px; padding: 0; }
+.harness-group-header > button:hover { color: @harness_fg; }
+.harness-group-tab { border-radius: 7px; transition: background-color 120ms ease-out; }
+.harness-group-tab:hover { background-color: alpha(@harness_fg, 0.04); }
+.harness-group-tab.selected { background-color: alpha(@harness_fg, 0.08); }
+.harness-group-tab > button { min-height: 26px; padding: 0 4px 0 10px; color: @harness_muted; font-size: 0.86em; background: none; }
+.harness-group-tab.selected > button { color: @harness_fg; }
+.harness-group-tab > button.harness-tab-close { min-width: 22px; min-height: 22px; padding: 0; margin-right: 2px; opacity: 0; transition: opacity 120ms ease-out; }
+.harness-group-tab:hover > button.harness-tab-close,
+.harness-group-tab.selected > button.harness-tab-close,
+.harness-group-tab > button.harness-tab-close:focus { opacity: 1; }
+.harness-path { min-height: 34px; padding: 0 6px 0 14px; border-bottom: 1px solid alpha(@harness_fg, 0.05); }
+.harness-path label { color: @harness_muted; font-size: 0.8em; }
+.harness-path image { color: @harness_muted; }
+.harness-canvas .navigation-sidebar row { min-height: 28px; margin: 1px 6px; padding: 0 10px; border-radius: 6px; color: @harness_muted; font-size: 0.86em; }
+.harness-canvas .navigation-sidebar row image { color: @harness_muted; }
+.harness-canvas .navigation-sidebar row:hover { background-color: alpha(@harness_fg, 0.05); color: @harness_fg; }
+.harness-canvas .navigation-sidebar row:selected { background-color: alpha(@harness_fg, 0.08); color: @harness_fg; }
+.harness-canvas .navigation-sidebar row:selected label { color: @harness_fg; }
+.harness-tree-heading label { color: @harness_muted; font-size: 0.75em; font-weight: 600; letter-spacing: 0.04em; padding-top: 8px; }
+.harness-added, .harness-removed { font-size: 0.8em; font-feature-settings: "tnum"; }
+.harness-added { color: @harness_success; }
+.harness-removed { color: @harness_danger; }
+.harness-page entry { min-height: 26px; font-size: 0.86em; border-radius: 7px; }
+.harness-canvas scrolledwindow, .harness-canvas viewport, .harness-canvas list, .harness-canvas .navigation-sidebar { background-color: transparent; box-shadow: none; }
