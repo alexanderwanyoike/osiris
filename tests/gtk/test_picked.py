@@ -38,3 +38,27 @@ def test_what_was_picked_goes_with_a_message_sent_now() -> None:
     asked(stand_in, "make it calm")
     stand_in.send_now("/review the timer", (REVIEW,))
     assert engine.referenced == [("ses_1", (REVIEW,))]
+
+
+def test_the_picker_offers_the_projects_files_and_the_skills_there() -> None:
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from osiris.harness.harness import Harness
+
+    from tests.test_harness import GPT, HOME
+
+    project = HOME / "Code" / "timer"
+    stand_in, engine = app()
+    stand_in.harness = Harness(engine, stand_in.log, GPT, directory=project)
+    stand_in.programs = lambda: SimpleNamespace(files=lambda _name: [Path("README.md")])
+    review = Entry("skill", "review", "review", "Review the changes")
+    asked_in: list[Path] = []
+    stand_in.skills = SimpleNamespace(
+        skills=lambda directory: asked_in.append(directory) or [review]
+    )
+    stand_in.refresh_offers()
+    readme = Entry("file", str(project / "README.md"), "README.md", "")
+    assert stand_in.offered("@") == [readme]
+    assert stand_in.offered("/") == [review]
+    assert asked_in == [project]
