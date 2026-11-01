@@ -6,7 +6,7 @@ import pytest
 
 from osiris.harness.activity import Step
 from osiris.harness.admin import Request
-from osiris.harness.conversation import Conversation, State
+from osiris.harness.conversation import Conversation, State, Turn
 from osiris.harness.engine import (
     Answered,
     Delivered,
@@ -593,3 +593,22 @@ def test_an_answer_that_edited_files_has_changes_to_show() -> None:
     assert not turn.edited
     talk.apply(ToolCalled(S, "c2", {"path": "main.py", "content": "x"}, False, "write"))
     assert turn.edited
+
+
+def test_a_turn_knows_the_program_commits_its_question_made() -> None:
+    """What its changes are shown from: a theme or a new folder has no commit."""
+    turn = Turn(
+        "build a coin flip",
+        "Made it.",
+        State.DONE,
+        changes=[
+            Change("Made coin-flip", {"action": "trash_program", "name": "coin-flip"}),
+            Change(
+                "coin-flip: Add a flip",
+                {"action": "revert_commit", "name": "coin-flip", "commit": "abc"},
+                "coin-flip",
+            ),
+            Change("Made Ember", {"action": "delete_theme", "name": "ember"}),
+        ],
+    )
+    assert turn.commits == [("coin-flip", "abc")]
