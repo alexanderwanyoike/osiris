@@ -69,6 +69,11 @@ class Picker:
         keys.connect("key-pressed", self.key)
         entry.add_controller(keys)
 
+    def refresh(self) -> None:
+        """What it lists has changed; an open picker lists it again."""
+        if self.popover.get_visible():
+            self._typed()
+
     def restyle(self, colours: tuple[str, str]) -> None:
         """The Theme's token colours, foreground and background."""
         self.token.props.foreground, self.token.props.background = colours
