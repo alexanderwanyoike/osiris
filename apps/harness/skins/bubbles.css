@@ -225,3 +225,13 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
     border-radius: 8px;
     padding: 6px 8px;
 }
+
+/* A message sent while Osiris works, waiting to reach it. */
+.harness-waiting {
+    margin: 0 12px 4px;
+    padding: 2px 4px 2px 12px;
+    border-radius: 14px;
+    border: 1px dashed alpha(@harness_fg, 0.18);
+    color: @harness_muted;
+    font-size: 0.9em;
+}
