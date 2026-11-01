@@ -269,6 +269,15 @@ def _step_detail(step: Step) -> Gtk.Widget:
     if shown.kind is Kind.COMMAND:
         asked.add_css_class("monospace")
     box.append(asked)
+    for name, value in shown.inputs:
+        given = Gtk.Label(label=f"{name}: {value}", xalign=0, wrap=True,
+                          selectable=True)
+        given.add_css_class("harness-step-input")
+        box.append(given)
+    if shown.note:
+        note = Gtk.Label(label=shown.note, xalign=0, wrap=True)
+        note.add_css_class("harness-step-note")
+        box.append(note)
     lines = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
     box.append(lines)
     kept, hidden = folded(shown.lines)
