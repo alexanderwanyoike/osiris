@@ -51,6 +51,7 @@ from canvas import Canvas, open_in_code  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
 from render import TurnView  # noqa: E402
 from sidebar import Sidebar  # noqa: E402
+from terminal import Terminal  # noqa: E402
 from skin_store import EngineSkinStore  # noqa: E402
 from theme_store import EngineStore, user_wallpapers  # noqa: E402
 
@@ -240,6 +241,7 @@ class Drawer(Gtk.ApplicationWindow):
         self.canvas = Canvas(read=lambda path: path.read_text(errors="replace"),
                              open_in_code=open_in_code,
                              on_changes=lambda: self.app.show_all_changes(),
+                             terminal=lambda folder: Terminal(folder, self.app.look.theme),
                              scheme=app.look.scheme if app.look is not None else None)
         self.canvas.set_visible(False)
         body = Gtk.Paned(start_child=chat, end_child=self.canvas,
@@ -1413,7 +1415,7 @@ class Application(Adw.Application):
     def _restyle(self) -> None:
         if self.drawer is not None:
             self.drawer.refresh(restyle=True)
-            self.drawer.canvas.restyle(self.look.scheme)
+            self.drawer.canvas.restyle(self.look.scheme, self.look.theme)
 
 
 if __name__ == "__main__":
