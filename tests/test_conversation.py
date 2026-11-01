@@ -97,6 +97,27 @@ def test_a_refused_action_is_shown_on_its_turn() -> None:
     assert talk.turns[-1].steps == [Step("shell", ("ls /etc",), allowed=False)]
 
 
+@pytest.mark.parametrize(
+    ("name", "given", "action", "resources"),
+    [
+        ("read", {"path": "/etc/hostname"}, "read", ("/etc/hostname",)),
+        ("write", {"path": "main.py", "content": "x"}, "edit", ("main.py",)),
+        ("edit", {"filePath": "main.py"}, "edit", ("main.py",)),
+        ("shell", {"command": "uname -r"}, "shell", ("uname -r",)),
+        ("websearch", {"query": "gtk 4"}, "websearch", ("gtk 4",)),
+    ],
+)
+def test_a_tool_the_engine_ran_without_asking_is_a_step(
+    name: str, given: dict[str, object], action: str, resources: tuple[str, ...]
+) -> None:
+    """The Engine's rules allowed it, so no decision of the Harness's names it
+    (ADR 0020); it is shown as the action it is."""
+    talk = Conversation()
+    talk.asked("go on")
+    talk.apply(ToolCalled(S, "c1", given, False, name))
+    assert talk.turns[-1].steps == [Step(action, resources, True, "c1", given)]
+
+
 def test_a_step_carries_the_input_of_its_tool_call() -> None:
     talk = Conversation()
     talk.asked("list /etc")
