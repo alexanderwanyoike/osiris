@@ -88,6 +88,7 @@ class Picker:
         # Picked before it goes in: putting it in re-marks the tokens.
         self._picked.append(entry)
         buffer.insert(start, f"{SIGN[entry.kind]}{entry.label} ")
+        self._entry.grab_focus()
 
     def _typed(self) -> None:
         buffer = self._entry.get_buffer()
