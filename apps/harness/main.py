@@ -627,7 +627,8 @@ class Drawer(Gtk.ApplicationWindow):
         if not shown:
             return
         self.rail.show_ticks(ticks(turns, self._tops(), total, top, height))
-        self.rail.show_view(top / total, min(height / total, 1.0))
+        if total > 0:
+            self.rail.show_view(top / total, min(height / total, 1.0))
 
     def rail_jump(self, index: int) -> None:
         self.scroller.get_vadjustment().set_value(max(self._tops()[index] - 12, 0))
