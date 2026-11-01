@@ -36,3 +36,39 @@ def test_the_look_keeps_the_theme_it_loaded(tmp_path: Path) -> None:
     """For what draws itself from the Theme, such as a terminal."""
     look = Look(tmp_path, lambda: None)
     assert "background" in look.theme["colors"]
+
+
+def test_a_panels_tabs_are_slim_in_every_look(tmp_path: Path) -> None:
+    """The person found 26px tabs too big; 20px is the most a tab stands."""
+    import time
+
+    from canvas import Canvas
+    from gi.repository import GLib
+
+    from osiris.programs.manifest import parse
+    from osiris.programs.programs import Program
+
+    from .conftest import widgets
+
+    manifest = parse(
+        '{"name": "timer", "label": "Timer", "description": "x",'
+        ' "run": ["python3", "main.py"]}'
+    )
+    for look in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(look)
+        Look(tmp_path, lambda: None)
+        canvas = Canvas(read=lambda _p: "print(1)\n", open_in_code=lambda _f, _p: None)
+        canvas.show([(Program(manifest, tmp_path, "a", None), [Path("main.py")])])
+        window = Gtk.Window(child=canvas, default_width=1200, default_height=700)
+        window.present()
+        context = GLib.MainContext.default()
+        deadline = time.monotonic() + 1
+        while time.monotonic() < deadline:
+            context.iteration(False)
+        tab = next(
+            w for w in widgets(canvas) if "harness-group-tab" in w.get_css_classes()
+        )
+        height = tab.get_height()
+        window.destroy()
+        assert 0 < height <= 20, (look, height)
