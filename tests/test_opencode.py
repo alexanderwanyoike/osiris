@@ -311,6 +311,18 @@ class TestGoingBack:
             restorable=True,
         )
 
+    def test_a_staged_revert_is_kept_or_cancelled(self) -> None:
+        """Kept, it drops the later questions; cancelled, the files return."""
+        commit = f"{URL}/api/session/{SESSION}/revert/commit"
+        clear = f"{URL}/api/session/{SESSION}/revert"
+        http = FakeHttpClient(replies={("POST", commit): None, ("DELETE", clear): None})
+        engine(http).keep_revert(SESSION)
+        engine(http).cancel_revert(SESSION)
+        assert [(m, u) for m, u, _ in http.requests] == [
+            ("POST", commit),
+            ("DELETE", clear),
+        ]
+
     def test_outside_a_git_repository_the_files_cannot_be_restored(self) -> None:
         """As opencode 2.2.4 does there: no snapshot, and no files, even though
         the question changed some."""
