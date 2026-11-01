@@ -23,6 +23,7 @@ class FakeDrawer:
     def __init__(self) -> None:
         self.entry = SimpleNamespace(grab_focus=lambda: None)
         self.drafts: list[str] = []
+        self.changes: list[tuple[str, object, Any]] = []
         self.refreshes = 0
 
     def clear(self) -> None:
@@ -36,6 +37,9 @@ class FakeDrawer:
 
     def draft(self, text: str) -> None:
         self.drafts.append(text)
+
+    def show_changes(self, question: str, files: object, on_comment: Any) -> None:
+        self.changes.append((question, files, on_comment))
 
 
 class App(SimpleNamespace):
@@ -243,3 +247,96 @@ def test_an_engine_error_while_going_back_is_told_on_the_question() -> None:
     engine.revert = broken
     stand_in.go_back(stand_in.conversation.turns[0])
     assert "snapshot store unavailable" in stand_in.conversation.turns[0].note
+
+
+def test_trying_again_goes_back_then_sends_the_question_again() -> None:
+    stand_in, engine = app()
+    engine.past = [
+        PastTurn("make x.txt", "Made it.", GPT, "msg_1"),
+        PastTurn("make y.txt", "Made it.", GPT, "msg_2"),
+    ]
+    stand_in.open_past("ses_9")
+    engine.past = engine.past[:1]
+    stand_in.go_back(stand_in.conversation.turns[1], again=True)
+    assert engine.reverted == [("ses_9", "msg_2")]
+    assert [turn.question for turn in stand_in.conversation.turns] == [
+        "make x.txt",
+        "make y.txt",
+    ]
+    assert stand_in.drawer.drafts == []
+
+
+def test_a_questions_changes_come_from_its_commits_and_a_comment_reaches_thoth() -> (
+    None
+):
+    from osiris.harness.engine import FileChange
+    from osiris.harness.log import Change
+    from osiris.platform import FakeRunner
+    from osiris.platform.process import Result
+    from osiris.programs.programs import Programs
+
+    patch = "diff --git a/main.py b/main.py\n@@ -1 +1 @@\n-a\n+b"
+    runner = FakeRunner(
+        results={
+            f"git -C {HOME}/Code/coin-flip show --format= --patch abc": Result(
+                (), 0, patch
+            )
+        }
+    )
+    stand_in, engine = app()
+    stand_in.programs = lambda: Programs(FakeFileSystem(), runner, HOME)
+    engine.past = [PastTurn("tidy main.py", "Tidied.", GPT, "msg_1")]
+    stand_in.open_past("ses_9")
+    turn = stand_in.conversation.turns[0]
+    turn.changes.append(
+        Change(
+            "coin-flip: Tidy",
+            {"action": "revert_commit", "name": "coin-flip", "commit": "abc"},
+            "coin-flip",
+        )
+    )
+    stand_in.show_changes(turn)
+    question, files, on_comment = stand_in.drawer.changes[-1]
+    assert (question, files) == (
+        "tidy main.py",
+        (FileChange("coin-flip/main.py", "modified", 1, 1, patch),),
+    )
+    on_comment("coin-flip/main.py", (3, 4), "Name it better.")
+    assert stand_in.conversation.turns[-1].question == (
+        "About coin-flip/main.py, lines 3 to 4:\n\nName it better."
+    )
+
+
+def test_changes_whose_program_is_gone_say_so_on_their_question() -> None:
+    """As after an Undo trashed the Program the question made."""
+    from osiris.harness.log import Change
+    from osiris.platform import CommandError, FakeRunner
+    from osiris.programs.programs import Programs
+
+    show = f"git -C {HOME}/Code/coin-flip show --format= --patch abc"
+    runner = FakeRunner(
+        results={show: CommandError(tuple(show.split()), 128, "not a git repository")}
+    )
+    stand_in, engine = app()
+    stand_in.programs = lambda: Programs(FakeFileSystem(), runner, HOME)
+    engine.past = [PastTurn("make a coin flip", "Made it.", GPT, "msg_1")]
+    stand_in.open_past("ses_9")
+    turn = stand_in.conversation.turns[0]
+    turn.changes.append(
+        Change(
+            "coin-flip: Add a flip",
+            {"action": "revert_commit", "name": "coin-flip", "commit": "abc"},
+            "coin-flip",
+        )
+    )
+    stand_in.show_changes(turn)
+    assert stand_in.drawer.changes == []
+    assert "coin-flip" in turn.note
+
+
+def test_a_message_sent_now_waits_shown_while_the_engine_cuts_in() -> None:
+    stand_in, engine = app()
+    asked(stand_in, "count to sixty")
+    stand_in.send_now("stop, count to ten")
+    assert engine.cut == ["ses_1"]
+    assert [w.text for w in stand_in.conversation.waiting] == ["stop, count to ten"]

@@ -201,6 +201,14 @@ class TestSessions:
         engine(http).withdraw(SESSION, "msg_1")
         assert http.requests == [("DELETE", path, None)]
 
+    def test_cutting_in_interrupts_and_resumes_with_what_is_waiting(self) -> None:
+        """As opencode 2.2.4 documents it: resume=true goes on at once with
+        the steering input still waiting."""
+        path = f"{URL}/api/session/{SESSION}/interrupt?resume=true"
+        http = FakeHttpClient(replies={("POST", path): {"interrupted": True}})
+        engine(http).cut_in(SESSION)
+        assert [(m, u) for m, u, _ in http.requests] == [("POST", path)]
+
     def test_stopping_interrupts_the_session(self) -> None:
         path = f"{URL}/api/session/{SESSION}/interrupt"
         http = FakeHttpClient(replies={("POST", path): {"interrupted": True}})
@@ -417,6 +425,36 @@ class TestEvents:
             ToolFinished(SESSION, "call_e29c", "NetworkManager\nUPower\n", exit=0)
         ]
 
+    def test_a_subagent_gives_back_its_answer_without_the_engines_wrapper(
+        self,
+    ) -> None:
+        """As opencode 2.2.4 reports the reviewer's answer: the child session's
+        reply, wrapped in a tag naming it."""
+        answered = {
+            "type": "session.tool.success",
+            "data": {
+                "sessionID": SESSION,
+                "id": "call_DL72",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": '<subagent sessionID="ses_child" state="completed">\n'
+                        "Verdict: pass - It works.\n\n## Spec\nNothing found.\n"
+                        "</subagent>",
+                    }
+                ],
+                "metadata": {"sessionID": "ses_child", "status": "completed"},
+                "executed": False,
+            },
+        }
+        assert self.events(answered) == [
+            ToolFinished(
+                SESSION,
+                "call_DL72",
+                "Verdict: pass - It works.\n\n## Spec\nNothing found.",
+            )
+        ]
+
     def test_a_tool_that_failed_says_why(self) -> None:
         failed = {
             "type": "session.tool.failed",
@@ -518,6 +556,28 @@ class TestHistory:
             Past("ses_b", "Pomodoro", Path("/home/tester/Code/pomodoro"), 2.0),
             Past("ses_a", "Calm theme", Path("/home/tester"), 1.0),
         ]
+
+    def test_a_subagents_session_is_no_conversation_of_its_own(self) -> None:
+        """As opencode 2.2.4 lists the reviewer's: a child of the session that
+        asked it, carrying the Harness's mark."""
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{URL}/api/session?limit=200"): {
+                    "data": [
+                        {
+                            "id": "ses_child",
+                            "parentID": "ses_a",
+                            "agent": "reviewer",
+                            "title": "Review coin-flip",
+                            "location": {"directory": "/home/tester"},
+                            "time": {"created": 990, "updated": 1000},
+                            "metadata": {"osiris": "harness"},
+                        }
+                    ]
+                }
+            }
+        )
+        assert engine(http).conversations() == []
 
     def test_a_past_conversation_is_rebuilt_from_its_messages(self) -> None:
         model = {"id": "gpt-6.1-sol", "providerID": "openai"}

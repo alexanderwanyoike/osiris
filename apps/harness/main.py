@@ -44,6 +44,7 @@ sys.path.insert(0, HERE)
 
 from admin_card import AdminCard  # noqa: E402
 from approval_card import ApprovalCard  # noqa: E402
+from going_back import going_back_dialog  # noqa: E402
 from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
 from canvas import Canvas, open_in_code  # noqa: E402
@@ -57,6 +58,7 @@ from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.apps.tool_server import NAME as TOOLS, undo  # noqa: E402
 
 from osiris.harness import admin  # noqa: E402
+from osiris.harness.changes import file_changes  # noqa: E402
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
 from osiris.harness.harness import Answer, Asking, Harness  # noqa: E402
 from osiris.harness.history import (  # noqa: E402
@@ -69,6 +71,8 @@ from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
+from osiris.harness.review import comment  # noqa: E402
+from osiris.harness.reviewer import write_reviewer  # noqa: E402
 from osiris.harness.rules import switch_on_task_list, write_starting_rules  # noqa: E402
 from osiris.harness.status import Status, status_of  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
@@ -77,6 +81,7 @@ from osiris.harness.unread import Unread  # noqa: E402
 from osiris.programs.programs import Programs  # noqa: E402
 from osiris.provision.upgrade import Upgrade  # noqa: E402
 from osiris.platform import (  # noqa: E402
+    CommandError,
     HttpError,
     ProcFs,
     RealFileSystem,
@@ -158,6 +163,7 @@ class Drawer(Gtk.ApplicationWindow):
                                               tooltip_text="Canvas", sensitive=False)
         self.canvas_toggle.add_css_class("flat")
         self.canvas_toggle.connect("toggled", self._canvas_toggled)
+        self.canvas_toggle.connect("notify::visible", self._show_canvas_if_toggled)
         header.append(self.canvas_toggle)
         header.append(self.expand_button)
         header.append(providers_button)
@@ -202,9 +208,16 @@ class Drawer(Gtk.ApplicationWindow):
                                valign=Gtk.Align.CENTER)
         self.send.add_css_class("harness-send")
         self.send.connect("clicked", self._send_or_stop)
+        self.send_now = Gtk.Button(
+            icon_name="media-skip-forward-symbolic", valign=Gtk.Align.CENTER,
+            visible=False,
+            tooltip_text="Send now: stop what Osiris is doing and take this instead")
+        self.send_now.add_css_class("flat")
+        self.send_now.connect("clicked", self._cut_in)
         controls = Gtk.Box(spacing=6)
         controls.append(Gtk.Box(hexpand=True))
         controls.append(self.model_menu)
+        controls.append(self.send_now)
         controls.append(self.send)
         composer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         composer.add_css_class("harness-composer")
@@ -257,7 +270,6 @@ class Drawer(Gtk.ApplicationWindow):
         compact = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(COMPACT_BELOW))
         for breakpoint in (no_canvas, compact):
             breakpoint.add_setter(self.canvas_toggle, "visible", False)
-            breakpoint.add_setter(self.canvas, "visible", False)
         compact.add_setter(self.split, "collapsed", True)
         compact.add_setter(self.sidebar_toggle, "active", False)
         layout.add_breakpoint(no_canvas)
@@ -356,6 +368,13 @@ class Drawer(Gtk.ApplicationWindow):
         else:
             self._ask()
 
+    def _cut_in(self, _button) -> None:
+        buffer = self.entry.get_buffer()
+        text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+        if text.strip():
+            buffer.set_text("")
+            self.app.send_now(text.strip())
+
     def _hold_back(self) -> None:
         """Messages still waiting go back to the composer, sent to no one."""
         held = [self.app.unqueue(waiting.message)
@@ -433,6 +452,11 @@ class Drawer(Gtk.ApplicationWindow):
         if self.split.get_collapsed():
             self.sidebar_toggle.set_active(False)
 
+    def show_changes(self, question: str, files, on_comment) -> None:
+        self.canvas.show_changes(question, files, on_comment)
+        self.canvas_toggle.set_sensitive(True)
+        self.canvas_toggle.set_active(True)
+
     def show_canvas(self, programs) -> None:
         """What the Conversation made; the Canvas opens the first time there is
         something to show."""
@@ -446,9 +470,14 @@ class Drawer(Gtk.ApplicationWindow):
 
     def _canvas_toggled(self, toggle) -> None:
         # As in the prototype: the Canvas takes the sidebar's room.
-        shown = toggle.get_active()
-        self.canvas.set_visible(shown)
-        self.sidebar_toggle.set_active(not shown)
+        self._show_canvas_if_toggled()
+        self.sidebar_toggle.set_active(not toggle.get_active())
+
+    def _show_canvas_if_toggled(self, *_args) -> None:
+        # A breakpoint hides only the toggle: one setting the Canvas's own
+        # visibility would restore, on widening, what it was before narrowing.
+        toggle = self.canvas_toggle
+        self.canvas.set_visible(toggle.get_visible() and toggle.get_active())
 
     def show_history(self, projects, loose) -> None:
         self.sidebar.show_history(projects, loose, getattr(self.app, "session", None),
@@ -468,8 +497,12 @@ class Drawer(Gtk.ApplicationWindow):
                             program_card=self.app.program_card,
                             admin_card=self.app.admin_card,
                             approval_card=self.app.approval_card,
-                            go_back=self.app.go_back,
-                            may_go_back=lambda turn: self.app.conversation.can_go_back(turn))
+                            edit=self.app.ask_to_go_back,
+                            try_again=lambda turn: self.app.ask_to_go_back(turn, True),
+                            may_go_back=lambda turn: self.app.conversation.can_go_back(turn),
+                            may_try_again=lambda turn:
+                                self.app.conversation.can_try_again(turn),
+                            show_changes=self.app.show_changes)
             self.views.append(view)
             self.turns.append(view)
         newest = len(self.views) - 1
@@ -485,6 +518,7 @@ class Drawer(Gtk.ApplicationWindow):
         self.send.set_icon_name("media-playback-stop-symbolic" if busy
                                 else "go-up-symbolic")
         self.send.set_tooltip_text("Stop" if busy else "Ask")
+        self.send_now.set_visible(busy)
         self.title.set_text(conversation.title or UNTITLED)
         self.model_label.set_text(conversation.model_label(self.app.models.default))
         self.footer.set_text(self.app.footer_line())
@@ -1081,9 +1115,45 @@ class Application(Adw.Application):
 
         self.background(lambda: harness.resume(session), opened)
 
-    def go_back(self, turn: Turn) -> None:
+    def show_changes(self, turn: Turn) -> None:
+        """What a question changed, on the Canvas; a comment on it is asked."""
+
+        def commented(path: str, lines: tuple[int, int], text: str) -> None:
+            self.ask(comment(path, lines, text))
+
+        programs = self.programs()
+
+        def read() -> tuple[tuple, list[str]]:
+            found, gone = [], []
+            for name, commit in turn.commits:
+                try:
+                    found += file_changes(name, programs.patch(name, commit))
+                except CommandError:
+                    gone.append(name)
+            return tuple(found), gone
+
+        def shown(result: tuple[tuple, list[str]]) -> None:
+            files, gone = result
+            if gone and not files:
+                turn.note = (f"{', '.join(dict.fromkeys(gone))} is gone, so what this "
+                             "question changed in it cannot be shown.")
+                self.drawer.refresh()
+                return
+            self.drawer.show_changes(turn.question, files, commented)
+
+        self.background(read, shown)
+
+    def ask_to_go_back(self, turn: Turn, again: bool = False) -> None:
+        """Say what going back loses, and go back only on the person's yes."""
+        dialog = going_back_dialog(self.conversation.losing(turn), again=again)
+        dialog.connect("response", lambda _d, response: response == "back"
+                       and self.go_back(turn, again))
+        dialog.present(self.drawer)
+
+    def go_back(self, turn: Turn, again: bool = False) -> None:
         """Go back to before a question: the Engine puts its files back and
-        drops what came after, and the question returns to the composer."""
+        drops what came after; the question is sent ``again``, or returns to
+        the composer to be changed."""
         if self.harness is None or self.session is None:
             return
         harness, session = self.harness, self.session
@@ -1112,8 +1182,11 @@ class Application(Adw.Application):
             else:
                 self.conversation = self._restored(session, past)
                 self.drawer.clear()
-                self.drawer.draft(turn.question)
                 self.update_canvas()
+                if again:
+                    self.ask(turn.question)
+                else:
+                    self.drawer.draft(turn.question)
             self.drawer.refresh()
 
         self.background(work, went)
@@ -1186,6 +1259,19 @@ class Application(Adw.Application):
 
         self.background(lambda: harness.ask(text), queued)
 
+    def send_now(self, text: str) -> None:
+        """Sent while busy, cutting in: it waits shown until the Engine,
+        having stopped the step under way, takes it next."""
+        if self.harness is None:
+            return
+        harness, conversation = self.harness, self.conversation
+
+        def sent(message: str) -> None:
+            conversation.queued(message, text)
+            self.drawer.refresh()
+
+        self.background(lambda: harness.send_now(text), sent)
+
     def unqueue(self, message: str) -> str:
         """Take a waiting message back from the Engine; its text."""
         text = self.conversation.unqueued(message)
@@ -1228,6 +1314,7 @@ class Application(Adw.Application):
         # service already running too.
         write_starting_rules(files, me.home)
         switch_on_task_list(files, me.home)
+        write_reviewer(files, me.home)
         while True:
             try:
                 service = locate(files, me, SubprocessRunner(sink=lambda _l: None))
