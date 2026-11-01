@@ -272,3 +272,10 @@ def test_the_pointer_chooses_the_entry_it_rests_on() -> None:
     _ok, at = second.compute_point(picker.list, Graphene.Point())
     picker.pointed(None, 10, at.y + second.get_height() / 2)
     assert picker.list.get_selected_row() is second
+
+
+def test_one_match_makes_a_card_one_row_tall() -> None:
+    picker, _ = docked("@RE", [README, CLOCK])
+    row = picker.list.get_row_at_index(0)
+    _minimum, natural, _b, _c = picker.card.measure(Gtk.Orientation.VERTICAL, -1)
+    assert natural == row.get_height()
