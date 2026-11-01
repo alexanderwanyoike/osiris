@@ -85,6 +85,7 @@ from osiris.harness.review import comment  # noqa: E402
 from osiris.harness.reviewer import write_reviewer  # noqa: E402
 from osiris.harness.rules import switch_on_task_list, write_starting_rules  # noqa: E402
 from osiris.harness.status import Status, status_of  # noqa: E402
+from osiris.harness.style import token_colours  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.harness.trust import auto_mode_on, turn_auto_mode  # noqa: E402
 from osiris.harness.unread import Unread  # noqa: E402
@@ -199,6 +200,7 @@ class Drawer(Gtk.ApplicationWindow):
         enter.connect("key-pressed", self._composer_key)
         self.entry.add_controller(enter)
         self.picker = Picker(self.entry, self.app.offered)
+        self._restyle_tokens()
         typed = Gtk.Overlay(child=self.entry)
         typed.add_overlay(placeholder)
 
@@ -519,8 +521,15 @@ class Drawer(Gtk.ApplicationWindow):
             self.turns.remove(view)
         self.views = []
 
+    def _restyle_tokens(self) -> None:
+        look = self.app.look
+        if look is not None and look.theme is not None:
+            self.picker.restyle(token_colours(look.theme))
+
     def refresh(self, restyle: bool = False) -> None:
         conversation, look = self.app.conversation, self.app.look
+        if restyle:
+            self._restyle_tokens()
         fresh = len(self.views)
         while len(self.views) < len(conversation.turns):
             view = TurnView(conversation.turns[len(self.views)],
