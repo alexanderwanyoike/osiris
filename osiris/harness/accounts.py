@@ -65,6 +65,10 @@ class Accounts(Protocol):
 
     def finish_sign_in(self, provider: str, attempt: str, code: str | None) -> None: ...
 
+    def connector_sign_in(self, integration: str) -> SignIn:
+        """Start signing in to an MCP server, through the Engine's integration."""
+        ...
+
     def models(self) -> list[ModelInfo]:
         """The models reachable with the accounts connected now."""
         ...
