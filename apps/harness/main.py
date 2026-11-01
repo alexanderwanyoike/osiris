@@ -63,7 +63,15 @@ from osiris.apps.tool_server import NAME as TOOLS, undo  # noqa: E402
 
 from osiris.harness import admin  # noqa: E402
 from osiris.harness.changes import file_changes  # noqa: E402
-from osiris.harness.connectors import Servers, offered_servers  # noqa: E402
+from osiris.harness.connectors import (  # noqa: E402
+    Connector,
+    Servers,
+    State as ConnectorState,
+    offered_servers,
+    read_connectors,
+    remove_connector,
+    save_connector,
+)
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
 from osiris.harness.harness import Answer, Asking, Harness  # noqa: E402
 from osiris.harness.history import (  # noqa: E402
@@ -1079,6 +1087,21 @@ class Application(Adw.Application):
             self.drawer.show_history(*group(pasts, home))
 
         self.background(gather, show)
+
+    def read_connectors(self) -> list[Connector]:
+        return read_connectors(self.files, self.home)
+
+    def save_connector(self, connector: Connector) -> bool:
+        return save_connector(self.files, self.home, connector)
+
+    def remove_connector(self, name: str) -> bool:
+        return remove_connector(self.files, self.home, name)
+
+    def connector_states(self) -> dict[str, ConnectorState]:
+        """As the Engine finds each server for the Conversation on screen."""
+        if self.servers is None or self.harness is None:
+            return {}
+        return self.servers.connector_states(self.harness.directory)
 
     def offered(self, sign: str) -> list[Entry]:
         return self.offers.get(sign, [])
