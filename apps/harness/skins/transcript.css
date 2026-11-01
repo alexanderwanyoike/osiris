@@ -266,7 +266,6 @@ popover.harness-picker-popover > contents {
 }
 .harness-picker-popover scrolledwindow, .harness-picker { background-color: transparent; }
 .harness-picker row { min-height: 28px; padding: 0 10px; margin: 0 6px; border-radius: 4px; }
-.harness-picker row:hover { background-color: alpha(@harness_fg, 0.05); }
 .harness-picker row:selected { background-color: alpha(@harness_fg, 0.09); }
 .harness-picker-icon { color: @harness_muted; -gtk-icon-size: 14px; }
 .harness-picker row:selected .harness-picker-icon { color: @harness_fg; }
