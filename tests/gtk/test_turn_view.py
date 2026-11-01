@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import time
-from dataclasses import replace
 from collections.abc import Callable
+from dataclasses import replace
 
 from gi.repository import GLib, Gtk
 from render import TurnView
