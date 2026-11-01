@@ -102,7 +102,7 @@ class ConversationPanel(Gtk.Box):
         legend = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         for part in shared:
             line = Gtk.Box(spacing=8)
-            line.append(Gtk.Box(css_classes=["harness-context-square", part.kind],
+            line.append(Gtk.Box(css_classes=["harness-context-swatch", part.kind],
                                 valign=Gtk.Align.CENTER))
             line.append(Gtk.Label(label=NAMES[part.kind], xalign=0, hexpand=True))
             share = Gtk.Label(label=f"{round(part.tokens * 100 / window)}%"
