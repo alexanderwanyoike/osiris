@@ -47,12 +47,6 @@ UNMARKED_TITLE = "Osiris Harness"
 #: opencode serves at most this many messages a page.
 MESSAGE_LIMIT = 200
 
-#: Every action stops at a tool request, so the Harness's policy decides.
-#: Denying instead strips the tools from the request, which opencode's free
-#: tier refuses outright.
-ASK_EVERYTHING = [{"action": "*", "resource": "*", "effect": "ask"}]
-
-
 @dataclass(frozen=True)
 class Service:
     url: str
@@ -108,7 +102,6 @@ class OpencodeEngine:
     ) -> str:
         body: dict[str, object] = {
             "title": "Osiris Harness",
-            "permissions": ASK_EVERYTHING,
             "metadata": MINE,
         }
         if directory is not None:
