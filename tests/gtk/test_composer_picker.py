@@ -233,3 +233,17 @@ def test_the_card_lines_up_with_the_message_boxs_edges_padding_and_all() -> None
     minimum, _natural, _b, _c = picker.card.measure(Gtk.Orientation.HORIZONTAL, -1)
     Gtk.StyleContext.remove_provider_for_display(Gdk.Display.get_default(), padded)
     assert minimum == edges.get_width()
+
+
+def test_opening_the_picker_says_so_once_not_at_every_key() -> None:
+    from composer_picker import Picker
+
+    entry = Gtk.TextView()
+    window = Gtk.Window(child=entry)
+    window.present()
+    opened: list[str] = []
+    picker = Picker(entry, lambda _sign: [README, CLOCK], on_open=opened.append)
+    for text in ("@", "@R", "@RE", "fix", "fix /"):
+        entry.get_buffer().set_text(text)
+    assert opened == ["@", "/"]
+    assert picker.popover.get_visible()
