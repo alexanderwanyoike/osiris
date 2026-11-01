@@ -31,9 +31,7 @@ def test_a_conversation_starting_to_wait_in_view_is_not_told() -> None:
     assert stand_in.sent == []
 
 
-def test_answering_a_card_tells_the_sidebar_the_conversation_stopped_waiting() -> (
-    None
-):
+def test_answering_a_card_tells_the_sidebar_the_conversation_stopped_waiting() -> None:
     from osiris.harness.harness import Answer
 
     stand_in, _ = app()
