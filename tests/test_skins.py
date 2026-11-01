@@ -61,6 +61,7 @@ CLASSES = (
     "harness-admin-command",
     "harness-approval",
     "harness-approval-input",
+    "harness-waiting",
 )
 
 
