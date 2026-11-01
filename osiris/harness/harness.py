@@ -120,6 +120,8 @@ class Harness:
         #: sessions, and whether it runs sudo.
         self._last_command: dict[str, tuple[int, bool]] = {}
         self._commands_noted = 0
+        #: Sessions cut in on: the stop that follows resumes at once.
+        self._cutting_in: set[str] = set()
         #: Actions held for the person, by session and request.
         self._waiting: dict[tuple[str, str], Asking] = {}
 
@@ -141,6 +143,7 @@ class Harness:
         message = self.ask(text)
         session = self._session
         if session is not None:
+            self._cutting_in.add(session)
             self._engine.cut_in(session)
             self._log.write("cut-in", session=session)
         return message
@@ -347,7 +350,9 @@ class Harness:
         """
         if event.session != self._session and event.session not in self._running:
             return None
-        if isinstance(event, Finished | Stopped | Failed):
+        if isinstance(event, Stopped) and event.session in self._cutting_in:
+            self._cutting_in.discard(event.session)
+        elif isinstance(event, Finished | Stopped | Failed):
             self._running.pop(event.session, None)
         match event:
             case Answered(session, model, tokens, cost):
