@@ -22,6 +22,7 @@ from osiris.harness.picker import (  # noqa: E402
 
 #: Rows shown at once; typing narrows the rest.
 SHOWN = 8
+WIDTH = 440
 MOVES = {Gdk.KEY_Down: 1, Gdk.KEY_Up: -1}
 COMPLETES = (Gdk.KEY_Tab, Gdk.KEY_Return, Gdk.KEY_KP_Enter)
 
@@ -33,6 +34,9 @@ class Picker:
         self._picked: list[Entry] = []
         self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.BROWSE)
         self.list.add_css_class("harness-picker")
+        # One width whatever is listed, so the card holds still while typing
+        # narrows it; descriptions are cut to fit rather than widen it.
+        self.list.set_size_request(WIDTH, -1)
         self.list.connect("row-activated", lambda _l, row: self._complete(row.entry))
         # Without autohide the popover leaves the keyboard with the message
         # box, so typing carries on filtering while it is open.
@@ -126,12 +130,13 @@ class Picker:
 
 def _row(entry: Entry) -> Gtk.ListBoxRow:
     line = Gtk.Box(spacing=10)
-    label = Gtk.Label(label=entry.label, xalign=0, ellipsize=Pango.EllipsizeMode.START)
+    label = Gtk.Label(label=entry.label, xalign=0, max_width_chars=28,
+                      ellipsize=Pango.EllipsizeMode.START)
     label.add_css_class("harness-picker-label")
     line.append(label)
     if entry.description:
         about = Gtk.Label(label=entry.description, xalign=0, hexpand=True,
-                          ellipsize=Pango.EllipsizeMode.END)
+                          max_width_chars=1, ellipsize=Pango.EllipsizeMode.END)
         about.add_css_class("harness-meta")
         line.append(about)
     row = Gtk.ListBoxRow(child=line)
