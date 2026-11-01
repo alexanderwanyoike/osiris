@@ -801,3 +801,28 @@ class TestOffered:
         )
         offered = engine(http).skills(Path("/home/tester"))
         assert offered == [Entry("skill", "opencode", "opencode", "")]
+
+
+class TestConnectors:
+    WHERE = "location%5Bdirectory%5D=%2Fhome%2Ftester"
+
+    def test_each_servers_state_is_read_with_its_reason(self) -> None:
+        from osiris.harness.connectors import State
+
+        servers = [
+            {"name": "wiki", "status": {"status": "failed", "error": "refused"}},
+            {"name": "files", "status": {"status": "connected"}},
+            {
+                "name": "tracker",
+                "status": {"status": "needs_auth", "error": "sign in"},
+                "integrationID": "mcp-tracker",
+            },
+        ]
+        http = FakeHttpClient(
+            replies={("GET", f"{URL}/api/mcp?{self.WHERE}"): {"data": servers}}
+        )
+        assert engine(http).connector_states(Path("/home/tester")) == {
+            "wiki": State("failed", "refused"),
+            "files": State("connected"),
+            "tracker": State("needs_auth", "sign in", "mcp-tracker"),
+        }
