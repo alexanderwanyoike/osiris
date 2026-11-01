@@ -7,6 +7,7 @@ import re
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
 from enum import Enum
+from fnmatch import fnmatchcase
 from pathlib import Path
 
 from osiris.harness.admin import Request
@@ -85,6 +86,7 @@ class Answer(Enum):
     """The person's answer to a card."""
 
     ONCE = "once"
+    CONVERSATION = "conversation"
     DENY = "deny"
 
 
@@ -134,6 +136,10 @@ class Harness:
         self._commands_allowed = 0
         #: Actions held for the person, by session and request.
         self._waiting: dict[tuple[str, str], Asking] = {}
+        #: What the person allowed for a whole Conversation: by session, each
+        #: action with the patterns its resources must match. Kept here, not
+        #: by the Engine, whose standing grants cover a whole Project.
+        self._granted: dict[str, list[tuple[str, tuple[str, ...]]]] = {}
 
     def ask(self, text: str) -> None:
         directory, session = self._directory, self._session
@@ -229,6 +235,8 @@ class Harness:
     ) -> Tier | None:
         if action in self._tiers:
             return self._tiers[action]
+        if self._granted_for(session, action, resources):
+            return Tier.ANYTHING
         folder = self._running.get(session, self._directory)
         if (
             action in FILE_TIERS
@@ -237,6 +245,16 @@ class Harness:
         ):
             return FILE_TIERS[action]
         return Tier.ANYTHING if self._allow_everything() else None
+
+    def _granted_for(
+        self, session: str, action: str, resources: tuple[str, ...]
+    ) -> bool:
+        return any(
+            granted == action
+            and resources
+            and all(any(fnmatchcase(r, p) for p in patterns) for r in resources)
+            for granted, patterns in self._granted.get(session, [])
+        )
 
     def _inside(self, folder: Path, resource: str) -> bool:
         """Whether a path the Engine names, relative to the session's folder or
@@ -304,6 +322,9 @@ class Harness:
             answer=answer.value,
             **({"reply": reply} if reply else {}),
         )
+        if allow and answer is Answer.CONVERSATION:
+            patterns = asking.patterns or asking.resources
+            self._granted.setdefault(session, []).append((asking.action, patterns))
         if allow:
             return Allowed(
                 session, asking.action, Tier.ANYTHING, asking.resources, asking.call
