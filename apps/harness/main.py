@@ -58,6 +58,7 @@ from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.apps.tool_server import NAME as TOOLS, undo  # noqa: E402
 
 from osiris.harness import admin  # noqa: E402
+from osiris.harness.changes import file_changes  # noqa: E402
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
 from osiris.harness.harness import Answer, Asking, Harness  # noqa: E402
 from osiris.harness.history import (  # noqa: E402
@@ -1115,16 +1116,15 @@ class Application(Adw.Application):
 
     def show_changes(self, turn: Turn) -> None:
         """What a question changed, on the Canvas; a comment on it is asked."""
-        if self.harness is None or self.session is None:
-            return
-        harness, session = self.harness, self.session
 
         def commented(path: str, lines: tuple[int, int], text: str) -> None:
             self.ask(comment(path, lines, text))
 
-        self.background(lambda: harness.changes(session, turn.message),
-                        lambda files: self.drawer.show_changes(turn.question, files,
-                                                               commented))
+        programs = self.programs()
+        self.background(
+            lambda: tuple(change for name, commit in turn.commits
+                          for change in file_changes(name, programs.patch(name, commit))),
+            lambda files: self.drawer.show_changes(turn.question, files, commented))
 
     def ask_to_go_back(self, turn: Turn, again: bool = False) -> None:
         """Say what going back loses, and go back only on the person's yes."""
