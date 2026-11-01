@@ -256,3 +256,20 @@ def test_code_has_room_between_its_lines_and_around_it() -> None:
     view = widget.current_view()
     assert view.get_pixels_below_lines() >= 2
     assert view.get_left_margin() >= 16 and view.get_top_margin() >= 16
+
+
+def test_changes_in_the_toolbar_asks_for_every_questions_changes() -> None:
+    asked: list[str] = []
+    widget = Canvas(
+        read=lambda _path: "",
+        open_in_code=lambda _f, _p: None,
+        on_changes=lambda: asked.append("changes"),
+    )
+    button = next(
+        w
+        for w in widgets(widget.toolbar)
+        if isinstance(w, Gtk.Button) and w.get_icon_name() == "osiris-changes-symbolic"
+    )
+    assert button.get_tooltip_text() == "Changes"
+    button.emit("clicked")
+    assert asked == ["changes"]
