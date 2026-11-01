@@ -206,3 +206,24 @@ def test_a_connectors_sign_in_is_not_offered_as_a_model_provider() -> None:
         replies={("GET", f"{URL}/api/integration"): {"data": [OPENAI, LINEAR]}}
     )
     assert [p.id for p in accounts(http).providers()] == ["openai"]
+
+
+def test_a_connector_signs_in_by_its_servers_own_sign_in_page() -> None:
+    integration = LINEAR["id"]
+    start = f"{URL}/api/integration/{integration}/connect/oauth"
+    attempt = {
+        "attemptID": "att_2",
+        "url": "https://linear.app/oauth/authorize?x=1",
+        "instructions": "",
+        "mode": "auto",
+        "time": {"created": 1, "expires": 2},
+    }
+    http = FakeHttpClient(
+        replies={
+            ("GET", f"{URL}/api/integration/{integration}"): {"data": LINEAR},
+            ("POST", start): {"data": attempt},
+        }
+    )
+    sign_in = accounts(http).connector_sign_in(integration)
+    assert http.requests[-1] == ("POST", start, {"methodID": integration})
+    assert sign_in.url == "https://linear.app/oauth/authorize?x=1"
