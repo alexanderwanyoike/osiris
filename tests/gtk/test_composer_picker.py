@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from gi.repository import Gtk
+from gi.repository import Graphene, Gtk
 
 from osiris.harness.picker import Entry
 
@@ -187,3 +187,19 @@ def test_a_long_list_is_all_there_and_scrolls_rather_than_grows() -> None:
     )
     assert len(shown(picker)) == 40
     assert natural <= 320
+
+
+def test_moving_past_the_bottom_scrolls_the_chosen_entry_into_view() -> None:
+    from gi.repository import Gdk
+
+    many = [Entry("file", f"/p/f{n}.py", f"f{n}.py", "") for n in range(40)]
+    picker, _ = docked("@", many)
+    for _ in range(25):
+        press(picker, Gdk.KEY_Down)
+    settle()
+    row = picker.list.get_selected_row()
+    _ok, at = row.compute_point(picker.list, Graphene.Point())
+    top = at.y
+    shown_from = picker.card.get_vadjustment().get_value()
+    assert shown_from <= top
+    assert top + row.get_height() <= shown_from + picker.card.get_height()
