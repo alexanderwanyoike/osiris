@@ -133,6 +133,18 @@ class TestScheme:
         assert found["diff:added-line"]["foreground"] == colours["success"]
         assert found["diff:removed-line"]["foreground"] == colours["danger"]
 
+    def test_line_numbers_sit_quieter_than_muted_text(self) -> None:
+        """Between the muted text and the background, so the code leads."""
+        numbers = styles(source_scheme(OBSIDIAN))["line-numbers"]["foreground"]
+        colours = OBSIDIAN["colors"]
+        assert isinstance(colours, dict)
+
+        def level(hex_colour: str) -> int:
+            return sum(int(hex_colour[i : i + 2], 16) for i in (1, 3, 5))
+
+        assert level(colours["background"]) < level(numbers)
+        assert level(numbers) < level(colours["foregroundMuted"])
+
 
 class TestCodeFont:
     def test_code_is_set_in_the_themes_terminal_font_with_its_ligatures(self) -> None:
