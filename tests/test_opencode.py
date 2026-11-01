@@ -10,11 +10,15 @@ import pytest
 
 from osiris.harness.engine import (
     Answered,
+    Delivered,
     Failed,
+    FileChange,
     Finished,
     ModelRef,
     Past,
     PastTurn,
+    Reply,
+    Revert,
     Stopped,
     Text,
     Tokens,
@@ -23,7 +27,6 @@ from osiris.harness.engine import (
     ToolRequested,
 )
 from osiris.harness.opencode import (
-    ASK_EVERYTHING,
     SERVICE_FILE,
     OpencodeEngine,
     Service,
@@ -150,15 +153,15 @@ class TestLocate:
 
 
 class TestSessions:
-    def test_a_session_asks_before_every_action(self) -> None:
+    def test_a_session_brings_no_rules_so_the_engines_own_decide(self) -> None:
+        """Rules sent with a session would override the person's (ADR 0020)."""
         http = FakeHttpClient(
             replies={("POST", f"{URL}/api/session"): {"data": {"id": SESSION}}}
         )
         assert engine(http).start() == SESSION
         _, _, body = http.requests[0]
         assert isinstance(body, dict)
-        assert body["permissions"] == ASK_EVERYTHING
-        assert ASK_EVERYTHING == [{"action": "*", "resource": "*", "effect": "ask"}]
+        assert "permissions" not in body
 
     def test_a_chosen_model_is_named_on_the_session(self) -> None:
         http = FakeHttpClient(
@@ -183,6 +186,28 @@ class TestSessions:
         http = FakeHttpClient(replies={("POST", path): {"data": {}}})
         engine(http).send(SESSION, "hello")
         assert http.requests == [("POST", path, {"text": "hello"})]
+
+    def test_sending_gives_back_where_the_message_waits_until_delivered(self) -> None:
+        """As opencode 2.2.4 answers a prompt: with the inbox item it made."""
+        path = f"{URL}/api/session/{SESSION}/prompt"
+        http = FakeHttpClient(
+            replies={("POST", path): {"data": {"id": "msg_1", "delivery": "steer"}}}
+        )
+        assert engine(http).send(SESSION, "stop at ten") == "msg_1"
+
+    def test_a_waiting_message_can_be_withdrawn(self) -> None:
+        path = f"{URL}/api/session/{SESSION}/inbox/msg_1"
+        http = FakeHttpClient(replies={("DELETE", path): None})
+        engine(http).withdraw(SESSION, "msg_1")
+        assert http.requests == [("DELETE", path, None)]
+
+    def test_cutting_in_interrupts_and_resumes_with_what_is_waiting(self) -> None:
+        """As opencode 2.2.4 documents it: resume=true goes on at once with
+        the steering input still waiting."""
+        path = f"{URL}/api/session/{SESSION}/interrupt?resume=true"
+        http = FakeHttpClient(replies={("POST", path): {"interrupted": True}})
+        engine(http).cut_in(SESSION)
+        assert [(m, u) for m, u, _ in http.requests] == [("POST", path)]
 
     def test_stopping_interrupts_the_session(self) -> None:
         path = f"{URL}/api/session/{SESSION}/interrupt"
@@ -236,7 +261,7 @@ class TestSessions:
         self,
     ) -> None:
         """opencode withdraws a step's other requests when one is rejected."""
-        engine(FakeHttpClient()).reply(SESSION, "per_2", allow=False, message="no")
+        engine(FakeHttpClient()).reply(SESSION, "per_2", Reply.REJECT, "no")
 
     def test_a_tool_servers_requests_name_the_server_and_tool(self) -> None:
         """As opencode 2.0.32 does: ``tools.osiris.apply_theme`` in its code
@@ -245,16 +270,73 @@ class TestSessions:
             "osiris_apply_theme"
         )
 
-    @pytest.mark.parametrize(("allow", "decision"), [(True, "once"), (False, "reject")])
-    def test_a_tool_request_is_answered_once_or_rejected(
-        self, allow: bool, decision: str
+    @pytest.mark.parametrize(
+        ("answer", "decision"),
+        [(Reply.ONCE, "once"), (Reply.ALWAYS, "always"), (Reply.REJECT, "reject")],
+    )
+    def test_a_tool_request_is_answered_once_always_or_rejected(
+        self, answer: Reply, decision: str
     ) -> None:
         path = f"{URL}/api/session/{SESSION}/permission/per_1/reply"
         http = FakeHttpClient(replies={("POST", path): None})
-        engine(http).reply(SESSION, "per_1", allow=allow, message="why")
+        engine(http).reply(SESSION, "per_1", answer, "why")
         assert http.requests == [
             ("POST", path, {"decision": decision, "message": "why"})
         ]
+
+
+class TestGoingBack:
+    STAGE = f"{URL}/api/session/{SESSION}/revert/stage"
+    PATCH = "--- a/y.txt\n+++ /dev/null\n@@ -1 +0,0 @@\n-y\n"
+
+    def test_going_back_stages_the_engines_revert_and_names_what_it_restores(
+        self,
+    ) -> None:
+        """As opencode 2.2.4 does: staging puts the files back at once and
+        lists each, with the snapshot it restored from."""
+        reply = {
+            "data": {
+                "messageID": "msg_2",
+                "snapshot": "116a7001",
+                "files": [
+                    {
+                        "file": "y.txt",
+                        "patch": self.PATCH,
+                        "additions": 0,
+                        "deletions": 1,
+                        "status": "deleted",
+                    }
+                ],
+            }
+        }
+        http = FakeHttpClient(replies={("POST", self.STAGE): reply})
+        staged = engine(http).revert(SESSION, "msg_2")
+        assert http.requests == [
+            ("POST", self.STAGE, {"messageID": "msg_2", "files": True})
+        ]
+        assert staged == Revert(
+            files=(FileChange("y.txt", "deleted", 0, 1, self.PATCH),),
+            restorable=True,
+        )
+
+    def test_a_staged_revert_is_kept_or_cancelled(self) -> None:
+        """Kept, it drops the later questions; cancelled, the files return."""
+        commit = f"{URL}/api/session/{SESSION}/revert/commit"
+        clear = f"{URL}/api/session/{SESSION}/revert"
+        http = FakeHttpClient(replies={("POST", commit): None, ("DELETE", clear): None})
+        engine(http).keep_revert(SESSION)
+        engine(http).cancel_revert(SESSION)
+        assert [(m, u) for m, u, _ in http.requests] == [
+            ("POST", commit),
+            ("DELETE", clear),
+        ]
+
+    def test_outside_a_git_repository_the_files_cannot_be_restored(self) -> None:
+        """As opencode 2.2.4 does there: no snapshot, and no files, even though
+        the question changed some."""
+        reply = {"data": {"messageID": "msg_2", "files": []}}
+        http = FakeHttpClient(replies={("POST", self.STAGE): reply})
+        assert engine(http).revert(SESSION, "msg_2") == Revert((), restorable=False)
 
 
 class TestEvents:
@@ -283,8 +365,32 @@ class TestEvents:
         assert self.events(*TOOL) == [
             ToolCalled(SESSION, "bc9122d7", {"command": "ls /etc"}, executed=False),
             ToolRequested(
-                SESSION, "per_14b99bc5a001drhmJZhNc5wHRG", "shell", ("ls /etc",)
+                SESSION,
+                "per_14b99bc5a001drhmJZhNc5wHRG",
+                "shell",
+                ("ls /etc",),
+                patterns=("ls *",),
             ),
+        ]
+
+    def test_a_tool_call_carries_the_name_its_input_started_with(self) -> None:
+        """As opencode 2.2.4 does: the name comes first, on its own event, so
+        a call the rules allow without asking can still be shown."""
+        started = {
+            "type": "session.tool.input.started",
+            "data": {"sessionID": SESSION, "id": "c1", "name": "read"},
+        }
+        called = {
+            "type": "session.tool.called",
+            "data": {
+                "sessionID": SESSION,
+                "id": "c1",
+                "input": {"path": "/etc/hostname"},
+                "executed": False,
+            },
+        }
+        assert self.events(started, called) == [
+            ToolCalled(SESSION, "c1", {"path": "/etc/hostname"}, False, "read")
         ]
 
     def test_a_permission_names_the_tool_call_it_is_for(self) -> None:
@@ -319,6 +425,36 @@ class TestEvents:
             ToolFinished(SESSION, "call_e29c", "NetworkManager\nUPower\n", exit=0)
         ]
 
+    def test_a_subagent_gives_back_its_answer_without_the_engines_wrapper(
+        self,
+    ) -> None:
+        """As opencode 2.2.4 reports the reviewer's answer: the child session's
+        reply, wrapped in a tag naming it."""
+        answered = {
+            "type": "session.tool.success",
+            "data": {
+                "sessionID": SESSION,
+                "id": "call_DL72",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": '<subagent sessionID="ses_child" state="completed">\n'
+                        "Verdict: pass - It works.\n\n## Spec\nNothing found.\n"
+                        "</subagent>",
+                    }
+                ],
+                "metadata": {"sessionID": "ses_child", "status": "completed"},
+                "executed": False,
+            },
+        }
+        assert self.events(answered) == [
+            ToolFinished(
+                SESSION,
+                "call_DL72",
+                "Verdict: pass - It works.\n\n## Spec\nNothing found.",
+            )
+        ]
+
     def test_a_tool_that_failed_says_why(self) -> None:
         failed = {
             "type": "session.tool.failed",
@@ -332,6 +468,31 @@ class TestEvents:
         assert self.events(failed) == [
             ToolFinished(SESSION, "call_d376", "", error="File not found")
         ]
+
+    def test_a_permission_carries_the_patterns_that_would_allow_it_again(
+        self,
+    ) -> None:
+        """As opencode 2.2.4 does: ``save`` holds them, ``ls *`` for ``ls /etc``."""
+        asked = {
+            "type": "permission.asked",
+            "data": {
+                "id": "per_1",
+                "sessionID": SESSION,
+                "action": "shell",
+                "resources": ["ls /etc", "head -3"],
+                "save": ["ls *", "head *"],
+            },
+        }
+        (request,) = self.events(asked)
+        assert isinstance(request, ToolRequested)
+        assert request.patterns == ("ls *", "head *")
+
+    def test_a_waiting_message_that_reaches_the_model_is_delivered(self) -> None:
+        delivered = {
+            "type": "session.inbox.delivered",
+            "data": {"sessionID": SESSION, "inboxID": "msg_1"},
+        }
+        assert self.events(delivered) == [Delivered(SESSION, "msg_1")]
 
     def test_a_refusal_is_a_failure_carrying_the_engines_message(self) -> None:
         assert self.events(FREE_TIER_REFUSAL) == [
@@ -396,6 +557,28 @@ class TestHistory:
             Past("ses_a", "Calm theme", Path("/home/tester"), 1.0),
         ]
 
+    def test_a_subagents_session_is_no_conversation_of_its_own(self) -> None:
+        """As opencode 2.2.4 lists the reviewer's: a child of the session that
+        asked it, carrying the Harness's mark."""
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{URL}/api/session?limit=200"): {
+                    "data": [
+                        {
+                            "id": "ses_child",
+                            "parentID": "ses_a",
+                            "agent": "reviewer",
+                            "title": "Review coin-flip",
+                            "location": {"directory": "/home/tester"},
+                            "time": {"created": 990, "updated": 1000},
+                            "metadata": {"osiris": "harness"},
+                        }
+                    ]
+                }
+            }
+        )
+        assert engine(http).conversations() == []
+
     def test_a_past_conversation_is_rebuilt_from_its_messages(self) -> None:
         model = {"id": "gpt-6.1-sol", "providerID": "openai"}
         http = FakeHttpClient(
@@ -426,8 +609,10 @@ class TestHistory:
             }
         )
         assert engine(http).history(SESSION) == [
-            PastTurn("make a timer", "Made it.", ModelRef("openai", "gpt-6.1-sol")),
-            PastTurn("thanks", "", None),
+            PastTurn(
+                "make a timer", "Made it.", ModelRef("openai", "gpt-6.1-sol"), "m1"
+            ),
+            PastTurn("thanks", "", None, "m6"),
         ]
 
     def test_sessions_from_before_the_harness_marked_its_own_are_adopted(

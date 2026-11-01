@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import posixpath
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
+from enum import Enum
 from pathlib import Path
 
 from osiris.harness.admin import Request
@@ -18,33 +18,28 @@ from osiris.harness.engine import (
     ModelRef,
     Past,
     PastTurn,
+    Reply,
+    Revert,
     Stopped,
     ToolCalled,
     ToolRequested,
 )
 from osiris.harness.log import HarnessLog
-from osiris.harness.tiers import Tier
 from osiris.harness.titles import title_of
 from osiris.platform import HttpError
 
-#: Passed to the model with every rejected tool, so it finds another way.
+#: Passed to the model with every action the person denies.
 REFUSED = (
-    "Osiris cannot do that: it cannot run commands or read files, "
-    "and changes this machine only through the Osiris tools. Answer in words, "
-    "or with those tools."
+    "The person said no to this. Do not try it another way without asking "
+    "them; tell them what you wanted to do and why, and ask how Osiris should "
+    "go on."
 )
-
-
-#: Why a step was refused, in the person's words: the two rules that refuse.
-ONLY_IN_PROGRAMS = "Files are read and edited only inside a Program"
-ONLY_WITH_EVERYTHING = "Runs only with Allow everything on"
 
 
 @dataclass(frozen=True)
 class Allowed:
     session: str
     action: str
-    tier: Tier
     resources: tuple[str, ...]
     call: str = ""
 
@@ -58,21 +53,41 @@ class Refused:
     reason: str = ""
 
 
-#: The Engine's own file tools, allowed only on files inside a Program: reading
-#: is a look, and editing is undoable because a Program's changes are commits.
-FILE_TIERS = {
-    "read": Tier.LOOK,
-    "external_directory": Tier.LOOK,
-    "edit": Tier.UNDOABLE,
-}
-
 #: The Engine's tool for running a command: opencode 2.0 names it shell, and
 #: 1.x named it bash.
 COMMAND_ACTIONS = frozenset({"shell", "bash"})
 _SUDO = re.compile(r"\bsudo\b")
 
+
+@dataclass(frozen=True)
+class Asking:
+    """An action the Engine's rules ask about, held until the person answers its
+    card."""
+
+    session: str
+    request: str
+    action: str
+    resources: tuple[str, ...]
+    call: str = ""
+    #: Patterns that would allow it again without asking, as the Engine suggests.
+    patterns: tuple[str, ...] = ()
+
+
+class Answer(Enum):
+    """The person's answer to a card."""
+
+    ONCE = "once"
+    #: Left to the Engine, which keeps allowing it in the Project.
+    ALWAYS = "always"
+    DENY = "deny"
+
+
+#: The rule a step the person denied shows.
+DENIED = "You said no"
+
+
 #: What the Harness decided about a ``ToolRequested``, passed on in its place.
-Decision = Allowed | Refused
+Decision = Allowed | Refused | Asking
 
 
 class Harness:
@@ -82,23 +97,17 @@ class Harness:
         log: HarnessLog,
         model: ModelRef | None = None,
         *,
-        tiers: Mapping[str, Tier],
         directory: Path,
-        may_touch: Callable[[Path], bool],
         tools: tuple[str, list[str]] | None = None,
-        allow_everything: Callable[[], bool] = lambda: False,
+        auto_mode: Callable[[], bool] = lambda: False,
     ) -> None:
-        """``tiers`` names every action the Harness may take; it rejects the rest.
-        File actions are allowed only on paths ``may_touch`` accepts, read from
-        ``directory``, where the Harness's session runs."""
+        """``directory`` is where a Conversation with no Project runs."""
         self._engine = engine
         self._log = log
         self._model = model
-        self._tiers = tiers
         self._directory = directory
         #: Where a Conversation with no Project runs.
         self._home = directory
-        self._may_touch = may_touch
         #: The tool server, which the Engine keeps per folder.
         self._tools = tools
         self._tools_in: set[Path] = set()
@@ -106,13 +115,19 @@ class Harness:
         #: Sessions working on a question, served whichever one is on screen,
         #: and the folder each runs in.
         self._running: dict[str, Path] = {}
-        self._allow_everything = allow_everything
-        #: Each session's latest allowed command: when it was allowed, counted
-        #: across sessions, and whether it runs sudo.
+        self._auto_mode = auto_mode
+        #: Each session's latest command: when it was noted, counted across
+        #: sessions, and whether it runs sudo.
         self._last_command: dict[str, tuple[int, bool]] = {}
-        self._commands_allowed = 0
+        self._commands_noted = 0
+        #: Sessions cut in on: the stop that follows resumes at once.
+        self._cutting_in: set[str] = set()
+        #: Actions held for the person, by session and request.
+        self._waiting: dict[tuple[str, str], Asking] = {}
 
-    def ask(self, text: str) -> None:
+    def ask(self, text: str) -> str:
+        """Send a question; while the session works it waits and steers the
+        model at its next step. Answers where it waits."""
         directory, session = self._directory, self._session
         if session is None:
             self._ready(directory)
@@ -120,7 +135,26 @@ class Harness:
             self._engine.rename(session, title_of(text))
         self._running[session] = directory
         self._log.write("sent", session=session, text=text)
-        self._engine.send(session, text)
+        return self._engine.send(session, text)
+
+    def send_now(self, text: str) -> str:
+        """Send while the session works, stopping its step at once so the
+        model takes this next. Answers where it waits until then."""
+        session = self._session
+        working = session is not None and session in self._running
+        message = self.ask(text)
+        if session is not None and working:
+            self._cutting_in.add(session)
+            self._engine.cut_in(session)
+            self._log.write("cut-in", session=session)
+        return message
+
+    def withdraw(self, message: str) -> None:
+        """Take back a message still waiting in the session on screen."""
+        if self._session is None:
+            return
+        self._engine.withdraw(self._session, message)
+        self._log.write("withdrawn", session=self._session, message=message)
 
     @property
     def session(self) -> str | None:
@@ -191,6 +225,32 @@ class Harness:
     def move(self, session: str, folder: Path) -> None:
         self._engine.move(session, folder)
 
+    def go_back(self, session: str, message: str, questions: int = 1) -> Revert | None:
+        """Go back to before ``message``: its files and the Conversation, which
+        drops ``questions``, that one and those after it. None while the
+        session is still answering, which the Engine refuses."""
+        if session in self._running:
+            return None
+        try:
+            revert = self._engine.revert(session, message)
+        except HttpError as error:
+            if error.status == 409:
+                return None
+            raise
+        if not revert.restorable:
+            self._engine.cancel_revert(session)
+            self._log.write("could-not-go-back", session=session, message=message)
+            return revert
+        self._engine.keep_revert(session)
+        self._log.write(
+            "went-back",
+            session=session,
+            message=message,
+            questions=questions,
+            files=[change.path for change in revert.files],
+        )
+        return revert
+
     def use_model(self, model: ModelRef) -> None:
         """Answer with this model from now on, in this conversation too."""
         self._model = model
@@ -201,30 +261,9 @@ class Harness:
         if self._session is not None:
             self._engine.stop(self._session)
 
-    def _tier(
-        self, session: str, action: str, resources: tuple[str, ...]
-    ) -> Tier | None:
-        if action in self._tiers:
-            return self._tiers[action]
-        folder = self._running.get(session, self._directory)
-        if (
-            action in FILE_TIERS
-            and resources
-            and all(self._inside(folder, resource) for resource in resources)
-        ):
-            return FILE_TIERS[action]
-        return Tier.ANYTHING if self._allow_everything() else None
-
-    def _inside(self, folder: Path, resource: str) -> bool:
-        """Whether a path the Engine names, relative to the session's folder or
-        absolute, and perhaps a folder pattern ending in ``*``, is one the
-        Harness may touch. ``..`` is resolved first, so it cannot climb out."""
-        path = posixpath.join(str(folder), resource.removesuffix("*"))
-        return self._may_touch(Path(posixpath.normpath(path)))
-
     def running_sudo(self) -> str | None:
         """The session an admin request is for: of those running, the one
-        whose latest allowed command runs sudo, the latest to allow it first."""
+        whose latest command runs sudo, the latest to run it first."""
         # Asked on the main loop while handle() runs on the Engine's thread:
         # copied first, so neither changes under the loop.
         commands, running = dict(self._last_command), set(self._running)
@@ -244,22 +283,74 @@ class Harness:
             approved=approved,
         )
 
-    def _allowed_command(self, session: str, resources: tuple[str, ...]) -> None:
-        self._commands_allowed += 1
+    def _noted_command(self, session: str, resources: tuple[str, ...]) -> None:
+        self._commands_noted += 1
         self._last_command[session] = (
-            self._commands_allowed,
+            self._commands_noted,
             any(_SUDO.search(resource) for resource in resources),
         )
 
-    def _reply(self, session: str, request: str, *, allow: bool, message: str) -> None:
+    def _reply(self, session: str, request: str, answer: Reply, message: str) -> None:
         """Answer a request; one the Engine cannot take is logged, so a single
         bad reply never ends the conversation."""
         try:
-            self._engine.reply(session, request, allow=allow, message=message)
+            self._engine.reply(session, request, answer, message)
         except HttpError as error:
             self._log.write(
                 "reply-failed", session=session, request=request, error=str(error)
             )
+
+    def answer(
+        self, session: str, request: str, answer: Answer, reply: str = ""
+    ) -> Decision | None:
+        """Answer a card; a typed reply refuses the action and is passed to the
+        model in its place. None when nothing is waiting under it."""
+        asking = self._waiting.pop((session, request), None)
+        if asking is None:
+            return None
+        allow = answer is not Answer.DENY and not reply
+        if not allow:
+            self._reply(session, request, Reply.REJECT, reply or REFUSED)
+        else:
+            always = answer is Answer.ALWAYS
+            self._reply(session, request, Reply.ALWAYS if always else Reply.ONCE, "")
+        self._log.write(
+            "replied",
+            session=session,
+            action=asking.action,
+            resources=list(asking.resources),
+            answer=answer.value,
+            **({"reply": reply} if reply else {}),
+        )
+        if allow:
+            return Allowed(session, asking.action, asking.resources, asking.call)
+        reason = f"You replied: {reply}" if reply else DENIED
+        return Refused(session, asking.action, asking.resources, asking.call, reason)
+
+    def _called(self, event: ToolCalled) -> None:
+        """Log a tool call; a command is noted even if the Engine's rules ran
+        it without asking, so its sudo finds its session."""
+        self._log.write(
+            "tool",
+            session=event.session,
+            call=event.call,
+            input=event.input,
+            executed=event.executed,
+        )
+        if isinstance(command := event.input.get("command"), str):
+            self._noted_command(event.session, (command,))
+
+    def _ended(self, event: Event) -> None:
+        """A session that ends is no longer running, unless it was cut in on:
+        the Engine goes on with the message at once."""
+        if not isinstance(event, Finished | Stopped | Failed):
+            return
+        for held in [key for key in self._waiting if key[0] == event.session]:
+            del self._waiting[held]
+        cut_in = event.session in self._cutting_in
+        self._cutting_in.discard(event.session)
+        if not (cut_in and isinstance(event, Stopped)):
+            self._running.pop(event.session, None)
 
     def handle(self, event: Event) -> Event | Decision | None:
         """Log what the Engine reports and apply policy; the event is passed on.
@@ -268,8 +359,7 @@ class Harness:
         """
         if event.session != self._session and event.session not in self._running:
             return None
-        if isinstance(event, Finished | Stopped | Failed):
-            self._running.pop(event.session, None)
+        self._ended(event)
         match event:
             case Answered(session, model, tokens, cost):
                 self._log.write(
@@ -280,40 +370,32 @@ class Harness:
                     tokens=asdict(tokens),
                     cost=cost,
                 )
-            case ToolCalled(session, call, arguments, executed):
-                self._log.write(
-                    "tool",
-                    session=session,
-                    call=call,
-                    input=arguments,
-                    executed=executed,
-                )
+            case ToolCalled():
+                self._called(event)
             case ToolRequested(session, request, action, resources, call) if (
-                tier := self._tier(session, action, resources)
+                self._auto_mode()
             ):
                 if action in COMMAND_ACTIONS:
-                    self._allowed_command(session, resources)
-                self._reply(session, request, allow=True, message="")
+                    self._noted_command(session, resources)
+                self._reply(session, request, Reply.ONCE, "")
                 self._log.write(
                     "allowed",
                     session=session,
                     action=action,
-                    tier=tier.value,
                     resources=list(resources),
+                    by="auto mode",
                 )
-                return Allowed(session, action, tier, resources, call)
-            case ToolRequested(session, request, action, resources, call):
-                self._reply(session, request, allow=False, message=REFUSED)
+                return Allowed(session, action, resources, call)
+            case ToolRequested(session, request, action, resources, call, patterns):
+                asking = Asking(session, request, action, resources, call, patterns)
+                self._waiting[(session, request)] = asking
                 self._log.write(
-                    "rejected",
+                    "asked",
                     session=session,
                     action=action,
                     resources=list(resources),
                 )
-                reason = (
-                    ONLY_IN_PROGRAMS if action in FILE_TIERS else ONLY_WITH_EVERYTHING
-                )
-                return Refused(session, action, resources, call, reason)
+                return asking
             case Failed(session, message):
                 self._log.write("failed", session=session, message=message)
             case Stopped(session):

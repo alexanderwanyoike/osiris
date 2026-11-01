@@ -19,6 +19,7 @@ from osiris.harness.activity import Step, elapsed, summary  # noqa: E402
 from osiris.harness.detail import Kind, Line, detail, folded  # noqa: E402
 from osiris.harness.admin import Request  # noqa: E402
 from osiris.harness.conversation import State, Turn  # noqa: E402
+from osiris.harness.tasks import Progress, Task  # noqa: E402
 from osiris.harness.markdown import (  # noqa: E402
     Code,
     Heading,
@@ -311,23 +312,75 @@ def _line(line: Line) -> Gtk.Label:
     return label
 
 
+#: Each task's progress as a style class, which each Skin draws as a mark.
+TASK_CLASSES = {
+    Progress.TO_DO: "to-do",
+    Progress.UNDER_WAY: "under-way",
+    Progress.DONE: "done",
+    Progress.DROPPED: "dropped",
+}
+
+
+def task_list(tasks: list[Task]) -> Gtk.Widget:
+    """The Engine's plan for the answer, each task marked by how far it got."""
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+    box.add_css_class("harness-tasks")
+    for task in tasks:
+        row = Gtk.Box(spacing=8)
+        row.add_css_class("harness-task")
+        row.add_css_class(TASK_CLASSES[task.progress])
+        row.set_tooltip_text(task.progress.value.capitalize())
+        mark = Gtk.Box(valign=Gtk.Align.CENTER)
+        mark.add_css_class("harness-task-mark")
+        row.append(mark)
+        row.append(Gtk.Label(label=task.text, xalign=0, wrap=True,
+                             wrap_mode=Pango.WrapMode.WORD_CHAR))
+        box.append(row)
+    return box
+
+
 class TurnView(Gtk.Box):
     """One question and its answer, redrawn only where the answer changed."""
 
     def __init__(self, turn: Turn, on_undo: Callable[[Turn], None],
                  program_card: Callable[[str], Gtk.Widget],
                  clock: Callable[[], float] = time.monotonic,
-                 admin_card: Callable[[Request], Gtk.Widget] | None = None):
+                 admin_card: Callable[[Request], Gtk.Widget] | None = None,
+                 approval_card: Callable[[Turn], Gtk.Widget] | None = None,
+                 edit: Callable[[Turn], None] | None = None,
+                 try_again: Callable[[Turn], None] | None = None,
+                 may_go_back: Callable[[Turn], bool] = lambda _turn: False,
+                 may_try_again: Callable[[Turn], bool] = lambda _turn: False,
+                 show_changes: Callable[[Turn], None] | None = None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-turn")
         self._on_undo = on_undo
         self._program_card = program_card
         self._admin_card = admin_card
+        self._approval_card = approval_card
+        self._edit = edit
+        self._try_again = try_again
+        self._may_go_back = may_go_back
+        self._may_try_again = may_try_again
+        self._show_changes = show_changes
         question = Gtk.Label(label=turn.question, xalign=0, wrap=True,
                              wrap_mode=Pango.WrapMode.WORD_CHAR, selectable=True,
                              halign=Gtk.Align.END)
         question.add_css_class("harness-question")
-        self.append(question)
+        self._turn = turn
+        self._pencil = Gtk.Button(icon_name="document-edit-symbolic",
+                                  valign=Gtk.Align.CENTER, visible=False,
+                                  tooltip_text="Edit this question: it goes back to "
+                                  "before it, with its files and everything said "
+                                  "since")
+        self._pencil.add_css_class("flat")
+        self._pencil.add_css_class("harness-quiet")
+        self._pencil.connect("clicked", lambda _b: self._edit and self._edit(self._turn))
+        asked = Gtk.Box(spacing=4, halign=Gtk.Align.END)
+        asked.add_css_class("harness-question-row")
+        asked.append(self._pencil)
+        asked.append(question)
+        self.append(asked)
         self.answer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.answer.add_css_class("harness-answer")
         self.append(self.answer)
@@ -377,23 +430,54 @@ class TurnView(Gtk.Box):
             chip.append(undo)
         return chip
 
+    def _meta_line(self, turn: Turn, said: str) -> Gtk.Widget:
+        """The model and time, with the quiet actions on this answer."""
+        line = Gtk.Box(spacing=6, halign=Gtk.Align.START)
+        meta = Gtk.Label(label=said, xalign=0)
+        meta.add_css_class("harness-meta")
+        line.append(meta)
+        if self._try_again is not None and self._may_try_again(turn):
+            again = Gtk.Button(icon_name="view-refresh-symbolic",
+                               tooltip_text="Try this question again: it goes back "
+                               "to before it, with its files, and is sent again")
+            again.add_css_class("flat")
+            again.add_css_class("harness-quiet")
+            again.connect("clicked", lambda _b: self._try_again and self._try_again(turn))
+            line.append(again)
+        if self._show_changes is not None and turn.commits:
+            changes = Gtk.Button(icon_name="view-dual-symbolic",
+                                 tooltip_text="Show what this answer changed, file "
+                                 "by file, on the Canvas")
+            changes.add_css_class("flat")
+            changes.add_css_class("harness-quiet")
+            changes.connect("clicked",
+                            lambda _b: self._show_changes and self._show_changes(turn))
+            line.append(changes)
+        return line
+
     def _extras(self, turn: Turn) -> None:
         child = self.extras.get_first_child()
         while child is not None:
             following = child.get_next_sibling()
             self.extras.remove(child)
             child = following
+        self._turn = turn
+        self._pencil.set_visible(self._edit is not None and self._may_go_back(turn))
         self.record.show(turn.steps)
         if turn.state in (State.WAITING, State.ANSWERING):
             self.working.show(turn.doing)
         else:
             self.working.stop()
+        if turn.tasks:
+            self.extras.append(task_list(turn.tasks))
         if turn.changes:
             self.extras.append(self._changes(turn))
         for name in turn.programs:
             self.extras.append(self._program_card(name))
         if turn.admin is not None and self._admin_card is not None:
             self.extras.append(self._admin_card(turn.admin))
+        if turn.held is not None and self._approval_card is not None:
+            self.extras.append(self._approval_card(turn))
         if turn.state is State.FAILED:
             error = Gtk.Label(label=turn.error or "The answer failed.", xalign=0,
                               wrap=True, selectable=True)
@@ -406,6 +490,8 @@ class TurnView(Gtk.Box):
             if turn.state is State.STOPPED:
                 parts.append("stopped")
             parts.append(self._finished_at.strftime("%H:%M"))
-            meta = Gtk.Label(label="  ·  ".join(parts), xalign=0)
-            meta.add_css_class("harness-meta")
-            self.extras.append(meta)
+            self.extras.append(self._meta_line(turn, "  ·  ".join(parts)))
+        if turn.note:
+            note = Gtk.Label(label=turn.note, xalign=0, wrap=True)
+            note.add_css_class("harness-step-note")
+            self.extras.append(note)

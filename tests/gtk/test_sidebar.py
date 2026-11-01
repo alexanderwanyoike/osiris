@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 from gi.repository import Gtk
@@ -9,6 +10,7 @@ from sidebar import Sidebar
 
 from osiris.harness.engine import Past
 from osiris.harness.history import Project
+from osiris.harness.status import Status
 
 from .conftest import texts, widgets
 
@@ -29,8 +31,7 @@ class Opened:
 
 def sidebar(
     current: str | None = None,
-    running: frozenset[str] = frozenset(),
-    unread: frozenset[str] = frozenset(),
+    statuses: Mapping[str, Status] | None = None,
 ) -> tuple[Sidebar, Opened]:
     opened = Opened()
     widget = Sidebar(
@@ -40,7 +41,7 @@ def sidebar(
         on_archive=opened.archived.append,
         on_delete=lambda session, title: opened.deleted.append((session, title)),
     )
-    widget.show_history([PROJECT], [THEME], current, running, unread)
+    widget.show_history([PROJECT], [THEME], current, statuses or {})
     return widget, opened
 
 
@@ -132,36 +133,27 @@ def test_a_conversation_can_be_deleted() -> None:
     assert opened.deleted == [("ses_theme", "Make me a calm theme")]
 
 
-def working(row: Gtk.Widget) -> bool:
-    return any(w.has_css_class("harness-running") for w in widgets(row))
+def status(row: Gtk.Widget) -> str | None:
+    shown = [
+        w.get_text()
+        for w in widgets(row)
+        if isinstance(w, Gtk.Label) and w.has_css_class("harness-status")
+    ]
+    return shown[0] if shown else None
 
 
-def test_a_conversation_still_working_says_so() -> None:
-    widget, _ = sidebar(running=frozenset({"ses_timer"}))
-    assert working(row_with(widget, "Build a pomodoro timer"))
-    assert not working(row_with(widget, "Make me a calm theme"))
-
-
-def unread(row: Gtk.Widget) -> bool:
-    """Its title stands out and a dot sits at its end."""
-    title = next(w for w in widgets(row) if isinstance(w, Gtk.Label))
-    return title.has_css_class("harness-unread") and any(
-        w.has_css_class("harness-unread-dot") for w in widgets(row)
-    )
-
-
-def test_a_conversation_with_an_answer_not_yet_seen_says_so() -> None:
-    widget, _ = sidebar(unread=frozenset({"ses_theme"}))
-    assert unread(row_with(widget, "Make me a calm theme"))
-    assert not unread(row_with(widget, "Build a pomodoro timer"))
-
-
-def test_a_conversation_working_again_shows_its_spinner_rather_than_its_dot() -> None:
-    """Asked again before the last answer was seen: what it is doing now
-    matters more, and the row has room for one sign."""
+def test_each_conversation_says_how_it_stands() -> None:
     widget, _ = sidebar(
-        running=frozenset({"ses_theme"}), unread=frozenset({"ses_theme"})
+        statuses={"ses_timer": Status.WORKING, "ses_theme": Status.WAITING}
     )
+    assert status(row_with(widget, "Build a pomodoro timer")) == "Working"
+    assert status(row_with(widget, "Make me a calm theme")) == "Waiting for you"
+
+
+def test_a_conversation_done_and_unread_stands_out_until_read() -> None:
+    widget, _ = sidebar(statuses={"ses_theme": Status.DONE})
     row = row_with(widget, "Make me a calm theme")
-    assert working(row)
-    assert not any(w.has_css_class("harness-unread-dot") for w in widgets(row))
+    title = next(w for w in widgets(row) if isinstance(w, Gtk.Label))
+    assert status(row) == "Done"
+    assert title.has_css_class("harness-unread")
+    assert status(row_with(widget, "Build a pomodoro timer")) is None

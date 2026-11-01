@@ -121,9 +121,7 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 
 .harness-sidebar { background-color: @harness_raised; }
 .harness-sidebar scrolledwindow, .harness-sidebar viewport, .harness-sidebar list { background-color: transparent; }
-.harness-running { color: @harness_accent; }
 .harness-unread { font-weight: 600; }
-.harness-unread-dot { min-width: 6px; min-height: 6px; margin: 0 5px; border-radius: 1px; background-color: @harness_accent; }
 
 /* A step opened: what it asked for, then what came back. */
 .harness-step-detail {
@@ -138,3 +136,68 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-step-detail .monospace { font-size: 0.88em; }
 .harness-added { color: @harness_success; background-color: alpha(@harness_success, 0.10); }
 .harness-removed { color: @harness_danger; background-color: alpha(@harness_danger, 0.10); }
+
+/* The approval card stands apart from the answer: it waits on the person. */
+.harness-approval {
+    background-color: alpha(@harness_accent, 0.08);
+    border: 1px solid alpha(@harness_accent, 0.35);
+    border-radius: 6px;
+    padding: 12px 14px;
+}
+.harness-approval-input {
+    background-color: alpha(@harness_sunken, 0.75);
+    color: @harness_fg;
+    border-radius: 8px;
+    padding: 6px 8px;
+}
+
+/* A message sent while Osiris works, waiting to reach it. */
+.harness-waiting {
+    margin: 0 16px 4px;
+    padding: 2px 4px 2px 12px;
+    border-radius: 6px;
+    border: 1px dashed alpha(@harness_fg, 0.18);
+    color: @harness_muted;
+    font-size: 0.9em;
+}
+
+/* How a Conversation stands, in words at the end of its row. */
+.harness-status {
+    font-size: 0.75em;
+    padding: 1px 7px;
+    border-radius: 999px;
+    color: @harness_muted;
+    background-color: alpha(@harness_fg, 0.06);
+}
+.harness-status.working { color: @harness_fg; }
+.harness-status.waiting { color: @harness_on_accent; background-color: @harness_accent; }
+.harness-status.done { color: @harness_accent; background-color: alpha(@harness_accent, 0.14); }
+
+/* The Engine's task list: a ring to do, filled with the accent under way,
+   filled and struck through done, faded dropped. */
+.harness-tasks { margin: 2px 0; }
+.harness-task { padding: 1px 0; }
+.harness-task-mark {
+    min-width: 8px;
+    min-height: 8px;
+    border-radius: 99px;
+    border: 1.5px solid alpha(@harness_muted, 0.8);
+}
+.harness-task.under-way .harness-task-mark {
+    background-color: @harness_accent;
+    border-color: @harness_accent;
+}
+.harness-task.done .harness-task-mark {
+    background-color: alpha(@harness_success, 0.85);
+    border-color: transparent;
+}
+.harness-task.done label { color: @harness_muted; text-decoration-line: line-through; }
+.harness-task.dropped { opacity: 0.5; }
+.harness-task.dropped label { text-decoration-line: line-through; }
+/* The pencil on a question appears where the pointer is; the icons by an
+   answer's time stay, muted, so going back never looks like the main thing. */
+.harness-quiet { color: @harness_muted; min-height: 24px; min-width: 24px; padding: 2px; }
+.harness-quiet:hover { color: @harness_fg; }
+.harness-question-row .harness-quiet { opacity: 0; }
+.harness-question-row:hover .harness-quiet,
+.harness-question-row .harness-quiet:focus { opacity: 1; }

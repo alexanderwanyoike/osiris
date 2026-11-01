@@ -116,6 +116,8 @@ class HarnessLog:
                 asking = entry.get("session", "")
                 if asking == session:
                     questions.append([])
+            elif entry["kind"] == "went-back" and entry.get("session") == session:
+                del questions[len(questions) - entry.get("questions", 0) :]
             elif (
                 entry["kind"] == "changed"
                 and questions

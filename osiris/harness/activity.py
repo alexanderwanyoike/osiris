@@ -67,6 +67,9 @@ PHRASES = {
         "search the web for",
         shown=_as_written,
     ),
+    "subagent": Phrase(
+        "Asking", "Asked", "ask", shown=lambda agent: f"the {agent}", unnamed="a helper"
+    ),
     "bash": _COMMAND,
     "shell": _COMMAND,
     "osiris_list_themes": Phrase(
@@ -110,6 +113,12 @@ class Step:
         if not self.allowed:
             return f"Not allowed to {self._phrase.plain} {self._what}"
         return f"{self._phrase.done} {self._what}"
+
+    @property
+    def question(self) -> str:
+        """How the person is asked whether it may go ahead."""
+        phrase = self._phrase
+        return f"{phrase.plain.capitalize()} {phrase.what or phrase.unnamed}?"
 
     @property
     def _phrase(self) -> Phrase:

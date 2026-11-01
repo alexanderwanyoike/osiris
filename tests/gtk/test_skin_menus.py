@@ -40,8 +40,7 @@ def menu_buttons() -> list[Gtk.Button]:
         [],
         [Past("ses_a", "Make me a calm theme", Path("/home/tester"), 1)],
         None,
-        frozenset(),
-        frozenset(),
+        {},
     )
     more = next(w for w in widgets(widget) if isinstance(w, Gtk.MenuButton))
     return [w for w in widgets(more.get_popover()) if isinstance(w, Gtk.Button)]
