@@ -1093,6 +1093,9 @@ class Application(Adw.Application):
         self.background(gather, found)
 
     def update_canvas(self) -> None:
+        # The picker lists what is where the Conversation runs, which changes
+        # whenever its Canvas does.
+        self.refresh_offers()
         # What this run changed, and what the Conversation changed before, as
         # the log has it: a reopened Conversation brings its Canvas back.
         earlier = self.log.programs_of(self.session) if self.log and self.session else []
