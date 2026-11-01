@@ -9,6 +9,8 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Pango  # noqa: E402
 
+from osiris.harness.connectors import State, said_of  # noqa: E402
+
 
 def _section(title: str) -> tuple[Gtk.Box, Gtk.Box]:
     """A titled part of the panel, and the box its rows go in."""
@@ -46,9 +48,32 @@ class ConversationPanel(Gtk.Box):
         for fact in (self.project, self.branch, self.model):
             rows.append(fact)
         self.append(where)
+        connectors, self._connectors = _section("Connectors")
+        self.append(connectors)
 
     def show_where(self, project: str, branch: str, model: str) -> None:
         self.project.words.set_text(project)
         self.branch.words.set_text(branch)
         self.branch.set_visible(bool(branch))
         self.model.words.set_text(model)
+
+    def show_connectors(self, states: dict[str, State]) -> None:
+        _clear(self._connectors)
+        if not states:
+            none = Gtk.Label(label="None yet. Add one in Settings, under Connectors.",
+                             xalign=0, wrap=True)
+            none.add_css_class("harness-meta")
+            self._connectors.append(none)
+        for name, state in sorted(states.items()):
+            line = _fact("network-server-symbolic", name)
+            words, tone = said_of(state)
+            said = Gtk.Label(label=words, tooltip_text=words, max_width_chars=22,
+                             ellipsize=Pango.EllipsizeMode.END)
+            said.set_css_classes(["harness-connector-state", f"harness-{tone}"])
+            line.append(said)
+            self._connectors.append(line)
+
+
+def _clear(box: Gtk.Box) -> None:
+    while (child := box.get_first_child()) is not None:
+        box.remove(child)
