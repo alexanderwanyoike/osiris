@@ -147,6 +147,8 @@ class PastTurn:
     question: str
     answer: str
     model: ModelRef | None
+    #: The question's message at the Engine.
+    message: str = ""
 
 
 @dataclass(frozen=True)

@@ -286,7 +286,9 @@ class OpencodeEngine:
         turns: list[PastTurn] = []
         for message in self._messages(session):
             if message.get("type") == "user":
-                turns.append(PastTurn(message.get("text", ""), "", None))
+                turns.append(
+                    PastTurn(message.get("text", ""), "", None, message.get("id", ""))
+                )
             elif message.get("type") == "assistant" and turns:
                 said = "".join(
                     part.get("text", "")
@@ -300,6 +302,7 @@ class OpencodeEngine:
                         last.question,
                         last.answer + said,
                         ModelRef(model["providerID"], model["id"]) if model else None,
+                        last.message,
                     )
         return turns
 
