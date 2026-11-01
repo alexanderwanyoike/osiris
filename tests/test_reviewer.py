@@ -44,3 +44,33 @@ def test_the_reviewer_can_read_the_program_and_its_history() -> None:
     assert effect("shell", "git diff abc123") == "allow"
     assert effect("shell", "git log --oneline") == "allow"
     assert effect("skill", "review") == "allow"
+
+
+SKILL = "engine/skills/review/SKILL.md"
+
+
+def test_the_review_skill_is_shown_to_the_model() -> None:
+    """The Engine advertises only a skill with a description."""
+    head = Resources().read(SKILL).split("---")[1]
+    assert "\nname: review\n" in head
+    assert "\ndescription: " in head
+
+
+def test_the_review_reports_three_axes_side_by_side_under_one_verdict() -> None:
+    skill = Resources().read(SKILL)
+    for axis in ("## Spec", "## Standards", "## Bugs"):
+        assert axis in skill
+    assert "Verdict: pass" in skill
+    assert "partial" in skill and "fail" in skill
+    assert "CODING_STANDARDS.md" in skill
+
+
+def test_the_skills_it_is_adapted_from_are_credited_under_their_licences() -> None:
+    resources = Resources()
+    assert "Copyright (c) 2026 Matt Pocock" in resources.read(
+        "engine/skills/review/LICENSE-MIT"
+    )
+    assert "Apache License" in resources.read("engine/skills/review/LICENSE-APACHE")
+    notice = resources.read("engine/skills/review/NOTICE.md")
+    assert "https://github.com/mattpocock/skills" in notice
+    assert "https://github.com/anthropics/claude-plugins-official" in notice
