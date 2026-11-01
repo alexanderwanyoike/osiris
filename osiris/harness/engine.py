@@ -18,6 +18,8 @@ class Reply(Enum):
     """How a ``ToolRequested`` is answered."""
 
     ONCE = "once"
+    #: Allowed, and the Engine keeps allowing what it suggests, in the Project.
+    ALWAYS = "always"
     REJECT = "reject"
 
 
