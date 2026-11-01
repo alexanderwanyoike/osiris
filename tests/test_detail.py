@@ -61,3 +61,19 @@ def test_a_read_shows_what_was_looked_at_and_what_was_found() -> None:
 def test_a_search_shows_its_pattern() -> None:
     step = Step("grep", ("TODO",), input={"pattern": "TODO", "path": "src"})
     assert detail(step).asked == "TODO in src"
+
+
+def test_a_web_search_shows_its_query_and_what_came_back() -> None:
+    step = Step(
+        "websearch",
+        ("gtk4 popover",),
+        input={"query": "gtk4 popover"},
+        output="GtkPopover - docs.gtk.org",
+    )
+    shown = detail(step)
+    assert (shown.kind, shown.asked) == (Kind.WEB, "gtk4 popover")
+
+
+def test_a_page_fetch_shows_its_address() -> None:
+    step = Step("webfetch", ("docs.gtk.org",), input={"url": "https://docs.gtk.org"})
+    assert detail(step).asked == "https://docs.gtk.org"
