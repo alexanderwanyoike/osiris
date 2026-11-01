@@ -142,12 +142,14 @@ class ConnectorsPage(Gtk.Box):
 
     def _row(self, connector: Connector) -> Gtk.Widget:
         row = Adw.ActionRow(title=connector.name, use_markup=False,
-                            subtitle=_reach(connector), activatable=True)
+                            subtitle=_reach(connector), activatable=True,
+                            subtitle_lines=1, tooltip_text=_reach(connector))
         row.connect("activated", lambda _r: self._open_form(connector))
         said = Gtk.Label(valign=Gtk.Align.CENTER, max_width_chars=22,
                          ellipsize=Pango.EllipsizeMode.END)
         said.add_css_class("harness-connector-state")
         row.add_suffix(said)
+        row.said = said
         row.sign_in = Gtk.Button(label="Sign in", valign=Gtk.Align.CENTER,
                                  visible=False)
         row.sign_in.add_css_class("harness-sign-in")
@@ -224,6 +226,7 @@ class ConnectorsPage(Gtk.Box):
             if needs and state is not None:
                 self._integrations[connector.name] = state.integration
             self._rows[connector.name].sign_in.set_visible(needs)
+            label.set_visible(not needs)
         if unsettled and self._polls < self.POLLS:
             self._later(self.POLL_SECONDS, self._ask_states)
 
