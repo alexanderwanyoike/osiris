@@ -660,7 +660,7 @@ def test_the_rail_has_a_tick_per_question_and_a_click_scrolls_to_it() -> None:
     assert window.scroller.get_vadjustment().get_value() == 0
 
 
-def test_the_rails_ticks_stand_where_questions_do_however_far_it_is_scrolled() -> None:
+def test_the_current_tick_follows_the_scroll() -> None:
     from tests.gtk.test_composer_picker import settle
 
     window, _ = drawer()
@@ -675,33 +675,32 @@ def test_the_rails_ticks_stand_where_questions_do_however_far_it_is_scrolled() -
     view.set_value(view.get_upper())
     settle()
     window.refresh()
-    at = [tick.at for tick in window.rail._ticks]
-    assert at[0] < 0.02
-    assert at == sorted(at) and at[-1] > 0.6
+    at_foot = [tick.current for tick in window.rail._ticks]
+    view.set_value(0)
+    settle()
+    window.refresh()
+    at_head = [tick.current for tick in window.rail._ticks]
+    assert at_foot == [False, False, False, True]
+    assert at_head == [True, False, False, False]
 
 
-def test_the_rail_stands_in_for_the_conversations_scrollbar() -> None:
+def test_the_conversation_keeps_its_scrollbar_beside_the_rail() -> None:
     from gi.repository import Gtk
 
     window, _ = drawer()
     _across, down = window.scroller.get_policy()
-    assert down == Gtk.PolicyType.EXTERNAL
+    assert down == Gtk.PolicyType.AUTOMATIC
 
 
-def test_one_long_answer_still_shows_where_it_is_scrolled_to() -> None:
+def test_a_conversation_that_fits_on_one_screen_has_no_rail() -> None:
     from tests.gtk.test_composer_picker import settle
 
     window, _ = drawer()
     window.set_default_size(420, 700)
     window.present()
-    turn = window.app.conversation.asked("tell me a long story")
-    turn.answer = "a story that runs on\n\n" * 60
+    for n in range(2):
+        window.app.conversation.asked(f"question {n}").answer = "short"
     window.refresh()
     settle()
-    view = window.scroller.get_vadjustment()
-    view.set_value(0)
-    settle()
     window.refresh()
-    top, shown = window.rail._view
-    assert window.rail.get_visible()
-    assert top == 0 and 0 < shown < 1
+    assert not window.rail.get_visible()
