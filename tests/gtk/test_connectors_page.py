@@ -133,3 +133,14 @@ def test_changing_a_connector_that_is_off_keeps_it_off() -> None:
     shown.reach.set_text("npx -y files")
     shown.done.emit("clicked")
     assert store.saved["files"].on is False
+
+
+def test_cancel_closes_the_form_and_saves_nothing() -> None:
+    store = Store()
+    shown = page(store)
+    shown.add.emit("clicked")
+    shown.name.set_text("files")
+    shown.reach.set_text("npx files")
+    shown.cancel.emit("clicked")
+    assert store.saved == {}
+    assert not shown.form.get_visible()
