@@ -284,6 +284,19 @@ def test_a_typed_reply_refuses_the_action_and_reaches_thoth() -> None:
     assert entries(files)[-1]["reply"] == "Look in /etc/osiris only"
 
 
+def test_allowing_for_the_conversation_stops_asking_there_only() -> None:
+    subject, engine, _ = asked_to_list_etc()
+    subject.answer("ses_1", "per_1", Answer.CONVERSATION)
+    again = subject.handle(ToolRequested("ses_1", "per_2", "shell", ("ls /usr",)))
+    other = subject.handle(ToolRequested("ses_1", "per_3", "shell", ("rm /tmp/x",)))
+    assert isinstance(again, Allowed)
+    assert isinstance(other, Asking)
+    subject.new_conversation()
+    subject.ask("and here")
+    elsewhere = subject.handle(ToolRequested("ses_2", "per_4", "shell", ("ls /usr",)))
+    assert isinstance(elsewhere, Asking)
+
+
 def test_an_allowed_action_is_passed_on_with_what_it_touches() -> None:
     subject, _, _ = harness()
     subject.ask("add a pause button")
