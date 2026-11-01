@@ -47,6 +47,8 @@ CAREFUL = [
 
 def write_starting_rules(files: FileSystem, home: Path) -> None:
     path = home / ENGINE_CONFIG
+    if files.exists(path.with_suffix(".jsonc")):
+        return
     try:
         config = json.loads(files.read(path)) if files.exists(path) else {"$schema": SCHEMA}
     except json.JSONDecodeError:
