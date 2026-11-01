@@ -552,6 +552,10 @@ class TestHistory:
             PastTurn("make a timer", "Made it.", ModelRef("openai", "gpt-6.1-sol")),
             PastTurn("thanks", "", None),
         ]
+        assert [turn.message for turn in engine(http).history(SESSION)] == [
+            "m1",
+            "m6",
+        ]
 
     def test_sessions_from_before_the_harness_marked_its_own_are_adopted(
         self,
