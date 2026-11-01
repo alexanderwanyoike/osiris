@@ -469,6 +469,7 @@ class Drawer(Gtk.ApplicationWindow):
                             admin_card=self.app.admin_card,
                             approval_card=self.app.approval_card,
                             edit=self.app.go_back,
+                            try_again=lambda turn: self.app.go_back(turn, again=True),
                             may_go_back=lambda turn: self.app.conversation.can_go_back(turn))
             self.views.append(view)
             self.turns.append(view)
@@ -1081,9 +1082,10 @@ class Application(Adw.Application):
 
         self.background(lambda: harness.resume(session), opened)
 
-    def go_back(self, turn: Turn) -> None:
+    def go_back(self, turn: Turn, again: bool = False) -> None:
         """Go back to before a question: the Engine puts its files back and
-        drops what came after, and the question returns to the composer."""
+        drops what came after; the question is sent ``again``, or returns to
+        the composer to be changed."""
         if self.harness is None or self.session is None:
             return
         harness, session = self.harness, self.session
@@ -1112,8 +1114,11 @@ class Application(Adw.Application):
             else:
                 self.conversation = self._restored(session, past)
                 self.drawer.clear()
-                self.drawer.draft(turn.question)
                 self.update_canvas()
+                if again:
+                    self.ask(turn.question)
+                else:
+                    self.drawer.draft(turn.question)
             self.drawer.refresh()
 
         self.background(work, went)
