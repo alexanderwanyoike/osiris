@@ -280,3 +280,11 @@ def test_a_questions_changes_are_shown_and_a_comment_on_them_reaches_thoth() -> 
     assert stand_in.conversation.turns[-1].question == (
         "About main.py, lines 3 to 4:\n\nName it better."
     )
+
+
+def test_a_message_sent_now_waits_shown_while_the_engine_cuts_in() -> None:
+    stand_in, engine = app()
+    asked(stand_in, "count to sixty")
+    stand_in.send_now("stop, count to ten")
+    assert engine.cut == ["ses_1"]
+    assert [w.text for w in stand_in.conversation.waiting] == ["stop, count to ten"]
