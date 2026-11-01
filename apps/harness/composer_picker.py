@@ -9,7 +9,7 @@ from collections.abc import Callable
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gdk, Gtk, Pango  # noqa: E402
+from gi.repository import Gdk, Graphene, Gtk, Pango  # noqa: E402
 
 from osiris.harness.picker import (  # noqa: E402
     SIGN,
@@ -87,8 +87,18 @@ class Picker:
     def _move(self, step: int) -> None:
         row = self.list.get_selected_row()
         rows = len(list(self.list))
-        self.list.select_row(self.list.get_row_at_index(
-            min(max(row.get_index() + step, 0), rows - 1)))
+        chosen = self.list.get_row_at_index(min(max(row.get_index() + step, 0), rows - 1))
+        self.list.select_row(chosen)
+        self._reveal(chosen)
+
+    def _reveal(self, row: Gtk.ListBoxRow) -> None:
+        _found, at = row.compute_point(self.list, Graphene.Point())
+        shown = self.card.get_vadjustment()
+        top, page = shown.get_value(), shown.get_page_size()
+        if at.y < top:
+            shown.set_value(at.y)
+        elif at.y + row.get_height() > top + page:
+            shown.set_value(at.y + row.get_height() - page)
 
     def _complete(self, entry: Entry) -> None:
         buffer = self._entry.get_buffer()
