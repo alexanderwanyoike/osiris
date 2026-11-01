@@ -104,3 +104,36 @@ def test_the_pickers_chosen_entry_keeps_its_name_in_the_text_colour_in_every_loo
         text.parse(look.theme["colors"]["foreground"])
         window.destroy()
         assert label.get_color().equal(text), skin
+
+
+def test_a_working_connector_says_so_in_the_themes_success_colour_in_every_look(
+    tmp_path: Path,
+) -> None:
+    from connectors_page import ConnectorsPage
+    from gi.repository import Gdk
+
+    from osiris.harness.connectors import Connector, State
+
+    from .conftest import now
+
+    wiki = Connector("wiki", url="https://w.example/mcp")
+    for skin in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(skin)
+        look = Look(tmp_path, lambda: None)
+        page = ConnectorsPage(
+            read=lambda: [wiki],
+            save=lambda _c: True,
+            remove=lambda _n: True,
+            states=lambda: {"wiki": State("connected")},
+            background=now,
+        )
+        window = Gtk.Window(child=page)
+        window.present()
+        said = next(
+            w for w in widgets(page) if "harness-connector-state" in w.get_css_classes()
+        )
+        success = Gdk.RGBA()
+        success.parse(look.theme["colors"]["success"])
+        window.destroy()
+        assert said.get_color().equal(success), skin
