@@ -181,3 +181,9 @@ def test_a_server_that_never_starts_is_not_asked_about_for_ever() -> None:
     while waits and len(asked) < 100:
         waits.pop(0)()
     assert len(asked) < 100
+
+
+def test_with_no_connectors_the_page_says_what_one_is_and_draws_no_empty_list() -> None:
+    shown = page(Store())
+    assert any("MCP server" in text for text in texts(shown))
+    assert not shown.connectors.get_visible()
