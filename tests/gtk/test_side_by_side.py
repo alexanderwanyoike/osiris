@@ -3,6 +3,7 @@ answers it, and what it is still doing reaches it, not the one on screen."""
 
 from __future__ import annotations
 
+import time
 from types import SimpleNamespace
 from typing import Any
 
@@ -188,8 +189,8 @@ def test_the_sidebar_is_refreshed_once_a_question_has_its_session_working() -> N
     stand_in, _ = app()
     stand_in.conversation.asked("make it calm")
     stand_in._send("make it calm")
-    context = GLib.MainContext.default()
-    for _ in range(50):
+    context, deadline = GLib.MainContext.default(), time.monotonic() + 2
+    while stand_in.histories == 0 and time.monotonic() < deadline:
         context.iteration(False)
     assert stand_in.histories == 1
 
