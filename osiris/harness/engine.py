@@ -202,10 +202,6 @@ class Engine(Protocol):
         the files are put back at once, the Conversation when it is kept."""
         ...
 
-    def changes(self, session: str, message: str) -> tuple[FileChange, ...]:
-        """What the question ``message`` changed, file by file."""
-        ...
-
     def keep_revert(self, session: str) -> None:
         """Keep the staged revert: the later questions leave the Conversation."""
         ...

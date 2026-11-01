@@ -94,22 +94,28 @@ The first slice of ROADMAP P3.5:
   Harness switches on unless the person has switched it themselves; being
   experimental, it is one to watch when opencode is upgraded. A Conversation
   reopened from the Engine's history does not bring its task list back.
-- **It can go back.** Under each question, once nothing is answering, Edit and
-  Try again each return to before it: opencode's own snapshots put the
-  Project's files back and the Conversation drops that question and those
-  after it. Edit puts the question in the composer to change; Try again sends
-  it as it was. Both first say what will be lost (how many questions, and that
+- **It can go back.** Once nothing is answering, a pencil beside a question,
+  shown while the pointer is on it, and an arrow beside the latest answer's
+  model and time each return to before that question: opencode's own snapshots
+  put the Project's files back and the Conversation drops that question and
+  those after it. The pencil puts the question in the composer to change; the
+  arrow sends it again as it was. Only the latest answer has the arrow, since
+  trying an earlier one again would drop every answer after it unasked. Both first say what will be lost (how many questions, and that
   their files go back) and wait for a yes. Osiris keeps no copies of its own
   (ADR 0005, ADR 0012). See [Going back](#going-back).
-- **It shows what an answer changed.** Under an answer that edited files,
-  once it has ended, Changes opens a tab on the Canvas with that question's
-  changes from opencode (`GET /api/session/{id}/diff?from=<message>&context=3`):
-  each changed file with its lines added and removed, opening to its diff,
-  coloured by the Theme's code scheme. Lines picked in a diff and a comment
-  typed under it are sent to Thoth as a question naming the file and its lines
-  as they are now (`osiris/harness/review.py`), queued if Thoth is busy. A
-  Conversation reopened from history has no steps to say it edited, so offers
-  no Changes yet.
+- **It shows what an answer changed.** Beside the model and time of an answer
+  whose question made commits to Programs, once it has ended, an icon opens a
+  tab on the Canvas with that question's changes: the commits the Harness log
+  records with the question (the ones its Undo would revert), each read with
+  `git show` (`Programs.patch`) and split into files named under their Program
+  (`osiris/harness/changes.py`), each with its lines added and removed, opening
+  to its diff, coloured by the Theme's code scheme. Because the log outlives
+  the Engine's steps, a Conversation reopened from history offers them too, and
+  a Program made from a plain Conversation, which opencode tracks no changes
+  for outside a git Project, still has them. Lines picked in a diff and a
+  comment typed under it are sent to Thoth as a question naming the file and
+  its lines as they are now (`osiris/harness/review.py`), queued if Thoth is
+  busy.
 - **The Harness log** keeps everything: each question before it is sent, each
   answer with the model that gave it and its tokens, every tool call whether or
   not it asked, every answer to a card, everything auto mode allowed, every change with

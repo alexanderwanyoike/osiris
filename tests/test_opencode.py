@@ -331,34 +331,6 @@ class TestGoingBack:
             ("DELETE", clear),
         ]
 
-    def test_a_questions_changes_come_from_the_engines_diff_of_its_turn(
-        self,
-    ) -> None:
-        """As opencode 2.2.4 offers it: a turn's diff, with a few lines of
-        context around each change."""
-        path = f"{URL}/api/session/{SESSION}/diff?from=msg_2&context=3"
-        reply = {
-            "data": [
-                {
-                    "file": "README.md",
-                    "patch": "@@ -1 +1,2 @@\n # Egg Timer\n+Made with Osiris.\n",
-                    "additions": 1,
-                    "deletions": 0,
-                    "status": "modified",
-                }
-            ]
-        }
-        http = FakeHttpClient(replies={("GET", path): reply})
-        assert engine(http).changes(SESSION, "msg_2") == (
-            FileChange(
-                "README.md",
-                "modified",
-                1,
-                0,
-                "@@ -1 +1,2 @@\n # Egg Timer\n+Made with Osiris.\n",
-            ),
-        )
-
     def test_outside_a_git_repository_the_files_cannot_be_restored(self) -> None:
         """As opencode 2.2.4 does there: no snapshot, and no files, even though
         the question changed some."""
@@ -451,6 +423,36 @@ class TestEvents:
         }
         assert self.events(ran) == [
             ToolFinished(SESSION, "call_e29c", "NetworkManager\nUPower\n", exit=0)
+        ]
+
+    def test_a_subagent_gives_back_its_answer_without_the_engines_wrapper(
+        self,
+    ) -> None:
+        """As opencode 2.2.4 reports the reviewer's answer: the child session's
+        reply, wrapped in a tag naming it."""
+        answered = {
+            "type": "session.tool.success",
+            "data": {
+                "sessionID": SESSION,
+                "id": "call_DL72",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": '<subagent sessionID="ses_child" state="completed">\n'
+                        "Verdict: pass - It works.\n\n## Spec\nNothing found.\n"
+                        "</subagent>",
+                    }
+                ],
+                "metadata": {"sessionID": "ses_child", "status": "completed"},
+                "executed": False,
+            },
+        }
+        assert self.events(answered) == [
+            ToolFinished(
+                SESSION,
+                "call_DL72",
+                "Verdict: pass - It works.\n\n## Spec\nNothing found.",
+            )
         ]
 
     def test_a_tool_that_failed_says_why(self) -> None:
@@ -554,6 +556,28 @@ class TestHistory:
             Past("ses_b", "Pomodoro", Path("/home/tester/Code/pomodoro"), 2.0),
             Past("ses_a", "Calm theme", Path("/home/tester"), 1.0),
         ]
+
+    def test_a_subagents_session_is_no_conversation_of_its_own(self) -> None:
+        """As opencode 2.2.4 lists the reviewer's: a child of the session that
+        asked it, carrying the Harness's mark."""
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{URL}/api/session?limit=200"): {
+                    "data": [
+                        {
+                            "id": "ses_child",
+                            "parentID": "ses_a",
+                            "agent": "reviewer",
+                            "title": "Review coin-flip",
+                            "location": {"directory": "/home/tester"},
+                            "time": {"created": 990, "updated": 1000},
+                            "metadata": {"osiris": "harness"},
+                        }
+                    ]
+                }
+            }
+        )
+        assert engine(http).conversations() == []
 
     def test_a_past_conversation_is_rebuilt_from_its_messages(self) -> None:
         model = {"id": "gpt-6.1-sol", "providerID": "openai"}

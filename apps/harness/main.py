@@ -58,6 +58,7 @@ from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.apps.tool_server import NAME as TOOLS, undo  # noqa: E402
 
 from osiris.harness import admin  # noqa: E402
+from osiris.harness.changes import file_changes  # noqa: E402
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
 from osiris.harness.harness import Answer, Asking, Harness  # noqa: E402
 from osiris.harness.history import (  # noqa: E402
@@ -71,6 +72,7 @@ from osiris.harness.notice import notice_of  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.review import comment  # noqa: E402
+from osiris.harness.reviewer import write_reviewer  # noqa: E402
 from osiris.harness.rules import switch_on_task_list, write_starting_rules  # noqa: E402
 from osiris.harness.status import Status, status_of  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
@@ -79,6 +81,7 @@ from osiris.harness.unread import Unread  # noqa: E402
 from osiris.programs.programs import Programs  # noqa: E402
 from osiris.provision.upgrade import Upgrade  # noqa: E402
 from osiris.platform import (  # noqa: E402
+    CommandError,
     HttpError,
     ProcFs,
     RealFileSystem,
@@ -497,6 +500,8 @@ class Drawer(Gtk.ApplicationWindow):
                             edit=self.app.ask_to_go_back,
                             try_again=lambda turn: self.app.ask_to_go_back(turn, True),
                             may_go_back=lambda turn: self.app.conversation.can_go_back(turn),
+                            may_try_again=lambda turn:
+                                self.app.conversation.can_try_again(turn),
                             show_changes=self.app.show_changes)
             self.views.append(view)
             self.turns.append(view)
@@ -1112,16 +1117,31 @@ class Application(Adw.Application):
 
     def show_changes(self, turn: Turn) -> None:
         """What a question changed, on the Canvas; a comment on it is asked."""
-        if self.harness is None or self.session is None:
-            return
-        harness, session = self.harness, self.session
 
         def commented(path: str, lines: tuple[int, int], text: str) -> None:
             self.ask(comment(path, lines, text))
 
-        self.background(lambda: harness.changes(session, turn.message),
-                        lambda files: self.drawer.show_changes(turn.question, files,
-                                                               commented))
+        programs = self.programs()
+
+        def read() -> tuple[tuple, list[str]]:
+            found, gone = [], []
+            for name, commit in turn.commits:
+                try:
+                    found += file_changes(name, programs.patch(name, commit))
+                except CommandError:
+                    gone.append(name)
+            return tuple(found), gone
+
+        def shown(result: tuple[tuple, list[str]]) -> None:
+            files, gone = result
+            if gone and not files:
+                turn.note = (f"{', '.join(dict.fromkeys(gone))} is gone, so what this "
+                             "question changed in it cannot be shown.")
+                self.drawer.refresh()
+                return
+            self.drawer.show_changes(turn.question, files, commented)
+
+        self.background(read, shown)
 
     def ask_to_go_back(self, turn: Turn, again: bool = False) -> None:
         """Say what going back loses, and go back only on the person's yes."""
@@ -1294,6 +1314,7 @@ class Application(Adw.Application):
         # service already running too.
         write_starting_rules(files, me.home)
         switch_on_task_list(files, me.home)
+        write_reviewer(files, me.home)
         while True:
             try:
                 service = locate(files, me, SubprocessRunner(sink=lambda _l: None))

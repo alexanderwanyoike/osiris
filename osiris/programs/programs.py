@@ -250,6 +250,10 @@ class Programs:
         """Undo one commit with a commit of its own, so history only grows."""
         self._git(name, "revert", "--no-edit", commit, harness=True)
 
+    def patch(self, name: str, commit: str) -> str:
+        """What one commit changed, as git's patch for it."""
+        return self._git(name, "show", "--format=", "--patch", commit)
+
     def check(self, name: str) -> list[str]:
         """Problems found without running anything: Python that does not compile."""
         self.manifest(name)
