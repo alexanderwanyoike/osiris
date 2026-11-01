@@ -50,6 +50,7 @@ from providers import ProvidersPage  # noqa: E402
 from browser import Page  # noqa: E402
 from canvas import Canvas, open_in_code  # noqa: E402
 from connectors_page import ConnectorsPage  # noqa: E402
+from conversation_panel import ConversationPanel  # noqa: E402
 from composer_picker import Picker  # noqa: E402
 from rail import Rail  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
@@ -277,12 +278,15 @@ class Drawer(Gtk.ApplicationWindow):
         rail_view.connect("value-changed", lambda _a: self._update_rail())
         rail_view.connect("changed", lambda _a: self._update_rail())
         chat.append(Adw.Clamp(maximum_size=READABLE, child=bottom))
+        self.conversation_panel = ConversationPanel()
+        self.conversation_panel.connect("map", lambda _p: self.app.update_panel())
         self.canvas = Canvas(read=lambda path: path.read_text(errors="replace"),
                              open_in_code=open_in_code,
                              on_changes=lambda: self.app.show_all_changes(),
                              terminal=lambda folder: Terminal(folder, self.app.look.theme),
                              page=lambda at, on_title: Page(at, on_title),
                              home=getattr(app, "home", None),
+                             conversation=self.conversation_panel,
                              scheme=app.look.scheme if app.look is not None else None)
         self.canvas.set_visible(False)
         # The Canvas's toolbar sits at the top bar's right, shown with the
@@ -1219,6 +1223,9 @@ class Application(Adw.Application):
         self.background(gather, found)
 
     def update_canvas(self) -> None:
+        # The panel follows the Conversation while it is on screen.
+        if self.drawer is not None and self.drawer.conversation_panel.get_mapped():
+            self.update_panel()
         # The picker lists what is where the Conversation runs, which changes
         # whenever its Canvas does.
         self.refresh_offers()
