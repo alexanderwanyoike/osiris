@@ -224,3 +224,37 @@ def test_a_short_state_is_shown_whole_however_narrow_the_drawer() -> None:
     ellipsized = pill.get_layout().is_ellipsized()
     window.destroy()
     assert not ellipsized
+
+
+def test_a_server_needing_sign_in_signs_in_from_its_row_without_a_terminal() -> None:
+    from connectors_page import ConnectorsPage
+
+    from osiris.harness.accounts import SignIn, SignInState
+
+    linear = Connector("linear", url="https://mcp.linear.app/mcp")
+    started = SignIn("mcp_x", "att_1", "https://linear.app/oauth", "", False)
+    progress = [SignInState("pending", ""), SignInState("complete", "")]
+    answers = [
+        {"linear": State("needs_auth", "login first", "mcp_x")},
+        {"linear": State("connected")},
+    ]
+    opened: list[str] = []
+    began: list[str] = []
+    waits: list[object] = []
+    shown = ConnectorsPage(
+        read=Store(linear).read,
+        save=lambda _c: True,
+        remove=lambda _n: True,
+        states=lambda: answers.pop(0),
+        background=now,
+        later=lambda _seconds, then: waits.append(then),
+        sign_in=lambda integration: began.append(integration) or started,
+        sign_in_state=lambda _s: progress.pop(0),
+        open_page=opened.append,
+    )
+    shown.row("linear").sign_in.emit("clicked")
+    while waits:
+        waits.pop(0)()
+    assert began == ["mcp_x"]
+    assert opened == ["https://linear.app/oauth"]
+    assert "Connected" in texts(shown)
