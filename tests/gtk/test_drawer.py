@@ -54,6 +54,18 @@ class FakeApp(Adw.Application):
     def refresh_offers(self) -> None:
         self.offers_fetched += 1
 
+    def read_connectors(self) -> list[object]:
+        return []
+
+    def save_connector(self, _connector: object) -> bool:
+        return True
+
+    def remove_connector(self, _name: str) -> bool:
+        return True
+
+    def connector_states(self) -> dict[str, object]:
+        return {}
+
     def undo(self, _turn: object) -> None:
         pass
 
