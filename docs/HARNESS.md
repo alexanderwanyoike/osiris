@@ -105,7 +105,8 @@ The first slice of ROADMAP P3.5:
   (ADR 0005, ADR 0012). See [Going back](#going-back).
 - **It shows what an answer changed.** Changes in the Canvas toolbar (its
   plus-minus icon, Osiris's own) opens the Changes group with a tab for each
-  question that made commits to Programs, newest first (#195): the commits the Harness log
+  question that made commits to Programs, in the order asked with the newest
+  on screen (#195): the commits the Harness log
   records with the question (the ones its Undo would revert), each read with
   `git show` (`Programs.patch`) and split into files named under their Program
   (`osiris/harness/changes.py`), each with its lines added and removed, opening
