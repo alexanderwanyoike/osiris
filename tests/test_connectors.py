@@ -99,3 +99,18 @@ def test_a_removed_connector_is_gone_from_the_engines_config() -> None:
     files.write(HOME / ENGINE_CONFIG, json.dumps(CONFIG))
     assert remove_connector(files, HOME, "wiki")
     assert [c.name for c in read_connectors(files, HOME)] == ["files"]
+
+
+def test_only_connected_servers_are_offered_and_not_osiris_own() -> None:
+    from osiris.harness.connectors import State, offered_servers
+    from osiris.harness.picker import Entry
+
+    states = {
+        "wiki": State("connected"),
+        "tracker": State("needs_auth", "sign in", "mcp-tracker"),
+        "files": State("disabled"),
+        "osiris": State("connected"),
+    }
+    assert offered_servers(states, own="osiris") == [
+        Entry("connector", "wiki", "wiki", "Connector")
+    ]
