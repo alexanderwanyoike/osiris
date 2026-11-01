@@ -353,8 +353,9 @@ class Harness:
                     executed=executed,
                 )
             case ToolRequested(session, request, action, resources, call) if (
-                tier := self._tier(session, action, resources)
+                self._allow_everything()
             ):
+                tier = Tier.ANYTHING
                 if action in COMMAND_ACTIONS:
                     self._allowed_command(session, resources)
                 self._reply(session, request, Reply.ONCE, "")
