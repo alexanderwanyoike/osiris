@@ -310,11 +310,13 @@ def _finished(session: str, data: dict[str, Any]) -> ToolFinished:
 
 
 def _tool(
-    kind: str, session: str, data: dict[str, Any]
+    kind: str, session: str, data: dict[str, Any], name: str = ""
 ) -> ToolCalled | ToolRequested | ToolFinished:
     """A tool call, the permission it asks for, or how it ended."""
     if kind == "session.tool.called":
-        return ToolCalled(session, data["id"], data.get("input", {}), data["executed"])
+        return ToolCalled(
+            session, data["id"], data.get("input", {}), data["executed"], name
+        )
     if kind == "permission.asked":
         return ToolRequested(
             session,
@@ -336,6 +338,8 @@ class _Reader:
 
     def __init__(self) -> None:
         self._models: dict[str, ModelRef] = {}
+        #: Each call's tool, named before the call is reported.
+        self._names: dict[str, str] = {}
 
     def read(self, event: dict[str, Any]) -> Event | None:
         kind, data = event.get("type"), event.get("data", {})
@@ -354,7 +358,9 @@ class _Reader:
                 | "session.tool.success"
                 | "session.tool.failed"
             ):
-                return _tool(kind, session, data)
+                return _tool(kind, session, data, self._names.pop(data.get("id"), ""))
+            case "session.tool.input.started":
+                self._names[data["id"]] = data.get("name", "")
             case "session.inbox.delivered":
                 return Delivered(session, data["inboxID"])
             case "session.step.ended":

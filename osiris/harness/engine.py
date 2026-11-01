@@ -54,6 +54,8 @@ class ToolCalled:
     call: str
     input: dict[str, object]
     executed: bool
+    #: The tool as the Engine names it, which may differ from its action.
+    name: str = ""
 
 
 @dataclass(frozen=True)
