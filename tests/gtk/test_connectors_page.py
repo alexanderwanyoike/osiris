@@ -96,3 +96,11 @@ def test_switching_a_connector_off_saves_it_off_and_says_so_at_once() -> None:
     shown.row("wiki").switch.set_active(False)
     assert store.saved["wiki"] == Connector("wiki", url=WIKI.url, on=False)
     assert "Off" in texts(shown)
+
+
+def test_a_removed_connector_leaves_the_list() -> None:
+    store = Store(WIKI, FILES)
+    shown = page(store)
+    shown.row("wiki").trash.emit("clicked")
+    assert list(store.saved) == ["files"]
+    assert "https://mcp.example.com/mcp" not in texts(shown)
