@@ -16,3 +16,12 @@ def test_a_tab_opens_in_the_group_of_its_kind_and_is_selected() -> None:
     panels.open(README)
     (code,) = panels.groups
     assert (code.kind, code.tabs, code.selected) == (Kind.CODE, [MAIN, README], README)
+
+
+def test_a_tab_already_open_is_selected_again_not_opened_twice() -> None:
+    panels = Panels()
+    panels.open(MAIN)
+    panels.open(README)
+    panels.open(MAIN)
+    (code,) = panels.groups
+    assert (code.tabs, code.selected) == ([MAIN, README], MAIN)
