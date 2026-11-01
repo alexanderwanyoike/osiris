@@ -35,13 +35,19 @@ class FakeApp(Adw.Application):
         self.gone_back: list[object] = []
         self.shown_changes: list[object] = []
         self.sent_now: list[str] = []
+        self.offers: dict[str, list[object]] = {"@": [], "/": []}
+        self.referenced: list[tuple[object, ...]] = []
 
     def open_past(self, session: str) -> None:
         self.opened.append(session)
 
-    def ask(self, text: str) -> None:
+    def ask(self, text: str, references: tuple[object, ...] = ()) -> None:
         self.asked.append(text)
+        self.referenced.append(references)
         self.conversation.asked(text)
+
+    def offered(self, sign: str) -> list[object]:
+        return self.offers[sign]
 
     def undo(self, _turn: object) -> None:
         pass
@@ -534,3 +540,19 @@ def test_the_canvas_toolbar_sits_in_the_top_bar_and_opens_the_canvas() -> None:
     )
     files.emit("clicked")
     assert window.canvas_toggle.get_active()
+
+
+def test_what_is_picked_in_the_message_box_goes_with_the_question() -> None:
+    from gi.repository import Gdk
+
+    from osiris.harness.picker import Entry, Reference
+
+    readme = Entry("file", "/home/tester/Code/timer/README.md", "README.md", "")
+    window, _ = drawer()
+    window.present()
+    window.app.offers["@"] = [readme]
+    window.entry.get_buffer().set_text("fix @RE")
+    none = Gdk.ModifierType(0)
+    window.picker.key(None, Gdk.KEY_Tab, 0, none)
+    window._composer_key(None, Gdk.KEY_Return, 0, none)
+    assert window.app.referenced == [(Reference(readme, 4, 14),)]
