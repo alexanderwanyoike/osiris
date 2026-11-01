@@ -412,3 +412,35 @@ def test_a_question_is_edited_from_a_pencil_beside_it() -> None:
 def test_the_pencil_is_hidden_while_the_question_may_not_be_gone_back_to() -> None:
     view, _, _ = going_back(may=False, state=State.ANSWERING)
     assert not icon_button(view, "document-edit-symbolic").get_visible()
+
+
+def tried(may: bool) -> tuple[TurnView, Turn, list[Turn]]:
+    again: list[Turn] = []
+    turn = Turn("make y.txt", "Made it.", State.DONE, message="msg_2")
+    view = TurnView(
+        turn,
+        on_undo=lambda _t: None,
+        program_card=lambda _n: Gtk.Label(),
+        try_again=again.append,
+        may_try_again=lambda _t: may,
+    )
+    view.update(turn, STYLE, None)
+    return view, turn, again
+
+
+def test_the_latest_answer_is_tried_again_from_an_arrow_by_its_model_and_time() -> None:
+    view, turn, again = tried(may=True)
+    arrow = icon_button(view, "view-refresh-symbolic")
+    meta = next(w for w in widgets(view) if "harness-meta" in w.get_css_classes())
+    assert arrow.get_parent() is meta.get_parent()
+    assert arrow.get_tooltip_text().startswith("Try this question again")
+    arrow.emit("clicked")
+    assert again == [turn]
+
+
+def test_an_answer_that_may_not_be_tried_again_has_no_arrow() -> None:
+    view, _, _ = tried(may=False)
+    assert not any(
+        isinstance(w, Gtk.Button) and w.get_icon_name() == "view-refresh-symbolic"
+        for w in widgets(view)
+    )
