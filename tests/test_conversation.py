@@ -543,3 +543,20 @@ def test_a_question_can_be_gone_back_to_once_nothing_is_answering() -> None:
     talk.asked("make y.txt")
     assert not talk.can_go_back(first)
     assert not talk.can_go_back(talk.turns[-1])
+
+
+@pytest.mark.parametrize(
+    ("place", "said"),
+    [
+        (2, "This question and its answer"),
+        (0, "This question and the 2 after it, with their answers,"),
+        (1, "This question and the one after it, with their answers,"),
+    ],
+)
+def test_going_back_says_what_will_be_lost(place: int, said: str) -> None:
+    talk = Conversation.restored(
+        [PastTurn(q, "Done.", None, f"msg_{i}") for i, q in enumerate("abc")]
+    )
+    lost = talk.losing(talk.turns[place])
+    assert lost.startswith(said)
+    assert "files" in lost
