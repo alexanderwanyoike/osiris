@@ -267,7 +267,6 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-question-row .harness-quiet:focus { opacity: 1; }
 
 /* Bubbles: the panels sit flush on the sunken colour, a hairline between. */
-.harness-canvas paned > separator { background-color: alpha(@harness_fg, 0.08); min-width: 1px; min-height: 1px; }
 
 /* The Canvas's panels (#194): a compact header per panel with small tabs and
    its own actions, a close that shows where the pointer is, counts in the
@@ -315,3 +314,15 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-page entry { min-height: 26px; font-size: 0.86em; border-radius: 7px; }
 .harness-canvas scrolledwindow, .harness-canvas viewport, .harness-canvas list, .harness-canvas .navigation-sidebar { background-color: transparent; box-shadow: none; }
 .harness-terminal { padding: 8px 12px; }
+/* Resize dividers are unseen at rest, with room to grab; the pointer brings a
+   faint line and the resize cursor. */
+.harness-drawer paned > separator,
+.harness-drawer paned > separator:backdrop {
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+    min-width: 6px;
+    min-height: 6px;
+    transition: background-color 140ms ease-out;
+}
+.harness-drawer paned > separator:hover { background-color: alpha(@harness_accent, 0.22); }

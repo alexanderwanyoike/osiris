@@ -398,7 +398,6 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 /* Studio: each panel its own card on the glass, with even gaps between. */
 .harness-canvas { margin: 0 8px 8px 4px; background-color: transparent; border: none; border-radius: 0; }
 .harness-canvas-group { background-color: alpha(@harness_sunken, 0.92); border: 1px solid alpha(@harness_fg, 0.07); border-radius: 12px; }
-.harness-canvas paned > separator { background-color: transparent; min-width: 8px; min-height: 8px; }
 
 /* The Canvas's panels (#194): a compact header per panel with small tabs and
    its own actions, a close that shows where the pointer is, counts in the
@@ -446,3 +445,15 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-page entry { min-height: 26px; font-size: 0.86em; border-radius: 7px; }
 .harness-canvas scrolledwindow, .harness-canvas viewport, .harness-canvas list, .harness-canvas .navigation-sidebar { background-color: transparent; box-shadow: none; }
 .harness-terminal { padding: 8px 12px; }
+/* Resize dividers are unseen at rest, with room to grab; the pointer brings a
+   faint line and the resize cursor. */
+.harness-drawer paned > separator,
+.harness-drawer paned > separator:backdrop {
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+    min-width: 6px;
+    min-height: 6px;
+    transition: background-color 140ms ease-out;
+}
+.harness-drawer paned > separator:hover { background-color: alpha(@harness_accent, 0.22); }
