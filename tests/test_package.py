@@ -77,6 +77,11 @@ def test_the_harness_can_render_answers() -> None:
     assert "gtksourceview5" in names
 
 
+def test_the_canvas_terminal_is_vte_for_gtk_4_as_arch_ships_it() -> None:
+    """#196: the embeddable GTK 4 terminal, in Arch's extra repository."""
+    assert "vte4" in package.depends()
+
+
 def test_the_osiris_tool_server_speaks_mcp_with_the_sdk_arch_ships() -> None:
     """The tool server is built on the official MCP SDK, in Arch's extra."""
     assert "python-mcp" in package.depends()
