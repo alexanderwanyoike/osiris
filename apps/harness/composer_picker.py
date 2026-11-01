@@ -11,10 +11,12 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, Gtk, Pango  # noqa: E402
 
-from osiris.harness.picker import Entry, matching, trigger  # noqa: E402
+from osiris.harness.picker import SIGN, Entry, matching, trigger  # noqa: E402
 
 #: Rows shown at once; typing narrows the rest.
 SHOWN = 8
+MOVES = {Gdk.KEY_Down: 1, Gdk.KEY_Up: -1}
+COMPLETES = (Gdk.KEY_Tab, Gdk.KEY_Return, Gdk.KEY_KP_Enter)
 
 
 class Picker:
@@ -30,6 +32,39 @@ class Picker:
         self.popover.add_css_class("harness-picker-popover")
         self.popover.set_parent(entry)
         entry.get_buffer().connect("changed", lambda _b: self._typed())
+        # Captured before the message box sees them, so Enter picks an entry
+        # rather than sending while the picker is open.
+        keys = Gtk.EventControllerKey(propagation_phase=Gtk.PropagationPhase.CAPTURE)
+        keys.connect("key-pressed", self.key)
+        entry.add_controller(keys)
+
+    def key(self, _controller, keyval, _code, _state) -> bool:
+        if not self.popover.get_visible():
+            return False
+        if keyval in MOVES:
+            self._move(MOVES[keyval])
+            return True
+        if keyval in COMPLETES:
+            self._complete(self.list.get_selected_row().entry)
+            return True
+        return False
+
+    def _move(self, step: int) -> None:
+        row = self.list.get_selected_row()
+        rows = len(list(self.list))
+        self.list.select_row(self.list.get_row_at_index(
+            min(max(row.get_index() + step, 0), rows - 1)))
+
+    def _complete(self, entry: Entry) -> None:
+        buffer = self._entry.get_buffer()
+        text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+        cursor = buffer.get_property("cursor-position")
+        found = trigger(text, cursor)
+        if found is None:
+            return
+        start = buffer.get_iter_at_offset(found.start)
+        buffer.delete(start, buffer.get_iter_at_offset(cursor))
+        buffer.insert(start, f"{SIGN[entry.kind]}{entry.label} ")
 
     def _typed(self) -> None:
         buffer = self._entry.get_buffer()
