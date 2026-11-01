@@ -337,6 +337,7 @@ class Canvas(Gtk.Box):
                                vexpand=True, hexpand=True)
         start.add_css_class("compact")
         start.add_css_class("harness-canvas-start")
+        start.add_css_class("harness-canvas-group")
         ways = Gtk.Box(spacing=8, halign=Gtk.Align.CENTER)
         for label, act in (("Open a terminal", self.open_terminal),
                            ("Open a page", lambda: self.open_page(""))):
