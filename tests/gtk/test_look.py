@@ -24,3 +24,9 @@ def test_the_drawers_look_outranks_the_user_sheet(tmp_path: Path) -> None:
     Look(tmp_path, lambda: None)
     probe = Gtk.Label(css_classes=["look-probe"])
     assert probe.get_color().to_string() != "rgb(255,0,0)"
+
+
+def test_code_is_drawn_in_the_themes_terminal_font(tmp_path: Path) -> None:
+    look = Look(tmp_path, lambda: None)
+    loaded = look._provider.to_string()
+    assert "calt" in loaded and "liga" in loaded
