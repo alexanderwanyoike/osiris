@@ -475,3 +475,18 @@ popover.harness-picker-popover > contents {
 .harness-picker row:selected .harness-picker-icon { color: @harness_fg; }
 .harness-picker-label { color: @harness_fg; font-size: 0.93em; }
 .harness-picker .harness-meta { font-size: 0.93em; }
+
+/* Connectors in Settings: each server's state as a small pill in the Theme's
+   own colour for it. */
+.harness-connector-state {
+    font-size: 0.82em;
+    font-weight: 500;
+    padding: 2px 9px;
+    border-radius: 999px;
+    color: @harness_muted;
+    background-color: alpha(@harness_fg, 0.06);
+}
+.harness-connector-state.harness-success { color: @harness_success; background-color: alpha(@harness_success, 0.14); }
+.harness-connector-state.harness-warning { color: @harness_warning; background-color: alpha(@harness_warning, 0.14); }
+.harness-connector-state.harness-danger { color: @harness_danger; background-color: alpha(@harness_danger, 0.14); }
+.harness-connector-form .harness-problem { color: @harness_danger; font-size: 0.9em; }
