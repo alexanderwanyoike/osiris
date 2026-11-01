@@ -309,6 +309,26 @@ class TestEvents:
             ),
         ]
 
+    def test_a_tool_call_carries_the_name_its_input_started_with(self) -> None:
+        """As opencode 2.2.4 does: the name comes first, on its own event, so
+        a call the rules allow without asking can still be shown."""
+        started = {
+            "type": "session.tool.input.started",
+            "data": {"sessionID": SESSION, "id": "c1", "name": "read"},
+        }
+        called = {
+            "type": "session.tool.called",
+            "data": {
+                "sessionID": SESSION,
+                "id": "c1",
+                "input": {"path": "/etc/hostname"},
+                "executed": False,
+            },
+        }
+        assert self.events(started, called) == [
+            ToolCalled(SESSION, "c1", {"path": "/etc/hostname"}, False, "read")
+        ]
+
     def test_a_permission_names_the_tool_call_it_is_for(self) -> None:
         """As opencode 2.2.4 does: ``source.id`` is the call's id."""
         asked = {
