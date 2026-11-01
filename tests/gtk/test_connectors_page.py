@@ -202,3 +202,25 @@ def test_a_long_failure_is_cut_short_on_its_pill_and_whole_on_hover() -> None:
     _minimum, natural, _b, _c = pill.measure(Gtk.Orientation.HORIZONTAL, -1)
     assert natural < 260
     assert reason.strip() in pill.get_tooltip_text()
+
+
+def test_a_short_state_is_shown_whole_however_narrow_the_drawer() -> None:
+    import time
+
+    from gi.repository import GLib, Gtk
+
+    from .conftest import widgets
+
+    long = Connector("everything", command=("npx", "-y", "@acme/server-everything"))
+    shown = page(Store(long), {"everything": State("connected")})
+    window = Gtk.Window(child=shown, default_width=300)
+    window.present()
+    context, deadline = GLib.MainContext.default(), time.monotonic() + 0.5
+    while time.monotonic() < deadline:
+        context.iteration(False)
+    pill = next(
+        w for w in widgets(shown) if "harness-connector-state" in w.get_css_classes()
+    )
+    ellipsized = pill.get_layout().is_ellipsized()
+    window.destroy()
+    assert not ellipsized
