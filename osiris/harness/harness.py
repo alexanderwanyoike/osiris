@@ -210,9 +210,10 @@ class Harness:
     def move(self, session: str, folder: Path) -> None:
         self._engine.move(session, folder)
 
-    def go_back(self, session: str, message: str) -> Revert | None:
-        """Go back to before ``message``: its files and the Conversation. None
-        while the session is still answering, which the Engine refuses."""
+    def go_back(self, session: str, message: str, questions: int = 1) -> Revert | None:
+        """Go back to before ``message``: its files and the Conversation, which
+        drops ``questions``, that one and those after it. None while the
+        session is still answering, which the Engine refuses."""
         if session in self._running:
             return None
         revert = self._engine.revert(session, message)
@@ -225,6 +226,7 @@ class Harness:
             "went-back",
             session=session,
             message=message,
+            questions=questions,
             files=[change.path for change in revert.files],
         )
         return revert

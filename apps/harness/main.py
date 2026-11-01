@@ -1087,9 +1087,13 @@ class Application(Adw.Application):
         if self.harness is None or self.session is None:
             return
         harness, session = self.harness, self.session
+        turns = self.conversation.turns
+        # By identity: two questions may read the same.
+        place = next((i for i, t in enumerate(turns) if t is turn), len(turns) - 1)
+        dropped = len(turns) - place
 
         def work():
-            revert = harness.go_back(session, turn.message)
+            revert = harness.go_back(session, turn.message, dropped)
             kept = revert is not None and revert.restorable
             return revert, harness.resume(session) if kept else None
 
