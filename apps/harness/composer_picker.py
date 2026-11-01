@@ -80,8 +80,9 @@ class Picker:
             return
         start = buffer.get_iter_at_offset(found.start)
         buffer.delete(start, buffer.get_iter_at_offset(cursor))
-        buffer.insert(start, f"{SIGN[entry.kind]}{entry.label} ")
+        # Picked before it goes in: putting it in re-marks the tokens.
         self._picked.append(entry)
+        buffer.insert(start, f"{SIGN[entry.kind]}{entry.label} ")
 
     def _typed(self) -> None:
         buffer = self._entry.get_buffer()
