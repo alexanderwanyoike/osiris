@@ -331,8 +331,7 @@ def _tree_line(node: Node, depth: int) -> Gtk.Widget:
     if node.folder:
         icon = Gtk.Image(icon_name="folder-symbolic")
     else:
-        kind, _uncertain = Gio.content_type_guess(node.name, None)
-        icon = Gtk.Image(gicon=Gio.content_type_get_symbolic_icon(kind))
+        icon = _file_icon(node.name)
     line = Gtk.Box(spacing=8, margin_start=14 * depth)
     line.append(icon)
     line.append(Gtk.Label(label=node.name, xalign=0,
