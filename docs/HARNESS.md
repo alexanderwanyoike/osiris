@@ -68,6 +68,17 @@ The first slice of ROADMAP P3.5:
   as stopped, keeping what it had said, and is logged (`cut-in`); the Harness
   keeps the session working through that stop, since opencode resumes it.
   With nothing working, Send now sends without cutting in.
+- **Files and skills can be picked into a message.** `@` or `/` at the start
+  of a word opens a card docked over the message box, as wide as it: `@` lists
+  the Project's files, `/` the skills a session in that folder can load
+  (`GET /api/skill`, asked afresh each time the card opens, since an Engine
+  still loading a folder offers only its own two at first). Typing filters,
+  names that start with what is typed first; the arrow keys or the pointer
+  choose, Tab or Enter puts the entry in, Escape closes. A picked entry shows
+  as a token in the Theme's accent, and goes with the message as an attachment
+  (`files` with a `file://` URI, or `skills` by id), each with where it is
+  mentioned. Tokens are found again when the message is sent, so one edited
+  or deleted since is not sent.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
