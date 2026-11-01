@@ -71,3 +71,12 @@ def test_what_was_picked_is_found_where_it_still_stands_in_the_text(
     assert references(text, [README, REVIEW]) == tuple(
         Reference(entry, start, end) for entry, start, end in found
     )
+
+
+def test_a_servers_resource_and_the_server_itself_are_picked_with_at() -> None:
+    home = Entry("resource", "wiki://home", "Home", "wiki")
+    wiki = Entry("connector", "wiki", "wiki", "")
+    assert references("ask @wiki about @Home", [home, wiki]) == (
+        Reference(wiki, 4, 9),
+        Reference(home, 16, 21),
+    )
