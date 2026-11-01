@@ -3,6 +3,8 @@ what follows filters it."""
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from osiris.harness.picker import Trigger, trigger
@@ -36,3 +38,14 @@ def test_what_is_typed_filters_starts_first_then_contains_ignoring_case() -> Non
     assert matching([readme, domain, main], "ma") == [main, domain]
     assert matching([readme, domain, main], "READ") == [readme]
     assert matching([readme, domain, main], "") == [readme, domain, main]
+
+
+def test_a_programs_files_are_offered_by_where_they_are_in_it() -> None:
+    from osiris.harness.picker import Entry, project_files
+
+    source = Path("/home/tester/Code/timer")
+    offered = project_files(source, [Path("README.md"), Path("timer/clock.py")])
+    assert offered == [
+        Entry("file", "/home/tester/Code/timer/README.md", "README.md", ""),
+        Entry("file", "/home/tester/Code/timer/timer/clock.py", "timer/clock.py", ""),
+    ]
