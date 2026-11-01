@@ -107,6 +107,12 @@ def test_a_refused_action_is_shown_on_its_turn() -> None:
         ("shell", {"command": "uname -r"}, "shell", ("uname -r",)),
         ("websearch", {"query": "gtk 4"}, "websearch", ("gtk 4",)),
         ("subagent", {"agent": "reviewer", "prompt": "x"}, "subagent", ("reviewer",)),
+        (
+            "patch",
+            {"patchText": "*** Begin Patch\n*** Update File: /c/main.py\n+x"},
+            "edit",
+            ("/c/main.py",),
+        ),
     ],
 )
 def test_a_tool_the_engine_ran_without_asking_is_a_step(
