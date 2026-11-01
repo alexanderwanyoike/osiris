@@ -220,7 +220,7 @@ def test_the_decision_is_passed_on_in_place_of_the_request() -> None:
     )
     refused = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls",)))
     assert allowed == Allowed("ses_1", "osiris_apply_theme", Tier.UNDOABLE, ("*",))
-    assert refused == Refused("ses_1", "bash", ("ls",))
+    assert refused == Refused("ses_1", "bash", ("ls",), reason=ONLY_WITH_EVERYTHING)
 
 
 def test_a_decision_names_the_tool_call_it_was_for() -> None:
@@ -612,7 +612,7 @@ def test_a_reply_the_engine_cannot_take_is_logged_and_the_conversation_goes_on()
 
     engine.reply = broken  # type: ignore[method-assign]
     decision = subject.handle(ToolRequested("ses_1", "per_1", "bash", ("ls",)))
-    assert decision == Refused("ses_1", "bash", ("ls",))
+    assert decision == Refused("ses_1", "bash", ("ls",), reason=ONLY_WITH_EVERYTHING)
     assert "reply-failed" in [entry["kind"] for entry in entries(files)]
 
 
