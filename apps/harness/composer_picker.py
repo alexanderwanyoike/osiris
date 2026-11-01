@@ -22,6 +22,11 @@ from osiris.harness.picker import (  # noqa: E402
 
 #: Rows shown at once; typing narrows the rest.
 SHOWN = 8
+ICONS = {
+    "file": "text-x-generic-symbolic",
+    "skill": "applications-science-symbolic",
+    "command": "system-run-symbolic",
+}
 MOVES = {Gdk.KEY_Down: 1, Gdk.KEY_Up: -1}
 COMPLETES = (Gdk.KEY_Tab, Gdk.KEY_Return, Gdk.KEY_KP_Enter)
 
@@ -123,6 +128,9 @@ class Picker:
 
 def _row(entry: Entry) -> Gtk.ListBoxRow:
     line = Gtk.Box(spacing=10)
+    icon = Gtk.Image(icon_name=ICONS[entry.kind])
+    icon.add_css_class("harness-picker-icon")
+    line.append(icon)
     label = Gtk.Label(label=entry.label, xalign=0, max_width_chars=28,
                       ellipsize=Pango.EllipsizeMode.START)
     label.add_css_class("harness-picker-label")
