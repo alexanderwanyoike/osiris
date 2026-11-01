@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -330,12 +331,23 @@ def _file_changes(files: list[dict[str, Any]]) -> tuple[FileChange, ...]:
     )
 
 
+#: How a subagent's reply comes back: its child session's answer in a tag.
+_SUBAGENT = re.compile(r"\A<subagent [^>]*>\n?(.*?)\n?</subagent>\Z", re.DOTALL)
+
+
+def _unwrapped(output: str) -> str:
+    found = _SUBAGENT.match(output)
+    return found.group(1) if found else output
+
+
 def _finished(session: str, data: dict[str, Any]) -> ToolFinished:
     """The text a tool gave back; a file it gave is left out."""
-    output = "".join(
-        part.get("text", "")
-        for part in data.get("content") or []
-        if part.get("type") == "text"
+    output = _unwrapped(
+        "".join(
+            part.get("text", "")
+            for part in data.get("content") or []
+            if part.get("type") == "text"
+        )
     )
     exit_status = (data.get("metadata") or {}).get("exit")
     return ToolFinished(
