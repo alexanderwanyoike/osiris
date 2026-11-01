@@ -86,11 +86,13 @@ The first slice of ROADMAP P3.5:
   Harness switches on unless the person has switched it themselves; being
   experimental, it is one to watch when opencode is upgraded. A Conversation
   reopened from the Engine's history does not bring its task list back.
-- **It can go back.** Under each question, once nothing is answering, Go back
-  returns to before it: opencode's own snapshots put the Project's files back
-  and the Conversation drops that question and those after it; the question
-  returns to the composer to send again or change. Osiris keeps no copies of
-  its own (ADR 0005, ADR 0012). See [Going back](#going-back).
+- **It can go back.** Under each question, once nothing is answering, Edit and
+  Try again each return to before it: opencode's own snapshots put the
+  Project's files back and the Conversation drops that question and those
+  after it. Edit puts the question in the composer to change; Try again sends
+  it as it was. Both first say what will be lost (how many questions, and that
+  their files go back) and wait for a yes. Osiris keeps no copies of its own
+  (ADR 0005, ADR 0012). See [Going back](#going-back).
 - **The Harness log** keeps everything: each question before it is sent, each
   answer with the model that gave it and its tokens, every tool call whether or
   not it asked, every answer to a card, everything auto mode allowed, every change with
