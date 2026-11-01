@@ -301,9 +301,9 @@ class Canvas(Gtk.Box):
             buffer.set_style_scheme(self._scheme)
         buffer.set_text(self._read(program.source / relative))
         view = GtkSource.View(buffer=buffer, editable=False, cursor_visible=False,
-                              monospace=True, show_line_numbers=True, left_margin=12,
-                              right_margin=12, top_margin=12, bottom_margin=12,
-                              wrap_mode=Gtk.WrapMode.WORD_CHAR)
+                              monospace=True, show_line_numbers=True, left_margin=16,
+                              right_margin=16, top_margin=16, bottom_margin=16,
+                              pixels_below_lines=3, wrap_mode=Gtk.WrapMode.WORD_CHAR)
         view.add_css_class("harness-code")
         trail = " \u203a ".join((program.manifest.label, *relative.parts))
         where = Gtk.Label(label=trail, xalign=0, hexpand=True,
