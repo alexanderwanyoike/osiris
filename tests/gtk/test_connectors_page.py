@@ -104,3 +104,14 @@ def test_a_removed_connector_leaves_the_list() -> None:
     shown.row("wiki").trash.emit("clicked")
     assert list(store.saved) == ["files"]
     assert "https://mcp.example.com/mcp" not in texts(shown)
+
+
+def test_a_chosen_connector_opens_in_the_form_and_saves_its_change() -> None:
+    store = Store(WIKI)
+    shown = page(store)
+    shown.row("wiki").emit("activated")
+    assert shown.form.get_visible()
+    assert (shown.name.get_text(), shown.reach.get_text()) == ("wiki", WIKI.url)
+    shown.reach.set_text("https://new.example.com/mcp")
+    shown.done.emit("clicked")
+    assert store.saved == {"wiki": Connector("wiki", url="https://new.example.com/mcp")}
