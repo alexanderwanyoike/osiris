@@ -297,6 +297,14 @@ def test_allowing_for_the_conversation_stops_asking_there_only() -> None:
     assert isinstance(elsewhere, Asking)
 
 
+def test_a_card_waiting_in_one_conversation_holds_up_no_other() -> None:
+    subject, engine, _ = asked_to_list_etc()
+    subject.new_conversation()
+    subject.ask("make it calm")
+    subject.handle(ToolRequested("ses_2", "per_2", "read", ("Code/pomodoro/a.py",)))
+    assert engine.replies == [("ses_2", "per_2", True, "")]
+
+
 def test_an_allowed_action_is_passed_on_with_what_it_touches() -> None:
     subject, _, _ = harness()
     subject.ask("add a pause button")

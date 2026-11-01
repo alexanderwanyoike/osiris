@@ -149,6 +149,14 @@ def test_an_action_held_for_the_person_shows_as_the_step_it_would_be() -> None:
     assert (held.action, held.input) == ("shell", {"command": "ls -la /etc"})
 
 
+def test_a_held_actions_card_goes_when_the_answer_ends() -> None:
+    talk = Conversation()
+    talk.asked("list /etc")
+    talk.apply(Asking(S, "per_1", "shell", ("ls /etc",), "call_1"))
+    talk.apply(Stopped(S))
+    assert (talk.turns[-1].asking, talk.turns[-1].held) == (None, None)
+
+
 def test_an_allowed_action_is_not_shown_as_refused() -> None:
     talk = Conversation()
     talk.asked("make it calm")
