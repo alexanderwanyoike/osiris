@@ -132,8 +132,10 @@ class Picker:
             self.list.append(_row(entry))
         self.list.select_row(self.list.get_row_at_index(0))
         # The anchor's width, whatever is listed, so the card holds still
-        # while typing narrows it; descriptions are cut to fit.
-        self.list.set_size_request(self._anchor.get_width(), -1)
+        # while typing narrows it; descriptions are cut to fit. Its bounds,
+        # not get_width(), which leaves out its padding.
+        _found, edges = self._anchor.compute_bounds(self._anchor)
+        self.list.set_size_request(round(edges.get_width()), -1)
         self.popover.popup()
 
     def _mark(self, buffer: Gtk.TextBuffer, text: str) -> None:
