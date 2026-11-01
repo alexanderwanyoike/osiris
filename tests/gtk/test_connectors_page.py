@@ -124,3 +124,12 @@ def test_a_connector_renamed_in_the_form_is_kept_only_by_its_new_name() -> None:
     shown.name.set_text("docs")
     shown.done.emit("clicked")
     assert list(store.saved) == ["docs"]
+
+
+def test_changing_a_connector_that_is_off_keeps_it_off() -> None:
+    store = Store(FILES)
+    shown = page(store)
+    shown.row("files").emit("activated")
+    shown.reach.set_text("npx -y files")
+    shown.done.emit("clicked")
+    assert store.saved["files"].on is False
