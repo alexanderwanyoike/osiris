@@ -430,23 +430,6 @@ class TurnView(Gtk.Box):
             chip.append(undo)
         return chip
 
-    def _going_back(self, turn: Turn) -> Gtk.Widget:
-        """Edit and Try again, each going back to before the question first."""
-        row = Gtk.Box(spacing=4, halign=Gtk.Align.START)
-        for label, act, tip in (
-                ("Edit", self._edit, "Go back to before this question and change it"),
-                ("Try again", self._try_again,
-                 "Go back to before this question and send it again")):
-            if act is None:
-                continue
-            button = Gtk.Button(label=label)
-            button.add_css_class("flat")
-            button.set_tooltip_text(f"{tip}: its files, and everything said since, "
-                                    "go back too")
-            button.connect("clicked", lambda _b, a=act: a(turn))
-            row.append(button)
-        return row
-
     def _meta_line(self, turn: Turn, said: str) -> Gtk.Widget:
         """The model and time, with the quiet actions on this answer."""
         line = Gtk.Box(spacing=6, halign=Gtk.Align.START)
@@ -512,13 +495,3 @@ class TurnView(Gtk.Box):
             note = Gtk.Label(label=turn.note, xalign=0, wrap=True)
             note.add_css_class("harness-step-note")
             self.extras.append(note)
-        if self._may_go_back(turn):
-            self.extras.append(self._going_back(turn))
-        ended = turn.state not in (State.WAITING, State.ANSWERING)
-        if self._show_changes is not None and turn.edited and turn.message and ended:
-            changes = Gtk.Button(label="Changes", halign=Gtk.Align.START)
-            changes.add_css_class("flat")
-            changes.set_tooltip_text("Show what this answer changed, file by file, "
-                                     "on the Canvas")
-            changes.connect("clicked", lambda _b: self._show_changes(turn))
-            self.extras.append(changes)
