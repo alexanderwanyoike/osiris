@@ -14,6 +14,7 @@ gi.require_version("GtkSource", "5")
 from gi.repository import Adw, Gio, Gtk, GtkSource, Pango  # noqa: E402
 
 from osiris.harness.engine import FileChange  # noqa: E402
+from osiris.harness.file_tree import Node, tree  # noqa: E402
 from osiris.harness.panels import Kind, Panels, Tab  # noqa: E402
 from osiris.harness.review import file_lines  # noqa: E402
 from osiris.programs.programs import Program  # noqa: E402
@@ -194,17 +195,30 @@ class Canvas(Gtk.Box):
                                                      xalign=0))
             heading.add_css_class("harness-tree-heading")
             self.tree.append(heading)
-            for relative in files:
-                row = Gtk.ListBoxRow(child=Gtk.Label(
-                    label=str(relative), xalign=0,
-                    ellipsize=Pango.EllipsizeMode.MIDDLE))
-                row.opens = (name, relative)
-                self.tree.append(row)
+            self._add_nodes(name, tree(files), depth=0)
+
+    def _add_nodes(self, name: str, nodes: tuple[Node, ...],
+                   depth: int) -> list[Gtk.ListBoxRow]:
+        """Rows for ``nodes``, a folder's contents hidden until it opens."""
+        rows = []
+        for node in nodes:
+            row = Gtk.ListBoxRow(child=_tree_line(node, depth), visible=depth == 0)
+            self.tree.append(row)
+            rows.append(row)
+            if node.folder:
+                row.inside = self._add_nodes(name, node.children, depth + 1)
+                row.add_css_class("harness-tree-folder")
+            else:
+                row.opens = (name, node.path)
+        return rows
 
     def _tree_activated(self, _tree, row) -> None:
         opens = getattr(row, "opens", None)
         if opens is not None:
             self.open_file(*opens)
+            return
+        inside = getattr(row, "inside", [])
+        _show_inside(inside, not (inside and inside[0].get_visible()))
 
     def _changes_page(self, files: tuple[FileChange, ...],
                       on_comment: Callable[[str, tuple[int, int], str], None],
@@ -308,6 +322,28 @@ class Canvas(Gtk.Box):
         page.append(Gtk.ScrolledWindow(child=view, vexpand=True, hexpand=True,
                                        hscrollbar_policy=Gtk.PolicyType.NEVER))
         return page, view
+
+
+def _tree_line(node: Node, depth: int) -> Gtk.Widget:
+    """A file or folder's icon and name, indented by how deep it is."""
+    if node.folder:
+        icon = Gtk.Image(icon_name="folder-symbolic")
+    else:
+        kind, _uncertain = Gio.content_type_guess(node.name, None)
+        icon = Gtk.Image(gicon=Gio.content_type_get_symbolic_icon(kind))
+    line = Gtk.Box(spacing=8, margin_start=14 * depth)
+    line.append(icon)
+    line.append(Gtk.Label(label=node.name, xalign=0,
+                          ellipsize=Pango.EllipsizeMode.MIDDLE))
+    return line
+
+
+def _show_inside(rows: list[Gtk.ListBoxRow], shown: bool) -> None:
+    """Open a folder to its own contents, or close it and every folder in it."""
+    for row in rows:
+        row.set_visible(shown)
+        if not shown:
+            _show_inside(getattr(row, "inside", []), False)
 
 
 def _first_file(program: Program, files: list[Path]) -> Path | None:
