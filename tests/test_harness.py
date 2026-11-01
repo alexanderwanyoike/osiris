@@ -294,6 +294,7 @@ def test_a_card_waiting_in_one_conversation_holds_up_no_other() -> None:
     subject.new_conversation()
     subject.ask("make it calm")
     subject.handle(ToolRequested("ses_2", "per_2", "read", ("Code/pomodoro/a.py",)))
+    subject.answer("ses_2", "per_2", Answer.ONCE)
     assert engine.replies == [("ses_2", "per_2", Reply.ONCE, "")]
 
 
