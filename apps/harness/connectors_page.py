@@ -4,6 +4,7 @@ What a connector is, where it is kept and how its state is said are decided in
 osiris/harness/connectors.py; this draws them and passes on what is changed.
 """
 from collections.abc import Callable
+from dataclasses import replace
 
 import gi
 
@@ -29,6 +30,7 @@ class ConnectorsPage(Gtk.Box):
         self._states, self._background = states, background
         self._connectors: list[Connector] = []
         self._said: dict[str, Gtk.Label] = {}
+        self._rows: dict[str, Adw.ActionRow] = {}
         self._list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
         self._list.add_css_class("boxed-list")
         self.append(self._list)
@@ -90,6 +92,7 @@ class ConnectorsPage(Gtk.Box):
     def reload(self) -> None:
         self._list.remove_all()
         self._said.clear()
+        self._rows.clear()
         self._connectors = self._read()
         for connector in self._connectors:
             self._list.append(self._row(connector))
@@ -101,14 +104,27 @@ class ConnectorsPage(Gtk.Box):
         said = Gtk.Label(valign=Gtk.Align.CENTER)
         said.add_css_class("harness-connector-state")
         row.add_suffix(said)
+        row.switch = Gtk.Switch(active=connector.on, valign=Gtk.Align.CENTER,
+                                tooltip_text="Use this connector")
+        row.switch.connect("notify::active", lambda switch, _p: self._switched(
+            connector, switch.get_active()))
+        row.add_suffix(row.switch)
         self._said[connector.name] = said
+        self._rows[connector.name] = row
         return row
+
+    def row(self, name: str) -> Adw.ActionRow:
+        return self._rows[name]
+
+    def _switched(self, connector: Connector, on: bool) -> None:
+        if self._save(replace(connector, on=on)):
+            self.reload()
 
     def _show_states(self, states: dict[str, State]) -> None:
         for connector in self._connectors:
             # Switched off here, it is off before the Engine has reloaded.
-            state = states.get(connector.name) or (
-                None if connector.on else State("disabled"))
+            state = (states.get(connector.name) if connector.on
+                     else State("disabled"))
             words, tone = said_of(state)
             label = self._said[connector.name]
             label.set_text(words)
