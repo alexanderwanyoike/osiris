@@ -106,6 +106,7 @@ def test_a_refused_action_is_shown_on_its_turn() -> None:
         ("edit", {"filePath": "main.py"}, "edit", ("main.py",)),
         ("shell", {"command": "uname -r"}, "shell", ("uname -r",)),
         ("websearch", {"query": "gtk 4"}, "websearch", ("gtk 4",)),
+        ("subagent", {"agent": "reviewer", "prompt": "x"}, "subagent", ("reviewer",)),
     ],
 )
 def test_a_tool_the_engine_ran_without_asking_is_a_step(
