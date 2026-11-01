@@ -312,14 +312,25 @@ class Canvas(Gtk.Box):
         if len(shown) == 1:
             return shown[0]
         stack = shown[-1]
-        for widget in reversed(shown[1:-1]):
-            stack = self._paned(Gtk.Orientation.VERTICAL, widget, stack)
-        return self._paned(Gtk.Orientation.HORIZONTAL, shown[0], stack)
+        for left, widget in enumerate(reversed(shown[1:-1]), start=2):
+            # Each takes its share of the column: a half, then a third...
+            stack = self._paned(Gtk.Orientation.VERTICAL, widget, stack, 1 / (left))
+        return self._paned(Gtk.Orientation.HORIZONTAL, shown[0], stack, 1 / 2)
 
     def _paned(self, orientation: Gtk.Orientation, start: Gtk.Widget,
-               end: Gtk.Widget) -> Gtk.Paned:
+               end: Gtk.Widget, share: float) -> Gtk.Paned:
+        """Two panels split at ``share`` of the room, once it is known; the
+        person's own dragging is left alone after."""
         paned = Gtk.Paned(orientation=orientation, start_child=start, end_child=end,
                           wide_handle=False, hexpand=True, vexpand=True)
+
+        def sized(_paned, _spec) -> None:
+            room = paned.get_property("max-position")
+            if room > 0:
+                paned.set_position(round(room * share))
+                paned.disconnect(handler)
+
+        handler = paned.connect("notify::max-position", sized)
         self._paneds.append(paned)
         return paned
 
