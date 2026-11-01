@@ -11,6 +11,7 @@ from enum import Enum
 class Kind(Enum):
     CODE = "code"
     CHANGES = "changes"
+    TERMINAL = "terminal"
 
 
 @dataclass(frozen=True)

@@ -31,7 +31,8 @@ class Canvas(Gtk.Box):
     def __init__(self, *, read: Callable[[Path], str],
                  open_in_code: Callable[[Path, Path], None],
                  scheme: GtkSource.StyleScheme | None = None,
-                 on_changes: Callable[[], None] = lambda: None):
+                 on_changes: Callable[[], None] = lambda: None,
+                 terminal: Callable[[Path], Gtk.Widget] | None = None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.add_css_class("harness-canvas")
         self._read = read
@@ -46,6 +47,11 @@ class Canvas(Gtk.Box):
         #: The group last opened or chosen in, whose code is current.
         self._focus: Kind | None = None
         self._programs: dict[str, tuple[Program, list[Path]]] = {}
+        self._terminal = terminal
+        #: Terminals opened so far, which names each one's tab.
+        self._shells = 0
+        #: What each tab shows, ended when its tab closes.
+        self._contents: dict[Tab, Gtk.Widget] = {}
         self.tree = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
         self.tree.add_css_class("navigation-sidebar")
         self.tree.connect("row-activated", self._tree_activated)
@@ -59,6 +65,11 @@ class Canvas(Gtk.Box):
         changes.add_css_class("flat")
         changes.connect("clicked", lambda _b: on_changes())
         self.toolbar.append(changes)
+        shell = Gtk.Button(icon_name="utilities-terminal-symbolic",
+                           tooltip_text="Terminal")
+        shell.add_css_class("flat")
+        shell.connect("clicked", lambda _b: self.open_terminal())
+        self.toolbar.append(shell)
         self._tiles = Gtk.Box(vexpand=True, hexpand=True)
         self._paneds: list[Gtk.Paned] = []
         self.append(self.toolbar)
@@ -106,6 +117,25 @@ class Canvas(Gtk.Box):
         self._add(tab, content, view)
         self._opened(tab)
 
+    def open_terminal(self) -> None:
+        """A new terminal, in the folder of the Program being read."""
+        folder = self._folder()
+        if self._terminal is None or folder is None:
+            return
+        self._shells += 1
+        tab = Tab(Kind.TERMINAL, f"terminal-{self._shells}", folder.name)
+        self._add(tab, self._terminal(folder), None)
+        self._opened(tab)
+
+    def _folder(self) -> Path | None:
+        """The Program of the code tab on screen, else the first Program."""
+        code = next((g for g in self.panels.groups if g.kind is Kind.CODE), None)
+        if code is not None and code.selected is not None:
+            name = code.selected.key.split("/", 1)[0]
+            if name in self._programs:
+                return self._programs[name][0].source
+        return next((p.source for p, _ in self._programs.values()), None)
+
     def close(self, tab: Tab) -> None:
         page = self._pages.get(tab)
         if page is not None:
@@ -114,11 +144,14 @@ class Canvas(Gtk.Box):
     def _open(self, kind: Kind) -> list[Tab]:
         return next((g.tabs for g in self.panels.groups if g.kind is kind), [])
 
-    def _add(self, tab: Tab, content: Gtk.Widget, view: GtkSource.View) -> None:
+    def _add(self, tab: Tab, content: Gtk.Widget,
+             view: GtkSource.View | None) -> None:
         page = self._view(tab.kind).append(content)
         page.set_title(tab.title)
         self._pages[tab] = page
-        self._sources[tab] = view
+        self._contents[tab] = content
+        if view is not None:
+            self._sources[tab] = view
 
     def _opened(self, tab: Tab) -> None:
         self.panels.open(tab)
@@ -159,6 +192,9 @@ class Canvas(Gtk.Box):
         tab = next(t for t, p in self._pages.items() if p is page)
         del self._pages[tab]
         self._sources.pop(tab, None)
+        ended = getattr(self._contents.pop(tab, None), "close", None)
+        if callable(ended):
+            ended()
         self.panels.close(tab)
         view.close_page_finish(page, True)
         self._tile()
