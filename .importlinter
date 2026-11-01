@@ -86,6 +86,8 @@ forbidden_modules =
     http
 ignore_imports =
     osiris.platform.http -> urllib
+    # urllib.parse only builds the address line's search address; it opens nothing.
+    osiris.harness.web -> urllib
 
 [importlinter:contract:mcp-is-confined]
 name = Only the tool server speaks MCP
