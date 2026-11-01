@@ -8,7 +8,11 @@ opencode 2.2.4 offers no API that saves them.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
+
+from osiris.harness.engine_config import ENGINE_CONFIG, edit, read
+from osiris.platform import FileSystem
 
 
 @dataclass(frozen=True)
@@ -56,3 +60,14 @@ def saved(config: dict[str, Any], connector: Connector) -> dict[str, Any]:
 def removed(config: dict[str, Any], name: str) -> dict[str, Any]:
     config.get("mcp", {}).get("servers", {}).pop(name, None)
     return config
+
+
+def read_connectors(files: FileSystem, home: Path) -> list[Connector]:
+    return connectors(read(files, home / ENGINE_CONFIG))
+
+
+def save_connector(files: FileSystem, home: Path, connector: Connector) -> bool:
+    """Whether it could be saved: a commented config is left to the person."""
+    return edit(
+        files, home / ENGINE_CONFIG, lambda config: bool(saved(config, connector))
+    )
