@@ -81,6 +81,7 @@ from osiris.harness.unread import Unread  # noqa: E402
 from osiris.programs.programs import Programs  # noqa: E402
 from osiris.provision.upgrade import Upgrade  # noqa: E402
 from osiris.platform import (  # noqa: E402
+    CommandError,
     HttpError,
     ProcFs,
     RealFileSystem,
@@ -1121,10 +1122,26 @@ class Application(Adw.Application):
             self.ask(comment(path, lines, text))
 
         programs = self.programs()
-        self.background(
-            lambda: tuple(change for name, commit in turn.commits
-                          for change in file_changes(name, programs.patch(name, commit))),
-            lambda files: self.drawer.show_changes(turn.question, files, commented))
+
+        def read() -> tuple[tuple, list[str]]:
+            found, gone = [], []
+            for name, commit in turn.commits:
+                try:
+                    found += file_changes(name, programs.patch(name, commit))
+                except CommandError:
+                    gone.append(name)
+            return tuple(found), gone
+
+        def shown(result: tuple[tuple, list[str]]) -> None:
+            files, gone = result
+            if gone and not files:
+                turn.note = (f"{', '.join(dict.fromkeys(gone))} is gone, so what this "
+                             "question changed in it cannot be shown.")
+                self.drawer.refresh()
+                return
+            self.drawer.show_changes(turn.question, files, commented)
+
+        self.background(read, shown)
 
     def ask_to_go_back(self, turn: Turn, again: bool = False) -> None:
         """Say what going back loses, and go back only on the person's yes."""
