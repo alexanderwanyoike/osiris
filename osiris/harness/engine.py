@@ -149,6 +149,26 @@ class PastTurn:
     model: ModelRef | None
 
 
+@dataclass(frozen=True)
+class FileChange:
+    """A file a revert puts back: what happens to it, and the diff."""
+
+    path: str
+    status: str
+    additions: int
+    deletions: int
+    patch: str
+
+
+@dataclass(frozen=True)
+class Revert:
+    """A revert staged by the Engine: the files it put back, and whether it
+    could put files back at all (outside a git repository it cannot)."""
+
+    files: tuple[FileChange, ...]
+    restorable: bool
+
+
 @runtime_checkable
 class Engine(Protocol):
     def start(
@@ -173,6 +193,11 @@ class Engine(Protocol):
 
     def reply(self, session: str, request: str, answer: Reply, message: str) -> None:
         """Answer a ``ToolRequested``; ``message`` is passed to the model."""
+        ...
+
+    def revert(self, session: str, message: str) -> Revert:
+        """Stage going back to before ``message``, a question of the session's;
+        the files are put back at once, the Conversation when it is kept."""
         ...
 
     def stop(self, session: str) -> None: ...

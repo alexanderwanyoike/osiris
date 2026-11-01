@@ -19,11 +19,13 @@ from osiris.harness.engine import (
     Delivered,
     Event,
     Failed,
+    FileChange,
     Finished,
     ModelRef,
     Past,
     PastTurn,
     Reply,
+    Revert,
     Stopped,
     Text,
     Tokens,
@@ -137,6 +139,21 @@ class OpencodeEngine:
             # can arrive after its request is gone.
             if error.status != 404:
                 raise
+
+    def revert(self, session: str, message: str) -> Revert:
+        staged = self._post(
+            f"/api/session/{session}/revert/stage",
+            {"messageID": message, "files": True},
+        )["data"]
+        return Revert(
+            tuple(
+                FileChange(
+                    f["file"], f["status"], f["additions"], f["deletions"], f["patch"]
+                )
+                for f in staged.get("files", [])
+            ),
+            restorable="snapshot" in staged,
+        )
 
     def stop(self, session: str) -> None:
         self._post(f"/api/session/{session}/interrupt")

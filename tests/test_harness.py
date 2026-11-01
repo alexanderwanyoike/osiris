@@ -20,6 +20,7 @@ from osiris.harness.engine import (
     Past,
     PastTurn,
     Reply,
+    Revert,
     Stopped,
     Text,
     Tokens,
@@ -52,6 +53,8 @@ class FakeEngine:
     withdrawn: list[tuple[str, str]] = field(default_factory=list)
     replies: list[tuple[str, str, Reply, str]] = field(default_factory=list)
     stopped: list[str] = field(default_factory=list)
+    reverted: list[tuple[str, str]] = field(default_factory=list)
+    revert_gives: Revert = field(default_factory=lambda: Revert((), restorable=True))
     switched: list[tuple[str, ModelRef]] = field(default_factory=list)
     renamed: list[tuple[str, str]] = field(default_factory=list)
     moved: list[tuple[str, Path]] = field(default_factory=list)
@@ -82,6 +85,10 @@ class FakeEngine:
 
     def stop(self, session: str) -> None:
         self.stopped.append(session)
+
+    def revert(self, session: str, message: str) -> Revert:
+        self.reverted.append((session, message))
+        return self.revert_gives
 
     def switch_model(self, session: str, model: ModelRef) -> None:
         self.switched.append((session, model))
