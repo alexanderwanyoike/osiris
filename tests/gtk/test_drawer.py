@@ -640,3 +640,21 @@ def test_settings_hold_the_persons_connectors_beside_their_providers() -> None:
     shown = texts(window)
     assert "Connectors" in shown
     assert "https://w.example/mcp" in shown and "Connected" in shown
+
+
+def test_the_rail_has_a_tick_per_question_and_a_click_scrolls_to_it() -> None:
+    from tests.gtk.test_composer_picker import settle
+    from tests.gtk.test_rail import marks
+
+    window, _ = drawer()
+    window.set_default_size(420, 700)
+    window.present()
+    for n in range(3):
+        turn = window.app.conversation.asked(f"question {n}")
+        turn.answer = "an answer that runs on\n\n" * 20
+    window.refresh()
+    settle()
+    assert len(marks(window.rail)) == 3
+    window.rail_jump(0)
+    settle()
+    assert window.scroller.get_vadjustment().get_value() == 0
