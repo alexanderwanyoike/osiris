@@ -118,7 +118,7 @@ class Canvas(Gtk.Box):
                      on_comment: Callable[[str, tuple[int, int], str], None]) -> None:
         """A question's changes in a tab of their own: the files it changed,
         each opening to its diff, and a comment on picked lines."""
-        tab = Tab(Kind.CHANGES, question, f"Changes: {question}")
+        tab = Tab(Kind.CHANGES, question, question)
         if tab in self._pages:
             self.close(tab)
         content, view = self._changes_page(files, on_comment)
