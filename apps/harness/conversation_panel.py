@@ -4,6 +4,8 @@ its context and its changes, in one place beside it.
 What fills the context and how a connector's state is said are decided in
 osiris/harness; this draws them.
 """
+from collections.abc import Callable
+
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -65,6 +67,8 @@ class ConversationPanel(Gtk.Box):
         self.append(connectors)
         context, self._context = _section("Context")
         self.append(context)
+        changes, self._changes = _section("Changes")
+        self.append(changes)
 
     def show_where(self, project: str, branch: str, model: str) -> None:
         self.project.words.set_text(project)
@@ -116,6 +120,29 @@ class ConversationPanel(Gtk.Box):
                                "messages it keeps.", xalign=0, wrap=True)
         note.add_css_class("harness-meta")
         self._context.append(note)
+
+    def show_changes(self, changed: list[tuple[int, str, int]],
+                     on_open: Callable[[int], None]) -> None:
+        """Each question that changed something, by its place in the
+        Conversation, its start and how many changes; choosing one opens them."""
+        _clear(self._changes)
+        if not changed:
+            none = Gtk.Label(label="Nothing changed yet.", xalign=0)
+            none.add_css_class("harness-meta")
+            self._changes.append(none)
+            return
+        rows = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        rows.add_css_class("harness-panel-changes")
+        for index, question, count in changed:
+            line = _fact("osiris-changes-symbolic", question)
+            many = Gtk.Label(label=f"{count} change{'' if count == 1 else 's'}")
+            many.add_css_class("harness-meta")
+            line.append(many)
+            row = Gtk.ListBoxRow(child=line, activatable=True)
+            row.index = index
+            rows.append(row)
+        rows.connect("row-activated", lambda _l, row: on_open(row.index))
+        self._changes.append(rows)
 
 
 def _clear(box: Gtk.Box) -> None:
