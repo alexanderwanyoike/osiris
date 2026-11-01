@@ -377,3 +377,4 @@ popover.harness-picker-popover > contents {
 .harness-rail-tick.waiting .harness-rail-line { color: alpha(@harness_warning, 0.5); }
 .harness-rail-tick.waiting.lit .harness-rail-line { color: @harness_warning; }
 .harness-rail-tick:hover .harness-rail-line { min-height: 4px; }
+.harness-rail-band { border-radius: 4px; background-color: alpha(@harness_fg, 0.05); }
