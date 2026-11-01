@@ -801,3 +801,11 @@ def test_where_the_files_cannot_be_restored_nothing_goes_back() -> None:
     assert engine.reverts_kept == []
     assert engine.reverts_cancelled == ["ses_1"]
     assert entries(files)[-1]["kind"] == "could-not-go-back"
+
+
+def test_a_conversation_still_answering_does_not_go_back() -> None:
+    """The Engine refuses a revert while the session runs (opencode 2.2.4)."""
+    subject, engine, _ = harness()
+    subject.ask("make y.txt")
+    assert subject.go_back("ses_1", "msg_1") is None
+    assert engine.reverted == []
