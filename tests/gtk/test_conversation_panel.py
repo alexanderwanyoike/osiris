@@ -69,3 +69,27 @@ def test_context_is_a_grid_of_squares_with_a_legend_marked_approximate() -> None
     assert "10,000 of 100,000 tokens" in words
     assert "Instructions" in words and "6%" in words
     assert any("pproximate" in text for text in words)
+
+
+def test_each_question_that_changed_something_opens_its_changes() -> None:
+    from gi.repository import Gtk
+
+    from .conftest import widgets
+
+    opened: list[int] = []
+    shown = panel()
+    shown.show_changes(
+        [(1, "make it calm", 2), (3, "tidy the timer", 1)], opened.append
+    )
+    words = texts(shown)
+    assert "make it calm" in words and "2 changes" in words
+    assert "tidy the timer" in words and "1 change" in words
+    rows = [w for w in widgets(shown) if isinstance(w, Gtk.ListBoxRow)]
+    rows[1].emit("activate")
+    assert opened == [3]
+
+
+def test_with_nothing_changed_it_says_so() -> None:
+    shown = panel()
+    shown.show_changes([], lambda _i: None)
+    assert "Nothing changed yet." in texts(shown)
