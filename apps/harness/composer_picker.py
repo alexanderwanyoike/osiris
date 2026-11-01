@@ -30,6 +30,8 @@ ROWS = 10
 GAP = 8
 ICONS = {
     "file": "text-x-generic-symbolic",
+    "resource": "insert-link-symbolic",
+    "connector": "network-server-symbolic",
     "skill": "applications-science-symbolic",
     "command": "system-run-symbolic",
 }
