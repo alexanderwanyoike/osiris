@@ -438,3 +438,14 @@ def test_a_waiting_message_taken_back_gives_its_text_back() -> None:
     talk.queued("msg_2", "stop at ten")
     assert talk.unqueued("msg_2") == "stop at ten"
     assert talk.waiting == []
+
+
+def test_a_conversation_with_a_card_open_waits_for_the_person() -> None:
+    talk = Conversation()
+    talk.asked("list /etc")
+    assert not talk.waits_for_person
+    talk.apply(Asking(S, "per_1", "shell", ("ls /etc",), "call_1"))
+    assert talk.waits_for_person
+    talk.apply(Allowed(S, "shell", Tier.ANYTHING, ("ls /etc",), "call_1"))
+    talk.needs_password(Request(("pacman", "-S", "cowsay")))
+    assert talk.waits_for_person
