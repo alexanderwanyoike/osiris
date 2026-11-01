@@ -104,14 +104,18 @@ The first slice of ROADMAP P3.5:
   their files go back) and wait for a yes. Osiris keeps no copies of its own
   (ADR 0005, ADR 0012). See [Going back](#going-back).
 - **It shows what an answer changed.** Beside the model and time of an answer
-  that edited files, once it has ended, an icon opens a tab on the Canvas with that question's
-  changes from opencode (`GET /api/session/{id}/diff?from=<message>&context=3`):
-  each changed file with its lines added and removed, opening to its diff,
-  coloured by the Theme's code scheme. Lines picked in a diff and a comment
-  typed under it are sent to Thoth as a question naming the file and its lines
-  as they are now (`osiris/harness/review.py`), queued if Thoth is busy. A
-  Conversation reopened from history has no steps to say it edited, so offers
-  no Changes yet.
+  whose question made commits to Programs, once it has ended, an icon opens a
+  tab on the Canvas with that question's changes: the commits the Harness log
+  records with the question (the ones its Undo would revert), each read with
+  `git show` (`Programs.patch`) and split into files named under their Program
+  (`osiris/harness/changes.py`), each with its lines added and removed, opening
+  to its diff, coloured by the Theme's code scheme. Because the log outlives
+  the Engine's steps, a Conversation reopened from history offers them too, and
+  a Program made from a plain Conversation, which opencode tracks no changes
+  for outside a git Project, still has them. Lines picked in a diff and a
+  comment typed under it are sent to Thoth as a question naming the file and
+  its lines as they are now (`osiris/harness/review.py`), queued if Thoth is
+  busy.
 - **The Harness log** keeps everything: each question before it is sent, each
   answer with the model that gave it and its tokens, every tool call whether or
   not it asked, every answer to a card, everything auto mode allowed, every change with
