@@ -60,7 +60,7 @@ carry it on.
 
 - How it builds and runs is in `{manifest}` (`build` and `run`, each a list of
   words run in this folder). Keep them true when you change how it is built.
-- How code is written here is in `CODING_STANDARDS.md`. Follow it, and change
+- How code is written here is in `{standards}`. Follow it, and change
   it when the person asks for something it does not say.
 - Windows use GTK 4 and libadwaita, so the Program follows the Osiris Theme.
   Never write colours: style only with libadwaita's named colours
@@ -231,6 +231,7 @@ class Programs:
                 label=label,
                 description=description,
                 manifest=MANIFEST_FILE,
+                standards=STANDARDS_FILE,
                 follow_theme=FOLLOW_THEME,
             ),
         )
