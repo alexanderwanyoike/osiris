@@ -20,3 +20,11 @@ def test_a_projects_branch_is_the_one_checked_out() -> None:
 def test_a_folder_that_is_no_repository_has_no_branch() -> None:
     runner = FakeRunner(results={ASK: CommandError(ASK.split(), 128)})
     assert branch(runner, TIMER) == ""
+
+
+def test_a_project_is_named_by_its_folder_and_home_as_home() -> None:
+    from osiris.harness.where import project_name
+
+    home = Path("/home/tester")
+    assert project_name(TIMER, home) == "timer"
+    assert project_name(home, home) == "Home"
