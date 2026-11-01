@@ -809,3 +809,11 @@ def test_a_conversation_still_answering_does_not_go_back() -> None:
     subject.ask("make y.txt")
     assert subject.go_back("ses_1", "msg_1") is None
     assert engine.reverted == []
+
+
+def test_going_back_logs_how_many_questions_it_dropped() -> None:
+    subject, _, files = harness()
+    subject.ask("make y.txt")
+    subject.handle(Finished("ses_1"))
+    subject.go_back("ses_1", "msg_1", questions=3)
+    assert entries(files)[-1]["questions"] == 3
