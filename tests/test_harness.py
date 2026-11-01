@@ -276,6 +276,14 @@ def test_allowing_once_runs_the_action_and_is_logged() -> None:
     assert (entry["kind"], entry["answer"]) == ("answered", "once")
 
 
+def test_a_card_answered_leaves_the_tokens_spent_readable() -> None:
+    """Reopening the Conversation adds up its tokens from the log."""
+    subject, _, files = asked_to_list_etc()
+    subject.answer("ses_1", "per_1", Answer.ONCE)
+    subject.handle(Answered("ses_1", GPT, TOKENS, cost=0.0))
+    assert HarnessLog(files, HOME / LOG_FILE).tokens_spent("ses_1") == 16
+
+
 def test_denying_refuses_the_action_and_thoth_is_told() -> None:
     subject, engine, files = asked_to_list_etc()
     decision = subject.answer("ses_1", "per_1", Answer.DENY)
