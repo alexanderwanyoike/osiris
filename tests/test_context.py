@@ -27,3 +27,28 @@ def test_what_the_messages_do_not_account_for_is_the_engines_instructions() -> N
         Slice("tools", 0),
         Slice("free", 1000),
     ]
+
+
+def test_the_grid_gives_each_kind_its_share_of_squares() -> None:
+    from osiris.harness.context import grid
+
+    shared = [
+        Slice("instructions", 30),
+        Slice("questions", 5),
+        Slice("answers", 15),
+        Slice("tools", 0),
+        Slice("free", 50),
+    ]
+    squares = grid(shared, 20)
+    assert len(squares) == 20
+    assert (
+        squares
+        == ["instructions"] * 6 + ["questions"] + ["answers"] * 3 + ["free"] * 10
+    )
+
+
+def test_a_kind_with_any_tokens_gets_at_least_one_square() -> None:
+    from osiris.harness.context import grid
+
+    shared = [Slice("instructions", 1), Slice("free", 999)]
+    assert grid(shared, 10).count("instructions") == 1
