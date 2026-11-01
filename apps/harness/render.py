@@ -444,7 +444,7 @@ class TurnView(Gtk.Box):
             again.add_css_class("harness-quiet")
             again.connect("clicked", lambda _b: self._try_again and self._try_again(turn))
             line.append(again)
-        if self._show_changes is not None and turn.edited and turn.message:
+        if self._show_changes is not None and turn.commits:
             changes = Gtk.Button(icon_name="view-dual-symbolic",
                                  tooltip_text="Show what this answer changed, file "
                                  "by file, on the Canvas")
