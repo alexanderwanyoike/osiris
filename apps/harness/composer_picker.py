@@ -25,6 +25,8 @@ from osiris.harness.picker import (  # noqa: E402
 LISTED = 200
 #: The card's tallest, about ten rows; the rest scroll.
 HEIGHT = 300
+#: Space between the card and the message box under it.
+GAP = 8
 ICONS = {
     "file": "text-x-generic-symbolic",
     "skill": "applications-science-symbolic",
@@ -53,6 +55,7 @@ class Picker:
         self.popover = Gtk.Popover(child=self.card, autohide=False, has_arrow=False,
                                    position=Gtk.PositionType.TOP)
         self.popover.add_css_class("harness-picker-popover")
+        self.popover.set_offset(0, -GAP)
         self.popover.set_parent(self._anchor)
         self.token = entry.get_buffer().create_tag("harness-token", weight=500)
         entry.get_buffer().connect("changed", lambda _b: self._typed())
