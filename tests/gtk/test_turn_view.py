@@ -291,6 +291,9 @@ def test_the_task_list_stays_once_the_answer_ends() -> None:
     from osiris.harness.tasks import Progress, Task
 
     turn = Turn(
-        "make two files", "Done.", State.DONE, tasks=[Task("Create c.txt", Progress.DONE)]
+        "make two files",
+        "Done.",
+        State.DONE,
+        tasks=[Task("Create c.txt", Progress.DONE)],
     )
     assert "Create c.txt" in texts(drawn(turn))
