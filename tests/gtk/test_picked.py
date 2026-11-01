@@ -100,7 +100,6 @@ def test_at_offers_the_projects_files_then_its_servers_and_their_resources() -> 
 
     from osiris.harness.connectors import State
     from osiris.harness.harness import Harness
-
     from tests.test_harness import GPT, HOME
 
     project = HOME / "Code" / "timer"
