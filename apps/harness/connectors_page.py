@@ -13,6 +13,7 @@ gi.require_version("Adw", "1")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Adw, Gtk, Pango  # noqa: E402
 
+from osiris.harness.accounts import SignIn, SignInState  # noqa: E402
 from osiris.harness.connectors import (  # noqa: E402
     Connector,
     State,
@@ -32,11 +33,18 @@ class ConnectorsPage(Gtk.Box):
     def __init__(self, read: Callable[[], list[Connector]],
                  save: Callable[[Connector], bool], remove: Callable[[str], bool],
                  states: Callable[[], dict[str, State]], background,
-                 later: Callable[[int, Callable[[], None]], None] = lambda _s, _t: None):
+                 later: Callable[[int, Callable[[], None]], None] = lambda _s, _t: None,
+                 sign_in: Callable[[str], SignIn] | None = None,
+                 sign_in_state: Callable[[SignIn], SignInState] | None = None,
+                 open_page: Callable[[str], None] = lambda _url: None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         self.add_css_class("harness-connectors")
         self._read, self._save, self._remove = read, save, remove
         self._states, self._background, self._later = states, background, later
+        self._sign_in, self._sign_in_state = sign_in, sign_in_state
+        self._open_page = open_page
+        #: The Engine's integration each server signs in through, once known.
+        self._integrations: dict[str, str] = {}
         self._connectors: list[Connector] = []
         #: The connector the form is changing, if it is not adding one.
         self._editing: Connector | None = None
@@ -140,6 +148,11 @@ class ConnectorsPage(Gtk.Box):
                          ellipsize=Pango.EllipsizeMode.END)
         said.add_css_class("harness-connector-state")
         row.add_suffix(said)
+        row.sign_in = Gtk.Button(label="Sign in", valign=Gtk.Align.CENTER,
+                                 visible=False)
+        row.sign_in.add_css_class("harness-sign-in")
+        row.sign_in.connect("clicked", lambda _b: self._begin_sign_in(connector.name))
+        row.add_suffix(row.sign_in)
         row.switch = Gtk.Switch(active=connector.on, valign=Gtk.Align.CENTER,
                                 tooltip_text="Use this connector")
         row.switch.connect("notify::active", lambda switch, _p: self._switched(
@@ -153,6 +166,28 @@ class ConnectorsPage(Gtk.Box):
         self._said[connector.name] = said
         self._rows[connector.name] = row
         return row
+
+    def _begin_sign_in(self, name: str) -> None:
+        integration, sign_in = self._integrations[name], self._sign_in
+        if sign_in is not None:
+            self._background(lambda: sign_in(integration), self._signing_in)
+
+    def _signing_in(self, attempt: SignIn) -> None:
+        self._open_page(attempt.url)
+        self._later(self.POLL_SECONDS, lambda: self._check(attempt))
+
+    def _check(self, attempt: SignIn) -> None:
+        state = self._sign_in_state
+        if state is not None:
+            self._background(lambda: state(attempt),
+                             lambda now: self._checked(attempt, now))
+
+    def _checked(self, attempt: SignIn, now: SignInState) -> None:
+        if now.status == "pending":
+            self._later(self.POLL_SECONDS, lambda: self._check(attempt))
+            return
+        self._polls = 0
+        self._ask_states()
 
     def row(self, name: str) -> Adw.ActionRow:
         return self._rows[name]
@@ -184,6 +219,11 @@ class ConnectorsPage(Gtk.Box):
             label.set_ellipsize(Pango.EllipsizeMode.END if len(words) > self.SHORT
                                 else Pango.EllipsizeMode.NONE)
             label.set_css_classes(["harness-connector-state", f"harness-{tone}"])
+            needs = (state is not None and state.status == "needs_auth"
+                     and bool(state.integration) and self._sign_in is not None)
+            if needs and state is not None:
+                self._integrations[connector.name] = state.integration
+            self._rows[connector.name].sign_in.set_visible(needs)
         if unsettled and self._polls < self.POLLS:
             self._later(self.POLL_SECONDS, self._ask_states)
 
