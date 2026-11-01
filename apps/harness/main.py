@@ -1100,12 +1100,11 @@ class Application(Adw.Application):
         def went(result) -> None:
             revert, past = result
             if revert is None:
-                self.problem = "Osiris is still answering; go back once it is done."
+                turn.note = "Osiris is still answering; go back once it is done."
             elif past is None:
-                self.problem = ("Nothing went back: this folder is not a git "
-                                "repository, so its files cannot be put back.")
+                turn.note = ("Nothing went back: this folder is not a git "
+                             "repository, so its files cannot be put back.")
             else:
-                self.problem = None
                 self.conversation = self._restored(session, past)
                 self.drawer.clear()
                 self.drawer.draft(turn.question)
