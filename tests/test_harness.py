@@ -871,3 +871,12 @@ def test_the_stop_cutting_in_causes_leaves_the_session_working() -> None:
     assert subject.running == {"ses_1"}
     subject.handle(Stopped("ses_1"))
     assert subject.running == frozenset()
+
+
+def test_sending_now_with_nothing_running_does_not_cut_in() -> None:
+    """There is no step to stop, and no stop would come to resume through."""
+    subject, engine, _ = harness()
+    subject.ask("count to sixty")
+    subject.handle(Finished("ses_1"))
+    subject.send_now("and to ten")
+    assert engine.cut == []
