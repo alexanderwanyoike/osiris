@@ -6,6 +6,7 @@ import posixpath
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
+from enum import Enum
 from pathlib import Path
 
 from osiris.harness.admin import Request
@@ -80,6 +81,12 @@ class Asking:
     patterns: tuple[str, ...] = ()
 
 
+class Answer(Enum):
+    """The person's answer to a card."""
+
+    ONCE = "once"
+
+
 #: What the Harness decided about a ``ToolRequested``, passed on in its place.
 Decision = Allowed | Refused | Asking
 
@@ -120,6 +127,8 @@ class Harness:
         #: across sessions, and whether it runs sudo.
         self._last_command: dict[str, tuple[int, bool]] = {}
         self._commands_allowed = 0
+        #: Actions held for the person, by session and request.
+        self._waiting: dict[tuple[str, str], Asking] = {}
 
     def ask(self, text: str) -> None:
         directory, session = self._directory, self._session
@@ -270,6 +279,23 @@ class Harness:
                 "reply-failed", session=session, request=request, error=str(error)
             )
 
+    def answer(self, session: str, request: str, answer: Answer) -> Decision | None:
+        """Answer a card; None when nothing is waiting under it."""
+        asking = self._waiting.pop((session, request), None)
+        if asking is None:
+            return None
+        self._reply(session, request, allow=True, message="")
+        self._log.write(
+            "answered",
+            session=session,
+            action=asking.action,
+            resources=list(asking.resources),
+            answer=answer.value,
+        )
+        return Allowed(
+            session, asking.action, Tier.ANYTHING, asking.resources, asking.call
+        )
+
     def handle(self, event: Event) -> Event | Decision | None:
         """Log what the Engine reports and apply policy; the event is passed on.
 
@@ -313,6 +339,7 @@ class Harness:
                 return Allowed(session, action, tier, resources, call)
             case ToolRequested(session, request, action, resources, call, patterns):
                 asking = Asking(session, request, action, resources, call, patterns)
+                self._waiting[(session, request)] = asking
                 self._log.write(
                     "asked",
                     session=session,
