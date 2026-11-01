@@ -51,3 +51,8 @@ def saved(config: dict[str, Any], connector: Connector) -> dict[str, Any]:
         **({} if connector.on else {"disabled": True}),
     }
     return config
+
+
+def removed(config: dict[str, Any], name: str) -> dict[str, Any]:
+    config.get("mcp", {}).get("servers", {}).pop(name, None)
+    return config
