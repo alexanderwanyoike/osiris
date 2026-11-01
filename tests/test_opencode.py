@@ -283,7 +283,11 @@ class TestEvents:
         assert self.events(*TOOL) == [
             ToolCalled(SESSION, "bc9122d7", {"command": "ls /etc"}, executed=False),
             ToolRequested(
-                SESSION, "per_14b99bc5a001drhmJZhNc5wHRG", "shell", ("ls /etc",)
+                SESSION,
+                "per_14b99bc5a001drhmJZhNc5wHRG",
+                "shell",
+                ("ls /etc",),
+                patterns=("ls *",),
             ),
         ]
 
