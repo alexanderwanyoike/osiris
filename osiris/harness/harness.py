@@ -97,7 +97,7 @@ class Harness:
         *,
         directory: Path,
         tools: tuple[str, list[str]] | None = None,
-        allow_everything: Callable[[], bool] = lambda: False,
+        auto_mode: Callable[[], bool] = lambda: False,
     ) -> None:
         """``directory`` is where a Conversation with no Project runs."""
         self._engine = engine
@@ -113,7 +113,7 @@ class Harness:
         #: Sessions working on a question, served whichever one is on screen,
         #: and the folder each runs in.
         self._running: dict[str, Path] = {}
-        self._allow_everything = allow_everything
+        self._auto_mode = auto_mode
         #: Each session's latest command: when it was noted, counted across
         #: sessions, and whether it runs sudo.
         self._last_command: dict[str, tuple[int, bool]] = {}
@@ -320,7 +320,7 @@ class Harness:
             case ToolCalled():
                 self._called(event)
             case ToolRequested(session, request, action, resources, call) if (
-                self._allow_everything()
+                self._auto_mode()
             ):
                 if action in COMMAND_ACTIONS:
                     self._noted_command(session, resources)

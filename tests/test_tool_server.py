@@ -451,9 +451,9 @@ def test_the_model_is_told_what_waits_for_the_person_and_what_auto_mode_lets_run
     """Commands now ask rather than being out of reach (ADR 0020)."""
     from osiris.apps.tool_server import instructions
 
-    careful = instructions(allow_everything=False)
+    careful = instructions(auto_mode=False)
     assert "you cannot run commands" not in careful
     assert "asks the person" in careful
-    auto = instructions(allow_everything=True)
+    auto = instructions(auto_mode=True)
     assert "auto mode" in auto
     assert "rules forbid" in auto

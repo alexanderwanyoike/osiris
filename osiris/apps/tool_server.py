@@ -88,8 +88,8 @@ REACH = {
 }
 
 
-def instructions(*, allow_everything: bool) -> str:
-    return INSTRUCTIONS.replace("{reach}", REACH[allow_everything])
+def instructions(*, auto_mode: bool) -> str:
+    return INSTRUCTIONS.replace("{reach}", REACH[auto_mode])
 
 
 #: How far each tool reaches, which decides how the Harness answers its requests.
@@ -232,14 +232,14 @@ def server(
     wallpapers: UserWallpapers,
     *,
     skins: SkinStore | None = None,
-    allow_everything: bool = False,
+    auto_mode: bool = False,
 ) -> MCPServer:
     """The tools, acting on ``store``; every change they make is written to
     ``log`` with the step that undoes it."""
     logged = _Logged(log)
     tools = _Tools(
         NAME,
-        instructions=instructions(allow_everything=allow_everything),
+        instructions=instructions(auto_mode=auto_mode),
         log_level="WARNING",
     )
 

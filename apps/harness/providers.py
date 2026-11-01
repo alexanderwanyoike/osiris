@@ -46,8 +46,8 @@ class ProvidersPage(Gtk.Box):
     POLL_SECONDS = 2
 
     def __init__(self, accounts, background, open_page=None, later=None,
-                 default=None, on_model_chosen=None, allows_everything=False,
-                 on_allow_everything=None):
+                 default=None, on_model_chosen=None, auto_mode_on=False,
+                 on_auto_mode=None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-providers")
         self._accounts = accounts
@@ -74,10 +74,10 @@ class ProvidersPage(Gtk.Box):
                             xalign=0, wrap=True)
         warning.add_css_class("harness-meta")
         allow_text.append(warning)
-        allow_switch = Gtk.Switch(active=allows_everything, valign=Gtk.Align.CENTER)
-        if on_allow_everything is not None:
+        allow_switch = Gtk.Switch(active=auto_mode_on, valign=Gtk.Align.CENTER)
+        if on_auto_mode is not None:
             allow_switch.connect(
-                "notify::active", lambda s, _p: on_allow_everything(s.get_active()))
+                "notify::active", lambda s, _p: on_auto_mode(s.get_active()))
         allow_line.append(allow_text)
         allow_line.append(allow_switch)
         self._search = Gtk.SearchEntry(placeholder_text="Search other providers")

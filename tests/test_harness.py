@@ -126,7 +126,7 @@ def harness(
         model,
         directory=HOME,
         tools=("osiris", ["python3", "tool_server.py"]),
-        allow_everything=lambda: bool(allowed and allowed[0]),
+        auto_mode=lambda: bool(allowed and allowed[0]),
     )
     return subject, engine, files
 
@@ -647,7 +647,7 @@ def test_a_refusal_names_the_ai_as_the_person_knows_it() -> None:
     assert "Osiris" in REFUSED
 
 
-def test_once_the_person_allows_everything_nothing_waits() -> None:
+def test_once_auto_mode_is_on_nothing_waits() -> None:
     allowed = [False]
     subject, engine, _ = harness(allowed=allowed)
     subject.ask("what is in /etc")
@@ -678,12 +678,12 @@ def test_restarting_the_tools_attaches_them_again_where_they_run() -> None:
     assert engine.attached == [("osiris", HOME), ("osiris", HOME), ("osiris", POMODORO)]
 
 
-def everything_allowed() -> tuple[Harness, FakeEngine, FakeFileSystem]:
+def in_auto_mode() -> tuple[Harness, FakeEngine, FakeFileSystem]:
     return harness(allowed=[True])
 
 
 def test_an_admin_request_belongs_to_the_session_whose_last_command_ran_sudo() -> None:
-    subject, _, _ = everything_allowed()
+    subject, _, _ = in_auto_mode()
     subject.ask("install cowsay")
     subject.handle(ToolRequested("ses_1", "per_1", "shell", ("sudo pacman -S cowsay",)))
     assert subject.running_sudo() == "ses_1"
@@ -700,7 +700,7 @@ def test_a_sudo_command_the_engines_rules_allowed_still_finds_its_session() -> N
 
 
 def test_a_session_whose_last_command_did_not_run_sudo_has_no_admin_request() -> None:
-    subject, _, _ = everything_allowed()
+    subject, _, _ = in_auto_mode()
     subject.ask("install cowsay")
     subject.handle(ToolRequested("ses_1", "per_1", "bash", ("sudo pacman -S cowsay",)))
     subject.handle(ToolRequested("ses_1", "per_2", "bash", ("pseudocode --help",)))
@@ -715,7 +715,7 @@ def test_a_refused_sudo_is_no_sessions_admin_request() -> None:
 
 
 def test_a_session_that_has_finished_has_no_admin_request() -> None:
-    subject, _, _ = everything_allowed()
+    subject, _, _ = in_auto_mode()
     subject.ask("install cowsay")
     subject.handle(ToolRequested("ses_1", "per_1", "bash", ("sudo pacman -S cowsay",)))
     subject.handle(Finished("ses_1"))
@@ -723,7 +723,7 @@ def test_a_session_that_has_finished_has_no_admin_request() -> None:
 
 
 def test_of_two_sessions_running_sudo_the_latest_to_start_it_asks() -> None:
-    subject, _, _ = everything_allowed()
+    subject, _, _ = in_auto_mode()
     subject.ask("install cowsay")
     subject.new_conversation()
     subject.ask("restart sshd")
@@ -733,7 +733,7 @@ def test_of_two_sessions_running_sudo_the_latest_to_start_it_asks() -> None:
 
 
 def test_an_admin_password_answer_is_logged_without_the_password() -> None:
-    subject, _, files = everything_allowed()
+    subject, _, files = in_auto_mode()
     subject.ask("install cowsay")
     subject.admin_answered("ses_1", Request(("pacman", "-S", "cowsay")), approved=True)
     assert entries(files)[-1] == {
@@ -749,7 +749,7 @@ def test_an_admin_password_answer_is_logged_without_the_password() -> None:
 def test_a_sudo_command_is_known_before_the_engine_is_told_to_run_it() -> None:
     """The helper can ask as soon as the command starts, which is as soon as
     the Engine has the reply."""
-    subject, engine, _ = everything_allowed()
+    subject, engine, _ = in_auto_mode()
     subject.ask("install cowsay")
     seen: list[str | None] = []
     engine.reply = lambda *_args, **_kwargs: seen.append(subject.running_sudo())  # type: ignore[method-assign]
