@@ -112,7 +112,7 @@ def changed() -> tuple[Canvas, list[tuple[str, tuple[int, int], str]]]:
 def test_a_questions_changes_open_in_a_tab_of_their_own() -> None:
     widget, _ = changed()
     page = widget.views[Kind.CHANGES].get_selected_page()
-    assert page.get_title() == "Changes: tidy main.py"
+    assert page.get_title() == "tidy main.py"
     shown = texts(page.get_child())
     assert "main.py" in shown and "notes.md" in shown
     assert "+2" in shown and "\u22121" in shown  # a minus sign, as drawn
@@ -128,7 +128,7 @@ def test_the_first_file_opens_on_its_diff_in_the_themes_code_colours() -> None:
 def test_showing_the_programs_again_keeps_the_changes_tab() -> None:
     widget, _ = changed()
     widget.show([(program("pomodoro", "Pomodoro"), [Path("main.py")])])
-    assert titles(widget, Kind.CHANGES) == ["Changes: tidy main.py"]
+    assert titles(widget, Kind.CHANGES) == ["tidy main.py"]
 
 
 def test_a_comment_on_picked_lines_reaches_thoth_with_its_file_and_lines() -> None:
