@@ -35,7 +35,7 @@ class ApprovalCard(Gtk.Box):
 
         buttons = Gtk.Box(spacing=6)
         for label, answer in (("Allow once", Answer.ONCE),
-                              ("Allow for this Conversation", Answer.CONVERSATION),
+                              ("Allow for this Conversation", Answer.ALWAYS),
                               ("Deny", Answer.DENY)):
             button = Gtk.Button(label=label)
             if answer is Answer.ONCE:

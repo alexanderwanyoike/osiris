@@ -7,7 +7,6 @@ import re
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
 from enum import Enum
-from fnmatch import fnmatchcase
 from pathlib import Path
 
 from osiris.harness.admin import Request
@@ -87,7 +86,8 @@ class Answer(Enum):
     """The person's answer to a card."""
 
     ONCE = "once"
-    CONVERSATION = "conversation"
+    #: Left to the Engine, which keeps allowing it in the Project.
+    ALWAYS = "always"
     DENY = "deny"
 
 
@@ -137,10 +137,6 @@ class Harness:
         self._commands_allowed = 0
         #: Actions held for the person, by session and request.
         self._waiting: dict[tuple[str, str], Asking] = {}
-        #: What the person allowed for a whole Conversation: by session, each
-        #: action with the patterns its resources must match. Kept here, not
-        #: by the Engine, whose standing grants cover a whole Project.
-        self._granted: dict[str, list[tuple[str, tuple[str, ...]]]] = {}
 
     def ask(self, text: str) -> str:
         """Send a question; while the session works it waits and steers the
@@ -245,8 +241,6 @@ class Harness:
     ) -> Tier | None:
         if action in self._tiers:
             return self._tiers[action]
-        if self._granted_for(session, action, resources):
-            return Tier.ANYTHING
         folder = self._running.get(session, self._directory)
         if (
             action in FILE_TIERS
@@ -255,16 +249,6 @@ class Harness:
         ):
             return FILE_TIERS[action]
         return Tier.ANYTHING if self._allow_everything() else None
-
-    def _granted_for(
-        self, session: str, action: str, resources: tuple[str, ...]
-    ) -> bool:
-        return any(
-            granted == action
-            and resources
-            and all(any(fnmatchcase(r, p) for p in patterns) for r in resources)
-            for granted, patterns in self._granted.get(session, [])
-        )
 
     def _inside(self, folder: Path, resource: str) -> bool:
         """Whether a path the Engine names, relative to the session's folder or
@@ -302,13 +286,11 @@ class Harness:
             any(_SUDO.search(resource) for resource in resources),
         )
 
-    def _reply(self, session: str, request: str, *, allow: bool, message: str) -> None:
+    def _reply(self, session: str, request: str, answer: Reply, message: str) -> None:
         """Answer a request; one the Engine cannot take is logged, so a single
         bad reply never ends the conversation."""
         try:
-            self._engine.reply(
-                session, request, Reply.ONCE if allow else Reply.REJECT, message
-            )
+            self._engine.reply(session, request, answer, message)
         except HttpError as error:
             self._log.write(
                 "reply-failed", session=session, request=request, error=str(error)
@@ -323,9 +305,11 @@ class Harness:
         if asking is None:
             return None
         allow = answer is not Answer.DENY and not reply
-        self._reply(
-            session, request, allow=allow, message=reply or ("" if allow else REFUSED)
-        )
+        if not allow:
+            self._reply(session, request, Reply.REJECT, reply or REFUSED)
+        else:
+            always = answer is Answer.ALWAYS
+            self._reply(session, request, Reply.ALWAYS if always else Reply.ONCE, "")
         self._log.write(
             "answered",
             session=session,
@@ -334,9 +318,6 @@ class Harness:
             answer=answer.value,
             **({"reply": reply} if reply else {}),
         )
-        if allow and answer is Answer.CONVERSATION:
-            patterns = asking.patterns or asking.resources
-            self._granted.setdefault(session, []).append((asking.action, patterns))
         if allow:
             return Allowed(
                 session, asking.action, Tier.ANYTHING, asking.resources, asking.call
@@ -376,7 +357,7 @@ class Harness:
             ):
                 if action in COMMAND_ACTIONS:
                     self._allowed_command(session, resources)
-                self._reply(session, request, allow=True, message="")
+                self._reply(session, request, Reply.ONCE, "")
                 self._log.write(
                     "allowed",
                     session=session,
