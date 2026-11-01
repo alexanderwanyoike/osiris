@@ -11,7 +11,7 @@ from gi.repository import Adw  # noqa: E402
 from osiris.harness.conversation import Conversation  # noqa: E402
 from osiris.harness.settings import Models  # noqa: E402
 
-from .conftest import texts  # noqa: E402
+from .conftest import texts, widgets  # noqa: E402
 
 
 class FakeApp(Adw.Application):
@@ -30,6 +30,7 @@ class FakeApp(Adw.Application):
         self.asked: list[str] = []
         self.new_conversations = 0
         self.opened: list[str] = []
+        self.unqueued: list[str] = []
 
     def open_past(self, session: str) -> None:
         self.opened.append(session)
@@ -55,6 +56,10 @@ class FakeApp(Adw.Application):
         from gi.repository import Gtk
 
         return Gtk.Label(label="approval card")
+
+    def unqueue(self, message: str) -> str:
+        self.unqueued.append(message)
+        return self.conversation.unqueued(message)
 
     def new_conversation(self) -> None:
         self.new_conversations += 1
@@ -190,6 +195,50 @@ def test_a_held_action_is_drawn_with_the_apps_approval_card() -> None:
     turn.held = Step("shell", ("ls /etc",))
     window.refresh()
     assert "approval card" in texts(window)
+
+
+def test_enter_sends_even_while_osiris_is_busy() -> None:
+    from gi.repository import Gdk
+
+    window, _ = drawer()
+    window.app.conversation.asked("count to sixty")
+    window.refresh()
+    window.entry.get_buffer().set_text("stop at ten")
+    window._composer_key(None, Gdk.KEY_Return, 0, Gdk.ModifierType(0))
+    assert window.app.asked == ["stop at ten"]
+
+
+def waiting_drawer():
+    window, _ = drawer()
+    window.app.conversation.asked("count to sixty")
+    window.app.conversation.queued("msg_2", "stop at ten")
+    window.refresh()
+    return window
+
+
+def button(window: object, label: str) -> object:
+    from gi.repository import Gtk
+
+    return next(
+        w for w in widgets(window) if isinstance(w, Gtk.Button) and w.get_label() == label
+    )
+
+
+def test_a_waiting_message_is_shown_and_can_be_removed() -> None:
+    window = waiting_drawer()
+    assert "stop at ten" in texts(window)
+    button(window, "Remove").emit("clicked")
+    assert window.app.unqueued == ["msg_2"]
+    assert "stop at ten" not in texts(window)
+
+
+def test_editing_a_waiting_message_puts_it_back_in_the_composer() -> None:
+    window = waiting_drawer()
+    button(window, "Edit").emit("clicked")
+    buffer = window.entry.get_buffer()
+    text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+    assert text == "stop at ten"
+    assert window.app.unqueued == ["msg_2"]
 
 
 def test_the_composer_takes_more_than_one_line_and_sends_it() -> None:
