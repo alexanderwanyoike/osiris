@@ -14,3 +14,19 @@ def tone_of(turn: Turn) -> str:
     if turn.changes:
         return "changed"
     return "plain"
+
+
+def placed(tops: list[float], height: float) -> list[float]:
+    """Where each question starts, as a share of the Conversation's height."""
+    return [top / height if height else 0.0 for top in tops]
+
+
+def on_screen(tops: list[float], total: float, top: float, height: float) -> list[bool]:
+    """Whether any of each question, or the answer under it, is scrolled into
+    the view ``height`` tall from ``top``: it runs from where it starts to
+    where the next one does."""
+    ends = [*tops[1:], total]
+    return [
+        start < top + height and end > top
+        for start, end in zip(tops, ends, strict=True)
+    ]
