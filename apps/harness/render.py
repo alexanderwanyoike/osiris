@@ -349,7 +349,8 @@ class TurnView(Gtk.Box):
                  approval_card: Callable[[Turn], Gtk.Widget] | None = None,
                  edit: Callable[[Turn], None] | None = None,
                  try_again: Callable[[Turn], None] | None = None,
-                 may_go_back: Callable[[Turn], bool] = lambda _turn: False):
+                 may_go_back: Callable[[Turn], bool] = lambda _turn: False,
+                 show_changes: Callable[[Turn], None] | None = None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-turn")
         self._on_undo = on_undo
@@ -359,6 +360,7 @@ class TurnView(Gtk.Box):
         self._edit = edit
         self._try_again = try_again
         self._may_go_back = may_go_back
+        self._show_changes = show_changes
         question = Gtk.Label(label=turn.question, xalign=0, wrap=True,
                              wrap_mode=Pango.WrapMode.WORD_CHAR, selectable=True,
                              halign=Gtk.Align.END)
@@ -472,3 +474,11 @@ class TurnView(Gtk.Box):
             self.extras.append(note)
         if self._may_go_back(turn):
             self.extras.append(self._going_back(turn))
+        ended = turn.state not in (State.WAITING, State.ANSWERING)
+        if self._show_changes is not None and turn.edited and turn.message and ended:
+            changes = Gtk.Button(label="Changes", halign=Gtk.Align.START)
+            changes.add_css_class("flat")
+            changes.set_tooltip_text("Show what this answer changed, file by file, "
+                                     "on the Canvas")
+            changes.connect("clicked", lambda _b: self._show_changes(turn))
+            self.extras.append(changes)
