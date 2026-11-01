@@ -245,3 +245,25 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-status.working { color: @harness_fg; }
 .harness-status.waiting { color: @harness_on_accent; background-color: @harness_accent; }
 .harness-status.done { color: @harness_accent; background-color: alpha(@harness_accent, 0.14); }
+
+/* The Engine's task list: a ring to do, filled with the accent under way,
+   filled and struck through done, faded dropped. */
+.harness-tasks { margin: 2px 0; }
+.harness-task { padding: 1px 0; }
+.harness-task-mark {
+    min-width: 8px;
+    min-height: 8px;
+    border-radius: 99px;
+    border: 1.5px solid alpha(@harness_muted, 0.8);
+}
+.harness-task.under-way .harness-task-mark {
+    background-color: @harness_accent;
+    border-color: @harness_accent;
+}
+.harness-task.done .harness-task-mark {
+    background-color: alpha(@harness_success, 0.85);
+    border-color: transparent;
+}
+.harness-task.done label { color: @harness_muted; text-decoration-line: line-through; }
+.harness-task.dropped { opacity: 0.5; }
+.harness-task.dropped label { text-decoration-line: line-through; }

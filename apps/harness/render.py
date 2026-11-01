@@ -19,6 +19,7 @@ from osiris.harness.activity import Step, elapsed, summary  # noqa: E402
 from osiris.harness.detail import Kind, Line, detail, folded  # noqa: E402
 from osiris.harness.admin import Request  # noqa: E402
 from osiris.harness.conversation import State, Turn  # noqa: E402
+from osiris.harness.tasks import Progress, Task  # noqa: E402
 from osiris.harness.markdown import (  # noqa: E402
     Code,
     Heading,
@@ -311,6 +312,33 @@ def _line(line: Line) -> Gtk.Label:
     return label
 
 
+#: Each task's progress as a style class, which each Skin draws as a mark.
+TASK_CLASSES = {
+    Progress.TO_DO: "to-do",
+    Progress.UNDER_WAY: "under-way",
+    Progress.DONE: "done",
+    Progress.DROPPED: "dropped",
+}
+
+
+def task_list(tasks: list[Task]) -> Gtk.Widget:
+    """The Engine's plan for the answer, each task marked by how far it got."""
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+    box.add_css_class("harness-tasks")
+    for task in tasks:
+        row = Gtk.Box(spacing=8)
+        row.add_css_class("harness-task")
+        row.add_css_class(TASK_CLASSES[task.progress])
+        row.set_tooltip_text(task.progress.value.capitalize())
+        mark = Gtk.Box(valign=Gtk.Align.CENTER)
+        mark.add_css_class("harness-task-mark")
+        row.append(mark)
+        row.append(Gtk.Label(label=task.text, xalign=0, wrap=True,
+                             wrap_mode=Pango.WrapMode.WORD_CHAR))
+        box.append(row)
+    return box
+
+
 class TurnView(Gtk.Box):
     """One question and its answer, redrawn only where the answer changed."""
 
@@ -390,6 +418,8 @@ class TurnView(Gtk.Box):
             self.working.show(turn.doing)
         else:
             self.working.stop()
+        if turn.tasks:
+            self.extras.append(task_list(turn.tasks))
         if turn.changes:
             self.extras.append(self._changes(turn))
         for name in turn.programs:
