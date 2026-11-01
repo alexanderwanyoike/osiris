@@ -365,7 +365,20 @@ class TurnView(Gtk.Box):
                              wrap_mode=Pango.WrapMode.WORD_CHAR, selectable=True,
                              halign=Gtk.Align.END)
         question.add_css_class("harness-question")
-        self.append(question)
+        self._turn = turn
+        self._pencil = Gtk.Button(icon_name="document-edit-symbolic",
+                                  valign=Gtk.Align.CENTER, visible=False,
+                                  tooltip_text="Edit this question: it goes back to "
+                                  "before it, with its files and everything said "
+                                  "since")
+        self._pencil.add_css_class("flat")
+        self._pencil.add_css_class("harness-quiet")
+        self._pencil.connect("clicked", lambda _b: self._edit and self._edit(self._turn))
+        asked = Gtk.Box(spacing=4, halign=Gtk.Align.END)
+        asked.add_css_class("harness-question-row")
+        asked.append(self._pencil)
+        asked.append(question)
+        self.append(asked)
         self.answer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.answer.add_css_class("harness-answer")
         self.append(self.answer)
@@ -438,6 +451,8 @@ class TurnView(Gtk.Box):
             following = child.get_next_sibling()
             self.extras.remove(child)
             child = following
+        self._turn = turn
+        self._pencil.set_visible(self._edit is not None and self._may_go_back(turn))
         self.record.show(turn.steps)
         if turn.state in (State.WAITING, State.ANSWERING):
             self.working.show(turn.doing)
