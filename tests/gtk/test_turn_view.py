@@ -371,3 +371,44 @@ def test_an_answer_still_editing_or_that_edited_nothing_offers_no_changes() -> N
         )
         view.update(turn, STYLE, None)
         assert "Changes" not in texts(view)
+
+
+def icon_button(root: Gtk.Widget, icon: str) -> Gtk.Button:
+    return next(
+        w
+        for w in widgets(root)
+        if isinstance(w, Gtk.Button) and w.get_icon_name() == icon
+    )
+
+
+def going_back(may: bool, state: State = State.DONE) -> tuple[TurnView, Turn, list]:
+    asked: list[tuple[str, Turn]] = []
+    turn = Turn("make y.txt", "Made it.", state, message="msg_2")
+    view = TurnView(
+        turn,
+        on_undo=lambda _t: None,
+        program_card=lambda _n: Gtk.Label(),
+        edit=lambda t: asked.append(("edit", t)),
+        try_again=lambda t: asked.append(("again", t)),
+        may_go_back=lambda _t: may,
+    )
+    view.update(turn, STYLE, None)
+    return view, turn, asked
+
+
+def test_a_question_is_edited_from_a_pencil_beside_it() -> None:
+    view, turn, asked = going_back(may=True)
+    pencil = icon_button(view, "document-edit-symbolic")
+    question = next(
+        w for w in widgets(view) if "harness-question" in w.get_css_classes()
+    )
+    assert pencil.get_parent() is question.get_parent()
+    assert pencil.get_visible()
+    assert pencil.get_tooltip_text().startswith("Edit this question")
+    pencil.emit("clicked")
+    assert asked == [("edit", turn)]
+
+
+def test_the_pencil_is_hidden_while_the_question_may_not_be_gone_back_to() -> None:
+    view, _, _ = going_back(may=False, state=State.ANSWERING)
+    assert not icon_button(view, "document-edit-symbolic").get_visible()
