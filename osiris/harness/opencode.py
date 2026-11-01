@@ -561,6 +561,16 @@ class OpencodeAccounts:
             needs_code=attempt["mode"] == "code",
         )
 
+    def connector_sign_in(self, integration: str) -> SignIn:
+        """Start signing in to an MCP server, by the sign-in page it offers."""
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/integration/{integration}",
+            headers=self._service.headers(),
+        )
+        method = next(m for m in reply["data"]["methods"] if m["type"] == "oauth")
+        return self.start_sign_in(integration, method["id"])
+
     def sign_in_state(self, provider: str, attempt: str) -> SignInState:
         reply: Any = self._http.request(
             "GET",
