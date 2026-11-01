@@ -505,3 +505,16 @@ def test_each_tab_carries_an_icon_for_what_it_shows() -> None:
     assert tab_icon(changes).get_icon_name() == "osiris-changes-symbolic"
     (shell,) = header_tabs(widget, Kind.TERMINAL)
     assert tab_icon(shell).get_icon_name() == "utilities-terminal-symbolic"
+
+
+def test_with_no_program_a_terminal_opens_in_the_home_folder() -> None:
+    made: list[FakeTerminal] = []
+    widget = Canvas(
+        read=lambda _p: "",
+        open_in_code=lambda _f, _p: None,
+        terminal=lambda folder: made.append(FakeTerminal(folder)) or made[-1],
+        home=Path("/home/tester"),
+    )
+    widget.open_terminal()
+    assert [t.folder for t in made] == [Path("/home/tester")]
+    assert titles(widget, Kind.TERMINAL) == ["tester"]
