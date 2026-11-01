@@ -16,6 +16,7 @@ from typing import Any
 from osiris.harness.accounts import Method, ModelInfo, Provider, SignIn, SignInState
 from osiris.harness.engine import (
     Answered,
+    Delivered,
     Event,
     Failed,
     Finished,
@@ -313,6 +314,24 @@ def _finished(session: str, data: dict[str, Any]) -> ToolFinished:
     )
 
 
+def _tool(
+    kind: str, session: str, data: dict[str, Any]
+) -> ToolCalled | ToolRequested | ToolFinished:
+    """A tool call, the permission it asks for, or how it ended."""
+    if kind == "session.tool.called":
+        return ToolCalled(session, data["id"], data.get("input", {}), data["executed"])
+    if kind == "permission.asked":
+        return ToolRequested(
+            session,
+            data["id"],
+            data["action"],
+            tuple(data["resources"]),
+            (data.get("source") or {}).get("id", ""),
+            tuple(data.get("save") or ()),
+        )
+    return _finished(session, data)
+
+
 class _Reader:
     """Turns opencode's events into the Engine's.
 
@@ -334,21 +353,15 @@ class _Reader:
                 )
             case "session.text.delta":
                 return Text(session, data["delta"])
-            case "session.tool.called":
-                return ToolCalled(
-                    session, data["id"], data.get("input", {}), data["executed"]
-                )
-            case "permission.asked":
-                return ToolRequested(
-                    session,
-                    data["id"],
-                    data["action"],
-                    tuple(data["resources"]),
-                    (data.get("source") or {}).get("id", ""),
-                    tuple(data.get("save") or ()),
-                )
-            case "session.tool.success" | "session.tool.failed":
-                return _finished(session, data)
+            case (
+                "session.tool.called"
+                | "permission.asked"
+                | "session.tool.success"
+                | "session.tool.failed"
+            ):
+                return _tool(kind, session, data)
+            case "session.inbox.delivered":
+                return Delivered(session, data["inboxID"])
             case "session.step.ended":
                 return self._answered(session, data)
             case "session.execution.succeeded":

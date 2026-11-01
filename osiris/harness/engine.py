@@ -73,6 +73,14 @@ class ToolFinished:
 
 
 @dataclass(frozen=True)
+class Delivered:
+    """A message that waited while the model worked has reached it."""
+
+    session: str
+    message: str
+
+
+@dataclass(frozen=True)
 class Answered:
     """One step of the answer is complete, and this model gave it."""
 
@@ -103,6 +111,7 @@ Event = (
     | ToolCalled
     | ToolRequested
     | ToolFinished
+    | Delivered
     | Answered
     | Finished
     | Stopped
