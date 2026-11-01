@@ -250,3 +250,17 @@ def test_opening_the_picker_says_so_once_not_at_every_key() -> None:
     buffer.insert_at_cursor(" /")
     assert opened == ["@", "/"]
     assert picker.popover.get_visible()
+
+
+def test_an_open_picker_lists_afresh_when_told_its_offers_changed() -> None:
+    from composer_picker import Picker
+
+    entry = Gtk.TextView()
+    window = Gtk.Window(child=entry)
+    window.present()
+    offers = [README]
+    picker = Picker(entry, lambda _sign: offers)
+    entry.get_buffer().insert_at_cursor("@")
+    offers = [README, CLOCK]
+    picker.refresh()
+    assert shown(picker) == ["README.md", "clock.py"]
