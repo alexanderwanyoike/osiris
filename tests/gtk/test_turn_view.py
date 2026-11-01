@@ -308,6 +308,13 @@ def test_a_note_about_the_question_is_shown_under_its_answer() -> None:
 def edited(state: State) -> Turn:
     turn = Turn("tidy main.py", "Tidied.", state, message="msg_3")
     turn.steps.append(Step("edit", ("main.py",)))
+    turn.changes.append(
+        Change(
+            "pomodoro: Tidy",
+            {"action": "revert_commit", "name": "pomodoro", "commit": "abc"},
+            "pomodoro",
+        )
+    )
     return turn
 
 
