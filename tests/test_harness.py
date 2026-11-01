@@ -25,7 +25,14 @@ from osiris.harness.engine import (
     ToolCalled,
     ToolRequested,
 )
-from osiris.harness.harness import REFUSED, Allowed, Harness, Refused
+from osiris.harness.harness import (
+    ONLY_IN_PROGRAMS,
+    ONLY_WITH_EVERYTHING,
+    REFUSED,
+    Allowed,
+    Harness,
+    Refused,
+)
 from osiris.harness.log import LOG_FILE, HarnessLog
 from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem
@@ -226,6 +233,17 @@ def test_a_decision_names_the_tool_call_it_was_for() -> None:
     assert isinstance(allowed, Allowed)
     assert isinstance(refused, Refused)
     assert (allowed.call, refused.call) == ("call_1", "call_2")
+
+
+def test_a_refusal_says_which_rule_refused_it() -> None:
+    subject, _, _ = harness()
+    subject.ask("tidy up")
+    command = subject.handle(ToolRequested("ses_1", "per_1", "bash", ("ls",)))
+    outside = subject.handle(ToolRequested("ses_1", "per_2", "read", ("/etc/hostname",)))
+    assert isinstance(command, Refused)
+    assert isinstance(outside, Refused)
+    assert command.reason == ONLY_WITH_EVERYTHING
+    assert outside.reason == ONLY_IN_PROGRAMS
 
 
 def test_an_allowed_action_is_passed_on_with_what_it_touches() -> None:
