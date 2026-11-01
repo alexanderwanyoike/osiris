@@ -70,6 +70,7 @@ from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
+from osiris.harness.review import comment  # noqa: E402
 from osiris.harness.rules import switch_on_task_list, write_starting_rules  # noqa: E402
 from osiris.harness.status import Status, status_of  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
@@ -434,6 +435,11 @@ class Drawer(Gtk.ApplicationWindow):
         if self.split.get_collapsed():
             self.sidebar_toggle.set_active(False)
 
+    def show_changes(self, question: str, files, on_comment) -> None:
+        self.canvas.show_changes(question, files, on_comment)
+        self.canvas_toggle.set_sensitive(True)
+        self.canvas_toggle.set_active(True)
+
     def show_canvas(self, programs) -> None:
         """What the Conversation made; the Canvas opens the first time there is
         something to show."""
@@ -471,7 +477,8 @@ class Drawer(Gtk.ApplicationWindow):
                             approval_card=self.app.approval_card,
                             edit=self.app.ask_to_go_back,
                             try_again=lambda turn: self.app.ask_to_go_back(turn, True),
-                            may_go_back=lambda turn: self.app.conversation.can_go_back(turn))
+                            may_go_back=lambda turn: self.app.conversation.can_go_back(turn),
+                            show_changes=self.app.show_changes)
             self.views.append(view)
             self.turns.append(view)
         newest = len(self.views) - 1
@@ -1082,6 +1089,19 @@ class Application(Adw.Application):
             self.update_canvas()
 
         self.background(lambda: harness.resume(session), opened)
+
+    def show_changes(self, turn: Turn) -> None:
+        """What a question changed, on the Canvas; a comment on it is asked."""
+        if self.harness is None or self.session is None:
+            return
+        harness, session = self.harness, self.session
+
+        def commented(path: str, lines: tuple[int, int], text: str) -> None:
+            self.ask(comment(path, lines, text))
+
+        self.background(lambda: harness.changes(session, turn.message),
+                        lambda files: self.drawer.show_changes(turn.question, files,
+                                                               commented))
 
     def ask_to_go_back(self, turn: Turn, again: bool = False) -> None:
         """Say what going back loses, and go back only on the person's yes."""
