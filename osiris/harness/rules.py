@@ -48,5 +48,7 @@ CAREFUL = [
 def write_starting_rules(files: FileSystem, home: Path) -> None:
     path = home / ENGINE_CONFIG
     config = json.loads(files.read(path)) if files.exists(path) else {"$schema": SCHEMA}
+    if "permissions" in config:
+        return
     config["permissions"] = CAREFUL
     files.write(path, json.dumps(config, indent=2) + "\n")
