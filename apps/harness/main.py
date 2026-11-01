@@ -473,9 +473,10 @@ class Drawer(Gtk.ApplicationWindow):
         for index, (view, turn) in enumerate(zip(self.views, conversation.turns)):
             if restyle:
                 view.restyle(turn, look.style, look.scheme)
-            elif index >= min(fresh, newest):
+            elif index >= min(fresh - 1, newest):
                 # Turns added just now are drawn once; after that only the
-                # newest can still be changing.
+                # newest can still be changing, and the one before it when a
+                # waiting message has just ended it.
                 view.update(turn, look.style, look.scheme)
         busy = conversation.busy
         self.send.set_icon_name("media-playback-stop-symbolic" if busy
