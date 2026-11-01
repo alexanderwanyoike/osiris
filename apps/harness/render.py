@@ -317,12 +317,14 @@ class TurnView(Gtk.Box):
     def __init__(self, turn: Turn, on_undo: Callable[[Turn], None],
                  program_card: Callable[[str], Gtk.Widget],
                  clock: Callable[[], float] = time.monotonic,
-                 admin_card: Callable[[Request], Gtk.Widget] | None = None):
+                 admin_card: Callable[[Request], Gtk.Widget] | None = None,
+                 approval_card: Callable[[Turn], Gtk.Widget] | None = None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-turn")
         self._on_undo = on_undo
         self._program_card = program_card
         self._admin_card = admin_card
+        self._approval_card = approval_card
         question = Gtk.Label(label=turn.question, xalign=0, wrap=True,
                              wrap_mode=Pango.WrapMode.WORD_CHAR, selectable=True,
                              halign=Gtk.Align.END)
@@ -394,6 +396,8 @@ class TurnView(Gtk.Box):
             self.extras.append(self._program_card(name))
         if turn.admin is not None and self._admin_card is not None:
             self.extras.append(self._admin_card(turn.admin))
+        if turn.held is not None and self._approval_card is not None:
+            self.extras.append(self._approval_card(turn))
         if turn.state is State.FAILED:
             error = Gtk.Label(label=turn.error or "The answer failed.", xalign=0,
                               wrap=True, selectable=True)
