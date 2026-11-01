@@ -216,6 +216,18 @@ def test_the_decision_is_passed_on_in_place_of_the_request() -> None:
     assert refused == Refused("ses_1", "bash", ("ls",))
 
 
+def test_a_decision_names_the_tool_call_it_was_for() -> None:
+    subject, _, _ = harness(tiers={"osiris_apply_theme": Tier.UNDOABLE})
+    subject.ask("make it calm")
+    allowed = subject.handle(
+        ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",), "call_1")
+    )
+    refused = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls",), "call_2"))
+    assert isinstance(allowed, Allowed)
+    assert isinstance(refused, Refused)
+    assert (allowed.call, refused.call) == ("call_1", "call_2")
+
+
 def test_an_allowed_action_is_passed_on_with_what_it_touches() -> None:
     subject, _, _ = harness()
     subject.ask("add a pause button")
