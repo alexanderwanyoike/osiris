@@ -48,18 +48,21 @@ def test_clicking_a_tick_jumps_to_its_question() -> None:
     assert jumped == [1]
 
 
-def test_ticks_stand_down_the_rail_where_their_questions_do() -> None:
+def test_ticks_stand_evenly_in_a_column_centred_on_the_rail() -> None:
     from gi.repository import Graphene, Gtk
+
+    from osiris.harness.rail import column
 
     from .test_composer_picker import settle
 
     shown = rail()
-    window = Gtk.Window(child=shown, default_height=409)
+    window = Gtk.Window(child=shown, default_height=400)
     window.present()
     settle()
     tops = [mark.compute_point(shown, Graphene.Point())[1].y for mark in marks(shown)]
     window.destroy()
-    assert tops == [0, 200, 360]
+    start, pitch = column(3, 400)
+    assert tops == [start, start + pitch, start + 2 * pitch]
 
 
 def test_a_band_marks_the_part_on_screen() -> None:
