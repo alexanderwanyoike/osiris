@@ -264,3 +264,33 @@ def test_a_command_waiting_for_the_password_shows_its_card_under_the_answer() ->
     turn.admin = None
     view.update(turn, STYLE, None)
     assert "admin card" not in texts(view)
+
+
+def test_the_engines_task_list_shows_each_step_and_how_far_it_has_got() -> None:
+    from osiris.harness.tasks import Progress, Task
+
+    tasks = [
+        Task("Create c.txt", Progress.DONE),
+        Task("Edit a.txt", Progress.UNDER_WAY),
+        Task("Run the tests", Progress.TO_DO),
+    ]
+    view = drawn(Turn("make two files", "", State.ANSWERING, tasks=tasks))
+    rows = [w for w in widgets(view) if w.has_css_class("harness-task")]
+    assert [texts(row) for row in rows] == [
+        ["Create c.txt"],
+        ["Edit a.txt"],
+        ["Run the tests"],
+    ]
+    assert [
+        next(c for c in ("done", "under-way", "to-do") if row.has_css_class(c))
+        for row in rows
+    ] == ["done", "under-way", "to-do"]
+
+
+def test_the_task_list_stays_once_the_answer_ends() -> None:
+    from osiris.harness.tasks import Progress, Task
+
+    turn = Turn(
+        "make two files", "Done.", State.DONE, tasks=[Task("Create c.txt", Progress.DONE)]
+    )
+    assert "Create c.txt" in texts(drawn(turn))
