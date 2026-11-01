@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from osiris.harness.tasks import Progress, Task
 
 from osiris.harness.activity import Step
 from osiris.harness.admin import Request
@@ -158,6 +159,26 @@ def test_osiris_tools_run_from_the_tool_catalogue_are_steps(
     talk.asked("make it calm")
     talk.apply(ToolCalled(S, "c1", {"code": code}, False, "execute"))
     assert [step.action for step in talk.turns[-1].steps] == actions
+
+
+def todos(*items: tuple[str, str]) -> dict[str, object]:
+    return {"todos": [{"content": c, "status": s} for c, s in items]}
+
+
+def test_the_engines_task_list_is_kept_on_its_turn_as_it_changes() -> None:
+    """As opencode 2.2.4 does: each todowrite call carries the whole list."""
+    talk = Conversation()
+    talk.asked("make two files")
+    first = todos(("Create c.txt", "in_progress"), ("Edit a.txt", "pending"))
+    talk.apply(ToolCalled(S, "c1", first, False, "todowrite"))
+    later = todos(("Create c.txt", "completed"), ("Edit a.txt", "in_progress"))
+    talk.apply(ToolCalled(S, "c2", later, False, "todowrite"))
+    turn = talk.turns[-1]
+    assert turn.tasks == [
+        Task("Create c.txt", Progress.DONE),
+        Task("Edit a.txt", Progress.UNDER_WAY),
+    ]
+    assert turn.steps == []
 
 
 def test_a_step_carries_the_input_of_its_tool_call() -> None:
