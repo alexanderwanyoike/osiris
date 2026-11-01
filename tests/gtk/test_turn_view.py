@@ -471,3 +471,21 @@ def test_an_answer_that_edited_files_shows_its_changes_from_an_icon_by_its_time(
     assert icon.get_tooltip_text().startswith("Show what this answer changed")
     icon.emit("clicked")
     assert shown == [turn]
+
+
+def test_an_answer_has_no_row_of_text_buttons_for_going_back_or_changes() -> None:
+    """Only quiet icons: the words made every answer look busy."""
+    turn = edited(State.DONE)
+    view = TurnView(
+        turn,
+        on_undo=lambda _t: None,
+        program_card=lambda _n: Gtk.Label(),
+        edit=lambda _t: None,
+        try_again=lambda _t: None,
+        may_go_back=lambda _t: True,
+        may_try_again=lambda _t: True,
+        show_changes=lambda _t: None,
+    )
+    view.update(turn, STYLE, None)
+    labels = {w.get_label() for w in widgets(view) if isinstance(w, Gtk.Button)}
+    assert not labels & {"Edit", "Try again", "Changes"}
