@@ -213,6 +213,22 @@ class OpencodeEngine:
             for server in reply["data"]
         }
 
+    def resources(self, directory: Path) -> list[Entry]:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/mcp/resource{_in(directory)}",
+            headers=self._service.headers(),
+        )
+        return [
+            Entry(
+                "resource",
+                found["uri"],
+                found["name"],
+                ": ".join(filter(None, (found["server"], found.get("description")))),
+            )
+            for found in reply["data"]["resources"]
+        ]
+
     def skills(self, directory: Path) -> list[Entry]:
         reply: Any = self._http.request(
             "GET",
