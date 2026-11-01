@@ -98,7 +98,16 @@ class Waiting:
 #: Tools whose action, the name the rules and steps use, differs from their own.
 _ACTIONS = {"write": "edit", "patch": "edit", "apply_patch": "edit", "bash": "shell"}
 #: The input naming what a tool works on, in the order looked for.
-_SUBJECT = ("command", "path", "filePath", "file_path", "pattern", "url", "query")
+_SUBJECT = (
+    "command",
+    "path",
+    "filePath",
+    "file_path",
+    "pattern",
+    "url",
+    "query",
+    "agent",
+)
 
 
 #: A tool server's tool called from the catalogue's code:
