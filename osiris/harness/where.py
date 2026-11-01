@@ -16,3 +16,7 @@ def branch(runner: CommandRunner, folder: Path) -> str:
         )
     except CommandError:
         return ""
+
+
+def project_name(directory: Path, home: Path) -> str:
+    return "Home" if directory == home else directory.name
