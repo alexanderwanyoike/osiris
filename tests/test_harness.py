@@ -868,6 +868,18 @@ def test_the_stop_cutting_in_causes_leaves_the_session_working() -> None:
     assert subject.running == frozenset()
 
 
+def test_an_answer_that_ends_before_the_cut_in_lands_takes_no_later_stop() -> None:
+    """The answer finished on its own as the person cut in: the next stop the
+    person makes must still end the session."""
+    subject, _, _ = harness()
+    subject.ask("count to sixty")
+    subject.send_now("stop, count to ten")
+    subject.handle(Finished("ses_1"))
+    subject.ask("count to five")
+    subject.handle(Stopped("ses_1"))
+    assert subject.running == frozenset()
+
+
 def test_sending_now_with_nothing_running_does_not_cut_in() -> None:
     """There is no step to stop, and no stop would come to resume through."""
     subject, engine, _ = harness()
