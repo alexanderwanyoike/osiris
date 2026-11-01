@@ -32,6 +32,7 @@ from osiris.harness.opencode import (
     Service,
     locate,
 )
+from osiris.harness.picker import Entry
 from osiris.platform import FakeFileSystem, FakeHttpClient, FakeIdentity, FakeRunner
 
 URL = "http://127.0.0.1:49374"
@@ -771,3 +772,22 @@ class TestHistory:
             }
         )
         assert engine(http).where(SESSION) == Path("/home/tester/Code/pomodoro")
+
+
+class TestOffered:
+    def test_the_skills_in_a_folder_are_offered_with_their_descriptions(
+        self,
+    ) -> None:
+        where = "location%5Bdirectory%5D=%2Fhome%2Ftester%2FCode%2Ftimer"
+        skill = {
+            "id": "review",
+            "name": "review",
+            "description": "Review the changes",
+            "path": "/home/tester/.config/opencode/skills/review/SKILL.md",
+            "content": "...",
+        }
+        http = FakeHttpClient(
+            replies={("GET", f"{URL}/api/skill?{where}"): {"data": [skill]}}
+        )
+        offered = engine(http).skills(Path("/home/tester/Code/timer"))
+        assert offered == [Entry("skill", "review", "review", "Review the changes")]
