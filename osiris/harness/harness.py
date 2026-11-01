@@ -343,6 +343,14 @@ class Harness:
         if isinstance(command := event.input.get("command"), str):
             self._noted_command(event.session, (command,))
 
+    def _ended(self, event: Event) -> None:
+        """A session that ends is no longer running, unless it was cut in on:
+        the Engine goes on with the message at once."""
+        if isinstance(event, Stopped) and event.session in self._cutting_in:
+            self._cutting_in.discard(event.session)
+        elif isinstance(event, Finished | Stopped | Failed):
+            self._running.pop(event.session, None)
+
     def handle(self, event: Event) -> Event | Decision | None:
         """Log what the Engine reports and apply policy; the event is passed on.
 
@@ -350,10 +358,7 @@ class Harness:
         """
         if event.session != self._session and event.session not in self._running:
             return None
-        if isinstance(event, Stopped) and event.session in self._cutting_in:
-            self._cutting_in.discard(event.session)
-        elif isinstance(event, Finished | Stopped | Failed):
-            self._running.pop(event.session, None)
+        self._ended(event)
         match event:
             case Answered(session, model, tokens, cost):
                 self._log.write(
