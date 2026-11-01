@@ -141,7 +141,9 @@ class Harness:
         #: by the Engine, whose standing grants cover a whole Project.
         self._granted: dict[str, list[tuple[str, tuple[str, ...]]]] = {}
 
-    def ask(self, text: str) -> None:
+    def ask(self, text: str) -> str:
+        """Send a question; while the session works it waits and steers the
+        model at its next step. Answers where it waits."""
         directory, session = self._directory, self._session
         if session is None:
             self._ready(directory)
@@ -149,7 +151,14 @@ class Harness:
             self._engine.rename(session, title_of(text))
         self._running[session] = directory
         self._log.write("sent", session=session, text=text)
-        self._engine.send(session, text)
+        return self._engine.send(session, text)
+
+    def withdraw(self, message: str) -> None:
+        """Take back a message still waiting in the session on screen."""
+        if self._session is None:
+            return
+        self._engine.withdraw(self._session, message)
+        self._log.write("withdrawn", session=self._session, message=message)
 
     @property
     def session(self) -> str | None:
