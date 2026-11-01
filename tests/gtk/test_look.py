@@ -76,9 +76,11 @@ def test_a_panels_tabs_are_slim_in_every_look(tmp_path: Path) -> None:
         assert 0 < height <= 20, (look, height)
 
 
-def test_the_pickers_chosen_entry_is_lit_with_the_accent_in_every_look(
+def test_the_pickers_chosen_entry_keeps_its_name_in_the_text_colour_in_every_look(
     tmp_path: Path,
 ) -> None:
+    """The chosen row is marked by a soft fill, as the person's reference
+    shows, not by recolouring its name."""
     from composer_picker import Picker
     from gi.repository import Gdk
 
@@ -98,7 +100,7 @@ def test_the_pickers_chosen_entry_is_lit_with_the_accent_in_every_look(
         label = next(
             w for w in widgets(row) if "harness-picker-label" in w.get_css_classes()
         )
-        accent = Gdk.RGBA()
-        accent.parse(look.theme["colors"]["accent"])
+        text = Gdk.RGBA()
+        text.parse(look.theme["colors"]["foreground"])
         window.destroy()
-        assert label.get_color().equal(accent), skin
+        assert label.get_color().equal(text), skin
