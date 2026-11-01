@@ -59,3 +59,11 @@ def test_each_question_makes_a_tick_with_where_it_stands_and_how_it_starts() -> 
         Tick(0.0, False, "plain", "what is a theme?"),
         Tick(0.5, True, "changed", "make the desktop calm and quiet, with a soft…"),
     ]
+
+
+def test_the_first_question_on_screen_is_the_current_one() -> None:
+    from osiris.harness.rail import ticks
+
+    turns = [Turn("one"), Turn("two"), Turn("three")]
+    made = ticks(turns, [0, 400, 900], 1500, top=500, height=600)
+    assert [tick.current for tick in made] == [False, True, False]
