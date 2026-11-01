@@ -44,7 +44,7 @@ class FakeApp(Adw.Application):
     def undo(self, _turn: object) -> None:
         pass
 
-    def go_back(self, turn: object) -> None:
+    def ask_to_go_back(self, turn: object, _again: bool = False) -> None:
         self.gone_back.append(turn)
 
     def program_card(self, name: str) -> object:
