@@ -201,6 +201,14 @@ class TestSessions:
         engine(http).withdraw(SESSION, "msg_1")
         assert http.requests == [("DELETE", path, None)]
 
+    def test_cutting_in_interrupts_and_resumes_with_what_is_waiting(self) -> None:
+        """As opencode 2.2.4 documents it: resume=true goes on at once with
+        the steering input still waiting."""
+        path = f"{URL}/api/session/{SESSION}/interrupt?resume=true"
+        http = FakeHttpClient(replies={("POST", path): {"interrupted": True}})
+        engine(http).cut_in(SESSION)
+        assert [(m, u) for m, u, _ in http.requests] == [("POST", path)]
+
     def test_stopping_interrupts_the_session(self) -> None:
         path = f"{URL}/api/session/{SESSION}/interrupt"
         http = FakeHttpClient(replies={("POST", path): {"interrupted": True}})
