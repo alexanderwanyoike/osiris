@@ -76,6 +76,10 @@ GLASS_EDGE_LIFT = 0.22
 GLASS_TINT = 0.10
 
 
+#: How far line numbers fade from muted text toward the background.
+GUTTER_FADE = 0.45
+
+
 def _frosted(c: Mapping[str, str], *, lift: float) -> str:
     lifted = Colour(c["surfaceMuted"]).mix(Colour(c["foreground"]), lift)
     return lifted.mix(Colour(c["accent"]), GLASS_TINT).hex
@@ -155,7 +159,9 @@ def source_scheme(theme: Mapping[str, Any]) -> str:
         "cursor": {"foreground": c["accent"]},
         "current-line": {"background": c["surface"]},
         "line-numbers": {
-            "foreground": c["foregroundMuted"],
+            "foreground": Colour(c["foregroundMuted"])
+            .mix(Colour(c["background"]), GUTTER_FADE)
+            .hex,
             "background": c["background"],
         },
         "bracket-match": {"background": c["surfaceMuted"], "bold": "true"},
