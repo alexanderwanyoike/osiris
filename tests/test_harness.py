@@ -859,3 +859,15 @@ def test_sending_now_steers_the_message_in_and_cuts_in() -> None:
     assert engine.sent[-1] == ("ses_1", "stop, count to ten")
     assert engine.cut == ["ses_1"]
     assert [e["kind"] for e in entries(files)[-2:]] == ["sent", "cut-in"]
+
+
+def test_the_stop_cutting_in_causes_leaves_the_session_working() -> None:
+    """The Engine resumes it at once with the message; its events must still
+    reach it, even off screen."""
+    subject, _, _ = harness()
+    subject.ask("count to sixty")
+    subject.send_now("stop, count to ten")
+    subject.handle(Stopped("ses_1"))
+    assert subject.running == {"ses_1"}
+    subject.handle(Stopped("ses_1"))
+    assert subject.running == frozenset()
