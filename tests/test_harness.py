@@ -314,9 +314,11 @@ def test_an_allowed_action_is_passed_on_with_what_it_touches() -> None:
     assert decision.resources == ("Code/pomodoro/main.py",)
 
 
-def test_a_rejection_points_the_model_at_the_tools_it_may_use() -> None:
-    assert "Osiris tools" in REFUSED
-    assert "only talk" not in REFUSED
+def test_a_denial_tells_the_model_the_person_said_no() -> None:
+    """Commands and files are no longer out of reach, only this one was
+    refused, so the model should not try it another way unasked."""
+    assert "said no" in REFUSED
+    assert "cannot run commands" not in REFUSED
 
 
 def test_every_tool_call_is_logged_even_one_that_never_asked() -> None:
