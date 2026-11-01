@@ -138,6 +138,28 @@ def test_what_auto_mode_allows_is_shown_once() -> None:
     assert [step.call for step in talk.turns[-1].steps] == ["c1"]
 
 
+@pytest.mark.parametrize(
+    ("code", "actions"),
+    [
+        ('await tools["osiris"].list_themes({});', ["osiris_list_themes"]),
+        (
+            "await tools.osiris.create_theme(intent); await tools.osiris.apply_theme(t)",
+            ["osiris_create_theme", "osiris_apply_theme"],
+        ),
+        ('await tools.shell({ command: "uname -s" });', []),
+    ],
+)
+def test_osiris_tools_run_from_the_tool_catalogue_are_steps(
+    code: str, actions: list[str]
+) -> None:
+    """As opencode 2.2.4 does: they run inside the catalogue's code and are
+    reported only as that code; any other tool it calls is reported itself."""
+    talk = Conversation()
+    talk.asked("make it calm")
+    talk.apply(ToolCalled(S, "c1", {"code": code}, False, "execute"))
+    assert [step.action for step in talk.turns[-1].steps] == actions
+
+
 def test_a_step_carries_the_input_of_its_tool_call() -> None:
     talk = Conversation()
     talk.asked("list /etc")
