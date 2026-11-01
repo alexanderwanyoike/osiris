@@ -445,8 +445,9 @@ def test_the_model_is_told_how_a_wallpaper_shader_is_written() -> None:
         assert needed in described
 
 
-def test_the_model_is_told_what_waits_for_the_person_and_what_auto_mode_lets_run(
-) -> None:
+def test_the_model_is_told_what_waits_for_the_person_and_what_auto_mode_lets_run() -> (
+    None
+):
     """Commands now ask rather than being out of reach (ADR 0020)."""
     from osiris.apps.tool_server import instructions
 
