@@ -84,6 +84,9 @@ from osiris.harness.history import (  # noqa: E402
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
 from osiris.harness.rail import ticks  # noqa: E402
+from osiris.harness.context import slices  # noqa: E402
+from osiris.harness.titles import title_of  # noqa: E402
+from osiris.harness.where import branch, project_name  # noqa: E402
 from osiris.harness.picker import Entry, Reference, Skills, project_files  # noqa: E402
 from osiris.harness.engine import (  # noqa: E402
     Failed,
@@ -679,6 +682,7 @@ class Application(Adw.Application):
         self.accounts: OpencodeAccounts | None = None
         self.skills: Skills | None = None
         self.servers: Servers | None = None
+        self.contexts: OpencodeEngine | None = None
         #: What the message box's picker lists, by the sign that opens it.
         self.offers: dict[str, list[Entry]] = {}
         self.files = RealFileSystem()
@@ -1176,6 +1180,44 @@ class Application(Adw.Application):
 
         self.background(gather, found)
 
+    def update_panel(self) -> None:
+        """Fill the Conversation panel: what is known at once now, what needs
+        the Engine or git when it comes back."""
+        if self.harness is None or self.drawer is None:
+            return
+        panel, conversation = self.drawer.conversation_panel, self.conversation
+        directory, session = self.harness.directory, self.session
+        project = project_name(directory, self.home)
+        label = conversation.model_label(self.models.default)
+        model = conversation.model or self.models.default
+        turns = conversation.turns
+        panel.show_where(project, "", label)
+        panel.show_changes(
+            [(at, title_of(turn.question), len(turn.changes))
+             for at, turn in enumerate(turns) if turn.changes],
+            lambda at: self.show_changes(turns[at]))
+        servers, contexts, accounts = self.servers, self.contexts, self.accounts
+
+        def gather():
+            states = servers.connector_states(directory) if servers else {}
+            use = contexts.context_use(session) if contexts and session else None
+            window = next((m.context for m in accounts.models() if m.ref == model),
+                          0) if accounts and model and use else 0
+            return (branch(SubprocessRunner(sink=lambda _line: None), directory),
+                    {name: s for name, s in states.items() if name != TOOLS},
+                    use, window)
+
+        def found(gathered) -> None:
+            if self.session != session:
+                return
+            checked_out, states, use, window = gathered
+            panel.show_where(project, checked_out, label)
+            panel.show_connectors(states)
+            if use is not None and window:
+                panel.show_context(slices(use.sizes, use.used, window), use.used, window)
+
+        self.background(gather, found)
+
     def update_canvas(self) -> None:
         # The picker lists what is where the Conversation runs, which changes
         # whenever its Canvas does.
@@ -1497,6 +1539,7 @@ class Application(Adw.Application):
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 self.skills = engine
                 self.servers = engine
+                self.contexts = engine
                 GLib.idle_add(self._refresh)
                 GLib.idle_add(lambda: self.refresh_offers() or False)
                 GLib.idle_add(self.start_waiting)
