@@ -213,6 +213,10 @@ class Harness:
     def go_back(self, session: str, message: str) -> Revert:
         """Go back to before ``message``: its files and the Conversation."""
         revert = self._engine.revert(session, message)
+        if not revert.restorable:
+            self._engine.cancel_revert(session)
+            self._log.write("could-not-go-back", session=session, message=message)
+            return revert
         self._engine.keep_revert(session)
         self._log.write(
             "went-back",
