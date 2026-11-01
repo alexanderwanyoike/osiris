@@ -196,7 +196,7 @@ The drawer follows the split CONTEXT.md draws: the **Theme** is colour, the
   for what acts). `tests/test_skins.py` fails any
   Skin that names a colour of its own or leaves part of the drawer unstyled.
 - The Skin is chosen by name in `~/.config/osiris/harness/skin`; anything else
-  means Bubbles. Choosing Skins in Appearance comes with Skin sets (P3.4).
+  means Studio. Choosing Skins in Appearance comes with Skin sets (P3.4).
 - The drawer watches the theme engine's current-theme file and the Skin file,
   so switching either retints or reshapes it while it is open.
 

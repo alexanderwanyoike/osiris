@@ -23,7 +23,7 @@ SCHEME_FILE = ".local/share/gtksourceview-5/styles/osiris.xml"
 SKIN_FILE = ".config/osiris/harness/skin"
 
 SKINS = ("bubbles", "transcript", "studio")
-DEFAULT_SKIN = "bubbles"
+DEFAULT_SKIN = "studio"
 
 #: The colours a Skin may refer to, and nothing else.
 VARIABLES = (
