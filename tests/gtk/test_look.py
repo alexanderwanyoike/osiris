@@ -30,3 +30,9 @@ def test_code_is_drawn_in_the_themes_terminal_font(tmp_path: Path) -> None:
     look = Look(tmp_path, lambda: None)
     loaded = look._provider.to_string()
     assert "calt" in loaded and "liga" in loaded
+
+
+def test_the_look_keeps_the_theme_it_loaded(tmp_path: Path) -> None:
+    """For what draws itself from the Theme, such as a terminal."""
+    look = Look(tmp_path, lambda: None)
+    assert "background" in look.theme["colors"]

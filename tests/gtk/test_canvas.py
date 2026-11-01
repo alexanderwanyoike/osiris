@@ -325,3 +325,12 @@ def test_closing_a_terminals_tab_ends_its_shell() -> None:
     (terminals,) = [g for g in widget.panels.groups if g.kind is Kind.TERMINAL]
     widget.close(terminals.tabs[0])
     assert made[0].closed
+
+
+def test_open_terminals_follow_a_theme_change() -> None:
+    restyled: list[object] = []
+    widget, made = with_terminals()
+    toolbar_button(widget, "utilities-terminal-symbolic").emit("clicked")
+    made[0].restyle = restyled.append  # type: ignore[attr-defined]
+    widget.restyle(None, {"colors": {}})
+    assert restyled == [{"colors": {}}]
