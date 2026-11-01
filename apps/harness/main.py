@@ -1142,20 +1142,21 @@ class Application(Adw.Application):
         self.background(lambda: harness.resume(session), opened)
 
     def show_all_changes(self) -> None:
-        """Every question's changes that made commits, newest first."""
-        for turn in reversed(self.conversation.turns):
-            if turn.commits:
-                self.show_changes(turn)
+        """Every question's changes that made commits, in the order asked, read
+        together so they open in that order; the newest is left on screen."""
+        self._show_changes([t for t in self.conversation.turns if t.commits])
 
     def show_changes(self, turn: Turn) -> None:
         """What a question changed, on the Canvas; a comment on it is asked."""
+        self._show_changes([turn])
 
+    def _show_changes(self, turns: list[Turn]) -> None:
         def commented(path: str, lines: tuple[int, int], text: str) -> None:
             self.ask(comment(path, lines, text))
 
         programs = self.programs()
 
-        def read() -> tuple[tuple, list[str]]:
+        def read(turn: Turn) -> tuple[tuple, list[str]]:
             found, gone = [], []
             for name, commit in turn.commits:
                 try:
@@ -1164,16 +1165,16 @@ class Application(Adw.Application):
                     gone.append(name)
             return tuple(found), gone
 
-        def shown(result: tuple[tuple, list[str]]) -> None:
-            files, gone = result
-            if gone and not files:
-                turn.note = (f"{', '.join(dict.fromkeys(gone))} is gone, so what this "
-                             "question changed in it cannot be shown.")
-                self.drawer.refresh()
-                return
-            self.drawer.show_changes(turn.question, files, commented)
+        def shown(results: list[tuple[tuple, list[str]]]) -> None:
+            for turn, (files, gone) in zip(turns, results, strict=True):
+                if gone and not files:
+                    turn.note = (f"{', '.join(dict.fromkeys(gone))} is gone, so what "
+                                 "this question changed in it cannot be shown.")
+                else:
+                    self.drawer.show_changes(turn.question, files, commented)
+            self.drawer.refresh()
 
-        self.background(read, shown)
+        self.background(lambda: [read(turn) for turn in turns], shown)
 
     def ask_to_go_back(self, turn: Turn, again: bool = False) -> None:
         """Say what going back loses, and go back only on the person's yes."""
