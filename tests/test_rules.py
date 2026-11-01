@@ -73,3 +73,15 @@ def test_a_person_who_keeps_their_config_as_jsonc_is_left_alone() -> None:
     files.write(ENGINE.with_suffix(".jsonc"), '{"model": "openai/gpt-5.5"}')
     write_starting_rules(files, HOME)
     assert not files.exists(ENGINE)
+
+
+CODE = HOME / "Code/.opencode/opencode.json"
+
+
+def test_edits_inside_a_project_in_code_are_allowed() -> None:
+    """Inside a Project the Engine names an edit by its path from the Project,
+    so the rule lives in a config every Project in ~/Code reads."""
+    files = FakeFileSystem()
+    write_starting_rules(files, HOME)
+    rules = json.loads(files.read(CODE))["permissions"]
+    assert effect(rules, "edit", "main.py") == "allow"
