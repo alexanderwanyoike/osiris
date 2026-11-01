@@ -8,7 +8,7 @@ from pathlib import Path
 gi = __import__("gi")
 gi.require_version("Adw", "1")
 from canvas import Canvas  # noqa: E402
-from gi.repository import Adw, Gtk  # noqa: E402
+from gi.repository import Gtk  # noqa: E402
 
 from osiris.harness.panels import Kind  # noqa: E402
 from osiris.programs.manifest import parse  # noqa: E402
@@ -51,37 +51,21 @@ def code(widget: Canvas) -> str:
     return buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
 
 
-def test_each_program_has_a_tab() -> None:
-    widget, _ = canvas()
-    titles = [
-        widget.tabs.get_nth_page(i).get_title()
-        for i in range(widget.tabs.get_n_pages())
-    ]
-    assert titles == ["Pomodoro", "Notes"]
+def titles(widget: Canvas, kind: Kind) -> list[str]:
+    view = widget.views[kind]
+    return [view.get_nth_page(i).get_title() for i in range(view.get_n_pages())]
 
 
 def test_a_program_opens_on_its_code() -> None:
     widget, _ = canvas()
     assert code(widget) == "print('tick')\n"
-    assert "pomodoro / main.py" in texts(widget.tabs.get_selected_page().get_child())
-
-
-def test_choosing_a_file_in_the_tree_shows_it() -> None:
-    widget, _ = canvas()
-    page = widget.tabs.get_selected_page().get_child()
-    tree = next(w for w in widgets(page) if isinstance(w, Gtk.ListBox))
-    readme = next(
-        row
-        for row in widgets(tree)
-        if isinstance(row, Gtk.ListBoxRow) and "README.md" in texts(row)
-    )
-    tree.emit("row-activated", readme)
-    assert code(widget) == "# Pomodoro\n"
+    page = widget.views[Kind.CODE].get_selected_page().get_child()
+    assert "pomodoro / main.py" in texts(page)
 
 
 def test_editing_is_handed_to_code() -> None:
     widget, opened = canvas()
-    page = widget.tabs.get_selected_page().get_child()
+    page = widget.views[Kind.CODE].get_selected_page().get_child()
     button = next(
         w
         for w in widgets(page)
@@ -91,20 +75,12 @@ def test_editing_is_handed_to_code() -> None:
     assert opened == [(Path("/home/tester/Code/pomodoro"), Path("main.py"))]
 
 
-def test_the_strip_ends_with_a_list_of_every_tab() -> None:
-    widget, _ = canvas()
-    assert isinstance(widget.strip, Adw.TabBar)
-    find(widget, Gtk.MenuButton)
-
-
-def test_showing_again_replaces_the_tabs() -> None:
+def test_showing_other_programs_closes_the_tabs_of_those_gone() -> None:
     widget, _ = canvas()
     widget.show([(program("notes", "Notes"), [Path("main.py")])])
-    titles = [
-        widget.tabs.get_nth_page(i).get_title()
-        for i in range(widget.tabs.get_n_pages())
-    ]
-    assert titles == ["Notes"]
+    assert titles(widget, Kind.CODE) == ["main.py"]
+    page = widget.views[Kind.CODE].get_selected_page().get_child()
+    assert "notes / main.py" in texts(page)
 
 
 PATCH = (
@@ -135,7 +111,7 @@ def changed() -> tuple[Canvas, list[tuple[str, tuple[int, int], str]]]:
 
 def test_a_questions_changes_open_in_a_tab_of_their_own() -> None:
     widget, _ = changed()
-    page = widget.tabs.get_selected_page()
+    page = widget.views[Kind.CHANGES].get_selected_page()
     assert page.get_title() == "Changes: tidy main.py"
     shown = texts(page.get_child())
     assert "main.py" in shown and "notes.md" in shown
@@ -152,11 +128,7 @@ def test_the_first_file_opens_on_its_diff_in_the_themes_code_colours() -> None:
 def test_showing_the_programs_again_keeps_the_changes_tab() -> None:
     widget, _ = changed()
     widget.show([(program("pomodoro", "Pomodoro"), [Path("main.py")])])
-    titles = [
-        widget.tabs.get_nth_page(i).get_title()
-        for i in range(widget.tabs.get_n_pages())
-    ]
-    assert "Changes: tidy main.py" in titles
+    assert titles(widget, Kind.CHANGES) == ["Changes: tidy main.py"]
 
 
 def test_a_comment_on_picked_lines_reaches_thoth_with_its_file_and_lines() -> None:
@@ -166,7 +138,7 @@ def test_a_comment_on_picked_lines_reaches_thoth_with_its_file_and_lines() -> No
     _, end = buffer.get_iter_at_line(4)
     end.forward_to_line_end()
     buffer.select_range(start, end)
-    entry = find(widget.tabs.get_selected_page().get_child(), Gtk.Entry)
+    entry = find(widget.views[Kind.CHANGES].get_selected_page().get_child(), Gtk.Entry)
     entry.set_text("Count down from five instead.")
     entry.emit("activate")
     assert comments == [("main.py", (11, 12), "Count down from five instead.")]
@@ -183,11 +155,6 @@ def test_files_sits_in_a_toolbar_at_the_top_right() -> None:
     assert files.get_tooltip_text() == "Files"
     assert widget.toolbar.get_halign() is Gtk.Align.END
     assert widget.get_first_child() is widget.toolbar
-
-
-def titles(widget: Canvas, kind: Kind) -> list[str]:
-    view = widget.views[kind]
-    return [view.get_nth_page(i).get_title() for i in range(view.get_n_pages())]
 
 
 def test_what_a_program_runs_opens_as_a_tab_in_the_code_group() -> None:
