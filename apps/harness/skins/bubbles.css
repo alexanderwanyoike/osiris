@@ -194,9 +194,7 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-sidebar list { background-color: transparent; }
 .harness-sidebar row:selected { background-color: alpha(@harness_glass_edge, 0.32); }
 .harness-sidebar row:hover { background-color: alpha(@harness_glass_edge, 0.18); }
-.harness-running { color: @harness_accent; }
 .harness-unread { font-weight: 700; }
-.harness-unread-dot { min-width: 8px; min-height: 8px; margin: 0 4px; border-radius: 999px; background-color: @harness_accent; }
 
 /* A step opened: what it asked for, then what came back. */
 .harness-step-detail {
@@ -235,3 +233,44 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
     color: @harness_muted;
     font-size: 0.9em;
 }
+
+/* How a Conversation stands, in words at the end of its row. */
+.harness-status {
+    font-size: 0.75em;
+    padding: 1px 7px;
+    border-radius: 999px;
+    color: @harness_muted;
+    background-color: alpha(@harness_fg, 0.06);
+}
+.harness-status.working { color: @harness_fg; }
+.harness-status.waiting { color: @harness_on_accent; background-color: @harness_accent; }
+.harness-status.done { color: @harness_accent; background-color: alpha(@harness_accent, 0.14); }
+
+/* The Engine's task list: a ring to do, filled with the accent under way,
+   filled and struck through done, faded dropped. */
+.harness-tasks { margin: 2px 0; }
+.harness-task { padding: 1px 0; }
+.harness-task-mark {
+    min-width: 8px;
+    min-height: 8px;
+    border-radius: 99px;
+    border: 1.5px solid alpha(@harness_muted, 0.8);
+}
+.harness-task.under-way .harness-task-mark {
+    background-color: @harness_accent;
+    border-color: @harness_accent;
+}
+.harness-task.done .harness-task-mark {
+    background-color: alpha(@harness_success, 0.85);
+    border-color: transparent;
+}
+.harness-task.done label { color: @harness_muted; text-decoration-line: line-through; }
+.harness-task.dropped { opacity: 0.5; }
+.harness-task.dropped label { text-decoration-line: line-through; }
+/* The pencil on a question appears where the pointer is; the icons by an
+   answer's time stay, muted, so going back never looks like the main thing. */
+.harness-quiet { color: @harness_muted; min-height: 24px; min-width: 24px; padding: 2px; }
+.harness-quiet:hover { color: @harness_fg; }
+.harness-question-row .harness-quiet { opacity: 0; }
+.harness-question-row:hover .harness-quiet,
+.harness-question-row .harness-quiet:focus { opacity: 1; }

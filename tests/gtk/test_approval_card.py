@@ -37,13 +37,21 @@ def test_the_card_names_the_action_and_its_exact_input() -> None:
 
 def test_each_button_gives_its_answer() -> None:
     widget, answers = card()
-    for label in ("Allow once", "Allow for this Conversation", "Deny"):
+    for label in ("Allow once", "Always allow here", "Deny"):
         button(widget, label).emit("clicked")
     assert answers == [
         (Answer.ONCE, ""),
-        (Answer.CONVERSATION, ""),
+        (Answer.ALWAYS, ""),
         (Answer.DENY, ""),
     ]
+
+
+def test_always_says_how_far_it_reaches() -> None:
+    """The Engine keeps it for the whole Project, past this Conversation."""
+    widget, _ = card()
+    tooltip = button(widget, "Always allow here").get_tooltip_text()
+    assert "Project" in tooltip
+    assert "until" in tooltip
 
 
 def test_a_typed_reply_is_sent_in_the_actions_place() -> None:

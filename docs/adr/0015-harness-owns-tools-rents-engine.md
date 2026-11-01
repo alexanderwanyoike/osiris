@@ -75,3 +75,9 @@ running program rather than its documentation:
   opencode's free tier then refuses it ("can only be used from within
   OpenCode"). Osiris does not route around that: the free tier is not a
   **Provider** the Harness depends on, and answering needs a connected account.
+
+## Note: amended by ADR 0020
+
+Policy is no longer the Harness's own: the Engine's permission rules decide
+what runs and what asks, and the Harness keeps the card, the log and the admin
+password card (ADR 0020).

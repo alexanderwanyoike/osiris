@@ -171,6 +171,21 @@ def test_each_question_of_a_session_gets_back_the_changes_it_led_to() -> None:
     ]
 
 
+def test_questions_gone_back_from_lead_to_no_changes_any_more() -> None:
+    """Their changes would otherwise be matched to the answers still there."""
+    subject = log()
+    subject.write("sent", session="ses_1", text="make x.txt")
+    subject.write("changed", summary="Made x", undo=None)
+    subject.write("sent", session="ses_1", text="make y.txt")
+    subject.write("changed", summary="Made y", undo=None)
+    subject.write("went-back", session="ses_1", message="msg_2", questions=1)
+    subject.write("sent", session="ses_1", text="make z.txt")
+    assert subject.changes_by_question("ses_1") == [
+        [Change("Made x", None)],
+        [],
+    ]
+
+
 def test_the_log_says_which_answers_changes_were_undone() -> None:
     subject = log()
     subject.write("changed", summary="Made Harbour", undo=None)
