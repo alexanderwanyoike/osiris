@@ -204,9 +204,16 @@ class Drawer(Gtk.ApplicationWindow):
                                valign=Gtk.Align.CENTER)
         self.send.add_css_class("harness-send")
         self.send.connect("clicked", self._send_or_stop)
+        self.send_now = Gtk.Button(
+            icon_name="media-skip-forward-symbolic", valign=Gtk.Align.CENTER,
+            visible=False,
+            tooltip_text="Send now: stop what Osiris is doing and take this instead")
+        self.send_now.add_css_class("flat")
+        self.send_now.connect("clicked", self._cut_in)
         controls = Gtk.Box(spacing=6)
         controls.append(Gtk.Box(hexpand=True))
         controls.append(self.model_menu)
+        controls.append(self.send_now)
         controls.append(self.send)
         composer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         composer.add_css_class("harness-composer")
@@ -358,6 +365,13 @@ class Drawer(Gtk.ApplicationWindow):
         else:
             self._ask()
 
+    def _cut_in(self, _button) -> None:
+        buffer = self.entry.get_buffer()
+        text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+        if text.strip():
+            buffer.set_text("")
+            self.app.send_now(text.strip())
+
     def _hold_back(self) -> None:
         """Messages still waiting go back to the composer, sent to no one."""
         held = [self.app.unqueue(waiting.message)
@@ -494,6 +508,7 @@ class Drawer(Gtk.ApplicationWindow):
         self.send.set_icon_name("media-playback-stop-symbolic" if busy
                                 else "go-up-symbolic")
         self.send.set_tooltip_text("Stop" if busy else "Ask")
+        self.send_now.set_visible(busy)
         self.title.set_text(conversation.title or UNTITLED)
         self.model_label.set_text(conversation.model_label(self.app.models.default))
         self.footer.set_text(self.app.footer_line())
