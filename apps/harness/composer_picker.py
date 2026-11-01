@@ -11,7 +11,14 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, Gtk, Pango  # noqa: E402
 
-from osiris.harness.picker import SIGN, Entry, matching, trigger  # noqa: E402
+from osiris.harness.picker import (  # noqa: E402
+    SIGN,
+    Entry,
+    Reference,
+    matching,
+    references,
+    trigger,
+)
 
 #: Rows shown at once; typing narrows the rest.
 SHOWN = 8
@@ -23,6 +30,7 @@ class Picker:
     def __init__(self, entry: Gtk.TextView, offered: Callable[[str], list[Entry]]):
         self._entry = entry
         self._offered = offered
+        self._picked: list[Entry] = []
         self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.BROWSE)
         self.list.add_css_class("harness-picker")
         # Without autohide the popover leaves the keyboard with the message
@@ -37,6 +45,10 @@ class Picker:
         keys = Gtk.EventControllerKey(propagation_phase=Gtk.PropagationPhase.CAPTURE)
         keys.connect("key-pressed", self.key)
         entry.add_controller(keys)
+
+    def references(self, text: str) -> tuple[Reference, ...]:
+        """What was picked into ``text``, for sending with it."""
+        return references(text, self._picked)
 
     def key(self, _controller, keyval, _code, _state) -> bool:
         if not self.popover.get_visible():
@@ -68,6 +80,7 @@ class Picker:
         start = buffer.get_iter_at_offset(found.start)
         buffer.delete(start, buffer.get_iter_at_offset(cursor))
         buffer.insert(start, f"{SIGN[entry.kind]}{entry.label} ")
+        self._picked.append(entry)
 
     def _typed(self) -> None:
         buffer = self._entry.get_buffer()
