@@ -71,3 +71,7 @@ def save_connector(files: FileSystem, home: Path, connector: Connector) -> bool:
     return edit(
         files, home / ENGINE_CONFIG, lambda config: bool(saved(config, connector))
     )
+
+
+def remove_connector(files: FileSystem, home: Path, name: str) -> bool:
+    return edit(files, home / ENGINE_CONFIG, lambda config: bool(removed(config, name)))
