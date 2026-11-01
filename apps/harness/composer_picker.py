@@ -20,8 +20,11 @@ from osiris.harness.picker import (  # noqa: E402
     trigger,
 )
 
-#: Rows shown at once; typing narrows the rest.
-SHOWN = 8
+#: Rows listed at most, so a Project of thousands of files stays quick to
+#: filter; typing narrows the rest.
+LISTED = 200
+#: The card's tallest, about ten rows; the rest scroll.
+HEIGHT = 300
 ICONS = {
     "file": "text-x-generic-symbolic",
     "skill": "applications-science-symbolic",
@@ -44,7 +47,10 @@ class Picker:
         self.list.connect("row-activated", lambda _l, row: self._complete(row.entry))
         # Without autohide the popover leaves the keyboard with the message
         # box, so typing carries on filtering while it is open.
-        self.popover = Gtk.Popover(child=self.list, autohide=False, has_arrow=False,
+        self.card = Gtk.ScrolledWindow(child=self.list, max_content_height=HEIGHT,
+                                       propagate_natural_height=True,
+                                       hscrollbar_policy=Gtk.PolicyType.NEVER)
+        self.popover = Gtk.Popover(child=self.card, autohide=False, has_arrow=False,
                                    position=Gtk.PositionType.TOP)
         self.popover.add_css_class("harness-picker-popover")
         self.popover.set_parent(self._anchor)
@@ -109,7 +115,7 @@ class Picker:
             self.popover.popdown()
             return
         self.list.remove_all()
-        for entry in entries[:SHOWN]:
+        for entry in entries[:LISTED]:
             self.list.append(_row(entry))
         self.list.select_row(self.list.get_row_at_index(0))
         # The anchor's width, whatever is listed, so the card holds still
