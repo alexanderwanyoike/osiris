@@ -121,3 +121,14 @@ _KINDS: dict[str, Callable[[Step], Detail]] = {
 def detail(step: Step) -> Detail:
     shown = _KINDS.get(step.action, _tool)(step)
     return replace(shown, note=step.refused_by or step.error or shown.note)
+
+
+#: How many lines of what came back show before the rest is folded away.
+FOLD = 12
+
+
+def folded(lines: tuple[Line, ...]) -> tuple[tuple[Line, ...], int]:
+    """The lines to show at first, and how many are folded away after them."""
+    if len(lines) <= FOLD:
+        return lines, 0
+    return lines[:FOLD], len(lines) - FOLD
