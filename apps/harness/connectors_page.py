@@ -3,6 +3,7 @@
 What a connector is, where it is kept and how its state is said are decided in
 osiris/harness/connectors.py; this draws them and passes on what is changed.
 """
+import shlex
 from collections.abc import Callable
 from dataclasses import replace
 
@@ -68,9 +69,9 @@ class ConnectorsPage(Gtk.Box):
         self.problem.set_text(problem)
         self.problem.set_visible(bool(problem))
 
-    def _open_form(self) -> None:
-        self.name.set_text("")
-        self.reach.set_text("")
+    def _open_form(self, connector: Connector | None = None) -> None:
+        self.name.set_text(connector.name if connector else "")
+        self.reach.set_text(_reach(connector) if connector else "")
         self.form.set_visible(True)
         self.add.set_visible(False)
 
@@ -100,7 +101,8 @@ class ConnectorsPage(Gtk.Box):
 
     def _row(self, connector: Connector) -> Gtk.Widget:
         row = Adw.ActionRow(title=connector.name, use_markup=False,
-                            subtitle=" ".join(connector.command) or connector.url)
+                            subtitle=_reach(connector), activatable=True)
+        row.connect("activated", lambda _r: self._open_form(connector))
         said = Gtk.Label(valign=Gtk.Align.CENTER)
         said.add_css_class("harness-connector-state")
         row.add_suffix(said)
@@ -138,3 +140,8 @@ class ConnectorsPage(Gtk.Box):
             label = self._said[connector.name]
             label.set_text(words)
             label.set_css_classes(["harness-connector-state", f"harness-{tone}"])
+
+
+def _reach(connector: Connector) -> str:
+    """How the server is reached, as the person would type it."""
+    return shlex.join(connector.command) if connector.command else connector.url
