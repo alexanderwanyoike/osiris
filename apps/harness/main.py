@@ -199,8 +199,6 @@ class Drawer(Gtk.ApplicationWindow):
         enter = Gtk.EventControllerKey()
         enter.connect("key-pressed", self._composer_key)
         self.entry.add_controller(enter)
-        self.picker = Picker(self.entry, self.app.offered)
-        self._restyle_tokens()
         typed = Gtk.Overlay(child=self.entry)
         typed.add_overlay(placeholder)
 
@@ -236,6 +234,8 @@ class Drawer(Gtk.ApplicationWindow):
         composer.add_css_class("harness-composer")
         composer.append(typed)
         composer.append(controls)
+        self.picker = Picker(self.entry, self.app.offered, anchor=composer)
+        self._restyle_tokens()
 
         self.footer = Gtk.Label(xalign=0, wrap=True)
         self.footer.add_css_class("harness-meta")
