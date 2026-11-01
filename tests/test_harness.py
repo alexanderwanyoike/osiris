@@ -19,6 +19,7 @@ from osiris.harness.engine import (
     ModelRef,
     Past,
     PastTurn,
+    Reply,
     Stopped,
     Text,
     Tokens,
@@ -50,7 +51,7 @@ class FakeEngine:
     directories: list[Path | None] = field(default_factory=list)
     sent: list[tuple[str, str]] = field(default_factory=list)
     withdrawn: list[tuple[str, str]] = field(default_factory=list)
-    replies: list[tuple[str, str, bool, str]] = field(default_factory=list)
+    replies: list[tuple[str, str, Reply, str]] = field(default_factory=list)
     stopped: list[str] = field(default_factory=list)
     switched: list[tuple[str, ModelRef]] = field(default_factory=list)
     renamed: list[tuple[str, str]] = field(default_factory=list)
@@ -77,8 +78,8 @@ class FakeEngine:
     def events(self) -> Iterator[Event]:
         return iter(())
 
-    def reply(self, session: str, request: str, *, allow: bool, message: str) -> None:
-        self.replies.append((session, request, allow, message))
+    def reply(self, session: str, request: str, answer: Reply, message: str) -> None:
+        self.replies.append((session, request, answer, message))
 
     def stop(self, session: str) -> None:
         self.stopped.append(session)
@@ -211,7 +212,7 @@ def test_an_action_with_a_tier_is_allowed_and_logged_with_it(tier: Tier) -> None
     subject, engine, files = harness(tiers={"osiris_apply_theme": tier})
     subject.ask("make it calm")
     subject.handle(ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",)))
-    assert engine.replies == [("ses_1", "per_1", True, "")]
+    assert engine.replies == [("ses_1", "per_1", Reply.ONCE, "")]
     entry = entries(files)[-1]
     assert entry["kind"] == "allowed"
     assert entry["action"] == "osiris_apply_theme"
@@ -264,7 +265,7 @@ def asked_to_list_etc() -> tuple[Harness, FakeEngine, FakeFileSystem]:
 def test_allowing_once_runs_the_action_and_is_logged() -> None:
     subject, engine, files = asked_to_list_etc()
     decision = subject.answer("ses_1", "per_1", Answer.ONCE)
-    assert engine.replies == [("ses_1", "per_1", True, "")]
+    assert engine.replies == [("ses_1", "per_1", Reply.ONCE, "")]
     assert decision == Allowed("ses_1", "shell", Tier.ANYTHING, ("ls /etc",), "call_1")
     entry = entries(files)[-1]
     assert (entry["kind"], entry["answer"]) == ("answered", "once")
@@ -273,7 +274,7 @@ def test_allowing_once_runs_the_action_and_is_logged() -> None:
 def test_denying_refuses_the_action_and_thoth_is_told() -> None:
     subject, engine, files = asked_to_list_etc()
     decision = subject.answer("ses_1", "per_1", Answer.DENY)
-    assert engine.replies == [("ses_1", "per_1", False, REFUSED)]
+    assert engine.replies == [("ses_1", "per_1", Reply.REJECT, REFUSED)]
     assert decision == Refused("ses_1", "shell", ("ls /etc",), "call_1", DENIED)
     assert entries(files)[-1]["answer"] == "deny"
 
@@ -283,7 +284,9 @@ def test_a_typed_reply_refuses_the_action_and_reaches_thoth() -> None:
     decision = subject.answer(
         "ses_1", "per_1", Answer.DENY, reply="Look in /etc/osiris only"
     )
-    assert engine.replies == [("ses_1", "per_1", False, "Look in /etc/osiris only")]
+    assert engine.replies == [
+        ("ses_1", "per_1", Reply.REJECT, "Look in /etc/osiris only")
+    ]
     assert isinstance(decision, Refused)
     assert decision.reason == "You replied: Look in /etc/osiris only"
     assert entries(files)[-1]["reply"] == "Look in /etc/osiris only"
@@ -307,7 +310,7 @@ def test_a_card_waiting_in_one_conversation_holds_up_no_other() -> None:
     subject.new_conversation()
     subject.ask("make it calm")
     subject.handle(ToolRequested("ses_2", "per_2", "read", ("Code/pomodoro/a.py",)))
-    assert engine.replies == [("ses_2", "per_2", True, "")]
+    assert engine.replies == [("ses_2", "per_2", Reply.ONCE, "")]
 
 
 def test_a_message_sent_while_busy_waits_and_can_be_withdrawn() -> None:
@@ -431,7 +434,7 @@ def test_files_inside_a_program_may_be_read_and_edited(
     subject.ask("add a pause button")
     decision = subject.handle(ToolRequested("ses_1", "per_1", action, resources))
     assert decision == Allowed("ses_1", action, tier, resources)
-    assert engine.replies == [("ses_1", "per_1", True, "")]
+    assert engine.replies == [("ses_1", "per_1", Reply.ONCE, "")]
 
 
 @pytest.mark.parametrize(
@@ -486,7 +489,7 @@ def test_a_session_still_working_after_a_new_conversation_is_still_served() -> N
         ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",))
     )
     assert decision == Allowed("ses_1", "osiris_apply_theme", Tier.UNDOABLE, ("*",))
-    assert engine.replies == [("ses_1", "per_1", True, "")]
+    assert engine.replies == [("ses_1", "per_1", Reply.ONCE, "")]
 
 
 def test_moving_away_while_a_question_is_still_being_sent_keeps_it_on_its_session() -> (
@@ -564,7 +567,7 @@ def test_a_conversation_with_no_project_takes_its_programs_project() -> None:
     subject.worked_on("ses_1", POMODORO)
     assert engine.moved == [("ses_1", POMODORO)]
     subject.handle(ToolRequested("ses_1", "per_1", "read", ("main.py",)))
-    assert engine.replies[-1][2] is True
+    assert engine.replies[-1][2] is Reply.ONCE
 
 
 def test_a_conversation_in_a_project_stays_there() -> None:
@@ -657,7 +660,7 @@ def test_a_resumed_conversation_runs_and_reads_files_in_its_own_folder() -> None
     subject.resume("ses_9")
     assert engine.attached == [("osiris", POMODORO)]
     subject.handle(ToolRequested("ses_9", "per_1", "read", ("main.py",)))
-    assert engine.replies[-1][2] is True
+    assert engine.replies[-1][2] is Reply.ONCE
     assert subject.directory == POMODORO
 
 
@@ -669,7 +672,7 @@ def test_a_session_off_screen_reads_files_in_its_own_folder() -> None:
     subject.ask("add a pause button")
     subject.new_conversation()
     subject.handle(ToolRequested("ses_1", "per_1", "read", ("main.py",)))
-    assert engine.replies == [("ses_1", "per_1", True, "")]
+    assert engine.replies == [("ses_1", "per_1", Reply.ONCE, "")]
 
 
 def test_a_reply_the_engine_cannot_take_is_logged_and_the_conversation_goes_on() -> (
@@ -706,7 +709,7 @@ def test_once_the_person_allows_everything_nothing_waits() -> None:
     allowed[0] = True
     decision = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls /etc",)))
     assert isinstance(asked, Asking)
-    assert engine.replies == [("ses_1", "per_2", True, "")]
+    assert engine.replies == [("ses_1", "per_2", Reply.ONCE, "")]
     assert decision == Allowed("ses_1", "bash", Tier.ANYTHING, ("ls /etc",))
 
 

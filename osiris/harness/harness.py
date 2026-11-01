@@ -20,6 +20,7 @@ from osiris.harness.engine import (
     ModelRef,
     Past,
     PastTurn,
+    Reply,
     Stopped,
     ToolCalled,
     ToolRequested,
@@ -305,7 +306,9 @@ class Harness:
         """Answer a request; one the Engine cannot take is logged, so a single
         bad reply never ends the conversation."""
         try:
-            self._engine.reply(session, request, allow=allow, message=message)
+            self._engine.reply(
+                session, request, Reply.ONCE if allow else Reply.REJECT, message
+            )
         except HttpError as error:
             self._log.write(
                 "reply-failed", session=session, request=request, error=str(error)

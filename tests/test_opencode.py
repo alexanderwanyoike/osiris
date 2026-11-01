@@ -16,6 +16,7 @@ from osiris.harness.engine import (
     ModelRef,
     Past,
     PastTurn,
+    Reply,
     Stopped,
     Text,
     Tokens,
@@ -250,7 +251,7 @@ class TestSessions:
         self,
     ) -> None:
         """opencode withdraws a step's other requests when one is rejected."""
-        engine(FakeHttpClient()).reply(SESSION, "per_2", allow=False, message="no")
+        engine(FakeHttpClient()).reply(SESSION, "per_2", Reply.REJECT, "no")
 
     def test_a_tool_servers_requests_name_the_server_and_tool(self) -> None:
         """As opencode 2.0.32 does: ``tools.osiris.apply_theme`` in its code
@@ -259,13 +260,15 @@ class TestSessions:
             "osiris_apply_theme"
         )
 
-    @pytest.mark.parametrize(("allow", "decision"), [(True, "once"), (False, "reject")])
+    @pytest.mark.parametrize(
+        ("answer", "decision"), [(Reply.ONCE, "once"), (Reply.REJECT, "reject")]
+    )
     def test_a_tool_request_is_answered_once_or_rejected(
-        self, allow: bool, decision: str
+        self, answer: Reply, decision: str
     ) -> None:
         path = f"{URL}/api/session/{SESSION}/permission/per_1/reply"
         http = FakeHttpClient(replies={("POST", path): None})
-        engine(http).reply(SESSION, "per_1", allow=allow, message="why")
+        engine(http).reply(SESSION, "per_1", answer, "why")
         assert http.requests == [
             ("POST", path, {"decision": decision, "message": "why"})
         ]

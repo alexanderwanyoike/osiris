@@ -23,6 +23,7 @@ from osiris.harness.engine import (
     ModelRef,
     Past,
     PastTurn,
+    Reply,
     Stopped,
     Text,
     Tokens,
@@ -46,6 +47,7 @@ HISTORY_LIMIT = 200
 UNMARKED_TITLE = "Osiris Harness"
 #: opencode serves at most this many messages a page.
 MESSAGE_LIMIT = 200
+
 
 @dataclass(frozen=True)
 class Service:
@@ -124,11 +126,11 @@ class OpencodeEngine:
             headers=self._service.headers(),
         )
 
-    def reply(self, session: str, request: str, *, allow: bool, message: str) -> None:
+    def reply(self, session: str, request: str, answer: Reply, message: str) -> None:
         try:
             self._post(
                 f"/api/session/{session}/permission/{request}/reply",
-                {"decision": "once" if allow else "reject", "message": message},
+                {"decision": answer.value, "message": message},
             )
         except HttpError as error:
             # Rejecting one of a step's requests withdraws the others, so a reply

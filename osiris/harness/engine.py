@@ -9,8 +9,16 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Protocol, runtime_checkable
+
+
+class Reply(Enum):
+    """How a ``ToolRequested`` is answered."""
+
+    ONCE = "once"
+    REJECT = "reject"
 
 
 @dataclass(frozen=True)
@@ -159,7 +167,7 @@ class Engine(Protocol):
         """Every session's events, for as long as the Engine runs."""
         ...
 
-    def reply(self, session: str, request: str, *, allow: bool, message: str) -> None:
+    def reply(self, session: str, request: str, answer: Reply, message: str) -> None:
         """Answer a ``ToolRequested``; ``message`` is passed to the model."""
         ...
 
