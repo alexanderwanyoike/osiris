@@ -426,3 +426,20 @@ def test_the_terminal_groups_header_opens_another_terminal() -> None:
     )
     another.emit("clicked")
     assert len(made) == 2
+
+
+def test_a_changed_file_shows_its_name_its_folder_and_coloured_counts() -> None:
+    from osiris.harness.engine import FileChange
+
+    widget, _ = canvas()
+    widget.show_changes(
+        "tidy",
+        (FileChange("coin-flip/src/clock.py", "modified", 2, 1, PATCH),),
+        on_comment=lambda *_: None,
+    )
+    page = widget.views[Kind.CHANGES].get_selected_page().get_child()
+    labels = {w.get_text(): w for w in widgets(page) if isinstance(w, Gtk.Label)}
+    assert "clock.py" in labels
+    assert "harness-meta" in labels["coin-flip/src"].get_css_classes()
+    assert "harness-added" in labels["+2"].get_css_classes()
+    assert "harness-removed" in labels["−1"].get_css_classes()
