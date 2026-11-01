@@ -39,7 +39,7 @@ The first slice of ROADMAP P3.5:
   reaches the model as guidance; Deny tells the model the person said no and
   not to try it another way unasked. A card waits without holding up any other
   Conversation, goes when its answer ends, and every answer is logged
-  (`answered`).
+  (`replied`).
 - **Unless the person turns on auto mode.** A switch on the Providers page
   (`osiris.harness.trust`) has the Harness answer every request once without a
   card, logged as `allowed` by `auto mode`, and restarts the tool server so the
