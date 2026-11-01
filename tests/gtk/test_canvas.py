@@ -170,3 +170,15 @@ def test_a_comment_on_picked_lines_reaches_thoth_with_its_file_and_lines() -> No
     entry.emit("activate")
     assert comments == [("main.py", (11, 12), "Count down from five instead.")]
     assert entry.get_text() == ""
+
+
+def test_files_sits_in_a_toolbar_at_the_top_right() -> None:
+    widget, _ = canvas()
+    files = next(
+        w
+        for w in widgets(widget.toolbar)
+        if isinstance(w, Gtk.Button) and w.get_icon_name() == "folder-symbolic"
+    )
+    assert files.get_tooltip_text() == "Files"
+    assert widget.toolbar.get_halign() is Gtk.Align.END
+    assert widget.get_first_child() is widget.toolbar
