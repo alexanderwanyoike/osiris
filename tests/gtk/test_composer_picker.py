@@ -203,3 +203,11 @@ def test_moving_past_the_bottom_scrolls_the_chosen_entry_into_view() -> None:
     shown_from = picker.card.get_vadjustment().get_value()
     assert shown_from <= top
     assert top + row.get_height() <= shown_from + picker.card.get_height()
+
+
+def test_the_card_stands_clear_of_the_message_box() -> None:
+    from composer_picker import GAP
+
+    picker, _ = docked("@", [README])
+    assert picker.popover.get_offset() == (0, -GAP)
+    assert GAP >= 6
