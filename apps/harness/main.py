@@ -250,6 +250,7 @@ class Drawer(Gtk.ApplicationWindow):
                              on_changes=lambda: self.app.show_all_changes(),
                              terminal=lambda folder: Terminal(folder, self.app.look.theme),
                              page=lambda at, on_title: Page(at, on_title),
+                             home=getattr(app, "home", None),
                              scheme=app.look.scheme if app.look is not None else None)
         self.canvas.set_visible(False)
         # The Canvas's toolbar sits at the top bar's right, shown with the

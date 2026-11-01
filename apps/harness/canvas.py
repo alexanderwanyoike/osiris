@@ -34,7 +34,8 @@ class Canvas(Gtk.Box):
                  scheme: GtkSource.StyleScheme | None = None,
                  on_changes: Callable[[], None] = lambda: None,
                  terminal: Callable[[Path], Gtk.Widget] | None = None,
-                 page: Callable[[str, Callable[[str], None]], Gtk.Widget] | None = None):
+                 page: Callable[[str, Callable[[str], None]], Gtk.Widget] | None = None,
+                 home: Path | None = None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.add_css_class("harness-canvas")
         self._read = read
@@ -50,6 +51,7 @@ class Canvas(Gtk.Box):
         self._focus: Kind | None = None
         self._programs: dict[str, tuple[Program, list[Path]]] = {}
         self._terminal = terminal
+        self._home = home
         self._page = page
         #: Pages opened so far, which keys each one's tab.
         self._pages_opened = 0
@@ -159,13 +161,14 @@ class Canvas(Gtk.Box):
         self._opened(tab)
 
     def _folder(self) -> Path | None:
-        """The Program of the code tab on screen, else the first Program."""
+        """The Program of the code tab on screen, else the first Program, else
+        the home folder."""
         code = next((g for g in self.panels.groups if g.kind is Kind.CODE), None)
         if code is not None and code.selected is not None:
             name = code.selected.key.split("/", 1)[0]
             if name in self._programs:
                 return self._programs[name][0].source
-        return next((p.source for p, _ in self._programs.values()), None)
+        return next((p.source for p, _ in self._programs.values()), self._home)
 
     def close(self, tab: Tab) -> None:
         page = self._pages.get(tab)
