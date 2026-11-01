@@ -607,7 +607,9 @@ class Drawer(Gtk.ApplicationWindow):
 
     def _tops(self) -> list[float]:
         """Where each question starts in the scrolled Conversation."""
-        content = self.scroller.get_child()
+        # Measured from the content the viewport scrolls, not the viewport,
+        # which would give where each is on screen.
+        content = self.scroller.get_child().get_child()
         return [view.compute_point(content, Graphene.Point())[1].y
                 for view in self.views]
 
