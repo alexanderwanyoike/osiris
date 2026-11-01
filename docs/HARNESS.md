@@ -25,9 +25,18 @@ The first slice of ROADMAP P3.5:
   ends with what changed and an **Undo**, which reverses it without the model:
   the previous theme comes back and the new one is deleted. See
   [The Osiris tools](#the-osiris-tools).
-- **Everything else is refused.** Any other action the model reaches for
-  (running a command, reading a file, editing anything) is rejected, and the
-  model is told what it may use instead.
+- **Everything else is asked about.** Any other action the model reaches for
+  (running a command, reading a file outside a Program, editing anything) is
+  held and shown as a card in the Conversation: the action and its exact input,
+  with Allow once, Allow for this Conversation, Deny, and a box to reply
+  instead. A reply refuses the action and reaches the model as guidance; Deny
+  tells it the action was refused. Allow for this Conversation keeps opencode's
+  suggested patterns (`save`, `ls *` for `ls /etc`) for that session only and
+  allows matching requests without a card; the Engine's own standing grant
+  would cover the whole Project, so Osiris keeps the rule and answers the
+  Engine once each time. A card waits without holding up any other
+  Conversation, goes when its answer ends, and every answer is logged
+  (`answered`).
 - **Unless the person allows everything.** A switch on the Providers page
   (`osiris.harness.trust`) lets the Harness allow any request, logged with the
   tier `anything`, and restarts the tool server so the model is told it may run
@@ -49,7 +58,7 @@ The first slice of ROADMAP P3.5:
   status; an edit as a diff of the change the model asked for; what a read or
   search looked at and found; a web search's query or a fetch's address; any
   other tool's name and inputs in words. Output past twelve lines is folded
-  until asked for, and a refused step names the rule that refused it.
+  until asked for, and a refused step says how the person answered.
 - **The Harness log** keeps everything: each question before it is sent, each
   answer with the model that gave it and its tokens, every tool call whether or
   not it asked, every action allowed and its **Action tier**, every change with
@@ -135,7 +144,7 @@ is written into the person's own opencode configuration.
 opencode runs MCP tools from its code mode (`tools.osiris.apply_theme(...)`),
 and every call still raises a permission request named `osiris_<tool>`. The
 Harness answers it by the tool's tier: a look or an undoable change is allowed
-and logged; anything without a tier is rejected. The model never writes a
+and logged; anything without a tier waits for the person's card. The model never writes a
 colour: the seed is a hex colour whose hue alone counts, and harmony and mood
 are fixed choices.
 
