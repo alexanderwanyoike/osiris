@@ -258,3 +258,24 @@ def test_a_server_needing_sign_in_signs_in_from_its_row_without_a_terminal() -> 
     assert began == ["mcp_x"]
     assert opened == ["https://linear.app/oauth"]
     assert "Connected" in texts(shown)
+
+
+def test_a_server_needing_sign_in_shows_the_button_in_place_of_its_state() -> None:
+    linear = Connector("linear", url="https://mcp.linear.app/mcp")
+    from connectors_page import ConnectorsPage
+
+    shown = ConnectorsPage(
+        read=Store(linear).read,
+        save=lambda _c: True,
+        remove=lambda _n: True,
+        states=lambda: {"linear": State("needs_auth", "login first", "mcp_x")},
+        background=now,
+        sign_in=lambda _i: None,
+    )
+    assert shown.row("linear").sign_in.get_visible()
+    assert not shown.row("linear").said.get_visible()
+
+
+def test_what_a_server_runs_stays_on_one_line() -> None:
+    shown = page(Store(Connector("linear", url="https://mcp.linear.app/mcp")))
+    assert shown.row("linear").get_subtitle_lines() == 1
