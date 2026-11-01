@@ -25,22 +25,27 @@ The first slice of ROADMAP P3.5:
   ends with what changed and an **Undo**, which reverses it without the model:
   the previous theme comes back and the new one is deleted. See
   [The Osiris tools](#the-osiris-tools).
-- **Everything else is asked about.** Any other action the model reaches for
-  (running a command, reading a file outside a Program, editing anything) is
-  held and shown as a card in the Conversation: the action and its exact input,
-  with Allow once, Allow for this Conversation, Deny, and a box to reply
-  instead. A reply refuses the action and reaches the model as guidance; Deny
-  tells it the action was refused. Allow for this Conversation keeps opencode's
-  suggested patterns (`save`, `ls *` for `ls /etc`) for that session only and
-  allows matching requests without a card; the Engine's own standing grant
-  would cover the whole Project, so Osiris keeps the rule and answers the
-  Engine once each time. A card waits without holding up any other
+- **The Engine's rules decide what asks** (ADR 0020). opencode's permission
+  rules, in its own config where the person can read and change them, allow,
+  ask about or deny each action; the last matching rule wins, and they hold for
+  every client of the Engine. Sessions are opened with no rules of their own,
+  since those would override the person's. See [Permission rules](#permission-rules).
+- **What the rules ask about is asked in the Conversation.** The request is
+  held and shown as a card: the action and its exact input, with Allow once,
+  Always allow here, Deny, and a box to reply instead. Always allow here is
+  answered `always`: opencode saves the rule it suggests (`ls *` for
+  `ls /etc`) for the whole Project and stops asking there until the rule is
+  removed, which the button's tooltip says. A reply refuses the action and
+  reaches the model as guidance; Deny tells the model the person said no and
+  not to try it another way unasked. A card waits without holding up any other
   Conversation, goes when its answer ends, and every answer is logged
   (`answered`).
-- **Unless the person allows everything.** A switch on the Providers page
-  (`osiris.harness.trust`) lets the Harness allow any request, logged with the
-  tier `anything`, and restarts the tool server so the model is told it may run
-  commands and change any file. It is off until the person turns it on.
+- **Unless the person turns on auto mode.** A switch on the Providers page
+  (`osiris.harness.trust`) has the Harness answer every request once without a
+  card, logged as `allowed` by `auto mode`, and restarts the tool server so the
+  model is told. A deny rule still refuses, since the Engine never asks about
+  it, and a command using sudo still asks for the password. It is off until
+  the person turns it on; a person who had allow everything on is in auto mode.
 - **It asks for the administrator password in the Conversation.** When a
   command it runs uses `sudo`, an admin password card appears under the
   answer: "Osiris needs your password to run:" and the exact command, a shell
@@ -69,7 +74,7 @@ The first slice of ROADMAP P3.5:
   until asked for, and a refused step says how the person answered.
 - **The Harness log** keeps everything: each question before it is sent, each
   answer with the model that gave it and its tokens, every tool call whether or
-  not it asked, every action allowed and its **Action tier**, every change with
+  not it asked, every answer to a card, everything auto mode allowed, every change with
   the step that undoes it, every Undo, every rejection and every failure. It is append-only JSON lines,
   readable with any tool:
 
@@ -110,10 +115,11 @@ osiris/harness/conversation   what the drawer shows, from the Engine's events
 osiris/harness/activity       each step of an answer in plain words, and time spent
 osiris/harness/markdown       answers as blocks, inline text as escaped Pango markup
 osiris/harness/style          colour variables and code scheme from a Theme; Skin choice
-osiris/harness/harness        its sessions: the log, and actions allowed by tier
+osiris/harness/harness        its sessions: the log, and requests held for the person
+osiris/harness/rules          the careful starting rules, written into the Engine's config
 osiris/harness/unread         the Conversations with an answer not yet seen, kept
 osiris/harness/notice         what the desktop is told when an answer ends unread
-osiris/harness/tiers          Action tiers: a look, an undoable change
+osiris/harness/tiers          Action tiers: a hint on each Osiris tool, a look or undoable
 osiris/harness/log            the Harness log
 osiris/harness/engine         the Engine port and its events
 osiris/harness/accounts       the Accounts port: Providers, signing in, models
@@ -150,9 +156,9 @@ is written into the person's own opencode configuration.
 | `apply_theme` | an undoable change | applies a theme to the whole desktop | applies the one it replaced |
 
 opencode runs MCP tools from its code mode (`tools.osiris.apply_theme(...)`),
-and every call still raises a permission request named `osiris_<tool>`. The
-Harness answers it by the tool's tier: a look or an undoable change is allowed
-and logged; anything without a tier waits for the person's card. The model never writes a
+and checks each call as the action `osiris_<tool>`. The starting rules allow
+`osiris_*`, since every tool only looks or has an Undo, so they run without a
+card; the tier is a hint to the model, not a decision. The model never writes a
 colour: the seed is a hex colour whose hue alone counts, and harmony and mood
 are fixed choices.
 
@@ -256,10 +262,10 @@ opencode 2.0 runs as a background service per user. The adapter runs
 `~/.local/state/opencode/service.json`, and talks to the API under `/api` with
 HTTP basic auth. Events stream from `/api/event` as server-sent events.
 
-Every session is opened with a ruleset that sets every action to `ask`, so each
-tool that touches the machine stops at a `permission.asked` event and the
-Harness answers it. Denying everything instead would strip the tools from the
-request, and opencode's free tier refuses such requests outright.
+Sessions are opened with no ruleset of their own: a session's rules come after
+the config's and win even over its denies, so sending any would override the
+person's. Whatever the rules ask about stops at a `permission.asked` event
+and the Harness answers it with the person's card, or at once in auto mode.
 
 A step's details come from the same stream, tied together by the call's id:
 `session.tool.called` carries the call's input, `permission.asked` names the
@@ -273,6 +279,36 @@ one on screen, and any still working on a question. The person can move to
 another Conversation while Osiris answers; the one left keeps being answered,
 its file requests judged against its own folder, and the sidebar says
 "Working" beside it until it ends.
+
+### Permission rules
+
+opencode 2's rules are a list of `{action, resource, effect}`, each `allow`,
+`ask` or `deny`; the last match wins (opencode.ai/v2/docs/permissions). With no
+config it allows everything but reading `.env` files, and does not ask before
+paths outside the folder. So on every start the Harness adds careful starting
+rules to each of two configs that has no `permissions` key
+(`osiris/harness/rules.py`):
+
+- `~/.config/opencode/opencode.json`: ask by default; allow reading, globbing
+  and searching, web lookups, questions, skills, subagents, opencode's tool
+  catalogue (`execute`), the task list (`todowrite`) and the Osiris tools
+  (`osiris_*`); ask before `.env` files (but not `.env.example`) and anything
+  outside the folder (`external_directory`). Commands, edits and other servers'
+  tools fall to the default and ask.
+- `~/Code/.opencode/opencode.json`: allow `edit`. Inside a Project opencode
+  names an edit by its path from the Project, so a rule cannot name `~/Code` by
+  path; opencode reads this config for every Project below `~/Code`, where each
+  Program's changes are commits. Conversations with no Project, which run in
+  home, still ask before editing.
+
+A config that already has `permissions`, even an empty list (opencode's own
+defaults), is the person's and is never changed; nor is one that is not plain
+JSON, or one kept as `opencode.jsonc`. opencode reloads its config when it
+changes.
+
+Checked against opencode 2.2.4: a saved `always` beats any `ask` and loses to a
+config `deny`; it is listed at `GET /api/permission/saved` and removed with
+`DELETE /api/permission/saved/{id}`, which Thoth does not offer yet.
 
 ### Unread and notifications
 
