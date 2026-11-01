@@ -31,3 +31,23 @@ def connectors(config: dict[str, Any]) -> list[Connector]:
         )
         for name, server in sorted(servers.items())
     ]
+
+
+def saved(config: dict[str, Any], connector: Connector) -> dict[str, Any]:
+    """``config`` with ``connector`` added or changed in place; what else the
+    person set on the server, such as headers or sign-in, is kept."""
+    servers = config.setdefault("mcp", {}).setdefault("servers", {})
+    server = dict(servers.get(connector.name, {}))
+    for key in ("type", "command", "url", "disabled"):
+        server.pop(key, None)
+    where: dict[str, Any] = (
+        {"type": "local", "command": list(connector.command)}
+        if connector.command
+        else {"type": "remote", "url": connector.url}
+    )
+    servers[connector.name] = {
+        **where,
+        **server,
+        **({} if connector.on else {"disabled": True}),
+    }
+    return config
