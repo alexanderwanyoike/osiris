@@ -55,9 +55,16 @@ class ConnectorsPage(Gtk.Box):
         self.form = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
                             visible=False)
         self.form.add_css_class("harness-connector-form")
+        self.problem = Gtk.Label(xalign=0, wrap=True, visible=False)
+        self.problem.add_css_class("harness-problem")
         self.form.append(fields)
+        self.form.append(self.problem)
         self.form.append(self.done)
         return self.form
+
+    def _say(self, problem: str) -> None:
+        self.problem.set_text(problem)
+        self.problem.set_visible(bool(problem))
 
     def _open_form(self) -> None:
         self.name.set_text("")
@@ -67,8 +74,15 @@ class ConnectorsPage(Gtk.Box):
 
     def _finish(self) -> None:
         connector = connector_of(self.name.get_text(), self.reach.get_text())
-        if connector is None or not self._save(connector):
+        if connector is None:
+            self._say("Give it a name, and the command that starts it or the "
+                      "web address it answers at.")
             return
+        if not self._save(connector):
+            self._say("Your opencode config has comments in it, so Osiris leaves "
+                      "it for you to edit by hand.")
+            return
+        self._say("")
         self.form.set_visible(False)
         self.add.set_visible(True)
         self.reload()
