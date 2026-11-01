@@ -59,6 +59,18 @@ class ToolRequested:
 
 
 @dataclass(frozen=True)
+class ToolFinished:
+    """A tool has run: what it gave back, or why it failed."""
+
+    session: str
+    call: str
+    output: str
+    error: str = ""
+    #: A command's exit status, when the tool ran one.
+    exit: int | None = None
+
+
+@dataclass(frozen=True)
 class Answered:
     """One step of the answer is complete, and this model gave it."""
 
@@ -84,7 +96,16 @@ class Failed:
     message: str
 
 
-Event = Text | ToolCalled | ToolRequested | Answered | Finished | Stopped | Failed
+Event = (
+    Text
+    | ToolCalled
+    | ToolRequested
+    | ToolFinished
+    | Answered
+    | Finished
+    | Stopped
+    | Failed
+)
 
 
 @dataclass(frozen=True)

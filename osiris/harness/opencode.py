@@ -26,6 +26,7 @@ from osiris.harness.engine import (
     Text,
     Tokens,
     ToolCalled,
+    ToolFinished,
     ToolRequested,
 )
 from osiris.harness.titles import title_of
@@ -285,6 +286,23 @@ class OpencodeEngine:
                 yield event
 
 
+def _finished(session: str, data: dict[str, Any]) -> ToolFinished:
+    """The text a tool gave back; a file it gave is left out."""
+    output = "".join(
+        part.get("text", "")
+        for part in data.get("content") or []
+        if part.get("type") == "text"
+    )
+    exit_status = (data.get("metadata") or {}).get("exit")
+    return ToolFinished(
+        session,
+        data["id"],
+        output,
+        error=(data.get("error") or {}).get("message", ""),
+        exit=exit_status if isinstance(exit_status, int) else None,
+    )
+
+
 class _Reader:
     """Turns opencode's events into the Engine's.
 
@@ -318,6 +336,8 @@ class _Reader:
                     tuple(data["resources"]),
                     (data.get("source") or {}).get("id", ""),
                 )
+            case "session.tool.success" | "session.tool.failed":
+                return _finished(session, data)
             case "session.step.ended":
                 return self._answered(session, data)
             case "session.execution.succeeded":
