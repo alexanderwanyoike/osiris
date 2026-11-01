@@ -47,6 +47,10 @@ class Picker:
         keys.connect("key-pressed", self.key)
         entry.add_controller(keys)
 
+    def restyle(self, colours: tuple[str, str]) -> None:
+        """The Theme's token colours, foreground and background."""
+        self.token.props.foreground, self.token.props.background = colours
+
     def references(self, text: str) -> tuple[Reference, ...]:
         """What was picked into ``text``, for sending with it."""
         return references(text, self._picked)
