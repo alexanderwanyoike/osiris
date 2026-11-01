@@ -143,7 +143,7 @@ def test_what_auto_mode_allows_is_shown_once() -> None:
     [
         ('await tools["osiris"].list_themes({});', ["osiris_list_themes"]),
         (
-            "await tools.osiris.create_theme(intent); await tools.osiris.apply_theme(t)",
+            "await tools.osiris.create_theme(i); await tools.osiris.apply_theme(t)",
             ["osiris_create_theme", "osiris_apply_theme"],
         ),
         ('await tools.shell({ command: "uname -s" });', []),
