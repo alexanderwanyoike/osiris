@@ -16,7 +16,7 @@ gi.require_version("GtkSource", "5")
 from gi.repository import GLib, Gtk, GtkSource, Pango  # noqa: E402
 
 from osiris.harness.activity import Step, elapsed, summary  # noqa: E402
-from osiris.harness.detail import Kind, Line, detail  # noqa: E402
+from osiris.harness.detail import Kind, Line, detail, folded  # noqa: E402
 from osiris.harness.admin import Request  # noqa: E402
 from osiris.harness.conversation import State, Turn  # noqa: E402
 from osiris.harness.markdown import (  # noqa: E402
@@ -269,8 +269,22 @@ def _step_detail(step: Step) -> Gtk.Widget:
     if shown.kind is Kind.COMMAND:
         asked.add_css_class("monospace")
     box.append(asked)
-    for line in shown.lines:
-        box.append(_line(line))
+    lines = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+    box.append(lines)
+    kept, hidden = folded(shown.lines)
+    for line in kept:
+        lines.append(_line(line))
+    if hidden:
+        more = Gtk.Button(label=f"Show {hidden} more lines", halign=Gtk.Align.START)
+        more.add_css_class("flat")
+
+        def unfold(_button: Gtk.Button) -> None:
+            for line in shown.lines[len(kept):]:
+                lines.append(_line(line))
+            box.remove(more)
+
+        more.connect("clicked", unfold)
+        box.append(more)
     return box
 
 
