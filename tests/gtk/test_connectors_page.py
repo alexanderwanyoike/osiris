@@ -187,3 +187,18 @@ def test_with_no_connectors_the_page_says_what_one_is_and_draws_no_empty_list() 
     shown = page(Store())
     assert any("MCP server" in text for text in texts(shown))
     assert not shown.connectors.get_visible()
+
+
+def test_a_long_failure_is_cut_short_on_its_pill_and_whole_on_hover() -> None:
+    from gi.repository import Gtk
+
+    from .conftest import widgets
+
+    reason = "connection refused by the server at mcp.example.com " * 4
+    shown = page(Store(WIKI), {"wiki": State("failed", reason)})
+    pill = next(
+        w for w in widgets(shown) if "harness-connector-state" in w.get_css_classes()
+    )
+    _minimum, natural, _b, _c = pill.measure(Gtk.Orientation.HORIZONTAL, -1)
+    assert natural < 260
+    assert reason.strip() in pill.get_tooltip_text()
