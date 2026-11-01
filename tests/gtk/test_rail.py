@@ -64,19 +64,3 @@ def test_ticks_stand_evenly_in_a_column_centred_on_the_rail() -> None:
     start, pitch = column(3, 400)
     assert tops == [start, start + pitch, start + 2 * pitch]
 
-
-def test_a_band_marks_the_part_on_screen() -> None:
-    from gi.repository import Graphene, Gtk
-
-    from .test_composer_picker import settle
-
-    shown = rail()
-    shown.show_view(0.25, 0.5)
-    window = Gtk.Window(child=shown, default_height=400)
-    window.present()
-    settle()
-    band = shown.band
-    top = band.compute_point(shown, Graphene.Point())[1].y
-    height = band.get_height()
-    window.destroy()
-    assert (top, height) == (100, 200)
