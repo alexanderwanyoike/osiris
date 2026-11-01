@@ -35,11 +35,6 @@ REFUSED = (
 )
 
 
-#: Why a step was refused, in the person's words: the two rules that refuse.
-ONLY_IN_PROGRAMS = "Files are read and edited only inside a Program"
-ONLY_WITH_EVERYTHING = "Runs only with Allow everything on"
-
-
 @dataclass(frozen=True)
 class Allowed:
     session: str
@@ -71,8 +66,21 @@ FILE_TIERS = {
 COMMAND_ACTIONS = frozenset({"shell", "bash"})
 _SUDO = re.compile(r"\bsudo\b")
 
+@dataclass(frozen=True)
+class Asking:
+    """An action outside the tier, held until the person answers its card."""
+
+    session: str
+    request: str
+    action: str
+    resources: tuple[str, ...]
+    call: str = ""
+    #: Patterns that would allow it again without asking, as the Engine suggests.
+    patterns: tuple[str, ...] = ()
+
+
 #: What the Harness decided about a ``ToolRequested``, passed on in its place.
-Decision = Allowed | Refused
+Decision = Allowed | Refused | Asking
 
 
 class Harness:
@@ -302,18 +310,15 @@ class Harness:
                     resources=list(resources),
                 )
                 return Allowed(session, action, tier, resources, call)
-            case ToolRequested(session, request, action, resources, call):
-                self._reply(session, request, allow=False, message=REFUSED)
+            case ToolRequested(session, request, action, resources, call, patterns):
+                asking = Asking(session, request, action, resources, call, patterns)
                 self._log.write(
-                    "rejected",
+                    "asked",
                     session=session,
                     action=action,
                     resources=list(resources),
                 )
-                reason = (
-                    ONLY_IN_PROGRAMS if action in FILE_TIERS else ONLY_WITH_EVERYTHING
-                )
-                return Refused(session, action, resources, call, reason)
+                return asking
             case Failed(session, message):
                 self._log.write("failed", session=session, message=message)
             case Stopped(session):
