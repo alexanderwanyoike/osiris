@@ -24,6 +24,9 @@ from osiris.harness.connectors import (  # noqa: E402
 class ConnectorsPage(Gtk.Box):
     #: Seconds between asking again about a server still starting.
     POLL_SECONDS = 2
+    #: How often to ask before leaving a server to say it has not started; a
+    #: server starts only for a folder a session runs in.
+    POLLS = 15
 
     def __init__(self, read: Callable[[], list[Connector]],
                  save: Callable[[Connector], bool], remove: Callable[[str], bool],
@@ -115,6 +118,7 @@ class ConnectorsPage(Gtk.Box):
         self._said.clear()
         self._rows.clear()
         self._connectors = self._read()
+        self._polls = 0
         for connector in self._connectors:
             self._list.append(self._row(connector))
         self._ask_states()
@@ -152,6 +156,7 @@ class ConnectorsPage(Gtk.Box):
             self.reload()
 
     def _ask_states(self) -> None:
+        self._polls += 1
         self._background(self._states, self._show_states)
 
     def _show_states(self, states: dict[str, State]) -> None:
@@ -165,7 +170,7 @@ class ConnectorsPage(Gtk.Box):
             label = self._said[connector.name]
             label.set_text(words)
             label.set_css_classes(["harness-connector-state", f"harness-{tone}"])
-        if unsettled:
+        if unsettled and self._polls < self.POLLS:
             self._later(self.POLL_SECONDS, self._ask_states)
 
 
