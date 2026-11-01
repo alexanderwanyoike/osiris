@@ -431,8 +431,12 @@ def tried(may: bool) -> tuple[TurnView, Turn, list[Turn]]:
 def test_the_latest_answer_is_tried_again_from_an_arrow_by_its_model_and_time() -> None:
     view, turn, again = tried(may=True)
     arrow = icon_button(view, "view-refresh-symbolic")
-    meta = next(w for w in widgets(view) if "harness-meta" in w.get_css_classes())
-    assert arrow.get_parent() is meta.get_parent()
+    line = arrow.get_parent()
+    assert any(
+        "harness-meta" in w.get_css_classes() and "make" not in w.get_text()
+        for w in widgets(line)
+        if isinstance(w, Gtk.Label)
+    )
     assert arrow.get_tooltip_text().startswith("Try this question again")
     arrow.emit("clicked")
     assert again == [turn]
