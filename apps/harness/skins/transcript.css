@@ -229,3 +229,4 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-removed { color: @harness_danger; }
 .harness-page entry { min-height: 26px; font-size: 0.86em; border-radius: 7px; }
 .harness-canvas scrolledwindow, .harness-canvas viewport, .harness-canvas list, .harness-canvas .navigation-sidebar { background-color: transparent; box-shadow: none; }
+.harness-terminal { padding: 8px 12px; }
