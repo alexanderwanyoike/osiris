@@ -139,6 +139,16 @@ def test_an_action_held_for_the_person_waits_on_its_turn_until_answered() -> Non
     assert talk.turns[-1].asking is None
 
 
+def test_an_action_held_for_the_person_shows_as_the_step_it_would_be() -> None:
+    talk = Conversation()
+    talk.asked("list /etc")
+    talk.apply(ToolCalled(S, "call_1", {"command": "ls -la /etc"}, executed=False))
+    talk.apply(Asking(S, "per_1", "shell", ("ls /etc",), "call_1"))
+    held = talk.turns[-1].held
+    assert held is not None
+    assert (held.action, held.input) == ("shell", {"command": "ls -la /etc"})
+
+
 def test_an_allowed_action_is_not_shown_as_refused() -> None:
     talk = Conversation()
     talk.asked("make it calm")
