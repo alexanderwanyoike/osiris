@@ -19,3 +19,8 @@ def test_a_command_shows_its_command_line_and_output() -> None:
     assert shown.asked == "ls /etc | head -2"
     assert [line.text for line in shown.lines] == ["NetworkManager", "UPower"]
     assert shown.note == ""
+
+
+def test_a_command_that_failed_says_how_it_exited() -> None:
+    step = Step("shell", ("false",), input={"command": "false"}, exit=1)
+    assert detail(step).note == "Exited with status 1"
