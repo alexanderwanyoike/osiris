@@ -56,6 +56,14 @@ the first Program runs, or brings its file tree forward; it stays when every
 group is closed, so the files are always one click away. The toolbar is the
 one place a kind of group is opened from.
 
+**Terminals in the Canvas (#196).** Terminal in the toolbar opens a terminal
+as a new tab of the terminal group, running the person's shell in the folder
+of the Program being read. It is VTE for GTK 4, drawn in the Theme's terminal
+colours and font and following a Theme change; closing its tab ends its shell.
+VTE draws no font ligatures, by its maintainers' choice, so the desktop's
+terminal stays ghostty. Osiris does not fork VTE; the group moves to ghostty's
+library once that can draw inside another application.
+
 **Code reads like code.** A path bar with the path and Open in Code; below it
 the file in GtkSourceView with line numbers, in the Theme's colours, wrapping
 only a line that cannot fit. The Programs' files sit beside the code group when
