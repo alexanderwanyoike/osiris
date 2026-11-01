@@ -166,6 +166,9 @@ class OpencodeEngine:
     def stop(self, session: str) -> None:
         self._post(f"/api/session/{session}/interrupt")
 
+    def cut_in(self, session: str) -> None:
+        self._post(f"/api/session/{session}/interrupt?resume=true")
+
     def switch_model(self, session: str, model: ModelRef) -> None:
         self._post(
             f"/api/session/{session}/model",

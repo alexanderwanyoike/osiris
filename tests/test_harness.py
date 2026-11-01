@@ -54,6 +54,7 @@ class FakeEngine:
     withdrawn: list[tuple[str, str]] = field(default_factory=list)
     replies: list[tuple[str, str, Reply, str]] = field(default_factory=list)
     stopped: list[str] = field(default_factory=list)
+    cut: list[str] = field(default_factory=list)
     reverted: list[tuple[str, str]] = field(default_factory=list)
     reverts_kept: list[str] = field(default_factory=list)
     changed: tuple[FileChange, ...] = ()
@@ -89,6 +90,9 @@ class FakeEngine:
 
     def stop(self, session: str) -> None:
         self.stopped.append(session)
+
+    def cut_in(self, session: str) -> None:
+        self.cut.append(session)
 
     def revert(self, session: str, message: str) -> Revert:
         self.reverted.append((session, message))
