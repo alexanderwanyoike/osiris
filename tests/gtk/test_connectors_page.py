@@ -88,3 +88,11 @@ def test_a_commented_config_is_left_and_the_page_says_so() -> None:
     shown.done.emit("clicked")
     assert shown.form.get_visible()
     assert "comments" in shown.problem.get_text()
+
+
+def test_switching_a_connector_off_saves_it_off_and_says_so_at_once() -> None:
+    store = Store(WIKI)
+    shown = page(store, {"wiki": State("connected")})
+    shown.row("wiki").switch.set_active(False)
+    assert store.saved["wiki"] == Connector("wiki", url=WIKI.url, on=False)
+    assert "Off" in texts(shown)
