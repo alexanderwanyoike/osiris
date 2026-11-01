@@ -292,17 +292,16 @@ def test_a_typed_reply_refuses_the_action_and_reaches_thoth() -> None:
     assert entries(files)[-1]["reply"] == "Look in /etc/osiris only"
 
 
-def test_allowing_for_the_conversation_stops_asking_there_only() -> None:
-    subject, _, _ = asked_to_list_etc()
-    subject.answer("ses_1", "per_1", Answer.CONVERSATION)
+def test_always_allowing_leaves_the_engine_to_keep_allowing_it() -> None:
+    """The Engine saves the rule for the Project, so the Harness keeps none and
+    the Engine stops asking (ADR 0020)."""
+    subject, engine, files = asked_to_list_etc()
+    decision = subject.answer("ses_1", "per_1", Answer.ALWAYS)
+    assert engine.replies == [("ses_1", "per_1", Reply.ALWAYS, "")]
+    assert isinstance(decision, Allowed)
+    assert entries(files)[-1]["answer"] == "always"
     again = subject.handle(ToolRequested("ses_1", "per_2", "shell", ("ls /usr",)))
-    other = subject.handle(ToolRequested("ses_1", "per_3", "shell", ("rm /tmp/x",)))
-    assert isinstance(again, Allowed)
-    assert isinstance(other, Asking)
-    subject.new_conversation()
-    subject.ask("and here")
-    elsewhere = subject.handle(ToolRequested("ses_2", "per_4", "shell", ("ls /usr",)))
-    assert isinstance(elsewhere, Asking)
+    assert isinstance(again, Asking)
 
 
 def test_a_card_waiting_in_one_conversation_holds_up_no_other() -> None:
