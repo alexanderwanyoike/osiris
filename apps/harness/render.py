@@ -229,17 +229,25 @@ class ActivityRecord(Gtk.Expander):
         self.add_css_class("harness-activity")
         self._steps = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         self.set_child(self._steps)
-        self._shown = 0
+        #: Each step drawn so far, and its row.
+        self._rows: list[tuple[Step, Gtk.Expander]] = []
 
     def show(self, steps: list[Step]) -> None:
-        for step in steps[self._shown:]:
-            self._steps.append(self._row(step))
-        self._shown = len(steps)
+        """New steps are added; a step whose result has since come is redrawn."""
+        for index, step in enumerate(steps):
+            if index == len(self._rows):
+                row = self._row(step)
+                self._steps.append(row)
+                self._rows.append((step, row))
+            elif self._rows[index][0] != step:
+                row = self._rows[index][1]
+                row.set_child(_step_detail(step))
+                self._rows[index] = (step, row)
         self.set_label(summary(steps))
         self.set_visible(bool(steps))
 
     @staticmethod
-    def _row(step: Step) -> Gtk.Widget:
+    def _row(step: Step) -> Gtk.Expander:
         row = Gtk.Box(spacing=8)
         row.add_css_class("harness-step")
         if not step.allowed:
