@@ -81,6 +81,19 @@ class Waiting:
     text: str
 
 
+#: Tools whose action, the name the rules and steps use, differs from their own.
+_ACTIONS = {"write": "edit", "patch": "edit", "apply_patch": "edit", "bash": "shell"}
+#: The input naming what a tool works on, in the order looked for.
+_SUBJECT = ("command", "path", "filePath", "file_path", "pattern", "url", "query")
+
+
+def _ran(name: str, call: str, arguments: Mapping[str, object]) -> Step:
+    """A tool the Engine ran without asking, as the step it would have been."""
+    subject = next((arguments[key] for key in _SUBJECT if key in arguments), None)
+    resources = (str(subject),) if subject is not None else ()
+    return Step(_ACTIONS.get(name, name), resources, True, call, arguments)
+
+
 class Conversation:
     def __init__(self) -> None:
         self.turns: list[Turn] = []
@@ -211,8 +224,11 @@ class Conversation:
                     else step
                     for step in turn.steps
                 ]
-            case ToolCalled(_, call, arguments, _):
+            case ToolCalled(_, call, arguments, _, name):
                 self._inputs[call] = arguments
+                if name:
+                    turn.steps.append(_ran(name, call, arguments))
+                    turn.doing = turn.steps[-1].doing
             case Allowed(_, action, resources, call):
                 turn.steps.append(
                     Step(action, resources, True, call, self._input(call))
