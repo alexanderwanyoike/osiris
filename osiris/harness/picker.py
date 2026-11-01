@@ -3,11 +3,13 @@ Project's files. It opens on a sign at the start of the word being typed."""
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
 SIGNS = ("@", "/")
+SIGN = {"file": "@", "skill": "/", "command": "/"}
 
 
 @dataclass(frozen=True)
@@ -66,3 +68,18 @@ class Skills(Protocol):
     def skills(self, directory: Path) -> list[Entry]:
         """The skills a session in the folder can load."""
         ...
+
+
+def references(text: str, picked: list[Entry]) -> tuple[Reference, ...]:
+    """Where each picked entry is first mentioned as a token in ``text``.
+
+    Found at send time rather than kept from the moment of picking, so edits
+    made after picking cannot leave a reference pointing at the wrong text;
+    a token deleted since is not sent at all."""
+    found = []
+    for entry in picked:
+        token = SIGN[entry.kind] + entry.label
+        match = re.search(rf"(?<!\S){re.escape(token)}(?![\w/])", text)
+        if match:
+            found.append(Reference(entry, match.start(), match.end()))
+    return tuple(sorted(found, key=lambda reference: reference.start))
