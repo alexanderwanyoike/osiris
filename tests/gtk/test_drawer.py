@@ -34,6 +34,7 @@ class FakeApp(Adw.Application):
         self.stopped = 0
         self.gone_back: list[object] = []
         self.shown_changes: list[object] = []
+        self.sent_now: list[str] = []
 
     def open_past(self, session: str) -> None:
         self.opened.append(session)
@@ -50,6 +51,9 @@ class FakeApp(Adw.Application):
 
     def show_changes(self, turn: object) -> None:
         self.shown_changes.append(turn)
+
+    def send_now(self, text: str) -> None:
+        self.sent_now.append(text)
 
     def program_card(self, name: str) -> object:
         from gi.repository import Gtk
@@ -432,3 +436,23 @@ def test_a_draft_fills_an_empty_input() -> None:
     buffer = window.entry.get_buffer()
     text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
     assert text == "Convert this theme"
+
+
+def test_while_osiris_works_a_message_can_be_sent_now() -> None:
+    """It stops what Osiris is doing and is taken next (#188)."""
+    window, _ = drawer()
+    window.app.conversation.asked("count to sixty")
+    window.refresh()
+    assert window.send_now.get_visible()
+    assert "stop" in window.send_now.get_tooltip_text().lower()
+    window.entry.get_buffer().set_text("stop, count to ten")
+    window.send_now.emit("clicked")
+    buffer = window.entry.get_buffer()
+    assert window.app.sent_now == ["stop, count to ten"]
+    assert buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False) == ""
+
+
+def test_with_nothing_working_there_is_nothing_to_cut_into() -> None:
+    window, _ = drawer()
+    window.refresh()
+    assert not window.send_now.get_visible()
