@@ -23,7 +23,9 @@ def card() -> tuple[ApprovalCard, list[tuple[Answer, str]]]:
 
 def button(widget: Gtk.Widget, label: str) -> Gtk.Button:
     return next(
-        w for w in widgets(widget) if isinstance(w, Gtk.Button) and w.get_label() == label
+        w
+        for w in widgets(widget)
+        if isinstance(w, Gtk.Button) and w.get_label() == label
     )
 
 
