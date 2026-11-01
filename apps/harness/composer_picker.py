@@ -33,6 +33,7 @@ class Picker:
         self._picked: list[Entry] = []
         self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.BROWSE)
         self.list.add_css_class("harness-picker")
+        self.list.connect("row-activated", lambda _l, row: self._complete(row.entry))
         # Without autohide the popover leaves the keyboard with the message
         # box, so typing carries on filtering while it is open.
         self.popover = Gtk.Popover(child=self.list, autohide=False, has_arrow=False,
