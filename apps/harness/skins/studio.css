@@ -360,3 +360,17 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-step-detail .monospace { font-size: 0.88em; }
 .harness-added { color: @harness_success; background-color: alpha(@harness_success, 0.10); }
 .harness-removed { color: @harness_danger; background-color: alpha(@harness_danger, 0.10); }
+
+/* The approval card stands apart from the answer: it waits on the person. */
+.harness-approval {
+    background-color: alpha(@harness_accent, 0.08);
+    border: 1px solid alpha(@harness_accent, 0.35);
+    border-radius: 14px;
+    padding: 12px 14px;
+}
+.harness-approval-input {
+    background-color: alpha(@harness_sunken, 0.75);
+    color: @harness_fg;
+    border-radius: 8px;
+    padding: 6px 8px;
+}
