@@ -64,6 +64,13 @@ VTE draws no font ligatures, by its maintainers' choice, so the desktop's
 terminal stays ghostty. Osiris does not fork VTE; the group moves to ghostty's
 library once that can draw inside another application.
 
+**A browser for research (#197).** Browser (a globe) in the toolbar brings the
+browser group forward, or opens it on a new page: an address line with back,
+forward and reload over WebKitGTK. A full address is kept, a site gets https,
+and anything else is searched for (DuckDuckGo). Each page is a tab named by its
+title, and a page Thoth reads while answering the Conversation on screen opens
+there as a tab, so its sources can be followed.
+
 **Code reads like code.** A path bar with the path and Open in Code; below it
 the file in GtkSourceView with line numbers, in the Theme's colours, wrapping
 only a line that cannot fit. The Programs' files sit beside the code group when
