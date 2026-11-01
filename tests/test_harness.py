@@ -26,11 +26,13 @@ from osiris.harness.engine import (
     ToolRequested,
 )
 from osiris.harness.harness import (
+    DENIED,
     REFUSED,
     Allowed,
     Answer,
     Asking,
     Harness,
+    Refused,
 )
 from osiris.harness.log import LOG_FILE, HarnessLog
 from osiris.harness.tiers import Tier
@@ -261,6 +263,25 @@ def test_allowing_once_runs_the_action_and_is_logged() -> None:
     assert decision == Allowed("ses_1", "shell", Tier.ANYTHING, ("ls /etc",), "call_1")
     entry = entries(files)[-1]
     assert (entry["kind"], entry["answer"]) == ("answered", "once")
+
+
+def test_denying_refuses_the_action_and_thoth_is_told() -> None:
+    subject, engine, files = asked_to_list_etc()
+    decision = subject.answer("ses_1", "per_1", Answer.DENY)
+    assert engine.replies == [("ses_1", "per_1", False, REFUSED)]
+    assert decision == Refused("ses_1", "shell", ("ls /etc",), "call_1", DENIED)
+    assert entries(files)[-1]["answer"] == "deny"
+
+
+def test_a_typed_reply_refuses_the_action_and_reaches_thoth() -> None:
+    subject, engine, files = asked_to_list_etc()
+    decision = subject.answer(
+        "ses_1", "per_1", Answer.DENY, reply="Look in /etc/osiris only"
+    )
+    assert engine.replies == [("ses_1", "per_1", False, "Look in /etc/osiris only")]
+    assert isinstance(decision, Refused)
+    assert decision.reason == "You replied: Look in /etc/osiris only"
+    assert entries(files)[-1]["reply"] == "Look in /etc/osiris only"
 
 
 def test_an_allowed_action_is_passed_on_with_what_it_touches() -> None:
