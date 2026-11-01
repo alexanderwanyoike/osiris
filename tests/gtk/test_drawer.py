@@ -31,6 +31,7 @@ class FakeApp(Adw.Application):
         self.new_conversations = 0
         self.opened: list[str] = []
         self.unqueued: list[str] = []
+        self.stopped = 0
 
     def open_past(self, session: str) -> None:
         self.opened.append(session)
@@ -56,6 +57,9 @@ class FakeApp(Adw.Application):
         from gi.repository import Gtk
 
         return Gtk.Label(label="approval card")
+
+    def stop(self) -> None:
+        self.stopped += 1
 
     def unqueue(self, message: str) -> str:
         self.unqueued.append(message)
@@ -239,6 +243,15 @@ def test_editing_a_waiting_message_puts_it_back_in_the_composer() -> None:
     text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
     assert text == "stop at ten"
     assert window.app.unqueued == ["msg_2"]
+
+
+def test_stop_keeps_waiting_messages_in_the_composer_and_sends_none() -> None:
+    window = waiting_drawer()
+    window.send.emit("clicked")
+    buffer = window.entry.get_buffer()
+    text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+    assert (window.app.stopped, window.app.unqueued) == (1, ["msg_2"])
+    assert text == "stop at ten"
 
 
 def test_the_composer_takes_more_than_one_line_and_sends_it() -> None:
