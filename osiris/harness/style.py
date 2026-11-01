@@ -123,6 +123,19 @@ def colours_css(theme: Mapping[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def code_font_css(theme: Mapping[str, Any]) -> str:
+    """Code in the font the terminal uses, ligatures on as ghostty has them,
+    at one size and line height for every look."""
+    mono = theme.get("ui", {}).get("mono", "monospace")
+    return (
+        ".harness-code, .harness-code text {\n"
+        f'    font-family: "{mono}";\n'
+        '    font-feature-settings: "calt", "liga";\n'
+        "    font-size: 0.92em;\n"
+        "}\n"
+    )
+
+
 def inline_style(theme: Mapping[str, Any]) -> InlineStyle:
     c = _colours(theme)
     return InlineStyle(
