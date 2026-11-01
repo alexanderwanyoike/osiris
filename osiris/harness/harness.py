@@ -14,6 +14,7 @@ from osiris.harness.engine import (
     Engine,
     Event,
     Failed,
+    FileChange,
     Finished,
     ModelRef,
     Past,
@@ -209,6 +210,10 @@ class Harness:
 
     def move(self, session: str, folder: Path) -> None:
         self._engine.move(session, folder)
+
+    def changes(self, session: str, message: str) -> tuple[FileChange, ...]:
+        """What a question changed, file by file, as the Engine has it."""
+        return self._engine.changes(session, message)
 
     def go_back(self, session: str, message: str, questions: int = 1) -> Revert | None:
         """Go back to before ``message``: its files and the Conversation, which
