@@ -6,7 +6,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from osiris.harness.connectors import Connector, connectors
+import pytest
+
+from osiris.harness.connectors import Connector, State, connectors
 from osiris.harness.engine_config import ENGINE_CONFIG
 from osiris.platform import FakeFileSystem
 
@@ -132,3 +134,25 @@ def test_a_command_with_an_unclosed_quote_is_no_command() -> None:
     from osiris.harness.connectors import command_of
 
     assert command_of('npx "server') == ()
+
+
+@pytest.mark.parametrize(
+    ("state", "said"),
+    [
+        (State("connected"), ("Connected", "success")),
+        (State("pending"), ("Starting", "muted")),
+        (State("disabled"), ("Off", "muted")),
+        (
+            State("failed", "connection refused"),
+            ("Failed: connection refused", "danger"),
+        ),
+        (State("needs_auth", "401", "mcp-x"), ("Needs signing in", "warning")),
+        (None, ("Not started yet", "muted")),
+    ],
+)
+def test_each_state_is_said_in_plain_words_with_a_tone(
+    state: State | None, said: tuple[str, str]
+) -> None:
+    from osiris.harness.connectors import said_of
+
+    assert said_of(state) == said
