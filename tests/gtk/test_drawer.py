@@ -25,6 +25,7 @@ class FakeApp(Adw.Application):
         class Look:
             style = None
             scheme = None
+            theme = None
 
         self.look = Look()
         self.asked: list[str] = []
@@ -572,3 +573,22 @@ def test_what_is_picked_in_the_message_box_goes_with_a_message_sent_now() -> Non
     window.picker.key(None, Gdk.KEY_Tab, 0, Gdk.ModifierType(0))
     window._cut_in(None)
     assert window.app.referenced == [(Reference(readme, 4, 14),)]
+
+
+def test_tokens_in_the_message_box_follow_the_theme() -> None:
+    import main
+
+    from osiris.harness.style import token_colours
+
+    from tests.test_style import DAWN, OBSIDIAN
+
+    app = FakeApp()
+    app.look.theme = OBSIDIAN
+    window = main.Drawer(app)
+    token = window.picker.token.props
+    assert token.foreground_rgba.to_string() == "rgb(124,138,235)"
+    app.look.theme = DAWN
+    window.refresh(restyle=True)
+    accent = token_colours(DAWN)[0].lstrip("#")
+    rgb = ",".join(str(int(accent[i : i + 2], 16)) for i in (0, 2, 4))
+    assert token.foreground_rgba.to_string() == f"rgb({rgb})"
