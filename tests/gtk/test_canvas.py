@@ -489,3 +489,19 @@ def test_the_code_panels_frame_holds_its_file_tree_too() -> None:
     assert "harness-canvas-group" in frame.get_css_classes()
     assert frame.get_overflow() is Gtk.Overflow.HIDDEN
     assert widget.tree in list(widgets(frame))
+
+
+def tab_icon(tab: Gtk.Widget) -> Gtk.Image:
+    return next(w for w in widgets(tab) if isinstance(w, Gtk.Image))
+
+
+def test_each_tab_carries_an_icon_for_what_it_shows() -> None:
+    widget, made = with_terminals()
+    widget.show_changes("tidy", (), on_comment=lambda *_: None)
+    widget.open_terminal()
+    (code,) = header_tabs(widget, Kind.CODE)
+    assert tab_icon(code).get_gicon() is not None
+    (changes,) = header_tabs(widget, Kind.CHANGES)
+    assert tab_icon(changes).get_icon_name() == "osiris-changes-symbolic"
+    (shell,) = header_tabs(widget, Kind.TERMINAL)
+    assert tab_icon(shell).get_icon_name() == "utilities-terminal-symbolic"
