@@ -92,3 +92,20 @@ def test_the_engines_task_list_is_switched_on() -> None:
     files = FakeFileSystem()
     switch_on_task_list(files, HOME)
     assert json.loads(files.read(ENGINE))["experimental"]["todo"] is True
+
+
+def test_a_task_list_the_person_switched_off_stays_off() -> None:
+    files = FakeFileSystem()
+    files.write(ENGINE, json.dumps({"experimental": {"todo": False, "x": 1}}))
+    switch_on_task_list(files, HOME)
+    assert json.loads(files.read(ENGINE))["experimental"] == {"todo": False, "x": 1}
+
+
+def test_the_task_list_leaves_a_config_that_is_not_plain_json_alone() -> None:
+    files = FakeFileSystem()
+    commented = '{\n  // mine\n  "model": "openai/gpt-5.5"\n}\n'
+    files.write(ENGINE, commented)
+    switch_on_task_list(files, HOME)
+    files.write(ENGINE.with_suffix(".jsonc"), "{}")
+    switch_on_task_list(files, HOME)
+    assert files.read(ENGINE) == commented
