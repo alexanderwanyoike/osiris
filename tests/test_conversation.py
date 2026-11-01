@@ -20,7 +20,7 @@ from osiris.harness.engine import (
     ToolFinished,
     ToolRequested,
 )
-from osiris.harness.harness import Allowed, Refused
+from osiris.harness.harness import Allowed, Asking, Refused
 from osiris.harness.log import Change
 from osiris.harness.tiers import Tier
 
@@ -127,6 +127,16 @@ def test_a_refused_step_carries_the_rule_that_refused_it() -> None:
     talk.asked("list /etc")
     talk.apply(Refused(S, "shell", ("ls /etc",), "call_1", "Runs only with X on"))
     assert talk.turns[-1].steps[0].refused_by == "Runs only with X on"
+
+
+def test_an_action_held_for_the_person_waits_on_its_turn_until_answered() -> None:
+    talk = Conversation()
+    talk.asked("list /etc")
+    asking = Asking(S, "per_1", "shell", ("ls /etc",), "call_1")
+    talk.apply(asking)
+    assert talk.turns[-1].asking == asking
+    talk.apply(Allowed(S, "shell", Tier.ANYTHING, ("ls /etc",), "call_1"))
+    assert talk.turns[-1].asking is None
 
 
 def test_an_allowed_action_is_not_shown_as_refused() -> None:
