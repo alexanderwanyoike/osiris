@@ -441,8 +441,8 @@ def test_a_changed_file_shows_its_name_its_folder_and_coloured_counts() -> None:
     labels = {w.get_text(): w for w in widgets(page) if isinstance(w, Gtk.Label)}
     assert "clock.py" in labels
     assert "harness-meta" in labels["coin-flip/src"].get_css_classes()
-    assert "harness-added" in labels["+2"].get_css_classes()
-    assert "harness-removed" in labels["\u22121"].get_css_classes()
+    assert "harness-count-added" in labels["+2"].get_css_classes()
+    assert "harness-count-removed" in labels["\u22121"].get_css_classes()
 
 
 def test_a_panel_clips_its_contents_to_its_rounded_corners() -> None:
