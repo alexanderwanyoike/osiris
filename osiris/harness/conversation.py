@@ -47,8 +47,10 @@ class Turn:
     undone: bool = False
     #: A command of this answer's waiting for the administrator password.
     admin: Request | None = None
-    #: An action of this answer's waiting for the person to answer its card.
+    #: An action of this answer's waiting for the person to answer its card,
+    #: and the step it would be, with the input the model gave it.
     asking: Asking | None = None
+    held: Step | None = None
 
     @property
     def programs(self) -> list[str]:
@@ -150,10 +152,13 @@ class Conversation:
         event: Asking | ToolCalled | Allowed | Refused | ToolFinished,
     ) -> None:
         if isinstance(event, Allowed | Refused):
-            turn.asking = None
+            turn.asking, turn.held = None, None
         match event:
-            case Asking():
+            case Asking(_, _, action, resources, call):
                 turn.asking = event
+                turn.held = Step(
+                    action, resources, call=call, input=self._inputs.get(call)
+                )
             case ToolFinished(_, call, output, error, exit_status):
                 turn.steps = [
                     replace(step, output=output, error=error, exit=exit_status)
