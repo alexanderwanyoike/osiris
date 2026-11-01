@@ -481,3 +481,11 @@ def test_stacked_panels_share_their_column_evenly() -> None:
     ]
     window.destroy()
     assert min(heights) > 0.8 * max(heights)
+
+
+def test_the_code_panels_frame_holds_its_file_tree_too() -> None:
+    widget, _ = canvas()
+    frame = widget._groups[Kind.CODE]
+    assert "harness-canvas-group" in frame.get_css_classes()
+    assert frame.get_overflow() is Gtk.Overflow.HIDDEN
+    assert widget.tree in list(widgets(frame))
