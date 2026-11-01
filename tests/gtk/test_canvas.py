@@ -334,3 +334,43 @@ def test_open_terminals_follow_a_theme_change() -> None:
     made[0].restyle = restyled.append  # type: ignore[attr-defined]
     widget.restyle(None, {"colors": {}})
     assert restyled == [{"colors": {}}]
+
+
+class FakePage(Gtk.Box):
+    def __init__(self, at: str, on_title) -> None:
+        super().__init__()
+        self.at = at
+        self.on_title = on_title
+
+
+def with_pages() -> tuple[Canvas, list[FakePage]]:
+    made: list[FakePage] = []
+
+    def page(at: str, on_title) -> FakePage:
+        made.append(FakePage(at, on_title))
+        return made[-1]
+
+    widget = Canvas(
+        read=lambda path: SOURCES[path.name],
+        open_in_code=lambda _f, _p: None,
+        page=page,
+    )
+    return widget, made
+
+
+def test_the_globe_opens_a_page_in_the_browser_group_or_brings_it_forward() -> None:
+    widget, made = with_pages()
+    globe = toolbar_button(widget, "web-browser-symbolic")
+    assert globe.get_tooltip_text() == "Browser"
+    globe.emit("clicked")
+    globe.emit("clicked")
+    assert len(made) == 1
+    assert titles(widget, Kind.BROWSER) == ["New page"]
+
+
+def test_a_pages_tab_is_named_by_its_title() -> None:
+    widget, made = with_pages()
+    widget.open_page("https://docs.gtk.org")
+    made[0].on_title("GTK Documentation")
+    assert made[0].at == "https://docs.gtk.org"
+    assert titles(widget, Kind.BROWSER) == ["GTK Documentation"]
