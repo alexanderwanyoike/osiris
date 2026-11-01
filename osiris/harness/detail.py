@@ -15,6 +15,7 @@ class Kind(Enum):
     COMMAND = "command"
     CHANGE = "change"
     LOOK = "look"
+    WEB = "web"
 
 
 @dataclass(frozen=True)
@@ -79,6 +80,11 @@ def _look(step: Step) -> Detail:
     return Detail(Kind.LOOK, asked or " ".join(step.resources), _output(step))
 
 
+def _web(step: Step) -> Detail:
+    asked = _text(step.input or {}, "query", "url")
+    return Detail(Kind.WEB, asked or " ".join(step.resources), _output(step))
+
+
 _KINDS: dict[str, Callable[[Step], Detail]] = {
     "shell": _command,
     "bash": _command,
@@ -89,6 +95,9 @@ _KINDS: dict[str, Callable[[Step], Detail]] = {
     "glob": _look,
     "grep": _look,
     "external_directory": _look,
+    "websearch": _web,
+    "web_search": _web,
+    "webfetch": _web,
 }
 
 
