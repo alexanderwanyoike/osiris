@@ -28,6 +28,7 @@ from osiris.harness.engine import (
 from osiris.harness.harness import (
     REFUSED,
     Allowed,
+    Answer,
     Asking,
     Harness,
 )
@@ -242,6 +243,24 @@ def test_an_action_outside_the_tier_waits_for_the_person() -> None:
     assert decision == Asking("ses_1", "per_1", "bash", ("ls",), "call_1", ("ls *",))
     assert engine.replies == []
     assert entries(files)[-1]["kind"] == "asked"
+
+
+def asked_to_list_etc() -> tuple[Harness, FakeEngine, FakeFileSystem]:
+    subject, engine, files = harness()
+    subject.ask("what is in /etc")
+    subject.handle(
+        ToolRequested("ses_1", "per_1", "shell", ("ls /etc",), "call_1", ("ls *",))
+    )
+    return subject, engine, files
+
+
+def test_allowing_once_runs_the_action_and_is_logged() -> None:
+    subject, engine, files = asked_to_list_etc()
+    decision = subject.answer("ses_1", "per_1", Answer.ONCE)
+    assert engine.replies == [("ses_1", "per_1", True, "")]
+    assert decision == Allowed("ses_1", "shell", Tier.ANYTHING, ("ls /etc",), "call_1")
+    entry = entries(files)[-1]
+    assert (entry["kind"], entry["answer"]) == ("answered", "once")
 
 
 def test_an_allowed_action_is_passed_on_with_what_it_touches() -> None:
