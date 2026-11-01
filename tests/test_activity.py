@@ -175,3 +175,15 @@ def test_the_steps_of_an_answer_are_summed_up_as_tools_used(
 )
 def test_time_spent_is_said_in_seconds_then_minutes(seconds: float, said: str) -> None:
     assert elapsed(seconds) == said
+
+
+@pytest.mark.parametrize(
+    ("action", "question"),
+    [
+        ("shell", "Run a command?"),
+        ("read", "Read a file?"),
+        ("osiris_apply_theme", "Apply a theme?"),
+    ],
+)
+def test_a_held_step_is_asked_about_in_plain_words(action: str, question: str) -> None:
+    assert Step(action, ("x",)).question == question
