@@ -458,20 +458,21 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 }
 .harness-drawer paned > separator:hover { background-color: alpha(@harness_accent, 0.22); }
 
-/* The / and @ picker: a raised card of quiet rows over the message box, the
-   chosen one lit with the accent. */
+/* The / and @ picker: a card docked over the message box, each row an icon, a
+   name and a muted description; the chosen row a soft fill. */
 popover.harness-picker-popover > contents {
     background-color: @harness_raised;
     color: @harness_fg;
-    border: 1px solid alpha(@harness_fg, 0.10);
-    border-radius: 12px;
-    padding: 4px;
-    min-width: 300px;
-    box-shadow: 0 8px 24px alpha(@harness_sunken, 0.45);
+    border: 1px solid alpha(@harness_fg, 0.08);
+    border-radius: 14px;
+    padding: 6px 0;
+    box-shadow: 0 10px 30px alpha(black, 0.35);
 }
-.harness-picker { background-color: transparent; }
-.harness-picker row { min-height: 30px; padding: 0 10px; border-radius: 8px; }
+.harness-picker-popover scrolledwindow, .harness-picker { background-color: transparent; }
+.harness-picker row { min-height: 28px; padding: 0 10px; margin: 0 6px; border-radius: 8px; }
 .harness-picker row:hover { background-color: alpha(@harness_fg, 0.05); }
-.harness-picker row:selected { background-color: alpha(@harness_accent, 0.14); }
-.harness-picker-label { color: @harness_fg; font-weight: 500; }
-.harness-picker row:selected .harness-picker-label { color: @harness_accent; }
+.harness-picker row:selected { background-color: alpha(@harness_fg, 0.09); }
+.harness-picker-icon { color: @harness_muted; -gtk-icon-size: 14px; }
+.harness-picker row:selected .harness-picker-icon { color: @harness_fg; }
+.harness-picker-label { color: @harness_fg; font-size: 0.93em; }
+.harness-picker .harness-meta { font-size: 0.93em; }
