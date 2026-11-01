@@ -62,6 +62,11 @@ class Turn:
     note: str = ""
 
     @property
+    def edited(self) -> bool:
+        """Whether the answer changed files, so has changes to show."""
+        return any(step.action == "edit" and step.allowed for step in self.steps)
+
+    @property
     def programs(self) -> list[str]:
         """The Programs this turn changed, each once, in the order they changed."""
         named = (change.program for change in self.changes if change.program)
