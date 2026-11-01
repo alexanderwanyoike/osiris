@@ -163,3 +163,17 @@ def test_the_picker_is_a_card_as_wide_as_the_message_box_it_sits_over() -> None:
     minimum, _natural, _b, _c = card.measure(Gtk.Orientation.HORIZONTAL, -1)
     assert picker.popover.get_parent() is composer
     assert minimum == composer.get_width() == 600
+
+
+def test_each_entry_shows_an_icon_for_its_kind() -> None:
+    from composer_picker import ICONS
+
+    from .conftest import widgets
+
+    picker, _ = docked("/", [README, REVIEW])
+    icons = [
+        next(w.get_icon_name() for w in widgets(row) if isinstance(w, Gtk.Image))
+        for row in (picker.list.get_row_at_index(0), picker.list.get_row_at_index(1))
+    ]
+    assert icons == [ICONS["file"], ICONS["skill"]]
+    assert ICONS["file"] != ICONS["skill"]
