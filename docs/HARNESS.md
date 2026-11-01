@@ -43,7 +43,13 @@ The first slice of ROADMAP P3.5:
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
   question. Every step it took, allowed or refused, is kept under the answer,
   folded away as "Used 4 tools", each in the past tense ("Edited
-  pomodoro/main.py") or as "Not allowed to run ls /etc".
+  pomodoro/main.py") or as "Not allowed to run ls /etc". Each step opens to
+  what it asked for and what came back, drawn for its kind
+  (`osiris/harness/detail.py`): a command's line, output and a failed exit
+  status; an edit as a diff of the change the model asked for; what a read or
+  search looked at and found; a web search's query or a fetch's address; any
+  other tool's name and inputs in words. Output past twelve lines is folded
+  until asked for, and a refused step names the rule that refused it.
 - **The Harness log** keeps everything: each question before it is sent, each
   answer with the model that gave it and its tokens, every tool call whether or
   not it asked, every action allowed and its **Action tier**, every change with
@@ -237,6 +243,12 @@ Every session is opened with a ruleset that sets every action to `ask`, so each
 tool that touches the machine stops at a `permission.asked` event and the
 Harness answers it. Denying everything instead would strip the tools from the
 request, and opencode's free tier refuses such requests outright.
+
+A step's details come from the same stream, tied together by the call's id:
+`session.tool.called` carries the call's input, `permission.asked` names the
+call in `source.id`, and `session.tool.success` (its text output and, for a
+command, `metadata.exit`) or `session.tool.failed` (its `error.message`)
+reports how it ended. As observed with opencode 2.2.4.
 
 The event stream carries every session on the service, including any opened
 by opencode's own terminal app. The Harness acts only on its own sessions: the
