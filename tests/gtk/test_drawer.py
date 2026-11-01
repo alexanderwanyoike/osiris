@@ -678,3 +678,11 @@ def test_the_rails_ticks_stand_where_questions_do_however_far_it_is_scrolled() -
     at = [tick.at for tick in window.rail._ticks]
     assert at[0] < 0.02
     assert at == sorted(at) and at[-1] > 0.6
+
+
+def test_the_rail_stands_in_for_the_conversations_scrollbar() -> None:
+    from gi.repository import Gtk
+
+    window, _ = drawer()
+    _across, down = window.scroller.get_policy()
+    assert down == Gtk.PolicyType.EXTERNAL
