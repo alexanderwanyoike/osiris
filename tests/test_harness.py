@@ -789,3 +789,15 @@ def test_going_back_keeps_the_engines_revert_and_is_logged() -> None:
         "msg_1",
         ["y.txt"],
     )
+
+
+def test_where_the_files_cannot_be_restored_nothing_goes_back() -> None:
+    """Rather than the Conversation going back while its files stay changed."""
+    subject, engine, files = harness()
+    subject.ask("make y.txt")
+    subject.handle(Finished("ses_1"))
+    engine.revert_gives = Revert((), restorable=False)
+    assert subject.go_back("ses_1", "msg_1").restorable is False
+    assert engine.reverts_kept == []
+    assert engine.reverts_cancelled == ["ses_1"]
+    assert entries(files)[-1]["kind"] == "could-not-go-back"
