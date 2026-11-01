@@ -155,3 +155,6 @@ class TestSkinChoice:
 
     def test_studio_can_be_chosen(self) -> None:
         assert skin_name("studio") == "studio"
+
+    def test_studio_is_the_look_when_none_is_chosen(self) -> None:
+        assert skin_name(None) == "studio"
