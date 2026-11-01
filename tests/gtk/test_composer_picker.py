@@ -34,3 +34,24 @@ def test_a_sign_at_the_start_of_a_word_opens_the_picker_filtered() -> None:
     picker = typed("fix @RE")
     assert picker.popover.get_visible()
     assert shown(picker) == ["README.md"]
+
+
+def press(picker, key: int) -> bool:
+    from gi.repository import Gdk
+
+    return picker.key(None, key, 0, Gdk.ModifierType(0))
+
+
+def text(picker) -> str:
+    buffer = picker.popover.get_parent().get_buffer()
+    return buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+
+
+def test_the_arrow_keys_move_and_tab_puts_the_chosen_entry_in_the_message() -> None:
+    from gi.repository import Gdk
+
+    picker = typed("fix @")
+    assert press(picker, Gdk.KEY_Down)
+    assert press(picker, Gdk.KEY_Tab)
+    assert text(picker) == "fix @clock.py "
+    assert not picker.popover.get_visible()
