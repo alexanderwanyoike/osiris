@@ -55,3 +55,12 @@ def test_the_arrow_keys_move_and_tab_puts_the_chosen_entry_in_the_message() -> N
     assert press(picker, Gdk.KEY_Tab)
     assert text(picker) == "fix @clock.py "
     assert not picker.popover.get_visible()
+
+
+def test_escape_closes_the_picker_and_leaves_what_was_typed() -> None:
+    from gi.repository import Gdk
+
+    picker = typed("fix @RE")
+    assert press(picker, Gdk.KEY_Escape)
+    assert not picker.popover.get_visible()
+    assert text(picker) == "fix @RE"
