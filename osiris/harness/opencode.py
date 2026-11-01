@@ -335,6 +335,7 @@ class _Reader:
                     data["action"],
                     tuple(data["resources"]),
                     (data.get("source") or {}).get("id", ""),
+                    tuple(data.get("save") or ()),
                 )
             case "session.tool.success" | "session.tool.failed":
                 return _finished(session, data)

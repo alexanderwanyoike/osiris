@@ -56,6 +56,8 @@ class ToolRequested:
     resources: tuple[str, ...]
     #: The ``ToolCalled`` it asks for; empty when the Engine does not say.
     call: str = ""
+    #: Patterns the Engine suggests for allowing it again without asking.
+    patterns: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
