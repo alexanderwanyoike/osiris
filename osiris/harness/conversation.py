@@ -24,6 +24,7 @@ from osiris.harness.engine import (
 )
 from osiris.harness.harness import Allowed, Asking, Decision, Refused
 from osiris.harness.log import Change
+from osiris.harness.status import Status
 from osiris.harness.tasks import TASK_TOOL, Task, tasks_of
 from osiris.harness.titles import title_of
 
@@ -284,6 +285,7 @@ class Conversation:
         match event:
             case Asking(_, _, action, resources, call):
                 turn.steps = [step for step in turn.steps if step.call != call]
+                turn.doing = Status.WAITING.value
                 turn.asking = event
                 turn.held = Step(
                     action, resources, call=call, input=self._inputs.get(call)
