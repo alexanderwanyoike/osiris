@@ -93,6 +93,13 @@ The first slice of ROADMAP P3.5:
   under `@`: a resource goes with the message by its own URI, a server is
   named so the model reaches for its tools, and those tool calls ask on the
   approval card like any other.
+- **Its length shows at a glance.** A thin rail runs down the Conversation's
+  edge in place of a scrollbar: a tick per question, where the question
+  starts; the ticks of the part on screen brighter, over a faint band that
+  marks that part; a question whose answer changed something in the Theme's
+  success colour, one waiting on the person in its warning colour. Hovering a
+  tick shows the start of its question, and clicking it scrolls there. It
+  shows once there are two questions, or one answer longer than the screen.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
