@@ -88,7 +88,7 @@ from osiris.harness.status import Status, status_of  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.harness.trust import auto_mode_on, turn_auto_mode  # noqa: E402
 from osiris.harness.unread import Unread  # noqa: E402
-from osiris.programs.programs import Programs  # noqa: E402
+from osiris.programs.programs import ProgramError, Programs  # noqa: E402
 from osiris.provision.upgrade import Upgrade  # noqa: E402
 from osiris.platform import (  # noqa: E402
     CommandError,
@@ -1069,7 +1069,11 @@ class Application(Adw.Application):
         programs, skills = self.programs(), self.skills
 
         def gather() -> dict[str, list[Entry]]:
-            files = programs.files(here) if here else []
+            try:
+                files = programs.files(here) if here else []
+            except ProgramError:
+                # A folder in ~/Code the person made themselves.
+                files = []
             return {"@": project_files(directory, files),
                     "/": skills.skills(directory) if skills else []}
 
