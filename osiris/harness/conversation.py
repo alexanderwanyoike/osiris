@@ -56,6 +56,8 @@ class Turn:
     held: Step | None = None
     #: The Engine's plan for this answer, as it last reported it.
     tasks: list[Task] = field(default_factory=list)
+    #: The question's message at the Engine, once it has been sent.
+    message: str = ""
 
     @property
     def programs(self) -> list[str]:
@@ -156,6 +158,11 @@ class Conversation:
         model = self.model or default
         return f"{model.provider} / {model.model}" if model else "default model"
 
+    def can_go_back(self, turn: Turn) -> bool:
+        """Whether going back to before ``turn`` can be offered: it was sent,
+        and nothing is answering, which the Engine would refuse."""
+        return bool(turn.message) and not self.busy
+
     def asked(self, question: str) -> Turn:
         turn = Turn(question)
         self.turns.append(turn)
@@ -176,7 +183,15 @@ class Conversation:
         talk = cls()
         talk.tokens_spent = tokens_spent
         for turn in past:
-            talk.turns.append(Turn(turn.question, turn.answer, State.DONE, turn.model))
+            talk.turns.append(
+                Turn(
+                    turn.question,
+                    turn.answer,
+                    State.DONE,
+                    turn.model,
+                    message=turn.message,
+                )
+            )
             talk.model = turn.model or talk.model
         undid = set(undone or [])
         for answer, made in zip(
