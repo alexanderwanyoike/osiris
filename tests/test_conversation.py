@@ -118,6 +118,26 @@ def test_a_tool_the_engine_ran_without_asking_is_a_step(
     assert talk.turns[-1].steps == [Step(action, resources, True, "c1", given)]
 
 
+def test_a_tool_that_then_asks_is_held_and_shown_once_answered() -> None:
+    """The call is reported before the Engine asks about it."""
+    talk = Conversation()
+    talk.asked("list /etc")
+    talk.apply(ToolCalled(S, "c1", {"command": "ls /etc"}, False, "shell"))
+    talk.apply(Asking(S, "per_1", "shell", ("ls /etc",), "c1"))
+    assert talk.turns[-1].steps == []
+    assert talk.turns[-1].held is not None
+    talk.apply(Allowed(S, "shell", ("ls /etc",), "c1"))
+    assert [step.call for step in talk.turns[-1].steps] == ["c1"]
+
+
+def test_what_auto_mode_allows_is_shown_once() -> None:
+    talk = Conversation()
+    talk.asked("list /etc")
+    talk.apply(ToolCalled(S, "c1", {"command": "ls /etc"}, False, "shell"))
+    talk.apply(Allowed(S, "shell", ("ls /etc",), "c1"))
+    assert [step.call for step in talk.turns[-1].steps] == ["c1"]
+
+
 def test_a_step_carries_the_input_of_its_tool_call() -> None:
     talk = Conversation()
     talk.asked("list /etc")
