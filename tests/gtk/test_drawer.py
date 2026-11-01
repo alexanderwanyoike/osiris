@@ -471,9 +471,14 @@ def test_a_canvas_opened_in_a_narrow_drawer_is_shown_once_it_is_wide() -> None:
     context = GLib.MainContext.default()
 
     def settle(width: int) -> None:
+        import time
+
         window.set_default_size(width, 800)
         window.present()
-        for _ in range(250):
+        deadline = time.monotonic() + 5
+        while window.get_width() != width and time.monotonic() < deadline:
+            context.iteration(False)
+        for _ in range(100):
             context.iteration(False)
 
     settle(440)
