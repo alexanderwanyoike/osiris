@@ -323,6 +323,34 @@ class TestGoingBack:
             ("DELETE", clear),
         ]
 
+    def test_a_questions_changes_come_from_the_engines_diff_of_its_turn(
+        self,
+    ) -> None:
+        """As opencode 2.2.4 offers it: a turn's diff, with a few lines of
+        context around each change."""
+        path = f"{URL}/api/session/{SESSION}/diff?from=msg_2&context=3"
+        reply = {
+            "data": [
+                {
+                    "file": "README.md",
+                    "patch": "@@ -1 +1,2 @@\n # Egg Timer\n+Made with Osiris.\n",
+                    "additions": 1,
+                    "deletions": 0,
+                    "status": "modified",
+                }
+            ]
+        }
+        http = FakeHttpClient(replies={("GET", path): reply})
+        assert engine(http).changes(SESSION, "msg_2") == (
+            FileChange(
+                "README.md",
+                "modified",
+                1,
+                0,
+                "@@ -1 +1,2 @@\n # Egg Timer\n+Made with Osiris.\n",
+            ),
+        )
+
     def test_outside_a_git_repository_the_files_cannot_be_restored(self) -> None:
         """As opencode 2.2.4 does there: no snapshot, and no files, even though
         the question changed some."""
