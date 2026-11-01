@@ -637,7 +637,11 @@ class OpencodeAccounts:
             "GET", self._service.url + "/api/model", headers=self._service.headers()
         )
         return [
-            ModelInfo(ModelRef(entry["providerID"], entry["id"]), entry["name"])
+            ModelInfo(
+                ModelRef(entry["providerID"], entry["id"]),
+                entry["name"],
+                (entry.get("limit") or {}).get("context", 0),
+            )
             for entry in reply["data"]
         ]
 
