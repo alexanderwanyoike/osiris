@@ -32,6 +32,7 @@ class FakeApp(Adw.Application):
         self.opened: list[str] = []
         self.unqueued: list[str] = []
         self.stopped = 0
+        self.gone_back: list[object] = []
 
     def open_past(self, session: str) -> None:
         self.opened.append(session)
@@ -42,6 +43,9 @@ class FakeApp(Adw.Application):
 
     def undo(self, _turn: object) -> None:
         pass
+
+    def go_back(self, turn: object) -> None:
+        self.gone_back.append(turn)
 
     def program_card(self, name: str) -> object:
         from gi.repository import Gtk
