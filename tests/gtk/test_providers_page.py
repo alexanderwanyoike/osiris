@@ -218,9 +218,12 @@ def test_a_connected_provider_wears_a_connected_chip_with_a_check() -> None:
     assert icons == ["object-select-symbolic"]
 
 
-def test_the_page_offers_to_allow_everything_and_shows_the_choice() -> None:
+def test_the_page_offers_auto_mode_and_shows_the_choice() -> None:
+    """It answers every request the rules ask about; a deny still holds."""
     page = ProvidersPage(FakeAccounts(), background=now, allows_everything=True)
-    assert "Allow everything" in texts(page)
+    shown = texts(page)
+    assert "Auto mode" in shown
+    assert any("denies" in text for text in shown)
     assert find(page, Gtk.Switch).get_active()
 
 
