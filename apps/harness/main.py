@@ -43,6 +43,7 @@ for candidate in ("/usr/share/osiris/lib", REPO):
 sys.path.insert(0, HERE)
 
 from admin_card import AdminCard  # noqa: E402
+from approval_card import ApprovalCard  # noqa: E402
 from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
 from canvas import Canvas, open_in_code  # noqa: E402
@@ -57,7 +58,7 @@ from osiris.apps.tool_server import NAME as TOOLS, TIERS, undo  # noqa: E402
 
 from osiris.harness import admin  # noqa: E402
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
-from osiris.harness.harness import Harness  # noqa: E402
+from osiris.harness.harness import Answer, Asking, Harness  # noqa: E402
 from osiris.harness.history import (  # noqa: E402
     CODE_DIR,
     group,
@@ -452,7 +453,8 @@ class Drawer(Gtk.ApplicationWindow):
             view = TurnView(conversation.turns[len(self.views)],
                             on_undo=self.app.undo,
                             program_card=self.app.program_card,
-                            admin_card=self.app.admin_card)
+                            admin_card=self.app.admin_card,
+                            approval_card=self.app.approval_card)
             self.views.append(view)
             self.turns.append(view)
         newest = len(self.views) - 1
@@ -511,6 +513,8 @@ class Application(Adw.Application):
         self.engine_pid: int | None = None
         #: Admin password requests waiting on the person, by session.
         self.admin_pending: dict[str, AdminPending] = {}
+        #: Each approval card waiting for the person, by session and request.
+        self.approvals: dict[tuple[str, str], ApprovalCard] = {}
         self._admin_object = 0
         #: An Entry point's folder and draft, until it can be started.
         self.waiting: tuple[Path, str | None] | None = None
@@ -636,6 +640,34 @@ class Application(Adw.Application):
             if pending.request is request:
                 return pending.card
         return Gtk.Box()
+
+    def approval_card(self, turn: Turn) -> Gtk.Widget:
+        """The card for a held action, the same one each time it is drawn, so
+        what is typed in it survives a redraw."""
+        asking, held = turn.asking, turn.held
+        if asking is None or held is None:
+            return Gtk.Box()
+        key = (asking.session, asking.request)
+        if key not in self.approvals:
+            self.approvals[key] = ApprovalCard(
+                held, on_answer=lambda answer, reply: self.answer_card(
+                    asking, answer, reply))
+        return self.approvals[key]
+
+    def answer_card(self, asking: Asking, answer: Answer, reply: str) -> None:
+        """The Engine is answered off the main loop; the decision comes back
+        to the Conversation like any other."""
+        self.approvals.pop((asking.session, asking.request), None)
+        harness = self.harness
+        if harness is None:
+            return
+
+        def answered(decision) -> None:
+            if decision is not None:
+                self._apply(decision)
+
+        self.background(lambda: harness.answer(asking.session, asking.request,
+                                                answer, reply), answered)
 
     def admin_answer(self, session: str, password: str | None) -> None:
         """Answer a waiting request once: with the password, or refused when
