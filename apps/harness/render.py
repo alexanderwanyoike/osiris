@@ -455,5 +455,9 @@ class TurnView(Gtk.Box):
             meta = Gtk.Label(label="  ·  ".join(parts), xalign=0)
             meta.add_css_class("harness-meta")
             self.extras.append(meta)
+        if turn.note:
+            note = Gtk.Label(label=turn.note, xalign=0, wrap=True)
+            note.add_css_class("harness-step-note")
+            self.extras.append(note)
         if self._go_back is not None and self._may_go_back(turn):
             self.extras.append(self._going_back(turn))

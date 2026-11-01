@@ -58,6 +58,8 @@ class Turn:
     tasks: list[Task] = field(default_factory=list)
     #: The question's message at the Engine, once it has been sent.
     message: str = ""
+    #: A word from Thoth about this question, such as why it could not go back.
+    note: str = ""
 
     @property
     def programs(self) -> list[str]:
