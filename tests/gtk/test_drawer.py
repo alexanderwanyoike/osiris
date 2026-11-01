@@ -39,6 +39,7 @@ class FakeApp(Adw.Application):
         self.offers: dict[str, list[object]] = {"@": [], "/": []}
         self.referenced: list[tuple[object, ...]] = []
         self.offers_fetched = 0
+        self.panel_updates = 0
 
     def open_past(self, session: str) -> None:
         self.opened.append(session)
@@ -65,6 +66,9 @@ class FakeApp(Adw.Application):
 
     def connector_states(self) -> dict[str, object]:
         return {}
+
+    def update_panel(self) -> None:
+        self.panel_updates += 1
 
     def undo(self, _turn: object) -> None:
         pass
@@ -706,3 +710,15 @@ def test_a_conversation_that_fits_on_one_screen_has_no_rail() -> None:
     settle()
     window.refresh()
     assert not window.rail.get_visible()
+
+
+def test_the_conversation_panel_is_filled_as_it_comes_on_screen() -> None:
+    from tests.gtk.test_composer_picker import settle
+
+    window, _ = drawer()
+    window.set_default_size(900, 700)
+    window.present()
+    window.canvas.set_visible(True)
+    window.canvas.show_conversation()
+    settle()
+    assert window.app.panel_updates == 1
