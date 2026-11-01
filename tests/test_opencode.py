@@ -557,6 +557,28 @@ class TestHistory:
             Past("ses_a", "Calm theme", Path("/home/tester"), 1.0),
         ]
 
+    def test_a_subagents_session_is_no_conversation_of_its_own(self) -> None:
+        """As opencode 2.2.4 lists the reviewer's: a child of the session that
+        asked it, carrying the Harness's mark."""
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{URL}/api/session?limit=200"): {
+                    "data": [
+                        {
+                            "id": "ses_child",
+                            "parentID": "ses_a",
+                            "agent": "reviewer",
+                            "title": "Review coin-flip",
+                            "location": {"directory": "/home/tester"},
+                            "time": {"created": 990, "updated": 1000},
+                            "metadata": {"osiris": "harness"},
+                        }
+                    ]
+                }
+            }
+        )
+        assert engine(http).conversations() == []
+
     def test_a_past_conversation_is_rebuilt_from_its_messages(self) -> None:
         model = {"id": "gpt-6.1-sol", "providerID": "openai"}
         http = FakeHttpClient(
