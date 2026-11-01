@@ -114,10 +114,10 @@ class Harness:
         #: and the folder each runs in.
         self._running: dict[str, Path] = {}
         self._allow_everything = allow_everything
-        #: Each session's latest allowed command: when it was allowed, counted
-        #: across sessions, and whether it runs sudo.
+        #: Each session's latest command: when it was noted, counted across
+        #: sessions, and whether it runs sudo.
         self._last_command: dict[str, tuple[int, bool]] = {}
-        self._commands_allowed = 0
+        self._commands_noted = 0
         #: Actions held for the person, by session and request.
         self._waiting: dict[tuple[str, str], Asking] = {}
 
@@ -221,7 +221,7 @@ class Harness:
 
     def running_sudo(self) -> str | None:
         """The session an admin request is for: of those running, the one
-        whose latest allowed command runs sudo, the latest to allow it first."""
+        whose latest command runs sudo, the latest to run it first."""
         # Asked on the main loop while handle() runs on the Engine's thread:
         # copied first, so neither changes under the loop.
         commands, running = dict(self._last_command), set(self._running)
@@ -241,10 +241,10 @@ class Harness:
             approved=approved,
         )
 
-    def _allowed_command(self, session: str, resources: tuple[str, ...]) -> None:
-        self._commands_allowed += 1
+    def _noted_command(self, session: str, resources: tuple[str, ...]) -> None:
+        self._commands_noted += 1
         self._last_command[session] = (
-            self._commands_allowed,
+            self._commands_noted,
             any(_SUDO.search(resource) for resource in resources),
         )
 
@@ -296,7 +296,7 @@ class Harness:
             executed=event.executed,
         )
         if isinstance(command := event.input.get("command"), str):
-            self._allowed_command(event.session, (command,))
+            self._noted_command(event.session, (command,))
 
     def handle(self, event: Event) -> Event | Decision | None:
         """Log what the Engine reports and apply policy; the event is passed on.
@@ -323,7 +323,7 @@ class Harness:
                 self._allow_everything()
             ):
                 if action in COMMAND_ACTIONS:
-                    self._allowed_command(session, resources)
+                    self._noted_command(session, resources)
                 self._reply(session, request, Reply.ONCE, "")
                 self._log.write(
                     "allowed",
