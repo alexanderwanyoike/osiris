@@ -30,6 +30,12 @@ class Rail(Gtk.Widget):
         self._on_jump = on_jump
         self._ticks: list[Tick] = []
         self._marks: list[Gtk.Widget] = []
+        #: The part on screen, as shares of the Conversation: where, how much.
+        self._view = (0.0, 1.0)
+        # First child, so the ticks are drawn over it.
+        self.band = Gtk.Box()
+        self.band.add_css_class("harness-rail-band")
+        self.band.set_parent(self)
 
     def show_ticks(self, ticks: list[Tick]) -> None:
         # Scrolling changes only which are lit, so marks are kept and restyled
@@ -44,6 +50,10 @@ class Rail(Gtk.Widget):
             if mark.get_tooltip_text() != tick.label:
                 mark.set_tooltip_text(tick.label)
         self._ticks = list(ticks)
+        self.queue_allocate()
+
+    def show_view(self, top: float, height: float) -> None:
+        self._view = (top, height)
         self.queue_allocate()
 
     def _mark(self, index: int) -> Gtk.Widget:
@@ -63,6 +73,9 @@ class Rail(Gtk.Widget):
         return 0, 0, -1, -1
 
     def do_size_allocate(self, width, height, _baseline):
+        top, shown = self._view
+        place = Gsk.Transform().translate(Graphene.Point().init(0, round(top * height)))
+        self.band.allocate(width, max(round(shown * height), 1), -1, place)
         for tick, mark in zip(self._ticks, self._marks):
             # Down to the strip's foot, keeping the last tick wholly on it.
             down = round(tick.at * max(height - REACH, 0))
@@ -73,3 +86,4 @@ class Rail(Gtk.Widget):
         for mark in self._marks:
             mark.unparent()
         self._marks = []
+        self.band.unparent()
