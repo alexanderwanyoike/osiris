@@ -539,3 +539,10 @@ def test_an_empty_canvas_shows_where_to_start() -> None:
     widget.close(widget.panels.groups[0].tabs[0])
     find(widget._tiles.get_first_child(), Gtk.Button, "Open a page").emit("clicked")
     assert [g.kind for g in widget.panels.groups] == [Kind.BROWSER]
+
+
+def test_an_empty_canvas_sits_in_a_panels_frame() -> None:
+    """In Studio, panels are cards; an empty Canvas is one too, not bare glass."""
+    widget = Canvas(read=lambda _p: "", open_in_code=lambda _f, _p: None)
+    start = widget._tiles.get_first_child()
+    assert "harness-canvas-group" in start.get_css_classes()
