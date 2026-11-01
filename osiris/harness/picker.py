@@ -4,6 +4,8 @@ Project's files. It opens on a sign at the start of the word being typed."""
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Protocol
 
 SIGNS = ("@", "/")
 
@@ -53,3 +55,9 @@ class Reference:
     entry: Entry
     start: int
     end: int
+
+
+class Skills(Protocol):
+    def skills(self, directory: Path) -> list[Entry]:
+        """The skills a session in the folder can load."""
+        ...

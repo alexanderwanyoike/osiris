@@ -34,7 +34,7 @@ from osiris.harness.engine import (
     ToolFinished,
     ToolRequested,
 )
-from osiris.harness.picker import Reference
+from osiris.harness.picker import Entry, Reference
 from osiris.harness.titles import title_of
 from osiris.platform import CommandRunner, FileSystem, HttpClient, HttpError, Identity
 
@@ -194,6 +194,18 @@ class OpencodeEngine:
             body={"config": {"type": "local", "command": command}},
             headers=self._service.headers(),
         )
+
+    def skills(self, directory: Path) -> list[Entry]:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/skill"
+            f"?location%5Bdirectory%5D={_quoted(str(directory))}",
+            headers=self._service.headers(),
+        )
+        return [
+            Entry("skill", skill["id"], skill["name"], skill.get("description", ""))
+            for skill in reply["data"]
+        ]
 
     def rename(self, session: str, title: str) -> None:
         self._http.request(
