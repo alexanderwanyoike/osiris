@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from osiris.harness.tasks import Progress, Task
 
 from osiris.harness.activity import Step
 from osiris.harness.admin import Request
@@ -24,6 +23,7 @@ from osiris.harness.engine import (
 )
 from osiris.harness.harness import Allowed, Asking, Refused
 from osiris.harness.log import Change
+from osiris.harness.tasks import Progress, Task
 
 S = "ses_1"
 GPT = ModelRef("openai", "gpt-5.5")

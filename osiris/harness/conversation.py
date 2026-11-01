@@ -24,6 +24,7 @@ from osiris.harness.engine import (
 )
 from osiris.harness.harness import Allowed, Asking, Decision, Refused
 from osiris.harness.log import Change
+from osiris.harness.tasks import TASK_TOOL, Task, tasks_of
 from osiris.harness.titles import title_of
 
 
@@ -53,6 +54,8 @@ class Turn:
     #: and the step it would be, with the input the model gave it.
     asking: Asking | None = None
     held: Step | None = None
+    #: The Engine's plan for this answer, as it last reported it.
+    tasks: list[Task] = field(default_factory=list)
 
     @property
     def programs(self) -> list[str]:
@@ -220,6 +223,20 @@ class Conversation:
     def _input(self, call: str) -> Mapping[str, object] | None:
         return self._inputs.pop(call, None) if call else None
 
+    def _called(self, turn: Turn, event: ToolCalled) -> None:
+        """A tool call: the task list, or a step the Engine ran without asking."""
+        call, arguments, name = event.call, event.input, event.name
+        if name == TASK_TOOL:
+            turn.tasks = tasks_of(arguments)
+            return
+        self._inputs[call] = arguments
+        ran = _from_code(call, arguments) if name == "execute" else None
+        if ran is None and name:
+            ran = [_ran(name, call, arguments)]
+        if ran:
+            turn.steps += ran
+            turn.doing = turn.steps[-1].doing
+
     def _step(
         self,
         turn: Turn,
@@ -241,14 +258,8 @@ class Conversation:
                     else step
                     for step in turn.steps
                 ]
-            case ToolCalled(_, call, arguments, _, name):
-                self._inputs[call] = arguments
-                ran = _from_code(call, arguments) if name == "execute" else None
-                if ran is None and name:
-                    ran = [_ran(name, call, arguments)]
-                if ran:
-                    turn.steps += ran
-                    turn.doing = turn.steps[-1].doing
+            case ToolCalled():
+                self._called(turn, event)
             case Allowed(_, action, resources, call):
                 if not any(step.call == call for step in turn.steps if call):
                     turn.steps.append(
