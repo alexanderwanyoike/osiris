@@ -327,3 +327,9 @@ def test_no_going_back_is_offered_when_it_may_not() -> None:
     )
     view.update(turn, STYLE, None)
     assert "Go back" not in texts(view)
+
+
+def test_a_note_about_the_question_is_shown_under_its_answer() -> None:
+    """Such as why it could not be gone back to."""
+    turn = Turn("make x.txt", "Made it.", State.DONE, note="Nothing went back.")
+    assert "Nothing went back." in texts(drawn(turn))
