@@ -214,6 +214,9 @@ class Drawer(Gtk.ApplicationWindow):
         self.footer.add_css_class("harness-footer")
 
         bottom = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        #: Messages sent while Osiris works, until each reaches it.
+        self.waiting = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        bottom.append(self.waiting)
         bottom.append(composer)
         bottom.append(self.footer)
         chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
@@ -332,7 +335,7 @@ class Drawer(Gtk.ApplicationWindow):
     def _ask(self) -> None:
         buffer = self.entry.get_buffer()
         text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
-        if text.strip() and not self.app.conversation.busy:
+        if text.strip():
             buffer.set_text("")
             self.app.ask(text.strip())
 
@@ -472,7 +475,33 @@ class Drawer(Gtk.ApplicationWindow):
         self.title.set_text(conversation.title or UNTITLED)
         self.model_label.set_text(conversation.model_label(self.app.models.default))
         self.footer.set_text(self.app.footer_line())
+        self._show_waiting(conversation.waiting)
         self._follow()
+
+    def _show_waiting(self, waiting) -> None:
+        while (row := self.waiting.get_first_child()) is not None:
+            self.waiting.remove(row)
+        for message in waiting:
+            row = Gtk.Box(spacing=6)
+            row.add_css_class("harness-waiting")
+            label = Gtk.Label(label=message.text, xalign=0, hexpand=True,
+                              ellipsize=Pango.EllipsizeMode.END)
+            row.append(label)
+            for name, act in (("Edit", self._edit_waiting),
+                              ("Remove", self._remove_waiting)):
+                button = Gtk.Button(label=name)
+                button.add_css_class("flat")
+                button.connect("clicked", lambda _b, m=message.message, a=act: a(m))
+                row.append(button)
+            self.waiting.append(row)
+
+    def _remove_waiting(self, message: str) -> None:
+        self.app.unqueue(message)
+        self.refresh()
+
+    def _edit_waiting(self, message: str) -> None:
+        self.entry.get_buffer().set_text(self.app.unqueue(message))
+        self.refresh()
 
     def _follow(self) -> None:
         """Keep the newest text in view, unless the reader has scrolled up."""
