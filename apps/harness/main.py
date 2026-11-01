@@ -47,6 +47,7 @@ from approval_card import ApprovalCard  # noqa: E402
 from going_back import going_back_dialog  # noqa: E402
 from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
+from browser import Page  # noqa: E402
 from canvas import Canvas, open_in_code  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
 from render import TurnView  # noqa: E402
@@ -70,7 +71,13 @@ from osiris.harness.history import (  # noqa: E402
 )
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
-from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
+from osiris.harness.engine import (  # noqa: E402
+    Failed,
+    Finished,
+    ModelRef,
+    Stopped,
+    ToolCalled,
+)
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.review import comment  # noqa: E402
 from osiris.harness.reviewer import write_reviewer  # noqa: E402
@@ -242,6 +249,7 @@ class Drawer(Gtk.ApplicationWindow):
                              open_in_code=open_in_code,
                              on_changes=lambda: self.app.show_all_changes(),
                              terminal=lambda folder: Terminal(folder, self.app.look.theme),
+                             page=lambda at, on_title: Page(at, on_title),
                              scheme=app.look.scheme if app.look is not None else None)
         self.canvas.set_visible(False)
         body = Gtk.Paned(start_child=chat, end_child=self.canvas,
@@ -454,6 +462,9 @@ class Drawer(Gtk.ApplicationWindow):
         act(*args)
         if self.split.get_collapsed():
             self.sidebar_toggle.set_active(False)
+
+    def open_page(self, at: str) -> None:
+        self.canvas.open_page(at)
 
     def show_changes(self, question: str, files, on_comment) -> None:
         self.canvas.show_changes(question, files, on_comment)
@@ -1364,6 +1375,10 @@ class Application(Adw.Application):
         conversation.apply(event)
         if isinstance(event, Asking):
             self._waiting(event.session, conversation)
+        if (isinstance(event, ToolCalled) and event.name == "webfetch"
+                and conversation is self.conversation
+                and isinstance(url := event.input.get("url"), str)):
+            self.drawer.open_page(url)
         if isinstance(event, Finished | Stopped | Failed):
             looking = self.open and conversation is self.conversation
             if self.unread.ended(event, looking=looking):
