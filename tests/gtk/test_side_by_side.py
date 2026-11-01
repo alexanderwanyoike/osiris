@@ -23,6 +23,7 @@ class FakeDrawer:
     def __init__(self) -> None:
         self.entry = SimpleNamespace(grab_focus=lambda: None)
         self.drafts: list[str] = []
+        self.changes: list[tuple[str, object, Any]] = []
         self.refreshes = 0
 
     def clear(self) -> None:
@@ -36,6 +37,9 @@ class FakeDrawer:
 
     def draft(self, text: str) -> None:
         self.drafts.append(text)
+
+    def show_changes(self, question: str, files: object, on_comment: Any) -> None:
+        self.changes.append((question, files, on_comment))
 
 
 class App(SimpleNamespace):
@@ -260,3 +264,19 @@ def test_trying_again_goes_back_then_sends_the_question_again() -> None:
         "make y.txt",
     ]
     assert stand_in.drawer.drafts == []
+
+
+def test_a_questions_changes_are_shown_and_a_comment_on_them_reaches_thoth() -> None:
+    from osiris.harness.engine import FileChange
+
+    stand_in, engine = app()
+    engine.past = [PastTurn("tidy main.py", "Tidied.", GPT, "msg_1")]
+    stand_in.open_past("ses_9")
+    engine.changed = (FileChange("main.py", "modified", 1, 0, "+x\n"),)
+    stand_in.show_changes(stand_in.conversation.turns[0])
+    question, files, on_comment = stand_in.drawer.changes[-1]
+    assert (question, files) == ("tidy main.py", engine.changed)
+    on_comment("main.py", (3, 4), "Name it better.")
+    assert stand_in.conversation.turns[-1].question == (
+        "About main.py, lines 3 to 4:\n\nName it better."
+    )
