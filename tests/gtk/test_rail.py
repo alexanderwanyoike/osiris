@@ -22,7 +22,8 @@ def rail(jumped: list[int] | None = None):
 def marks(shown) -> list[object]:
     found, child = [], shown.get_first_child()
     while child is not None:
-        found.append(child)
+        if child.has_css_class("harness-rail-tick"):
+            found.append(child)
         child = child.get_next_sibling()
     return found
 
