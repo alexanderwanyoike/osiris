@@ -17,6 +17,7 @@ from osiris.harness.engine import (
     PastTurn,
     Stopped,
     Text,
+    ToolCalled,
 )
 from osiris.harness.harness import Allowed, Decision, Refused
 from osiris.harness.log import Change
@@ -68,6 +69,8 @@ class Conversation:
         self.tokens_spent = 0
         #: Each step's text is written on its own, so the next starts a paragraph.
         self._step_ended = False
+        #: What the model gave each tool call, kept until a decision names it.
+        self._inputs: dict[str, Mapping[str, object]] = {}
 
     @property
     def title(self) -> str | None:
@@ -135,6 +138,24 @@ class Conversation:
         if self.turns:
             self.turns[-1].changes = changes
 
+    def _input(self, call: str) -> Mapping[str, object] | None:
+        return self._inputs.pop(call, None) if call else None
+
+    def _step(self, turn: Turn, event: ToolCalled | Allowed | Refused) -> None:
+        match event:
+            case ToolCalled(_, call, arguments, _):
+                self._inputs[call] = arguments
+            case Allowed(_, action, _, resources, call):
+                turn.steps.append(
+                    Step(action, resources, True, call, self._input(call))
+                )
+                turn.doing = turn.steps[-1].doing
+            case Refused(_, action, resources, call):
+                turn.steps.append(
+                    Step(action, resources, False, call, self._input(call))
+                )
+                turn.doing = THINKING
+
     def apply(self, event: Event | Decision) -> None:
         if not self.turns:
             return
@@ -152,12 +173,8 @@ class Conversation:
                 turn.doing = THINKING
                 self._step_ended = True
                 self.tokens_spent += tokens.input + tokens.output + tokens.reasoning
-            case Allowed(_, action, _, resources):
-                turn.steps.append(Step(action, resources))
-                turn.doing = turn.steps[-1].doing
-            case Refused(_, action, resources):
-                turn.steps.append(Step(action, resources, allowed=False))
-                turn.doing = THINKING
+            case ToolCalled() | Allowed() | Refused():
+                self._step(turn, event)
             case Finished():
                 turn.state = State.DONE
             case Stopped():

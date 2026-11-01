@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 
 
@@ -91,6 +91,9 @@ class Step:
     action: str
     resources: tuple[str, ...]
     allowed: bool = True
+    #: The Engine's tool call this step decided on, and what the model gave it.
+    call: str = ""
+    input: Mapping[str, object] | None = None
 
     @property
     def doing(self) -> str:
