@@ -138,7 +138,7 @@ def test_a_questions_changes_open_in_a_tab_of_their_own() -> None:
     assert page.get_title() == "Changes: tidy main.py"
     shown = texts(page.get_child())
     assert "main.py" in shown and "notes.md" in shown
-    assert "+2 −1" in shown
+    assert "+2 \u22121" in shown  # a minus sign, as the Canvas draws it
 
 
 def test_the_first_file_opens_on_its_diff_in_the_themes_code_colours() -> None:
