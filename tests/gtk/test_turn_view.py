@@ -164,6 +164,25 @@ def test_a_step_shows_its_output_once_it_arrives() -> None:
     assert "NetworkManager" in texts(step.get_child())
 
 
+def test_an_edit_step_marks_the_lines_it_removed_and_added() -> None:
+    turn = finished()
+    turn.steps = [
+        Step(
+            "edit",
+            ("main.py",),
+            input={"path": "main.py", "oldString": "a = 1", "newString": "a = 2"},
+        )
+    ]
+    step = find(find(drawn(turn), Gtk.Expander).get_child(), Gtk.Expander)
+    marked = {
+        w.get_text(): w.get_css_classes()
+        for w in widgets(step.get_child())
+        if isinstance(w, Gtk.Label)
+    }
+    assert "harness-removed" in marked["- a = 1"]
+    assert "harness-added" in marked["+ a = 2"]
+
+
 def test_an_answer_that_took_no_steps_keeps_no_record() -> None:
     view = drawn(finished())
     assert not any(text.startswith("Used") for text in shown(view))
