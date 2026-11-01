@@ -6,7 +6,7 @@ from __future__ import annotations
 import difflib
 import json
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 
 from osiris.harness.activity import Step
@@ -119,4 +119,5 @@ _KINDS: dict[str, Callable[[Step], Detail]] = {
 
 
 def detail(step: Step) -> Detail:
-    return _KINDS.get(step.action, _tool)(step)
+    shown = _KINDS.get(step.action, _tool)(step)
+    return replace(shown, note=step.refused_by or step.error or shown.note)
