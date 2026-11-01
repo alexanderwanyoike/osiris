@@ -66,6 +66,7 @@ FILE_TIERS = {
 COMMAND_ACTIONS = frozenset({"shell", "bash"})
 _SUDO = re.compile(r"\bsudo\b")
 
+
 @dataclass(frozen=True)
 class Asking:
     """An action outside the tier, held until the person answers its card."""
