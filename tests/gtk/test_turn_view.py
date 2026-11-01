@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from dataclasses import replace
 from collections.abc import Callable
 
 from gi.repository import GLib, Gtk
@@ -150,6 +151,17 @@ def test_a_step_opens_to_show_what_it_asked_and_what_came_back() -> None:
     assert {"ls /etc | head -2", "NetworkManager", "UPower"} <= set(
         texts(step.get_child())
     )
+
+
+def test_a_step_shows_its_output_once_it_arrives() -> None:
+    turn = Turn("list /etc", "", State.ANSWERING)
+    running = Step("shell", ("ls /etc",), input={"command": "ls /etc"})
+    turn.steps = [running]
+    view = drawn(turn)
+    turn.steps = [replace(running, output="NetworkManager\n")]
+    view.update(turn, STYLE, None)
+    step = find(find(view, Gtk.Expander).get_child(), Gtk.Expander)
+    assert "NetworkManager" in texts(step.get_child())
 
 
 def test_an_answer_that_took_no_steps_keeps_no_record() -> None:
