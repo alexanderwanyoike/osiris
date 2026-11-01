@@ -39,6 +39,7 @@ class Picker:
                                    position=Gtk.PositionType.TOP)
         self.popover.add_css_class("harness-picker-popover")
         self.popover.set_parent(entry)
+        self.token = entry.get_buffer().create_tag("harness-token", weight=500)
         entry.get_buffer().connect("changed", lambda _b: self._typed())
         # Captured before the message box sees them, so Enter picks an entry
         # rather than sending while the picker is open.
@@ -85,6 +86,7 @@ class Picker:
     def _typed(self) -> None:
         buffer = self._entry.get_buffer()
         text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+        self._mark(buffer, text)
         cursor = buffer.get_property("cursor-position")
         found = trigger(text, cursor)
         entries = matching(self._offered(found.sign), found.query) if found else []
@@ -97,6 +99,14 @@ class Picker:
         self.list.select_row(self.list.get_row_at_index(0))
         self._point_at(buffer.get_iter_at_offset(found.start))
         self.popover.popup()
+
+    def _mark(self, buffer: Gtk.TextBuffer, text: str) -> None:
+        """Tokens are what would be sent as references, so an edited one
+        stops looking like one the moment it stops being one."""
+        buffer.remove_tag(self.token, buffer.get_start_iter(), buffer.get_end_iter())
+        for found in self.references(text):
+            buffer.apply_tag(self.token, buffer.get_iter_at_offset(found.start),
+                             buffer.get_iter_at_offset(found.end))
 
     def _point_at(self, where: Gtk.TextIter) -> None:
         place = self._entry.get_iter_location(where)
