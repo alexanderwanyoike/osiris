@@ -163,3 +163,21 @@ def test_a_server_still_starting_is_asked_about_again_until_it_settles() -> None
         waits.pop(0)()
     assert "Connected" in texts(shown)
     assert answers == []
+
+
+def test_a_server_that_never_starts_is_not_asked_about_for_ever() -> None:
+    from connectors_page import ConnectorsPage
+
+    asked: list[int] = []
+    waits: list[object] = []
+    ConnectorsPage(
+        read=Store(WIKI).read,
+        save=lambda _c: True,
+        remove=lambda _n: True,
+        states=lambda: asked.append(1) or {},
+        background=now,
+        later=lambda _seconds, then: waits.append(then),
+    )
+    while waits and len(asked) < 100:
+        waits.pop(0)()
+    assert len(asked) < 100
