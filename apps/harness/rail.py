@@ -32,17 +32,22 @@ class Rail(Gtk.Widget):
         self._marks: list[Gtk.Widget] = []
 
     def show_ticks(self, ticks: list[Tick]) -> None:
-        for mark in self._marks:
-            mark.unparent()
-        self._ticks, self._marks = list(ticks), []
-        for index, tick in enumerate(ticks):
-            self._marks.append(self._mark(index, tick))
+        # Scrolling changes only which are lit, so marks are kept and restyled
+        # rather than made again, which would close a tooltip being read.
+        while len(self._marks) > len(ticks):
+            self._marks.pop().unparent()
+        while len(self._marks) < len(ticks):
+            self._marks.append(self._mark(len(self._marks)))
+        for mark, tick in zip(self._marks, ticks):
+            mark.set_css_classes(["harness-rail-tick", tick.tone,
+                                  *(["lit"] if tick.lit else [])])
+            if mark.get_tooltip_text() != tick.label:
+                mark.set_tooltip_text(tick.label)
+        self._ticks = list(ticks)
         self.queue_allocate()
 
-    def _mark(self, index: int, tick: Tick) -> Gtk.Widget:
-        mark = Gtk.Box(height_request=REACH, tooltip_text=tick.label,
-                       css_classes=["harness-rail-tick", tick.tone,
-                                    *(["lit"] if tick.lit else [])])
+    def _mark(self, index: int) -> Gtk.Widget:
+        mark = Gtk.Box(height_request=REACH)
         line = Gtk.Box(valign=Gtk.Align.CENTER, hexpand=True)
         line.add_css_class("harness-rail-line")
         mark.append(line)
