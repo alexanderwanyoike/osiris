@@ -49,6 +49,7 @@ class FakeEngine:
     started: list[ModelRef | None] = field(default_factory=list)
     directories: list[Path | None] = field(default_factory=list)
     sent: list[tuple[str, str]] = field(default_factory=list)
+    withdrawn: list[tuple[str, str]] = field(default_factory=list)
     replies: list[tuple[str, str, bool, str]] = field(default_factory=list)
     stopped: list[str] = field(default_factory=list)
     switched: list[tuple[str, ModelRef]] = field(default_factory=list)
@@ -66,8 +67,12 @@ class FakeEngine:
         self.directories.append(directory)
         return f"ses_{len(self.started)}"
 
-    def send(self, session: str, text: str) -> None:
+    def send(self, session: str, text: str) -> str:
         self.sent.append((session, text))
+        return f"msg_{len(self.sent)}"
+
+    def withdraw(self, session: str, message: str) -> None:
+        self.withdrawn.append((session, message))
 
     def events(self) -> Iterator[Event]:
         return iter(())
@@ -303,6 +308,16 @@ def test_a_card_waiting_in_one_conversation_holds_up_no_other() -> None:
     subject.ask("make it calm")
     subject.handle(ToolRequested("ses_2", "per_2", "read", ("Code/pomodoro/a.py",)))
     assert engine.replies == [("ses_2", "per_2", True, "")]
+
+
+def test_a_message_sent_while_busy_waits_and_can_be_withdrawn() -> None:
+    subject, engine, files = harness()
+    subject.ask("count to sixty")
+    waiting = subject.ask("stop at ten")
+    assert waiting == "msg_2"
+    subject.withdraw(waiting)
+    assert engine.withdrawn == [("ses_1", "msg_2")]
+    assert entries(files)[-1]["kind"] == "withdrawn"
 
 
 def test_an_allowed_action_is_passed_on_with_what_it_touches() -> None:
