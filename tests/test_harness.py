@@ -280,6 +280,14 @@ def test_a_card_answered_leaves_the_tokens_spent_readable() -> None:
     assert HarnessLog(files, HOME / LOG_FILE).tokens_spent("ses_1") == 16
 
 
+def test_a_card_left_open_when_its_answer_ends_answers_nothing() -> None:
+    """The Engine has dropped the request; replying to it would only fail."""
+    subject, engine, _ = asked_to_list_etc()
+    subject.handle(Finished("ses_1"))
+    assert subject.answer("ses_1", "per_1", Answer.ONCE) is None
+    assert engine.replies == []
+
+
 def test_denying_refuses_the_action_and_thoth_is_told() -> None:
     subject, engine, files = asked_to_list_etc()
     decision = subject.answer("ses_1", "per_1", Answer.DENY)
