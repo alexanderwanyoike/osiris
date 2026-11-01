@@ -66,3 +66,25 @@ def test_a_connector_added_by_name_and_command_is_saved_and_listed() -> None:
     assert store.saved == {"files": Connector("files", command=("npx", "-y", "files"))}
     assert "npx -y files" in texts(shown)
     assert not shown.form.get_visible()
+
+
+def test_an_unfinished_form_says_what_is_missing_and_saves_nothing() -> None:
+    store = Store()
+    shown = page(store)
+    shown.add.emit("clicked")
+    shown.name.set_text("files")
+    shown.done.emit("clicked")
+    assert store.saved == {}
+    assert shown.problem.get_visible()
+    assert "command" in shown.problem.get_text()
+
+
+def test_a_commented_config_is_left_and_the_page_says_so() -> None:
+    store = Store(writable=False)
+    shown = page(store)
+    shown.add.emit("clicked")
+    shown.name.set_text("files")
+    shown.reach.set_text("npx files")
+    shown.done.emit("clicked")
+    assert shown.form.get_visible()
+    assert "comments" in shown.problem.get_text()
