@@ -56,3 +56,20 @@ def test_a_commit_that_changed_nothing_gives_no_changes() -> None:
     from osiris.harness.changes import file_changes
 
     assert file_changes("coin-flip", "") == ()
+
+
+def test_a_binary_file_is_a_change_with_no_lines_counted() -> None:
+    """git names a changed picture but gives no lines for it."""
+    from osiris.harness.changes import file_changes
+
+    icon = "\n".join(
+        (
+            "diff --git a/icon.png b/icon.png",
+            "new file mode 100644",
+            "index 0..5",
+            "Binary files /dev/null and b/icon.png differ",
+        )
+    )
+    assert file_changes("coin-flip", icon) == (
+        FileChange("coin-flip/icon.png", "added", 0, 0, icon),
+    )
