@@ -84,6 +84,11 @@ _UNRESERVED = frozenset(
 )
 
 
+def _in(directory: Path) -> str:
+    """The query naming the folder a request is about."""
+    return f"?location%5Bdirectory%5D={_quoted(str(directory))}"
+
+
 def _quoted(text: str) -> str:
     return "".join(
         chr(byte) if chr(byte) in _UNRESERVED else f"%{byte:02X}"
@@ -178,10 +183,7 @@ class OpencodeEngine:
         )
 
     def attach_tools(self, name: str, command: list[str], directory: Path) -> None:
-        url = (
-            f"{self._service.url}/api/experimental/mcp/{name}"
-            f"?location%5Bdirectory%5D={_quoted(str(directory))}"
-        )
+        url = f"{self._service.url}/api/experimental/mcp/{name}{_in(directory)}"
         # opencode keeps a running server whose registration is unchanged, which
         # would keep serving the code from before an update.
         try:
@@ -199,8 +201,7 @@ class OpencodeEngine:
     def connector_states(self, directory: Path) -> dict[str, State]:
         reply: Any = self._http.request(
             "GET",
-            f"{self._service.url}/api/mcp"
-            f"?location%5Bdirectory%5D={_quoted(str(directory))}",
+            f"{self._service.url}/api/mcp{_in(directory)}",
             headers=self._service.headers(),
         )
         return {
@@ -215,8 +216,7 @@ class OpencodeEngine:
     def skills(self, directory: Path) -> list[Entry]:
         reply: Any = self._http.request(
             "GET",
-            f"{self._service.url}/api/skill"
-            f"?location%5Bdirectory%5D={_quoted(str(directory))}",
+            f"{self._service.url}/api/skill{_in(directory)}",
             headers=self._service.headers(),
         )
         return [
