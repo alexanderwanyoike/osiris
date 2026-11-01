@@ -316,9 +316,7 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-sidebar row:selected > box > button, .harness-sidebar row:selected > box > menubutton > button,
 .harness-sidebar row > box > button:focus, .harness-sidebar row > box > menubutton > button:checked,
 .harness-sidebar row > box > menubutton > button:focus { opacity: 1; }
-.harness-running { color: @harness_accent; }
 .harness-unread { font-weight: 600; color: @harness_fg; }
-.harness-unread-dot { min-width: 6px; min-height: 6px; margin: 0 6px; border-radius: 999px; background-color: @harness_accent; }
 
 /* The drawer is panels on the glass, like cards on a desk: the sidebar, the
    Conversation and the Canvas each rounded, with a gap between. The
@@ -384,3 +382,15 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
     color: @harness_muted;
     font-size: 0.9em;
 }
+
+/* How a Conversation stands, in words at the end of its row. */
+.harness-status {
+    font-size: 0.75em;
+    padding: 1px 7px;
+    border-radius: 999px;
+    color: @harness_muted;
+    background-color: alpha(@harness_fg, 0.06);
+}
+.harness-status.working { color: @harness_fg; }
+.harness-status.waiting { color: @harness_on_accent; background-color: @harness_accent; }
+.harness-status.done { color: @harness_accent; background-color: alpha(@harness_accent, 0.14); }

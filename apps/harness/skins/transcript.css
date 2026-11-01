@@ -121,9 +121,7 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 
 .harness-sidebar { background-color: @harness_raised; }
 .harness-sidebar scrolledwindow, .harness-sidebar viewport, .harness-sidebar list { background-color: transparent; }
-.harness-running { color: @harness_accent; }
 .harness-unread { font-weight: 600; }
-.harness-unread-dot { min-width: 6px; min-height: 6px; margin: 0 5px; border-radius: 1px; background-color: @harness_accent; }
 
 /* A step opened: what it asked for, then what came back. */
 .harness-step-detail {
@@ -162,3 +160,15 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
     color: @harness_muted;
     font-size: 0.9em;
 }
+
+/* How a Conversation stands, in words at the end of its row. */
+.harness-status {
+    font-size: 0.75em;
+    padding: 1px 7px;
+    border-radius: 999px;
+    color: @harness_muted;
+    background-color: alpha(@harness_fg, 0.06);
+}
+.harness-status.working { color: @harness_fg; }
+.harness-status.waiting { color: @harness_on_accent; background-color: @harness_accent; }
+.harness-status.done { color: @harness_accent; background-color: alpha(@harness_accent, 0.14); }
