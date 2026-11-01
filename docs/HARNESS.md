@@ -75,6 +75,17 @@ The first slice of ROADMAP P3.5:
   search looked at and found; a web search's query or a fetch's address; any
   other tool's name and inputs in words. Output past twelve lines is folded
   until asked for, and a refused step says how the person answered.
+- **It shows its plan.** For work in several steps the model keeps a task list
+  with opencode's `todowrite` tool, and the answer shows it as it changes:
+  each task marked to do, under way, done or dropped
+  (`osiris/harness/tasks.py`), kept once the answer ends. Each call carries the
+  whole list (`{"todos": [{"content", "status"}]}`, statuses `pending`,
+  `in_progress`, `completed`, `cancelled`), so the latest is what is shown; a
+  `todowrite` call is not listed as a step. The tool is behind opencode's
+  `experimental.todo` switch, off by default in opencode 2.2.4, which the
+  Harness switches on unless the person has switched it themselves; being
+  experimental, it is one to watch when opencode is upgraded. A Conversation
+  reopened from the Engine's history does not bring its task list back.
 - **The Harness log** keeps everything: each question before it is sent, each
   answer with the model that gave it and its tokens, every tool call whether or
   not it asked, every answer to a card, everything auto mode allowed, every change with
@@ -303,6 +314,9 @@ rules to each of two configs that has no `permissions` key
   path; opencode reads this config for every Project below `~/Code`, where each
   Program's changes are commits. Conversations with no Project, which run in
   home, still ask before editing.
+
+The same start switches on opencode's task list (`experimental.todo`) unless
+the config already says either way.
 
 A config that already has `permissions`, even an empty list (opencode's own
 defaults), is the person's and is never changed; nor is one that is not plain
