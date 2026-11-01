@@ -817,3 +817,18 @@ def test_going_back_logs_how_many_questions_it_dropped() -> None:
     subject.handle(Finished("ses_1"))
     subject.go_back("ses_1", "msg_1", questions=3)
     assert entries(files)[-1]["questions"] == 3
+
+
+def test_a_session_the_engine_says_is_busy_does_not_go_back() -> None:
+    """One the Harness did not start may still be answering (opencode 2.2.4
+    answers 409 then); it is told as still answering, not as a failure."""
+    from osiris.platform import HttpError
+
+    subject, engine, _ = harness()
+    subject.resume("ses_9")
+
+    def busy(*_args: object) -> Revert:
+        raise HttpError(409, "Session is busy")
+
+    engine.revert = busy  # type: ignore[method-assign]
+    assert subject.go_back("ses_9", "msg_1") is None
