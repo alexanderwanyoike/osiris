@@ -372,3 +372,57 @@ def test_a_pages_tab_is_named_by_its_title() -> None:
     made[0].on_title("GTK Documentation")
     assert made[0].at == "https://docs.gtk.org"
     assert titles(widget, Kind.BROWSER) == ["GTK Documentation"]
+
+
+def header_of(widget: Canvas, kind: Kind) -> Gtk.Widget:
+    group = widget._groups[kind]
+    return next(
+        w for w in widgets(group) if "harness-group-header" in w.get_css_classes()
+    )
+
+
+def header_tabs(widget: Canvas, kind: Kind) -> list[Gtk.Widget]:
+    return [
+        w
+        for w in widgets(header_of(widget, kind))
+        if "harness-group-tab" in w.get_css_classes()
+    ]
+
+
+def test_a_groups_header_names_each_tab_and_marks_the_one_selected() -> None:
+    widget, _ = canvas()
+    widget.tree.emit("row-activated", tree_row(widget, "README.md"))
+    tabs = header_tabs(widget, Kind.CODE)
+    assert [texts(tab)[0] for tab in tabs] == ["main.py", "README.md"]
+    assert ["selected" in t.get_css_classes() for t in tabs] == [False, True]
+
+
+def test_choosing_a_tab_in_the_header_shows_it() -> None:
+    widget, _ = canvas()
+    widget.tree.emit("row-activated", tree_row(widget, "README.md"))
+    first = header_tabs(widget, Kind.CODE)[0]
+    next(w for w in widgets(first) if isinstance(w, Gtk.Button)).emit("clicked")
+    assert code(widget) == "print('tick')\n"
+
+
+def test_a_groups_header_closes_the_whole_group() -> None:
+    widget, _ = changed()
+    close = next(
+        w
+        for w in widgets(header_of(widget, Kind.CHANGES))
+        if isinstance(w, Gtk.Button) and w.get_tooltip_text() == "Close"
+    )
+    close.emit("clicked")
+    assert [g.kind for g in widget.panels.groups] == [Kind.CODE]
+
+
+def test_the_terminal_groups_header_opens_another_terminal() -> None:
+    widget, made = with_terminals()
+    toolbar_button(widget, "utilities-terminal-symbolic").emit("clicked")
+    another = next(
+        w
+        for w in widgets(header_of(widget, Kind.TERMINAL))
+        if isinstance(w, Gtk.Button) and w.get_tooltip_text() == "New terminal"
+    )
+    another.emit("clicked")
+    assert len(made) == 2
