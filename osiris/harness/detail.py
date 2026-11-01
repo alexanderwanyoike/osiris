@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import difflib
 import json
+import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from enum import Enum
@@ -60,9 +61,27 @@ def _command(step: Step) -> Detail:
     return Detail(Kind.COMMAND, asked, _output(step), note)
 
 
+#: A file a patch names: ``*** Update File: path``, or Add or Delete.
+_PATCHED = re.compile(r"^\*\*\* (?:Update|Add|Delete) File: (.+)$", re.MULTILINE)
+
+
+def _patch(step: Step, patch: str) -> Detail:
+    """A change made with the patch tool: its first file, and its lines."""
+    named = _PATCHED.search(patch)
+    lines = tuple(
+        Line(row[1:], row[0])
+        for row in patch.splitlines()
+        if row[:1] in ("+", "-", " ") and not row.startswith("***")
+    )
+    path = named.group(1) if named else " ".join(step.resources)
+    return Detail(Kind.CHANGE, path, lines)
+
+
 def _change(step: Step) -> Detail:
     """The change as the model asked for it: what was there, what replaced it."""
     inputs = step.input or {}
+    if patch := _text(inputs, "patchText"):
+        return _patch(step, patch)
     old = _text(inputs, "oldString", "old_string").splitlines()
     new = _text(inputs, "newString", "new_string", "content").splitlines()
     rows = difflib.unified_diff(old, new, lineterm="")
