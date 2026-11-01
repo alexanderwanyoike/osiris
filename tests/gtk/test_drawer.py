@@ -516,3 +516,21 @@ def test_an_answers_changes_are_left_to_the_canvas_toolbar() -> None:
         isinstance(w, Gtk.Button) and w.get_icon_name() == "view-dual-symbolic"
         for w in widgets(window)
     )
+
+
+def test_the_canvas_toolbar_sits_in_the_top_bar_and_opens_the_canvas() -> None:
+    """No row of its own: Files, Changes, Terminal and Browser sit at the top
+    bar's right, and any of them opens the Canvas."""
+    from gi.repository import Gtk
+
+    window, _ = drawer()
+    header = next(w for w in widgets(window) if "harness-header" in w.get_css_classes())
+    assert window.canvas.toolbar.get_parent() is header
+    assert window.canvas.get_first_child() is not window.canvas.toolbar
+    files = next(
+        w
+        for w in widgets(window.canvas.toolbar)
+        if isinstance(w, Gtk.Button) and w.get_icon_name() == "folder-symbolic"
+    )
+    files.emit("clicked")
+    assert window.canvas_toggle.get_active()
