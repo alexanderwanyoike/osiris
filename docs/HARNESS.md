@@ -86,6 +86,11 @@ The first slice of ROADMAP P3.5:
   Harness switches on unless the person has switched it themselves; being
   experimental, it is one to watch when opencode is upgraded. A Conversation
   reopened from the Engine's history does not bring its task list back.
+- **It can go back.** Under each question, once nothing is answering, Go back
+  returns to before it: opencode's own snapshots put the Project's files back
+  and the Conversation drops that question and those after it; the question
+  returns to the composer to send again or change. Osiris keeps no copies of
+  its own (ADR 0005, ADR 0012). See [Going back](#going-back).
 - **The Harness log** keeps everything: each question before it is sent, each
   answer with the model that gave it and its tokens, every tool call whether or
   not it asked, every answer to a card, everything auto mode allowed, every change with
@@ -326,6 +331,33 @@ changes.
 Checked against opencode 2.2.4: a saved `always` beats any `ask` and loses to a
 config `deny`; it is listed at `GET /api/permission/saved` and removed with
 `DELETE /api/permission/saved/{id}`, which Thoth does not offer yet.
+
+### Going back
+
+`Harness.go_back` stages opencode's revert to before the question's message
+(`POST /api/session/{id}/revert/stage` with `files: true`), which puts the files
+back at once and names each with its diff, then keeps it
+(`POST .../revert/commit`), which drops the later questions from the
+Conversation. Checked against opencode 2.2.4:
+
+- A snapshot covers the session's folder inside a git worktree: tracked files
+  and untracked ones up to 2 MiB. Ignored files, files outside the folder and
+  git metadata are not covered. What was staged in git is left as it was.
+- Outside a git repository opencode restores no files and stages no snapshot.
+  Thoth then cancels the revert (`DELETE .../revert`) and says the files cannot
+  be put back, rather than going back with the files still changed
+  (`could-not-go-back` in the log).
+- opencode refuses while the session runs, so Go back is offered only once
+  nothing is answering.
+- Snapshots live in opencode's own object store under its data folder; it
+  documents no rule for pruning them (opencode.ai/v2/docs/snapshots), and
+  `"snapshots": false` in its config stops new ones.
+- Osiris's own changes, a Theme or a Skin, are not in the snapshot; each keeps
+  its own Undo.
+
+Each go back is logged as `went-back` with the message, the files put back and
+how many questions were dropped, so a reopened Conversation matches the log's
+changes to the answers still there.
 
 ### Unread and notifications
 
