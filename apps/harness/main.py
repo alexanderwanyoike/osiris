@@ -1093,13 +1093,18 @@ class Application(Adw.Application):
         dropped = len(turns) - place
 
         def work():
-            revert = harness.go_back(session, turn.message, dropped)
+            try:
+                revert = harness.go_back(session, turn.message, dropped)
+            except HttpError as error:
+                return error, None
             kept = revert is not None and revert.restorable
             return revert, harness.resume(session) if kept else None
 
         def went(result) -> None:
             revert, past = result
-            if revert is None:
+            if isinstance(revert, HttpError):
+                turn.note = f"Osiris could not go back: {revert}"
+            elif revert is None:
                 turn.note = "Osiris is still answering; go back once it is done."
             elif past is None:
                 turn.note = ("Nothing went back: this folder is not a git "
