@@ -180,8 +180,9 @@ class ConnectorsPage(Gtk.Box):
             label = self._said[connector.name]
             label.set_text(words)
             label.set_tooltip_text(words)
-            # Room for a short state whole; a long one is cut, never below that.
-            label.set_width_chars(min(len(words), self.SHORT))
+            # A short state is never cut; a long one is, whole on hover.
+            label.set_ellipsize(Pango.EllipsizeMode.END if len(words) > self.SHORT
+                                else Pango.EllipsizeMode.NONE)
             label.set_css_classes(["harness-connector-state", f"harness-{tone}"])
         if unsettled and self._polls < self.POLLS:
             self._later(self.POLL_SECONDS, self._ask_states)
