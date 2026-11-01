@@ -25,6 +25,7 @@ from osiris.harness.picker import (  # noqa: E402
 LISTED = 200
 #: The card's tallest, about ten rows; the rest scroll.
 HEIGHT = 300
+ROWS = 10
 #: Space between the card and the message box under it.
 GAP = 8
 ICONS = {
@@ -150,6 +151,10 @@ class Picker:
         self.list.remove_all()
         for entry in entries[:LISTED]:
             self.list.append(_row(entry))
+        # A scrollbar has a least length that would hold a short card open
+        # below its rows, so there is one only when there is more to see.
+        self.card.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC
+                             if len(entries) > ROWS else Gtk.PolicyType.NEVER)
         self.list.select_row(self.list.get_row_at_index(0))
         # The anchor's width, whatever is listed, so the card holds still
         # while typing narrows it; descriptions are cut to fit. Its bounds,
