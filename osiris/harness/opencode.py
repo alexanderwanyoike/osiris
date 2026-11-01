@@ -155,6 +155,16 @@ class OpencodeEngine:
             restorable="snapshot" in staged,
         )
 
+    def keep_revert(self, session: str) -> None:
+        self._post(f"/api/session/{session}/revert/commit")
+
+    def cancel_revert(self, session: str) -> None:
+        self._http.request(
+            "DELETE",
+            self._service.url + f"/api/session/{session}/revert",
+            headers=self._service.headers(),
+        )
+
     def stop(self, session: str) -> None:
         self._post(f"/api/session/{session}/interrupt")
 

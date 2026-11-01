@@ -54,6 +54,8 @@ class FakeEngine:
     replies: list[tuple[str, str, Reply, str]] = field(default_factory=list)
     stopped: list[str] = field(default_factory=list)
     reverted: list[tuple[str, str]] = field(default_factory=list)
+    reverts_kept: list[str] = field(default_factory=list)
+    reverts_cancelled: list[str] = field(default_factory=list)
     revert_gives: Revert = field(default_factory=lambda: Revert((), restorable=True))
     switched: list[tuple[str, ModelRef]] = field(default_factory=list)
     renamed: list[tuple[str, str]] = field(default_factory=list)
@@ -89,6 +91,12 @@ class FakeEngine:
     def revert(self, session: str, message: str) -> Revert:
         self.reverted.append((session, message))
         return self.revert_gives
+
+    def keep_revert(self, session: str) -> None:
+        self.reverts_kept.append(session)
+
+    def cancel_revert(self, session: str) -> None:
+        self.reverts_cancelled.append(session)
 
     def switch_model(self, session: str, model: ModelRef) -> None:
         self.switched.append((session, model))
