@@ -350,8 +350,7 @@ class TurnView(Gtk.Box):
                  edit: Callable[[Turn], None] | None = None,
                  try_again: Callable[[Turn], None] | None = None,
                  may_go_back: Callable[[Turn], bool] = lambda _turn: False,
-                 may_try_again: Callable[[Turn], bool] = lambda _turn: False,
-                 show_changes: Callable[[Turn], None] | None = None):
+                 may_try_again: Callable[[Turn], bool] = lambda _turn: False):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-turn")
         self._on_undo = on_undo
@@ -362,7 +361,6 @@ class TurnView(Gtk.Box):
         self._try_again = try_again
         self._may_go_back = may_go_back
         self._may_try_again = may_try_again
-        self._show_changes = show_changes
         question = Gtk.Label(label=turn.question, xalign=0, wrap=True,
                              wrap_mode=Pango.WrapMode.WORD_CHAR, selectable=True,
                              halign=Gtk.Align.END)
@@ -444,15 +442,6 @@ class TurnView(Gtk.Box):
             again.add_css_class("harness-quiet")
             again.connect("clicked", lambda _b: self._try_again and self._try_again(turn))
             line.append(again)
-        if self._show_changes is not None and turn.commits:
-            changes = Gtk.Button(icon_name="view-dual-symbolic",
-                                 tooltip_text="Show what this answer changed, file "
-                                 "by file, on the Canvas")
-            changes.add_css_class("flat")
-            changes.add_css_class("harness-quiet")
-            changes.connect("clicked",
-                            lambda _b: self._show_changes and self._show_changes(turn))
-            line.append(changes)
         return line
 
     def _extras(self, turn: Turn) -> None:
