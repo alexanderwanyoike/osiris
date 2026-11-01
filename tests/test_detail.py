@@ -77,3 +77,16 @@ def test_a_web_search_shows_its_query_and_what_came_back() -> None:
 def test_a_page_fetch_shows_its_address() -> None:
     step = Step("webfetch", ("docs.gtk.org",), input={"url": "https://docs.gtk.org"})
     assert detail(step).asked == "https://docs.gtk.org"
+
+
+def test_an_osiris_tool_shows_its_name_inputs_and_result_in_words() -> None:
+    step = Step(
+        "osiris_apply_theme",
+        ("*",),
+        input={"name": "calm-night", "dark": True},
+        output="Applied Calm Night.",
+    )
+    shown = detail(step)
+    assert (shown.kind, shown.asked) == (Kind.TOOL, "apply theme")
+    assert shown.inputs == (("name", "calm-night"), ("dark", "yes"))
+    assert [line.text for line in shown.lines] == ["Applied Calm Night."]
