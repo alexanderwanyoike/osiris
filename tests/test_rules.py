@@ -65,3 +65,11 @@ def test_a_config_that_is_not_plain_json_is_left_alone() -> None:
     files.write(ENGINE, commented)
     write_starting_rules(files, HOME)
     assert files.read(ENGINE) == commented
+
+
+def test_a_person_who_keeps_their_config_as_jsonc_is_left_alone() -> None:
+    """A second file beside it would add rules they never see."""
+    files = FakeFileSystem()
+    files.write(ENGINE.with_suffix(".jsonc"), '{"model": "openai/gpt-5.5"}')
+    write_starting_rules(files, HOME)
+    assert not files.exists(ENGINE)
