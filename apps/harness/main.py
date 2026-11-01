@@ -49,6 +49,7 @@ from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
 from browser import Page  # noqa: E402
 from canvas import Canvas, open_in_code  # noqa: E402
+from connectors_page import ConnectorsPage  # noqa: E402
 from composer_picker import Picker  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
 from render import TurnView  # noqa: E402
@@ -463,10 +464,21 @@ class Drawer(Gtk.ApplicationWindow):
             auto_mode_on=self.app.in_auto_mode,
             on_auto_mode=self.app.set_auto_mode,
         )
+        connectors = ConnectorsPage(
+            read=self.app.read_connectors, save=self.app.save_connector,
+            remove=self.app.remove_connector, states=self.app.connector_states,
+            background=self.app.background)
+        tabs = Adw.ViewStack(vhomogeneous=False)
+        tabs.add_titled_with_icon(page, "providers", "Models",
+                                  "preferences-system-symbolic")
+        tabs.add_titled_with_icon(connectors, "connectors", "Connectors",
+                                  "network-server-symbolic")
+        switcher = Adw.InlineViewSwitcher(stack=tabs, halign=Gtk.Align.CENTER)
         holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
                          margin_start=16, margin_end=16, margin_top=8)
         holder.append(back)
-        holder.append(page)
+        holder.append(switcher)
+        holder.append(tabs)
         self.pages.add_named(Gtk.ScrolledWindow(child=holder, vexpand=True), "providers")
         self.pages.set_visible_child_name("providers")
 

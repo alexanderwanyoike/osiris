@@ -37,10 +37,10 @@ class ConnectorsPage(Gtk.Box):
         self._list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
         self._list.add_css_class("boxed-list")
         self.append(self._list)
-        self.add = Gtk.Button(
-            child=Adw.ButtonContent(icon_name="list-add-symbolic",
-                                    label="Add a connector"),
-            halign=Gtk.Align.START)
+        face = Gtk.Box(spacing=8)
+        face.append(Gtk.Image(icon_name="list-add-symbolic"))
+        face.append(Gtk.Label(label="Add a connector"))
+        self.add = Gtk.Button(child=face, halign=Gtk.Align.START)
         self.add.add_css_class("flat")
         self.add.connect("clicked", lambda _b: self._open_form())
         self.append(self.add)
