@@ -160,6 +160,7 @@ class Drawer(Gtk.ApplicationWindow):
                                               tooltip_text="Canvas", sensitive=False)
         self.canvas_toggle.add_css_class("flat")
         self.canvas_toggle.connect("toggled", self._canvas_toggled)
+        self.canvas_toggle.connect("notify::visible", self._show_canvas_if_toggled)
         header.append(self.canvas_toggle)
         header.append(self.expand_button)
         header.append(providers_button)
@@ -266,7 +267,6 @@ class Drawer(Gtk.ApplicationWindow):
         compact = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(COMPACT_BELOW))
         for breakpoint in (no_canvas, compact):
             breakpoint.add_setter(self.canvas_toggle, "visible", False)
-            breakpoint.add_setter(self.canvas, "visible", False)
         compact.add_setter(self.split, "collapsed", True)
         compact.add_setter(self.sidebar_toggle, "active", False)
         layout.add_breakpoint(no_canvas)
@@ -467,9 +467,14 @@ class Drawer(Gtk.ApplicationWindow):
 
     def _canvas_toggled(self, toggle) -> None:
         # As in the prototype: the Canvas takes the sidebar's room.
-        shown = toggle.get_active()
-        self.canvas.set_visible(shown)
-        self.sidebar_toggle.set_active(not shown)
+        self._show_canvas_if_toggled()
+        self.sidebar_toggle.set_active(not toggle.get_active())
+
+    def _show_canvas_if_toggled(self, *_args) -> None:
+        # A breakpoint hides only the toggle: one setting the Canvas's own
+        # visibility would restore, on widening, what it was before narrowing.
+        toggle = self.canvas_toggle
+        self.canvas.set_visible(toggle.get_visible() and toggle.get_active())
 
     def show_history(self, projects, loose) -> None:
         self.sidebar.show_history(projects, loose, getattr(self.app, "session", None),
