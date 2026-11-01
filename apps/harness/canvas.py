@@ -81,7 +81,6 @@ class Canvas(Gtk.Box):
         self.toolbar.append(globe)
         self._tiles = Gtk.Box(vexpand=True, hexpand=True)
         self._paneds: list[Gtk.Paned] = []
-        self.append(self.toolbar)
         self.append(self._tiles)
 
     def show(self, programs: list[tuple[Program, list[Path]]]) -> None:

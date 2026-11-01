@@ -162,7 +162,7 @@ class Drawer(Gtk.ApplicationWindow):
                                         tooltip_text="Expand")
         self.expand_button.add_css_class("flat")
         self.expand_button.connect("clicked", self._toggle_expanded)
-        header = Gtk.Box(spacing=8)
+        header = self._header = Gtk.Box(spacing=8)
         header.add_css_class("harness-header")
         header.append(self.sidebar_toggle)
         header.append(new)
@@ -252,6 +252,15 @@ class Drawer(Gtk.ApplicationWindow):
                              page=lambda at, on_title: Page(at, on_title),
                              scheme=app.look.scheme if app.look is not None else None)
         self.canvas.set_visible(False)
+        # The Canvas's toolbar sits at the top bar's right, shown with the
+        # Canvas toggle; any of its buttons opens the Canvas.
+        self._header.insert_child_after(self.canvas.toolbar, self.title)
+        self.canvas_toggle.bind_property("visible", self.canvas.toolbar, "visible",
+                                         GObject.BindingFlags.SYNC_CREATE)
+        button = self.canvas.toolbar.get_first_child()
+        while button is not None:
+            button.connect("clicked", lambda _b: self._open_canvas())
+            button = button.get_next_sibling()
         body = Gtk.Paned(start_child=chat, end_child=self.canvas,
                          shrink_start_child=False, resize_end_child=True,
                          wide_handle=False, position=480)
@@ -481,6 +490,10 @@ class Drawer(Gtk.ApplicationWindow):
             self.canvas_toggle.set_active(True)
         elif not programs:
             self.canvas_toggle.set_active(False)
+
+    def _open_canvas(self) -> None:
+        self.canvas_toggle.set_sensitive(True)
+        self.canvas_toggle.set_active(True)
 
     def _canvas_toggled(self, toggle) -> None:
         # As in the prototype: the Canvas takes the sidebar's room.
