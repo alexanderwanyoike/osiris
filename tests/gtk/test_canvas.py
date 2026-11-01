@@ -451,3 +451,33 @@ def test_a_panel_clips_its_contents_to_its_rounded_corners() -> None:
         w for w in widgets(widget) if "harness-canvas-group" in w.get_css_classes()
     )
     assert group.get_overflow() is Gtk.Overflow.HIDDEN
+
+
+def test_stacked_panels_share_their_column_evenly() -> None:
+    import time
+
+    from gi.repository import GLib
+
+    made: list[Gtk.Widget] = []
+    widget = Canvas(
+        read=lambda path: SOURCES[path.name],
+        open_in_code=lambda _f, _p: None,
+        terminal=lambda folder: made.append(FakeTerminal(folder)) or made[-1],
+        page=lambda at, on_title: made.append(FakePage(at, on_title)) or made[-1],
+    )
+    widget.show([(program("pomodoro", "Pomodoro"), [Path("main.py")])])
+    widget.show_changes("tidy", (), on_comment=lambda *_: None)
+    widget.open_terminal()
+    widget.open_page("")
+    window = Gtk.Window(child=widget, default_width=1600, default_height=900)
+    window.present()
+    context = GLib.MainContext.default()
+    deadline = time.monotonic() + 3
+    while time.monotonic() < deadline:
+        context.iteration(False)
+    heights = [
+        widget._groups[kind].get_height()
+        for kind in (Kind.CHANGES, Kind.TERMINAL, Kind.BROWSER)
+    ]
+    window.destroy()
+    assert min(heights) > 0.8 * max(heights)
