@@ -11,6 +11,8 @@ from look import Look
 
 from osiris.apps.user_css import UserCss
 
+from .conftest import widgets
+
 
 def test_the_drawers_look_outranks_the_user_sheet(tmp_path: Path) -> None:
     """A Skin's sheet redefining libadwaita's window colour leaves the
@@ -72,3 +74,31 @@ def test_a_panels_tabs_are_slim_in_every_look(tmp_path: Path) -> None:
         height = tab.get_height()
         window.destroy()
         assert 0 < height <= 20, (look, height)
+
+
+def test_the_pickers_chosen_entry_is_lit_with_the_accent_in_every_look(
+    tmp_path: Path,
+) -> None:
+    from composer_picker import Picker
+    from gi.repository import Gdk
+
+    from osiris.harness.picker import Entry
+
+    readme = Entry("file", "/home/tester/Code/timer/README.md", "README.md", "")
+    for skin in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(skin)
+        look = Look(tmp_path, lambda: None)
+        entry = Gtk.TextView()
+        window = Gtk.Window(child=entry)
+        window.present()
+        picker = Picker(entry, lambda _sign: [readme])
+        entry.get_buffer().set_text("@")
+        row = picker.list.get_selected_row()
+        label = next(
+            w for w in widgets(row) if "harness-picker-label" in w.get_css_classes()
+        )
+        accent = Gdk.RGBA()
+        accent.parse(look.theme["colors"]["accent"])
+        window.destroy()
+        assert label.get_color().equal(accent), skin
