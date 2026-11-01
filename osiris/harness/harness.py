@@ -61,7 +61,8 @@ _SUDO = re.compile(r"\bsudo\b")
 
 @dataclass(frozen=True)
 class Asking:
-    """An action outside the tier, held until the person answers its card."""
+    """An action the Engine's rules ask about, held until the person answers its
+    card."""
 
     session: str
     request: str
