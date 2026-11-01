@@ -11,7 +11,12 @@ gi.require_version("Adw", "1")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Adw, Gtk  # noqa: E402
 
-from osiris.harness.connectors import Connector, State, said_of  # noqa: E402
+from osiris.harness.connectors import (  # noqa: E402
+    Connector,
+    State,
+    connector_of,
+    said_of,
+)
 
 
 class ConnectorsPage(Gtk.Box):
@@ -27,6 +32,45 @@ class ConnectorsPage(Gtk.Box):
         self._list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
         self._list.add_css_class("boxed-list")
         self.append(self._list)
+        self.add = Gtk.Button(
+            child=Adw.ButtonContent(icon_name="list-add-symbolic",
+                                    label="Add a connector"),
+            halign=Gtk.Align.START)
+        self.add.add_css_class("flat")
+        self.add.connect("clicked", lambda _b: self._open_form())
+        self.append(self.add)
+        self.append(self._form())
+        self.reload()
+
+    def _form(self) -> Gtk.Widget:
+        self.name = Adw.EntryRow(title="Name")
+        self.reach = Adw.EntryRow(title="Command, or a web address")
+        fields = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        fields.add_css_class("boxed-list")
+        fields.append(self.name)
+        fields.append(self.reach)
+        self.done = Gtk.Button(label="Save", halign=Gtk.Align.END)
+        self.done.add_css_class("suggested-action")
+        self.done.connect("clicked", lambda _b: self._finish())
+        self.form = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
+                            visible=False)
+        self.form.add_css_class("harness-connector-form")
+        self.form.append(fields)
+        self.form.append(self.done)
+        return self.form
+
+    def _open_form(self) -> None:
+        self.name.set_text("")
+        self.reach.set_text("")
+        self.form.set_visible(True)
+        self.add.set_visible(False)
+
+    def _finish(self) -> None:
+        connector = connector_of(self.name.get_text(), self.reach.get_text())
+        if connector is None or not self._save(connector):
+            return
+        self.form.set_visible(False)
+        self.add.set_visible(True)
         self.reload()
 
     def reload(self) -> None:
