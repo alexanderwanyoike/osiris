@@ -239,3 +239,13 @@ def test_each_file_and_folder_shows_an_icon_for_its_kind() -> None:
         w for w in widgets(tree_row(widget, "main.py")) if isinstance(w, Gtk.Image)
     ]
     assert python.get_gicon() is not None
+
+
+def test_a_files_header_names_its_program_and_path_beside_its_icon() -> None:
+    widget = nested()
+    widget.tree.emit("row-activated", tree_row(widget, "src"))
+    widget.tree.emit("row-activated", tree_row(widget, "clock.py"))
+    page = widget.views[Kind.CODE].get_selected_page().get_child()
+    header = next(w for w in widgets(page) if "harness-path" in w.get_css_classes())
+    assert "Timer › src › clock.py" in texts(header)
+    assert any(isinstance(w, Gtk.Image) for w in widgets(header))
