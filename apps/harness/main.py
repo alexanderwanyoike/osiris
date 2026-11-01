@@ -198,9 +198,7 @@ class Drawer(Gtk.ApplicationWindow):
         # Expanded to the whole screen, lines stay a readable length.
         self.scroller = Gtk.ScrolledWindow(
             child=Adw.Clamp(maximum_size=READABLE, child=self.turns), vexpand=True,
-            hscrollbar_policy=Gtk.PolicyType.NEVER,
-            # It scrolls; the rail at its edge shows where, in its place.
-            vscrollbar_policy=Gtk.PolicyType.EXTERNAL)
+            hscrollbar_policy=Gtk.PolicyType.NEVER)
 
         self.entry = Gtk.TextView(wrap_mode=Gtk.WrapMode.WORD_CHAR, accepts_tab=False,
                                   hexpand=True, top_margin=6, bottom_margin=6)
@@ -267,7 +265,8 @@ class Drawer(Gtk.ApplicationWindow):
         self.rail.set_halign(Gtk.Align.END)
         self.rail.set_margin_top(12)
         self.rail.set_margin_bottom(12)
-        self.rail.set_margin_end(2)
+        # Clear of the scrollbar, which shows at the very edge while scrolling.
+        self.rail.set_margin_end(10)
         railed = Gtk.Overlay(child=self.scroller, vexpand=True)
         railed.add_overlay(self.rail)
         chat.append(railed)
@@ -619,16 +618,13 @@ class Drawer(Gtk.ApplicationWindow):
         turns = self.app.conversation.turns
         view = self.scroller.get_vadjustment()
         total, top, height = view.get_upper(), view.get_value(), view.get_page_size()
-        # Shown where there is a length to show: questions to tell apart, or
-        # more than fits.
-        shown = (len(self.views) == len(turns) > 0
-                 and (len(turns) > 1 or total > height))
+        # Shown where there is a length to find one's way in: questions to tell
+        # apart, more than fits on one screen.
+        shown = len(self.views) == len(turns) > 1 and total > height
         self.rail.set_visible(shown)
         if not shown:
             return
         self.rail.show_ticks(ticks(turns, self._tops(), total, top, height))
-        if total > 0:
-            self.rail.show_view(top / total, min(height / total, 1.0))
 
     def rail_jump(self, index: int) -> None:
         self.scroller.get_vadjustment().set_value(max(self._tops()[index] - 12, 0))
