@@ -30,6 +30,8 @@ class ConnectorsPage(Gtk.Box):
         self._read, self._save, self._remove = read, save, remove
         self._states, self._background = states, background
         self._connectors: list[Connector] = []
+        #: The connector the form is changing, if it is not adding one.
+        self._editing: Connector | None = None
         self._said: dict[str, Gtk.Label] = {}
         self._rows: dict[str, Adw.ActionRow] = {}
         self._list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
@@ -70,6 +72,7 @@ class ConnectorsPage(Gtk.Box):
         self.problem.set_visible(bool(problem))
 
     def _open_form(self, connector: Connector | None = None) -> None:
+        self._editing = connector
         self.name.set_text(connector.name if connector else "")
         self.reach.set_text(_reach(connector) if connector else "")
         self.form.set_visible(True)
@@ -86,6 +89,8 @@ class ConnectorsPage(Gtk.Box):
                       "it for you to edit by hand.")
             return
         self._say("")
+        if self._editing is not None and self._editing.name != connector.name:
+            self._remove(self._editing.name)
         self.form.set_visible(False)
         self.add.set_visible(True)
         self.reload()
