@@ -27,6 +27,7 @@ from osiris.programs.manifest import (
     dump,
     parse,
 )
+from osiris.programs.standards import STANDARDS, STANDARDS_FILE
 
 CODE_DIR = "Code"
 INSTALL_DIR = ".local/share/osiris/programs"
@@ -59,8 +60,8 @@ carry it on.
 
 - How it builds and runs is in `{manifest}` (`build` and `run`, each a list of
   words run in this folder). Keep them true when you change how it is built.
-- Every change is one atomic commit: it does exactly one thing, and a refactor
-  never shares a commit with a change in behaviour.
+- How code is written here is in `{standards}`. Follow it, and change
+  it when the person asks for something it does not say.
 - Windows use GTK 4 and libadwaita, so the Program follows the Osiris Theme.
   Never write colours: style only with libadwaita's named colours
   (`@accent_bg_color`, `@window_bg_color`, `@card_bg_color` and the rest).
@@ -194,8 +195,8 @@ class Programs:
         terminal: bool = False,
         icon_svg: str,
     ) -> Manifest:
-        """Start a Program: its folder, manifest, README and AGENTS.md, and a
-        first commit."""
+        """Start a Program: its folder, manifest, README, coding standards and
+        AGENTS.md, and a first commit."""
         name = slug(label)
         source = self.source(name)
         if self._files.exists(source):
@@ -223,12 +224,14 @@ class Programs:
         self._files.write(source / MANIFEST_FILE, dump(manifest))
         self._files.write(source / ICON_FILE, icon_svg)
         self._files.write(source / "README.md", f"# {label}\n\n{description}\n")
+        self._files.write(source / STANDARDS_FILE, STANDARDS)
         self._files.write(
             source / "AGENTS.md",
             AGENTS.format(
                 label=label,
                 description=description,
                 manifest=MANIFEST_FILE,
+                standards=STANDARDS_FILE,
                 follow_theme=FOLLOW_THEME,
             ),
         )

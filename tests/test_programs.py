@@ -76,8 +76,29 @@ class TestCreating:
             "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
         )
         agents = files.read(SOURCE / "AGENTS.md")
-        assert "atomic commit" in agents
         assert MANIFEST_FILE in agents
+        assert "CODING_STANDARDS.md" in agents
+
+    def test_its_commit_rule_lives_only_in_the_coding_standards(self) -> None:
+        """One rule, one place: the person changes it there and nowhere else."""
+        subject, files, _ = programs()
+        subject.create(
+            "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+        )
+        assert "commit" not in files.read(SOURCE / "AGENTS.md")
+        assert "does one thing" in files.read(SOURCE / "CODING_STANDARDS.md")
+
+    def test_it_starts_with_coding_standards_the_person_can_change(self) -> None:
+        """What a reviewer judges the Program against: what no linter checks."""
+        subject, files, _ = programs()
+        subject.create(
+            "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+        )
+        standards = files.read(SOURCE / "CODING_STANDARDS.md")
+        for heading in ("## Style", "## Testing", "## Architecture", "## Commits"):
+            assert heading in standards
+        assert "Design patterns" in standards
+        assert "Domain-driven design" in standards
 
     def test_a_program_names_its_maker_as_the_person_knows_it(self) -> None:
         subject, files, _ = programs()
