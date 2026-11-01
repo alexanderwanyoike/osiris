@@ -239,7 +239,9 @@ def test_a_refusal_says_which_rule_refused_it() -> None:
     subject, _, _ = harness()
     subject.ask("tidy up")
     command = subject.handle(ToolRequested("ses_1", "per_1", "bash", ("ls",)))
-    outside = subject.handle(ToolRequested("ses_1", "per_2", "read", ("/etc/hostname",)))
+    outside = subject.handle(
+        ToolRequested("ses_1", "per_2", "read", ("/etc/hostname",))
+    )
     assert isinstance(command, Refused)
     assert isinstance(outside, Refused)
     assert command.reason == ONLY_WITH_EVERYTHING
