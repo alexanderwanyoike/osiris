@@ -6,8 +6,9 @@ from collections.abc import Callable
 import gi
 
 gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
 gi.require_version("WebKit", "6.0")
-from gi.repository import Gtk, WebKit  # noqa: E402
+from gi.repository import Adw, Gtk, WebKit  # noqa: E402
 
 from osiris.harness.web import address  # noqa: E402
 
@@ -30,8 +31,17 @@ class Page(Gtk.Box):
             button.connect("clicked", lambda _b, a=act: a())
             bar.append(button)
         bar.append(self._entry)
+        start = Adw.StatusPage(icon_name="web-browser-symbolic",
+                               title="Search or enter an address",
+                               description="Pages Osiris reads while it answers open "
+                               "here too.")
+        start.add_css_class("compact")
+        self.stack = Gtk.Stack(vexpand=True,
+                               transition_type=Gtk.StackTransitionType.CROSSFADE)
+        self.stack.add_named(start, "start")
+        self.stack.add_named(self.view, "web")
         self.append(bar)
-        self.append(self.view)
+        self.append(self.stack)
         self.view.connect("notify::title", lambda v, _p: on_title(v.get_title() or ""))
         self.view.connect("notify::uri", lambda v, _p: self._entry.set_text(
             v.get_uri() or ""))
@@ -39,4 +49,5 @@ class Page(Gtk.Box):
             self.load(at)
 
     def load(self, at: str) -> None:
+        self.stack.set_visible_child_name("web")
         self.view.load_uri(at)
