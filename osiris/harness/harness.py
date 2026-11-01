@@ -19,6 +19,7 @@ from osiris.harness.engine import (
     Past,
     PastTurn,
     Reply,
+    Revert,
     Stopped,
     ToolCalled,
     ToolRequested,
@@ -208,6 +209,18 @@ class Harness:
 
     def move(self, session: str, folder: Path) -> None:
         self._engine.move(session, folder)
+
+    def go_back(self, session: str, message: str) -> Revert:
+        """Go back to before ``message``: its files and the Conversation."""
+        revert = self._engine.revert(session, message)
+        self._engine.keep_revert(session)
+        self._log.write(
+            "went-back",
+            session=session,
+            message=message,
+            files=[change.path for change in revert.files],
+        )
+        return revert
 
     def use_model(self, model: ModelRef) -> None:
         """Answer with this model from now on, in this conversation too."""
