@@ -234,7 +234,8 @@ class Drawer(Gtk.ApplicationWindow):
         composer.add_css_class("harness-composer")
         composer.append(typed)
         composer.append(controls)
-        self.picker = Picker(self.entry, self.app.offered, anchor=composer)
+        self.picker = Picker(self.entry, self.app.offered, anchor=composer,
+                             on_open=lambda _sign: self.app.refresh_offers())
         self._restyle_tokens()
 
         self.footer = Gtk.Label(xalign=0, wrap=True)
