@@ -55,3 +55,11 @@ def test_a_server_by_command_is_saved_as_local_without_a_url() -> None:
         "type": "local",
         "command": ["npx", "wiki"],
     }
+
+
+def test_removing_a_connector_leaves_the_others() -> None:
+    from osiris.harness.connectors import removed
+
+    assert connectors(removed(CONFIG, "wiki")) == [
+        Connector("files", command=("npx", "files"), on=False)
+    ]
