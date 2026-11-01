@@ -35,11 +35,15 @@ class ApprovalCard(Gtk.Box):
 
         buttons = Gtk.Box(spacing=6)
         for label, answer in (("Allow once", Answer.ONCE),
-                              ("Allow for this Conversation", Answer.CONVERSATION),
+                              ("Always allow here", Answer.ALWAYS),
                               ("Deny", Answer.DENY)):
             button = Gtk.Button(label=label)
             if answer is Answer.ONCE:
                 button.add_css_class("suggested-action")
+            if answer is Answer.ALWAYS:
+                button.set_tooltip_text(
+                    "Allow this and anything like it in this Project, from now "
+                    "on, until you remove it from your rules")
             button.connect("clicked", lambda _b, a=answer: self._on_answer(a, ""))
             buttons.append(button)
         self.append(buttons)

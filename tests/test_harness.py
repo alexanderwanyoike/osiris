@@ -15,10 +15,13 @@ from osiris.harness.engine import (
     Answered,
     Event,
     Failed,
+    FileChange,
     Finished,
     ModelRef,
     Past,
     PastTurn,
+    Reply,
+    Revert,
     Stopped,
     Text,
     Tokens,
@@ -35,7 +38,6 @@ from osiris.harness.harness import (
     Refused,
 )
 from osiris.harness.log import LOG_FILE, HarnessLog
-from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem
 
 HOME = Path("/home/tester")
@@ -50,8 +52,13 @@ class FakeEngine:
     directories: list[Path | None] = field(default_factory=list)
     sent: list[tuple[str, str]] = field(default_factory=list)
     withdrawn: list[tuple[str, str]] = field(default_factory=list)
-    replies: list[tuple[str, str, bool, str]] = field(default_factory=list)
+    replies: list[tuple[str, str, Reply, str]] = field(default_factory=list)
     stopped: list[str] = field(default_factory=list)
+    cut: list[str] = field(default_factory=list)
+    reverted: list[tuple[str, str]] = field(default_factory=list)
+    reverts_kept: list[str] = field(default_factory=list)
+    reverts_cancelled: list[str] = field(default_factory=list)
+    revert_gives: Revert = field(default_factory=lambda: Revert((), restorable=True))
     switched: list[tuple[str, ModelRef]] = field(default_factory=list)
     renamed: list[tuple[str, str]] = field(default_factory=list)
     moved: list[tuple[str, Path]] = field(default_factory=list)
@@ -77,11 +84,24 @@ class FakeEngine:
     def events(self) -> Iterator[Event]:
         return iter(())
 
-    def reply(self, session: str, request: str, *, allow: bool, message: str) -> None:
-        self.replies.append((session, request, allow, message))
+    def reply(self, session: str, request: str, answer: Reply, message: str) -> None:
+        self.replies.append((session, request, answer, message))
 
     def stop(self, session: str) -> None:
         self.stopped.append(session)
+
+    def cut_in(self, session: str) -> None:
+        self.cut.append(session)
+
+    def revert(self, session: str, message: str) -> Revert:
+        self.reverted.append((session, message))
+        return self.revert_gives
+
+    def keep_revert(self, session: str) -> None:
+        self.reverts_kept.append(session)
+
+    def cancel_revert(self, session: str) -> None:
+        self.reverts_cancelled.append(session)
 
     def switch_model(self, session: str, model: ModelRef) -> None:
         self.switched.append((session, model))
@@ -116,7 +136,6 @@ POMODORO = HOME / "Code" / "pomodoro"
 
 def harness(
     model: ModelRef | None = GPT,
-    tiers: dict[str, Tier] | None = None,
     allowed: list[bool] | None = None,
 ) -> tuple[Harness, FakeEngine, FakeFileSystem]:
     engine, files = FakeEngine(), FakeFileSystem()
@@ -125,11 +144,9 @@ def harness(
         engine,
         log,
         model,
-        tiers=tiers or {},
         directory=HOME,
-        may_touch=lambda path: path == POMODORO or POMODORO in path.parents,
         tools=("osiris", ["python3", "tool_server.py"]),
-        allow_everything=lambda: bool(allowed and allowed[0]),
+        auto_mode=lambda: bool(allowed and allowed[0]),
     )
     return subject, engine, files
 
@@ -206,39 +223,24 @@ def test_an_action_without_a_tier_is_held_and_logged_as_asked() -> None:
     assert entry["resources"] == ["ls /etc"]
 
 
-@pytest.mark.parametrize("tier", [Tier.LOOK, Tier.UNDOABLE])
-def test_an_action_with_a_tier_is_allowed_and_logged_with_it(tier: Tier) -> None:
-    subject, engine, files = harness(tiers={"osiris_apply_theme": tier})
+@pytest.mark.parametrize(
+    ("action", "resources"),
+    [
+        ("osiris_apply_theme", ("*",)),
+        ("read", ("Code/pomodoro/main.py",)),
+        ("edit", ("Code/pomodoro/main.py",)),
+    ],
+)
+def test_whatever_the_engine_asks_about_waits_for_the_person(
+    action: str, resources: tuple[str, ...]
+) -> None:
+    """The Engine's rules decided it should ask, so no tier of the Harness's
+    answers in the person's place (ADR 0020)."""
+    subject, engine, _ = harness()
     subject.ask("make it calm")
-    subject.handle(ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",)))
-    assert engine.replies == [("ses_1", "per_1", True, "")]
-    entry = entries(files)[-1]
-    assert entry["kind"] == "allowed"
-    assert entry["action"] == "osiris_apply_theme"
-    assert entry["tier"] == tier.value
-
-
-def test_the_decision_is_passed_on_in_place_of_the_request() -> None:
-    subject, _, _ = harness(tiers={"osiris_apply_theme": Tier.UNDOABLE})
-    subject.ask("make it calm")
-    allowed = subject.handle(
-        ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",))
-    )
-    asked = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls",)))
-    assert allowed == Allowed("ses_1", "osiris_apply_theme", Tier.UNDOABLE, ("*",))
-    assert asked == Asking("ses_1", "per_2", "bash", ("ls",))
-
-
-def test_a_decision_names_the_tool_call_it_was_for() -> None:
-    subject, _, _ = harness(tiers={"osiris_apply_theme": Tier.UNDOABLE})
-    subject.ask("make it calm")
-    allowed = subject.handle(
-        ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",), "call_1")
-    )
-    asked = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls",), "call_2"))
-    assert isinstance(allowed, Allowed)
-    assert isinstance(asked, Asking)
-    assert (allowed.call, asked.call) == ("call_1", "call_2")
+    decision = subject.handle(ToolRequested("ses_1", "per_1", action, resources))
+    assert isinstance(decision, Asking)
+    assert engine.replies == []
 
 
 def test_an_action_outside_the_tier_waits_for_the_person() -> None:
@@ -264,16 +266,32 @@ def asked_to_list_etc() -> tuple[Harness, FakeEngine, FakeFileSystem]:
 def test_allowing_once_runs_the_action_and_is_logged() -> None:
     subject, engine, files = asked_to_list_etc()
     decision = subject.answer("ses_1", "per_1", Answer.ONCE)
-    assert engine.replies == [("ses_1", "per_1", True, "")]
-    assert decision == Allowed("ses_1", "shell", Tier.ANYTHING, ("ls /etc",), "call_1")
+    assert engine.replies == [("ses_1", "per_1", Reply.ONCE, "")]
+    assert decision == Allowed("ses_1", "shell", ("ls /etc",), "call_1")
     entry = entries(files)[-1]
-    assert (entry["kind"], entry["answer"]) == ("answered", "once")
+    assert (entry["kind"], entry["answer"]) == ("replied", "once")
+
+
+def test_a_card_answered_leaves_the_tokens_spent_readable() -> None:
+    """Reopening the Conversation adds up its tokens from the log."""
+    subject, _, files = asked_to_list_etc()
+    subject.answer("ses_1", "per_1", Answer.ONCE)
+    subject.handle(Answered("ses_1", GPT, TOKENS, cost=0.0))
+    assert HarnessLog(files, HOME / LOG_FILE).tokens_spent("ses_1") == 16
+
+
+def test_a_card_left_open_when_its_answer_ends_answers_nothing() -> None:
+    """The Engine has dropped the request; replying to it would only fail."""
+    subject, engine, _ = asked_to_list_etc()
+    subject.handle(Finished("ses_1"))
+    assert subject.answer("ses_1", "per_1", Answer.ONCE) is None
+    assert engine.replies == []
 
 
 def test_denying_refuses_the_action_and_thoth_is_told() -> None:
     subject, engine, files = asked_to_list_etc()
     decision = subject.answer("ses_1", "per_1", Answer.DENY)
-    assert engine.replies == [("ses_1", "per_1", False, REFUSED)]
+    assert engine.replies == [("ses_1", "per_1", Reply.REJECT, REFUSED)]
     assert decision == Refused("ses_1", "shell", ("ls /etc",), "call_1", DENIED)
     assert entries(files)[-1]["answer"] == "deny"
 
@@ -283,23 +301,24 @@ def test_a_typed_reply_refuses_the_action_and_reaches_thoth() -> None:
     decision = subject.answer(
         "ses_1", "per_1", Answer.DENY, reply="Look in /etc/osiris only"
     )
-    assert engine.replies == [("ses_1", "per_1", False, "Look in /etc/osiris only")]
+    assert engine.replies == [
+        ("ses_1", "per_1", Reply.REJECT, "Look in /etc/osiris only")
+    ]
     assert isinstance(decision, Refused)
     assert decision.reason == "You replied: Look in /etc/osiris only"
     assert entries(files)[-1]["reply"] == "Look in /etc/osiris only"
 
 
-def test_allowing_for_the_conversation_stops_asking_there_only() -> None:
-    subject, _, _ = asked_to_list_etc()
-    subject.answer("ses_1", "per_1", Answer.CONVERSATION)
+def test_always_allowing_leaves_the_engine_to_keep_allowing_it() -> None:
+    """The Engine saves the rule for the Project, so the Harness keeps none and
+    the Engine stops asking (ADR 0020)."""
+    subject, engine, files = asked_to_list_etc()
+    decision = subject.answer("ses_1", "per_1", Answer.ALWAYS)
+    assert engine.replies == [("ses_1", "per_1", Reply.ALWAYS, "")]
+    assert isinstance(decision, Allowed)
+    assert entries(files)[-1]["answer"] == "always"
     again = subject.handle(ToolRequested("ses_1", "per_2", "shell", ("ls /usr",)))
-    other = subject.handle(ToolRequested("ses_1", "per_3", "shell", ("rm /tmp/x",)))
-    assert isinstance(again, Allowed)
-    assert isinstance(other, Asking)
-    subject.new_conversation()
-    subject.ask("and here")
-    elsewhere = subject.handle(ToolRequested("ses_2", "per_4", "shell", ("ls /usr",)))
-    assert isinstance(elsewhere, Asking)
+    assert isinstance(again, Asking)
 
 
 def test_a_card_waiting_in_one_conversation_holds_up_no_other() -> None:
@@ -307,7 +326,8 @@ def test_a_card_waiting_in_one_conversation_holds_up_no_other() -> None:
     subject.new_conversation()
     subject.ask("make it calm")
     subject.handle(ToolRequested("ses_2", "per_2", "read", ("Code/pomodoro/a.py",)))
-    assert engine.replies == [("ses_2", "per_2", True, "")]
+    subject.answer("ses_2", "per_2", Answer.ONCE)
+    assert engine.replies == [("ses_2", "per_2", Reply.ONCE, "")]
 
 
 def test_a_message_sent_while_busy_waits_and_can_be_withdrawn() -> None:
@@ -321,7 +341,7 @@ def test_a_message_sent_while_busy_waits_and_can_be_withdrawn() -> None:
 
 
 def test_an_allowed_action_is_passed_on_with_what_it_touches() -> None:
-    subject, _, _ = harness()
+    subject, _, _ = harness(allowed=[True])
     subject.ask("add a pause button")
     decision = subject.handle(
         ToolRequested("ses_1", "per_1", "edit", ("Code/pomodoro/main.py",))
@@ -330,9 +350,11 @@ def test_an_allowed_action_is_passed_on_with_what_it_touches() -> None:
     assert decision.resources == ("Code/pomodoro/main.py",)
 
 
-def test_a_rejection_points_the_model_at_the_tools_it_may_use() -> None:
-    assert "Osiris tools" in REFUSED
-    assert "only talk" not in REFUSED
+def test_a_denial_tells_the_model_the_person_said_no() -> None:
+    """Commands and files are no longer out of reach, only this one was
+    refused, so the model should not try it another way unasked."""
+    assert "said no" in REFUSED
+    assert "cannot run commands" not in REFUSED
 
 
 def test_every_tool_call_is_logged_even_one_that_never_asked() -> None:
@@ -412,32 +434,10 @@ def test_a_new_model_mid_conversation_switches_the_open_session() -> None:
 
 
 @pytest.mark.parametrize(
-    ("action", "resources", "tier"),
-    [
-        ("read", ("Code/pomodoro/main.py",), Tier.LOOK),
-        (
-            "edit",
-            ("Code/pomodoro/main.py", "Code/pomodoro/ui/window.py"),
-            Tier.UNDOABLE,
-        ),
-        ("external_directory", (f"{POMODORO}/*",), Tier.LOOK),
-        ("read", (f"{POMODORO}/README.md",), Tier.LOOK),
-    ],
-)
-def test_files_inside_a_program_may_be_read_and_edited(
-    action: str, resources: tuple[str, ...], tier: Tier
-) -> None:
-    subject, engine, _ = harness()
-    subject.ask("add a pause button")
-    decision = subject.handle(ToolRequested("ses_1", "per_1", action, resources))
-    assert decision == Allowed("ses_1", action, tier, resources)
-    assert engine.replies == [("ses_1", "per_1", True, "")]
-
-
-@pytest.mark.parametrize(
     ("action", "resources"),
     [
         ("read", (".ssh/id_ed25519",)),
+        ("read", ("Code/pomodoro/main.py",)),
         ("read", ("Code/pomodoro/../../.ssh/id_ed25519",)),
         ("edit", ("Code/pomodoro/main.py", ".bashrc")),
         ("external_directory", ("/etc/*",)),
@@ -445,7 +445,7 @@ def test_files_inside_a_program_may_be_read_and_edited(
         ("bash", ("Code/pomodoro",)),
     ],
 )
-def test_files_anywhere_else_are_asked_about(
+def test_files_are_asked_about_wherever_the_engine_asks(
     action: str, resources: tuple[str, ...]
 ) -> None:
     subject, engine, _ = harness()
@@ -479,14 +479,14 @@ def test_after_a_new_conversation_an_ended_sessions_events_are_left_alone(
 
 def test_a_session_still_working_after_a_new_conversation_is_still_served() -> None:
     """Its permission requests must still be answered, or it would hang."""
-    subject, engine, _ = harness(tiers={"osiris_apply_theme": Tier.UNDOABLE})
+    subject, engine, _ = harness(allowed=[True])
     subject.ask("make it calm")
     subject.new_conversation()
     decision = subject.handle(
         ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",))
     )
-    assert decision == Allowed("ses_1", "osiris_apply_theme", Tier.UNDOABLE, ("*",))
-    assert engine.replies == [("ses_1", "per_1", True, "")]
+    assert isinstance(decision, Allowed)
+    assert engine.replies == [("ses_1", "per_1", Reply.ONCE, "")]
 
 
 def test_moving_away_while_a_question_is_still_being_sent_keeps_it_on_its_session() -> (
@@ -563,8 +563,6 @@ def test_a_conversation_with_no_project_takes_its_programs_project() -> None:
     subject.ask("build me a timer")
     subject.worked_on("ses_1", POMODORO)
     assert engine.moved == [("ses_1", POMODORO)]
-    subject.handle(ToolRequested("ses_1", "per_1", "read", ("main.py",)))
-    assert engine.replies[-1][2] is True
 
 
 def test_a_conversation_in_a_project_stays_there() -> None:
@@ -652,24 +650,11 @@ def test_the_tools_are_attached_where_the_session_runs_once_each() -> None:
     assert engine.attached == [("osiris", HOME), ("osiris", POMODORO)]
 
 
-def test_a_resumed_conversation_runs_and_reads_files_in_its_own_folder() -> None:
+def test_a_resumed_conversation_runs_in_its_own_folder() -> None:
     subject, engine, _ = harness()
     subject.resume("ses_9")
     assert engine.attached == [("osiris", POMODORO)]
-    subject.handle(ToolRequested("ses_9", "per_1", "read", ("main.py",)))
-    assert engine.replies[-1][2] is True
     assert subject.directory == POMODORO
-
-
-def test_a_session_off_screen_reads_files_in_its_own_folder() -> None:
-    """Switching Conversation changes the folder on screen, not the folder a
-    running session's paths are relative to."""
-    subject, engine, _ = harness()
-    subject.new_conversation(POMODORO)
-    subject.ask("add a pause button")
-    subject.new_conversation()
-    subject.handle(ToolRequested("ses_1", "per_1", "read", ("main.py",)))
-    assert engine.replies == [("ses_1", "per_1", True, "")]
 
 
 def test_a_reply_the_engine_cannot_take_is_logged_and_the_conversation_goes_on() -> (
@@ -677,7 +662,7 @@ def test_a_reply_the_engine_cannot_take_is_logged_and_the_conversation_goes_on()
 ):
     from osiris.platform import HttpError
 
-    subject, engine, files = harness(tiers={"osiris_apply_theme": Tier.UNDOABLE})
+    subject, engine, files = harness(allowed=[True])
     subject.ask("hello")
 
     def broken(*_args: object, **_kwargs: object) -> None:
@@ -687,7 +672,7 @@ def test_a_reply_the_engine_cannot_take_is_logged_and_the_conversation_goes_on()
     decision = subject.handle(
         ToolRequested("ses_1", "per_1", "osiris_apply_theme", ("*",))
     )
-    assert decision == Allowed("ses_1", "osiris_apply_theme", Tier.UNDOABLE, ("*",))
+    assert isinstance(decision, Allowed)
     assert "reply-failed" in [entry["kind"] for entry in entries(files)]
 
 
@@ -698,7 +683,7 @@ def test_a_refusal_names_the_ai_as_the_person_knows_it() -> None:
     assert "Osiris" in REFUSED
 
 
-def test_once_the_person_allows_everything_nothing_waits() -> None:
+def test_once_auto_mode_is_on_nothing_waits() -> None:
     allowed = [False]
     subject, engine, _ = harness(allowed=allowed)
     subject.ask("what is in /etc")
@@ -706,8 +691,17 @@ def test_once_the_person_allows_everything_nothing_waits() -> None:
     allowed[0] = True
     decision = subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls /etc",)))
     assert isinstance(asked, Asking)
-    assert engine.replies == [("ses_1", "per_2", True, "")]
-    assert decision == Allowed("ses_1", "bash", Tier.ANYTHING, ("ls /etc",))
+    assert engine.replies == [("ses_1", "per_2", Reply.ONCE, "")]
+    assert decision == Allowed("ses_1", "bash", ("ls /etc",))
+
+
+def test_what_auto_mode_allows_is_logged_as_auto_mode() -> None:
+    """So the log shows the person did not answer it themselves."""
+    subject, _, files = harness(allowed=[True])
+    subject.ask("what is in /etc")
+    subject.handle(ToolRequested("ses_1", "per_1", "shell", ("ls /etc",)))
+    entry = entries(files)[-1]
+    assert (entry["kind"], entry["by"]) == ("allowed", "auto mode")
 
 
 def test_restarting_the_tools_attaches_them_again_where_they_run() -> None:
@@ -720,19 +714,29 @@ def test_restarting_the_tools_attaches_them_again_where_they_run() -> None:
     assert engine.attached == [("osiris", HOME), ("osiris", HOME), ("osiris", POMODORO)]
 
 
-def everything_allowed() -> tuple[Harness, FakeEngine, FakeFileSystem]:
+def in_auto_mode() -> tuple[Harness, FakeEngine, FakeFileSystem]:
     return harness(allowed=[True])
 
 
 def test_an_admin_request_belongs_to_the_session_whose_last_command_ran_sudo() -> None:
-    subject, _, _ = everything_allowed()
+    subject, _, _ = in_auto_mode()
     subject.ask("install cowsay")
     subject.handle(ToolRequested("ses_1", "per_1", "shell", ("sudo pacman -S cowsay",)))
     assert subject.running_sudo() == "ses_1"
 
 
+def test_a_sudo_command_the_engines_rules_allowed_still_finds_its_session() -> None:
+    """Such a command never asks, so the Harness knows it only as a tool call."""
+    subject, _, _ = harness()
+    subject.ask("install cowsay")
+    subject.handle(
+        ToolCalled("ses_1", "call_1", {"command": "sudo pacman -S cowsay"}, False)
+    )
+    assert subject.running_sudo() == "ses_1"
+
+
 def test_a_session_whose_last_command_did_not_run_sudo_has_no_admin_request() -> None:
-    subject, _, _ = everything_allowed()
+    subject, _, _ = in_auto_mode()
     subject.ask("install cowsay")
     subject.handle(ToolRequested("ses_1", "per_1", "bash", ("sudo pacman -S cowsay",)))
     subject.handle(ToolRequested("ses_1", "per_2", "bash", ("pseudocode --help",)))
@@ -747,7 +751,7 @@ def test_a_refused_sudo_is_no_sessions_admin_request() -> None:
 
 
 def test_a_session_that_has_finished_has_no_admin_request() -> None:
-    subject, _, _ = everything_allowed()
+    subject, _, _ = in_auto_mode()
     subject.ask("install cowsay")
     subject.handle(ToolRequested("ses_1", "per_1", "bash", ("sudo pacman -S cowsay",)))
     subject.handle(Finished("ses_1"))
@@ -755,7 +759,7 @@ def test_a_session_that_has_finished_has_no_admin_request() -> None:
 
 
 def test_of_two_sessions_running_sudo_the_latest_to_start_it_asks() -> None:
-    subject, _, _ = everything_allowed()
+    subject, _, _ = in_auto_mode()
     subject.ask("install cowsay")
     subject.new_conversation()
     subject.ask("restart sshd")
@@ -765,7 +769,7 @@ def test_of_two_sessions_running_sudo_the_latest_to_start_it_asks() -> None:
 
 
 def test_an_admin_password_answer_is_logged_without_the_password() -> None:
-    subject, _, files = everything_allowed()
+    subject, _, files = in_auto_mode()
     subject.ask("install cowsay")
     subject.admin_answered("ses_1", Request(("pacman", "-S", "cowsay")), approved=True)
     assert entries(files)[-1] == {
@@ -781,9 +785,113 @@ def test_an_admin_password_answer_is_logged_without_the_password() -> None:
 def test_a_sudo_command_is_known_before_the_engine_is_told_to_run_it() -> None:
     """The helper can ask as soon as the command starts, which is as soon as
     the Engine has the reply."""
-    subject, engine, _ = everything_allowed()
+    subject, engine, _ = in_auto_mode()
     subject.ask("install cowsay")
     seen: list[str | None] = []
     engine.reply = lambda *_args, **_kwargs: seen.append(subject.running_sudo())  # type: ignore[method-assign]
     subject.handle(ToolRequested("ses_1", "per_1", "shell", ("sudo pacman -S cowsay",)))
     assert seen == ["ses_1"]
+
+
+def test_going_back_keeps_the_engines_revert_and_is_logged() -> None:
+
+    subject, engine, files = harness()
+    subject.ask("make y.txt")
+    subject.handle(Finished("ses_1"))
+    change = FileChange("y.txt", "deleted", 0, 1, "-y\n")
+    engine.revert_gives = Revert((change,), restorable=True)
+    assert subject.go_back("ses_1", "msg_1") == Revert((change,), restorable=True)
+    assert engine.reverted == [("ses_1", "msg_1")]
+    assert engine.reverts_kept == ["ses_1"]
+    entry = entries(files)[-1]
+    assert (entry["kind"], entry["message"], entry["files"]) == (
+        "went-back",
+        "msg_1",
+        ["y.txt"],
+    )
+
+
+def test_where_the_files_cannot_be_restored_nothing_goes_back() -> None:
+    """Rather than the Conversation going back while its files stay changed."""
+    subject, engine, files = harness()
+    subject.ask("make y.txt")
+    subject.handle(Finished("ses_1"))
+    engine.revert_gives = Revert((), restorable=False)
+    assert subject.go_back("ses_1", "msg_1").restorable is False
+    assert engine.reverts_kept == []
+    assert engine.reverts_cancelled == ["ses_1"]
+    assert entries(files)[-1]["kind"] == "could-not-go-back"
+
+
+def test_a_conversation_still_answering_does_not_go_back() -> None:
+    """The Engine refuses a revert while the session runs (opencode 2.2.4)."""
+    subject, engine, _ = harness()
+    subject.ask("make y.txt")
+    assert subject.go_back("ses_1", "msg_1") is None
+    assert engine.reverted == []
+
+
+def test_going_back_logs_how_many_questions_it_dropped() -> None:
+    subject, _, files = harness()
+    subject.ask("make y.txt")
+    subject.handle(Finished("ses_1"))
+    subject.go_back("ses_1", "msg_1", questions=3)
+    assert entries(files)[-1]["questions"] == 3
+
+
+def test_a_session_the_engine_says_is_busy_does_not_go_back() -> None:
+    """One the Harness did not start may still be answering (opencode 2.2.4
+    answers 409 then); it is told as still answering, not as a failure."""
+    from osiris.platform import HttpError
+
+    subject, engine, _ = harness()
+    subject.resume("ses_9")
+
+    def busy(*_args: object) -> Revert:
+        raise HttpError(409, "Session is busy")
+
+    engine.revert = busy  # type: ignore[method-assign]
+    assert subject.go_back("ses_9", "msg_1") is None
+
+
+def test_sending_now_steers_the_message_in_and_cuts_in() -> None:
+    subject, engine, files = harness()
+    subject.ask("count to sixty")
+    message = subject.send_now("stop, count to ten")
+    assert message == "msg_2"
+    assert engine.sent[-1] == ("ses_1", "stop, count to ten")
+    assert engine.cut == ["ses_1"]
+    assert [e["kind"] for e in entries(files)[-2:]] == ["sent", "cut-in"]
+
+
+def test_the_stop_cutting_in_causes_leaves_the_session_working() -> None:
+    """The Engine resumes it at once with the message; its events must still
+    reach it, even off screen."""
+    subject, _, _ = harness()
+    subject.ask("count to sixty")
+    subject.send_now("stop, count to ten")
+    subject.handle(Stopped("ses_1"))
+    assert subject.running == {"ses_1"}
+    subject.handle(Stopped("ses_1"))
+    assert subject.running == frozenset()
+
+
+def test_an_answer_that_ends_before_the_cut_in_lands_takes_no_later_stop() -> None:
+    """The answer finished on its own as the person cut in: the next stop the
+    person makes must still end the session."""
+    subject, _, _ = harness()
+    subject.ask("count to sixty")
+    subject.send_now("stop, count to ten")
+    subject.handle(Finished("ses_1"))
+    subject.ask("count to five")
+    subject.handle(Stopped("ses_1"))
+    assert subject.running == frozenset()
+
+
+def test_sending_now_with_nothing_running_does_not_cut_in() -> None:
+    """There is no step to stop, and no stop would come to resume through."""
+    subject, engine, _ = harness()
+    subject.ask("count to sixty")
+    subject.handle(Finished("ses_1"))
+    subject.send_now("and to ten")
+    assert engine.cut == []

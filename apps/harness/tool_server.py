@@ -18,7 +18,7 @@ from theme_store import EngineStore, user_wallpapers  # noqa: E402
 
 from osiris.apps.tool_server import server  # noqa: E402
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
-from osiris.harness.trust import allows_everything  # noqa: E402
+from osiris.harness.trust import auto_mode_on  # noqa: E402
 from osiris.platform import RealFileSystem, SubprocessRunner, SystemIdentity  # noqa: E402
 from osiris.programs.programs import Programs  # noqa: E402
 
@@ -29,4 +29,4 @@ if __name__ == "__main__":
     wallpapers = user_wallpapers(files, runner, home)
     server(EngineStore(), programs, HarnessLog(files, home / LOG_FILE), wallpapers,
            skins=EngineSkinStore(),
-           allow_everything=allows_everything(files, home)).run()
+           auto_mode=auto_mode_on(files, home)).run()
