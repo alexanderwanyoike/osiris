@@ -242,7 +242,7 @@ class Canvas(Gtk.Box):
         return header
 
     def _header_tab(self, view: Adw.TabView, page: Adw.TabPage) -> Gtk.Widget:
-        tab = Gtk.Box()
+        tab = Gtk.Box(valign=Gtk.Align.CENTER)
         tab.add_css_class("harness-group-tab")
         if view.get_selected_page() is page:
             tab.add_css_class("selected")

@@ -407,7 +407,7 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-canvas-toolbar { padding: 0; }
 .harness-canvas-toolbar button { color: @harness_muted; min-height: 28px; min-width: 28px; padding: 0; }
 .harness-canvas-toolbar button:hover { color: @harness_fg; }
-.harness-group-header { min-height: 30px; padding: 0 4px; border-bottom: 1px solid alpha(@harness_fg, 0.06); }
+.harness-group-header { min-height: 28px; padding: 0 4px; border-bottom: 1px solid alpha(@harness_fg, 0.06); }
 .harness-group-header > button { color: @harness_muted; min-height: 22px; min-width: 22px; padding: 0; }
 .harness-group-header > button:hover { color: @harness_fg; }
 .harness-group-tab {
@@ -425,9 +425,9 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-group-tab image { color: @harness_muted; -gtk-icon-size: 13px; }
 .harness-group-tab.selected image { color: @harness_accent; }
 .harness-group-tab > button.harness-tab-close image { color: @harness_muted; -gtk-icon-size: 12px; }
-.harness-group-tab > button { min-height: 20px; padding: 0 2px 0 8px; color: @harness_muted; font-size: 0.8em; background: none; }
+.harness-group-tab > button { min-height: 16px; padding: 0 2px 0 7px; color: @harness_muted; font-size: 0.8em; background: none; }
 .harness-group-tab.selected > button { color: @harness_fg; }
-.harness-group-tab > button.harness-tab-close { min-width: 16px; min-height: 16px; padding: 0; margin-right: 3px; -gtk-icon-size: 12px; opacity: 0; transition: opacity 120ms ease-out; }
+.harness-group-tab > button.harness-tab-close { min-width: 14px; min-height: 14px; padding: 0; margin-right: 3px; -gtk-icon-size: 12px; opacity: 0; transition: opacity 120ms ease-out; }
 .harness-group-tab:hover > button.harness-tab-close,
 .harness-group-tab.selected > button.harness-tab-close,
 .harness-group-tab > button.harness-tab-close:focus { opacity: 1; }
