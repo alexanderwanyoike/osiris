@@ -165,6 +165,21 @@ class Conversation:
         and nothing is answering, which the Engine would refuse."""
         return bool(turn.message) and not self.busy
 
+    def losing(self, turn: Turn) -> str:
+        """What going back to before ``turn`` loses, in words."""
+        place = next(i for i, t in enumerate(self.turns) if t is turn)
+        after = len(self.turns) - place - 1
+        if after == 0:
+            dropped = "This question and its answer"
+        elif after == 1:
+            dropped = "This question and the one after it, with their answers,"
+        else:
+            dropped = f"This question and the {after} after it, with their answers,"
+        return (
+            f"{dropped} leave the Conversation, and the files they changed in "
+            "this Project go back to how they were."
+        )
+
     def asked(self, question: str) -> Turn:
         turn = Turn(question)
         self.turns.append(turn)
