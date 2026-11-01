@@ -38,6 +38,7 @@ class FakeApp(Adw.Application):
         self.sent_now: list[str] = []
         self.offers: dict[str, list[object]] = {"@": [], "/": []}
         self.referenced: list[tuple[object, ...]] = []
+        self.offers_fetched = 0
 
     def open_past(self, session: str) -> None:
         self.opened.append(session)
@@ -49,6 +50,9 @@ class FakeApp(Adw.Application):
 
     def offered(self, sign: str) -> list[object]:
         return self.offers[sign]
+
+    def refresh_offers(self) -> None:
+        self.offers_fetched += 1
 
     def undo(self, _turn: object) -> None:
         pass
@@ -591,3 +595,14 @@ def test_tokens_in_the_message_box_follow_the_theme() -> None:
     accent = token_colours(DAWN)[0].lstrip("#")
     rgb = ",".join(str(int(accent[i : i + 2], 16)) for i in (0, 2, 4))
     assert token.foreground_rgba.to_string() == f"rgb({rgb})"
+
+
+def test_opening_the_picker_fetches_what_it_offers_afresh() -> None:
+    from osiris.harness.picker import Entry
+
+    window, _ = drawer()
+    window.present()
+    window.app.offers["@"] = [Entry("file", "/p/README.md", "README.md", "")]
+    window.entry.get_buffer().insert_at_cursor("@")
+    window.entry.get_buffer().insert_at_cursor("R")
+    assert window.app.offers_fetched == 1
