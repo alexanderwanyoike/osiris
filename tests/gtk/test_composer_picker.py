@@ -116,3 +116,16 @@ def test_after_a_click_typing_carries_on_in_the_message() -> None:
     row.grab_focus()
     picker.list.emit("row-activated", row)
     assert entry.get_root().get_focus() is entry
+
+
+def test_a_long_description_does_not_widen_the_picker() -> None:
+    from composer_picker import Picker
+
+    entry = Gtk.TextView()
+    window = Gtk.Window(child=entry)
+    window.present()
+    wordy = Entry("skill", "opencode", "opencode", "Use this skill for anything. " * 20)
+    picker = Picker(entry, lambda _sign: [wordy])
+    entry.get_buffer().set_text("/")
+    _minimum, natural, _b, _c = picker.list.measure(Gtk.Orientation.HORIZONTAL, -1)
+    assert natural <= 480
