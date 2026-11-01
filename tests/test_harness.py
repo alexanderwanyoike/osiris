@@ -657,6 +657,15 @@ def test_once_the_person_allows_everything_nothing_waits() -> None:
     assert decision == Allowed("ses_1", "bash", ("ls /etc",))
 
 
+def test_what_auto_mode_allows_is_logged_as_auto_mode() -> None:
+    """So the log shows the person did not answer it themselves."""
+    subject, _, files = harness(allowed=[True])
+    subject.ask("what is in /etc")
+    subject.handle(ToolRequested("ses_1", "per_1", "shell", ("ls /etc",)))
+    entry = entries(files)[-1]
+    assert (entry["kind"], entry["by"]) == ("allowed", "auto mode")
+
+
 def test_restarting_the_tools_attaches_them_again_where_they_run() -> None:
     """The tool server reads what it may tell the model when it starts."""
     subject, engine, _ = harness()
