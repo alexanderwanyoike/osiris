@@ -72,6 +72,7 @@ from osiris.harness.history import (  # noqa: E402
 )
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
+from osiris.harness.picker import Reference  # noqa: E402
 from osiris.harness.engine import (  # noqa: E402
     Failed,
     Finished,
@@ -1274,17 +1275,18 @@ class Application(Adw.Application):
         self.backgrounded[self.session] = self.conversation
         return True
 
-    def ask(self, text: str) -> None:
+    def ask(self, text: str, references: tuple[Reference, ...] = ()) -> None:
         if self.harness is None:
             return
         if self.conversation.busy:
-            self._queue(text)
+            self._queue(text, references)
             return
         turn = self.conversation.asked(text)
         self.drawer.refresh()
-        threading.Thread(target=self._send, args=(text, turn), daemon=True).start()
+        threading.Thread(target=self._send, args=(text, turn, references),
+                         daemon=True).start()
 
-    def _queue(self, text: str) -> None:
+    def _queue(self, text: str, references: tuple[Reference, ...] = ()) -> None:
         """Sent while busy: it waits in the Engine's inbox and steers the
         answer at its next step."""
         harness, conversation = self.harness, self.conversation
@@ -1293,7 +1295,7 @@ class Application(Adw.Application):
             conversation.queued(message, text)
             self.drawer.refresh()
 
-        self.background(lambda: harness.ask(text), queued)
+        self.background(lambda: harness.ask(text, references), queued)
 
     def send_now(self, text: str) -> None:
         """Sent while busy, cutting in: it waits shown until the Engine,
@@ -1320,9 +1322,10 @@ class Application(Adw.Application):
         if self.harness is not None:
             threading.Thread(target=self.harness.stop, daemon=True).start()
 
-    def _send(self, text: str, turn: Turn | None = None) -> None:
+    def _send(self, text: str, turn: Turn | None = None,
+              references: tuple[Reference, ...] = ()) -> None:
         try:
-            message = self.harness.ask(text)
+            message = self.harness.ask(text, references)
         except HttpError as error:
             GLib.idle_add(self._failed_to_send, str(error))
             return
