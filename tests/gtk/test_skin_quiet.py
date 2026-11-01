@@ -39,7 +39,6 @@ def icons() -> dict[str, Gtk.Button]:
         try_again=lambda _t: None,
         may_go_back=lambda _t: True,
         may_try_again=lambda _t: True,
-        show_changes=lambda _t: None,
     )
     view.update(turn, STYLE, None)
     return {
