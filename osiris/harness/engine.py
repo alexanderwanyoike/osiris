@@ -54,6 +54,8 @@ class ToolRequested:
     request: str
     action: str
     resources: tuple[str, ...]
+    #: The ``ToolCalled`` it asks for; empty when the Engine does not say.
+    call: str = ""
 
 
 @dataclass(frozen=True)

@@ -312,7 +312,11 @@ class _Reader:
                 )
             case "permission.asked":
                 return ToolRequested(
-                    session, data["id"], data["action"], tuple(data["resources"])
+                    session,
+                    data["id"],
+                    data["action"],
+                    tuple(data["resources"]),
+                    (data.get("source") or {}).get("id", ""),
                 )
             case "session.step.ended":
                 return self._answered(session, data)
