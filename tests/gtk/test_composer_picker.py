@@ -64,3 +64,13 @@ def test_escape_closes_the_picker_and_leaves_what_was_typed() -> None:
     assert press(picker, Gdk.KEY_Escape)
     assert not picker.popover.get_visible()
     assert text(picker) == "fix @RE"
+
+
+def test_a_completed_entry_is_sent_as_a_reference_where_it_stands() -> None:
+    from gi.repository import Gdk
+
+    from osiris.harness.picker import Reference
+
+    picker = typed("fix @")
+    press(picker, Gdk.KEY_Tab)
+    assert picker.references(text(picker)) == (Reference(README, 4, 14),)
