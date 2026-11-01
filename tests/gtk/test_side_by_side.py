@@ -214,7 +214,7 @@ def test_where_the_files_cannot_go_back_the_person_is_told_and_nothing_moves() -
     engine.revert_gives = Revert((), restorable=False)
     stand_in.go_back(stand_in.conversation.turns[0])
     assert [turn.question for turn in stand_in.conversation.turns] == ["make x.txt"]
-    assert "git" in stand_in.problem
+    assert "git" in stand_in.conversation.turns[0].note
     assert stand_in.drawer.drafts == []
 
 
