@@ -38,8 +38,12 @@ COMPLETES = (Gdk.KEY_Tab, Gdk.KEY_Return, Gdk.KEY_KP_Enter)
 
 class Picker:
     def __init__(self, entry: Gtk.TextView, offered: Callable[[str], list[Entry]],
-                 anchor: Gtk.Widget | None = None):
+                 anchor: Gtk.Widget | None = None,
+                 on_open: Callable[[str], None] = lambda _sign: None):
         self._entry = entry
+        #: Told the sign each time the picker opens, to fetch afresh what it
+        #: lists; an Engine still starting up can offer less at first.
+        self._on_open = on_open
         #: What the card sits over, at its full width: the whole message box.
         self._anchor = anchor or entry
         self._offered = offered
@@ -127,6 +131,8 @@ class Picker:
         if not entries:
             self.popover.popdown()
             return
+        if not self.popover.get_visible():
+            self._on_open(found.sign)
         self.list.remove_all()
         for entry in entries[:LISTED]:
             self.list.append(_row(entry))
