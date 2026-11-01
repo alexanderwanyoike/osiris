@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -146,13 +147,7 @@ class OpencodeEngine:
             {"messageID": message, "files": True},
         )["data"]
         return Revert(
-            tuple(
-                FileChange(
-                    f["file"], f["status"], f["additions"], f["deletions"], f["patch"]
-                )
-                for f in staged.get("files", [])
-            ),
-            restorable="snapshot" in staged,
+            _file_changes(staged.get("files", [])), restorable="snapshot" in staged
         )
 
     def keep_revert(self, session: str) -> None:
@@ -167,6 +162,9 @@ class OpencodeEngine:
 
     def stop(self, session: str) -> None:
         self._post(f"/api/session/{session}/interrupt")
+
+    def cut_in(self, session: str) -> None:
+        self._post(f"/api/session/{session}/interrupt?resume=true")
 
     def switch_model(self, session: str, model: ModelRef) -> None:
         self._post(
@@ -234,7 +232,7 @@ class OpencodeEngine:
         found = []
         for session in sessions:
             metadata = session.get("metadata") or {}
-            if metadata.get("archived"):
+            if metadata.get("archived") or session.get("parentID"):
                 continue
             if metadata.get("osiris") != MINE["osiris"]:
                 if session.get("title") != UNMARKED_TITLE:
@@ -322,12 +320,30 @@ class OpencodeEngine:
                 yield event
 
 
+def _file_changes(files: list[dict[str, Any]]) -> tuple[FileChange, ...]:
+    return tuple(
+        FileChange(f["file"], f["status"], f["additions"], f["deletions"], f["patch"])
+        for f in files
+    )
+
+
+#: How a subagent's reply comes back: its child session's answer in a tag.
+_SUBAGENT = re.compile(r"\A<subagent [^>]*>\n?(.*?)\n?</subagent>\Z", re.DOTALL)
+
+
+def _unwrapped(output: str) -> str:
+    found = _SUBAGENT.match(output)
+    return found.group(1) if found else output
+
+
 def _finished(session: str, data: dict[str, Any]) -> ToolFinished:
     """The text a tool gave back; a file it gave is left out."""
-    output = "".join(
-        part.get("text", "")
-        for part in data.get("content") or []
-        if part.get("type") == "text"
+    output = _unwrapped(
+        "".join(
+            part.get("text", "")
+            for part in data.get("content") or []
+            if part.get("type") == "text"
+        )
     )
     exit_status = (data.get("metadata") or {}).get("exit")
     return ToolFinished(
