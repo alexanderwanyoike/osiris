@@ -4,6 +4,7 @@ back, drawn for the kind of step it is. GTK draws it; this decides it."""
 from __future__ import annotations
 
 import difflib
+import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import Enum
@@ -16,6 +17,7 @@ class Kind(Enum):
     CHANGE = "change"
     LOOK = "look"
     WEB = "web"
+    TOOL = "tool"
 
 
 @dataclass(frozen=True)
@@ -34,6 +36,8 @@ class Detail:
     lines: tuple[Line, ...]
     #: An exit status, an error, or the rule that refused the step.
     note: str = ""
+    #: A tool's inputs, each as a name and a value in words.
+    inputs: tuple[tuple[str, str], ...] = ()
 
 
 def _text(inputs: Mapping[str, object], *keys: str) -> str:
@@ -85,6 +89,19 @@ def _web(step: Step) -> Detail:
     return Detail(Kind.WEB, asked or " ".join(step.resources), _output(step))
 
 
+def _words(value: object) -> str:
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+    return value if isinstance(value, str) else json.dumps(value)
+
+
+def _tool(step: Step) -> Detail:
+    """Any other tool, the Osiris tools among them: its name and inputs."""
+    name = step.action.removeprefix("osiris_").replace("_", " ")
+    inputs = tuple((key, _words(value)) for key, value in (step.input or {}).items())
+    return Detail(Kind.TOOL, name, _output(step), inputs=inputs)
+
+
 _KINDS: dict[str, Callable[[Step], Detail]] = {
     "shell": _command,
     "bash": _command,
@@ -102,4 +119,4 @@ _KINDS: dict[str, Callable[[Step], Detail]] = {
 
 
 def detail(step: Step) -> Detail:
-    return _KINDS.get(step.action, _command)(step)
+    return _KINDS.get(step.action, _tool)(step)
