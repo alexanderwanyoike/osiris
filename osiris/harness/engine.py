@@ -9,8 +9,18 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Protocol, runtime_checkable
+
+
+class Reply(Enum):
+    """How a ``ToolRequested`` is answered."""
+
+    ONCE = "once"
+    #: Allowed, and the Engine keeps allowing what it suggests, in the Project.
+    ALWAYS = "always"
+    REJECT = "reject"
 
 
 @dataclass(frozen=True)
@@ -44,6 +54,8 @@ class ToolCalled:
     call: str
     input: dict[str, object]
     executed: bool
+    #: The tool as the Engine names it, which may differ from its action.
+    name: str = ""
 
 
 @dataclass(frozen=True)
@@ -70,6 +82,14 @@ class ToolFinished:
     error: str = ""
     #: A command's exit status, when the tool ran one.
     exit: int | None = None
+
+
+@dataclass(frozen=True)
+class Delivered:
+    """A message that waited while the model worked has reached it."""
+
+    session: str
+    message: str
 
 
 @dataclass(frozen=True)
@@ -103,6 +123,7 @@ Event = (
     | ToolCalled
     | ToolRequested
     | ToolFinished
+    | Delivered
     | Answered
     | Finished
     | Stopped
@@ -126,6 +147,28 @@ class PastTurn:
     question: str
     answer: str
     model: ModelRef | None
+    #: The question's message at the Engine.
+    message: str = ""
+
+
+@dataclass(frozen=True)
+class FileChange:
+    """A file a revert puts back: what happens to it, and the diff."""
+
+    path: str
+    status: str
+    additions: int
+    deletions: int
+    patch: str
+
+
+@dataclass(frozen=True)
+class Revert:
+    """A revert staged by the Engine: the files it put back, and whether it
+    could put files back at all (outside a git repository it cannot)."""
+
+    files: tuple[FileChange, ...]
+    restorable: bool
 
 
 @runtime_checkable
@@ -137,17 +180,41 @@ class Engine(Protocol):
         model, or its own folder."""
         ...
 
-    def send(self, session: str, text: str) -> None: ...
+    def send(self, session: str, text: str) -> str:
+        """Send a message; while the session is busy it waits and steers the
+        model at its next step. Answers where it waits."""
+        ...
+
+    def withdraw(self, session: str, message: str) -> None:
+        """Take back a message that is still waiting."""
+        ...
 
     def events(self) -> Iterator[Event]:
         """Every session's events, for as long as the Engine runs."""
         ...
 
-    def reply(self, session: str, request: str, *, allow: bool, message: str) -> None:
+    def reply(self, session: str, request: str, answer: Reply, message: str) -> None:
         """Answer a ``ToolRequested``; ``message`` is passed to the model."""
         ...
 
+    def revert(self, session: str, message: str) -> Revert:
+        """Stage going back to before ``message``, a question of the session's;
+        the files are put back at once, the Conversation when it is kept."""
+        ...
+
+    def keep_revert(self, session: str) -> None:
+        """Keep the staged revert: the later questions leave the Conversation."""
+        ...
+
+    def cancel_revert(self, session: str) -> None:
+        """Drop the staged revert: the files it put back return."""
+        ...
+
     def stop(self, session: str) -> None: ...
+
+    def cut_in(self, session: str) -> None:
+        """Stop the step under way and go on at once with what was sent."""
+        ...
 
     def switch_model(self, session: str, model: ModelRef) -> None: ...
 

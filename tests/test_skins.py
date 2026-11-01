@@ -42,15 +42,17 @@ CLASSES = (
     "harness-canvas",
     "harness-path",
     "harness-sidebar",
-    "harness-running",
     "harness-unread",
-    "harness-unread-dot",
+    "harness-status",
     "harness-working",
     "harness-dot",
     "harness-doing",
     "harness-elapsed",
     "harness-activity",
     "harness-step",
+    "harness-tasks",
+    "harness-task",
+    "harness-task-mark",
     "harness-step-detail",
     "harness-step-asked",
     "harness-step-input",
@@ -61,6 +63,7 @@ CLASSES = (
     "harness-admin-command",
     "harness-approval",
     "harness-approval-input",
+    "harness-waiting",
 )
 
 

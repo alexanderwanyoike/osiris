@@ -11,7 +11,7 @@ from gi.repository import Adw  # noqa: E402
 from osiris.harness.conversation import Conversation  # noqa: E402
 from osiris.harness.settings import Models  # noqa: E402
 
-from .conftest import texts  # noqa: E402
+from .conftest import texts, widgets  # noqa: E402
 
 
 class FakeApp(Adw.Application):
@@ -20,7 +20,7 @@ class FakeApp(Adw.Application):
         self.conversation = Conversation()
         self.accounts = None
         self.models = Models(None, None)
-        self.everything_allowed = False
+        self.in_auto_mode = False
 
         class Look:
             style = None
@@ -30,6 +30,11 @@ class FakeApp(Adw.Application):
         self.asked: list[str] = []
         self.new_conversations = 0
         self.opened: list[str] = []
+        self.unqueued: list[str] = []
+        self.stopped = 0
+        self.gone_back: list[object] = []
+        self.shown_changes: list[object] = []
+        self.sent_now: list[str] = []
 
     def open_past(self, session: str) -> None:
         self.opened.append(session)
@@ -40,6 +45,15 @@ class FakeApp(Adw.Application):
 
     def undo(self, _turn: object) -> None:
         pass
+
+    def ask_to_go_back(self, turn: object, _again: bool = False) -> None:
+        self.gone_back.append(turn)
+
+    def show_changes(self, turn: object) -> None:
+        self.shown_changes.append(turn)
+
+    def send_now(self, text: str) -> None:
+        self.sent_now.append(text)
 
     def program_card(self, name: str) -> object:
         from gi.repository import Gtk
@@ -55,6 +69,13 @@ class FakeApp(Adw.Application):
         from gi.repository import Gtk
 
         return Gtk.Label(label="approval card")
+
+    def stop(self) -> None:
+        self.stopped += 1
+
+    def unqueue(self, message: str) -> str:
+        self.unqueued.append(message)
+        return self.conversation.unqueued(message)
 
     def new_conversation(self) -> None:
         self.new_conversations += 1
@@ -151,7 +172,7 @@ def test_the_providers_page_opens_with_a_back_button_carrying_an_arrow() -> None
     app.background = now
     app.open_page = lambda _url: None
     app.choose_model = lambda _model: None
-    app.set_allow_everything = lambda _on: None
+    app.set_auto_mode = lambda _on: None
     window.show_providers()
     backs = [w for w in widgets(window) if isinstance(w, Adw.ButtonContent)]
     assert [(b.get_label(), b.get_icon_name()) for b in backs] == [
@@ -190,6 +211,71 @@ def test_a_held_action_is_drawn_with_the_apps_approval_card() -> None:
     turn.held = Step("shell", ("ls /etc",))
     window.refresh()
     assert "approval card" in texts(window)
+
+
+def test_enter_sends_even_while_osiris_is_busy() -> None:
+    from gi.repository import Gdk
+
+    window, _ = drawer()
+    window.app.conversation.asked("count to sixty")
+    window.refresh()
+    window.entry.get_buffer().set_text("stop at ten")
+    window._composer_key(None, Gdk.KEY_Return, 0, Gdk.ModifierType(0))
+    assert window.app.asked == ["stop at ten"]
+
+
+def waiting_drawer():
+    window, _ = drawer()
+    window.app.conversation.asked("count to sixty")
+    window.app.conversation.queued("msg_2", "stop at ten")
+    window.refresh()
+    return window
+
+
+def button(window: object, label: str) -> object:
+    from gi.repository import Gtk
+
+    return next(
+        w
+        for w in widgets(window)
+        if isinstance(w, Gtk.Button) and w.get_label() == label
+    )
+
+
+def test_a_waiting_message_is_shown_and_can_be_removed() -> None:
+    window = waiting_drawer()
+    assert "stop at ten" in texts(window)
+    button(window, "Remove").emit("clicked")
+    assert window.app.unqueued == ["msg_2"]
+    assert "stop at ten" not in texts(window)
+
+
+def test_editing_a_waiting_message_puts_it_back_in_the_composer() -> None:
+    window = waiting_drawer()
+    button(window, "Edit").emit("clicked")
+    buffer = window.entry.get_buffer()
+    text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+    assert text == "stop at ten"
+    assert window.app.unqueued == ["msg_2"]
+
+
+def test_stop_keeps_waiting_messages_in_the_composer_and_sends_none() -> None:
+    window = waiting_drawer()
+    window.send.emit("clicked")
+    buffer = window.entry.get_buffer()
+    text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+    assert (window.app.stopped, window.app.unqueued) == (1, ["msg_2"])
+    assert text == "stop at ten"
+
+
+def test_the_answer_a_delivered_message_steered_stops_working() -> None:
+    from osiris.harness.engine import Delivered
+
+    window = waiting_drawer()
+    assert window.views[0].working.ticking
+    window.app.conversation.apply(Delivered("ses_1", "msg_2"))
+    window.refresh()
+    assert not window.views[0].working.ticking
 
 
 def test_the_composer_takes_more_than_one_line_and_sends_it() -> None:
@@ -350,3 +436,59 @@ def test_a_draft_fills_an_empty_input() -> None:
     buffer = window.entry.get_buffer()
     text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
     assert text == "Convert this theme"
+
+
+def test_while_osiris_works_a_message_can_be_sent_now() -> None:
+    """It stops what Osiris is doing and is taken next (#188)."""
+    window, _ = drawer()
+    window.app.conversation.asked("count to sixty")
+    window.refresh()
+    assert window.send_now.get_visible()
+    assert "stop" in window.send_now.get_tooltip_text().lower()
+    window.entry.get_buffer().set_text("stop, count to ten")
+    window.send_now.emit("clicked")
+    buffer = window.entry.get_buffer()
+    assert window.app.sent_now == ["stop, count to ten"]
+    assert buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False) == ""
+
+
+def test_with_nothing_working_there_is_nothing_to_cut_into() -> None:
+    window, _ = drawer()
+    window.refresh()
+    assert not window.send_now.get_visible()
+
+
+def test_a_canvas_opened_in_a_narrow_drawer_is_shown_once_it_is_wide() -> None:
+    """The narrow drawer hides the Canvas; widening it must bring it back."""
+    from pathlib import Path
+
+    from gi.repository import GLib
+
+    from osiris.programs.manifest import parse
+    from osiris.programs.programs import Program
+
+    window, _ = drawer()
+    context = GLib.MainContext.default()
+
+    def settle(width: int) -> None:
+        import time
+
+        window.set_default_size(width, 800)
+        window.present()
+        deadline = time.monotonic() + 5
+        while window.get_width() != width and time.monotonic() < deadline:
+            context.iteration(False)
+        for _ in range(100):
+            context.iteration(False)
+
+    settle(440)
+    manifest = parse(
+        '{"name": "pomodoro", "label": "Pomodoro", "description": "x",'
+        ' "run": ["python3", "main.py"]}'
+    )
+    window.show_canvas([(Program(manifest, Path("/nonexistent"), "a", None), [])])
+    settle(1600)
+    assert window.get_width() == 1600
+    assert window.canvas_toggle.get_visible()
+    assert window.canvas_toggle.get_active()
+    assert window.canvas.get_visible()

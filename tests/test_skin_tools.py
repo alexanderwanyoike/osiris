@@ -137,7 +137,7 @@ def test_undoing_skin_steps_reaches_the_skin_store() -> None:
 
 
 def test_the_model_is_told_a_skin_is_data_and_never_a_program() -> None:
-    told = instructions(allow_everything=True)
+    told = instructions(auto_mode=True)
     assert "create_skin" in told and "wear_skin" in told
     assert "never write scripts" in told.lower()
     assert "/usr/share/osiris" in told

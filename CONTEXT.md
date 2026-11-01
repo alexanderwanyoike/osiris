@@ -103,15 +103,24 @@ The part of **Expanded** where the **Harness** shows whatever a **Conversation**
 _Avoid_: artifact, preview pane
 
 **Action tier**:
-How far an action of the **Harness** reaches, which decides whether it asks
-first: a look, an undoable change, or a change that cannot be undone or is not
-the person's own.
-Outside its tier an action waits for the person, who allows it once, for the
-Conversation, or denies it.
-A person can **allow everything**: then the **Harness** asks about nothing, runs
-commands and touches any file, and the model is told so. It is the person's
-choice, off until they turn it on.
+How far one of the Osiris tools reaches: a look, or an undoable change. A hint
+on the tool, not a decision; the **Permission rules** decide.
 _Avoid_: permission level
+
+**Permission rules**:
+The **Engine**'s rules, in its own config, that allow, ask about or deny each
+action the **Harness** takes; the last that matches wins, and they hold for
+every client of the **Engine**. What they ask about waits on a card in the
+**Conversation**: Allow once, Always allow here (the **Engine** keeps allowing
+it in the **Project**), or Deny. A fresh install starts with careful ones; the
+person's own are never overwritten.
+_Avoid_: permissions file, policy (for these)
+
+**Auto mode**:
+The person's choice to have the **Harness** allow whatever the
+**Permission rules** ask about, without a card. A deny rule still refuses, and
+sudo still asks for the password. Off until they turn it on.
+_Avoid_: allow everything, yolo
 
 **Admin password card**:
 Where the **Harness** asks for the administrator password when a command it
@@ -148,6 +157,12 @@ _Avoid_: app (for all of these), skill, plugin
 How the **Harness** goes about a kind of task, written as instructions it
 follows. A **Skill** changes how the **Harness** works; it is not a **Program**.
 _Avoid_: program, prompt
+
+**Reviewer**:
+The **Engine** subagent that reviews a change to a **Program** before the
+**Harness** calls it done: it had no part in the building, can read but not
+change, and answers pass, partial or fail.
+_Avoid_: checker, critic
 
 **Program manifest**:
 What a **Program** is, what it may touch, and how it runs, read before it is
