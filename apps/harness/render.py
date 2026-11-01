@@ -346,13 +346,17 @@ class TurnView(Gtk.Box):
                  program_card: Callable[[str], Gtk.Widget],
                  clock: Callable[[], float] = time.monotonic,
                  admin_card: Callable[[Request], Gtk.Widget] | None = None,
-                 approval_card: Callable[[Turn], Gtk.Widget] | None = None):
+                 approval_card: Callable[[Turn], Gtk.Widget] | None = None,
+                 go_back: Callable[[Turn], None] | None = None,
+                 may_go_back: Callable[[Turn], bool] = lambda _turn: False):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-turn")
         self._on_undo = on_undo
         self._program_card = program_card
         self._admin_card = admin_card
         self._approval_card = approval_card
+        self._go_back = go_back
+        self._may_go_back = may_go_back
         question = Gtk.Label(label=turn.question, xalign=0, wrap=True,
                              wrap_mode=Pango.WrapMode.WORD_CHAR, selectable=True,
                              halign=Gtk.Align.END)
@@ -407,6 +411,14 @@ class TurnView(Gtk.Box):
             chip.append(undo)
         return chip
 
+    def _going_back(self, turn: Turn) -> Gtk.Widget:
+        back = Gtk.Button(label="Go back", halign=Gtk.Align.START)
+        back.add_css_class("flat")
+        back.set_tooltip_text("Go back to before this question: its files, and "
+                              "everything said since")
+        back.connect("clicked", lambda _b: self._go_back(turn))
+        return back
+
     def _extras(self, turn: Turn) -> None:
         child = self.extras.get_first_child()
         while child is not None:
@@ -443,3 +455,5 @@ class TurnView(Gtk.Box):
             meta = Gtk.Label(label="  ·  ".join(parts), xalign=0)
             meta.add_css_class("harness-meta")
             self.extras.append(meta)
+        if self._go_back is not None and self._may_go_back(turn):
+            self.extras.append(self._going_back(turn))
