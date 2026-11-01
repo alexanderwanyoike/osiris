@@ -606,3 +606,26 @@ def test_opening_the_picker_fetches_what_it_offers_afresh() -> None:
     window.entry.get_buffer().insert_at_cursor("@")
     window.entry.get_buffer().insert_at_cursor("R")
     assert window.app.offers_fetched == 1
+
+
+def test_settings_hold_the_persons_connectors_beside_their_providers() -> None:
+    from tests.gtk.conftest import now, texts
+    from tests.gtk.test_providers_page import FakeAccounts
+
+    from osiris.harness.connectors import Connector, State
+
+    window, _ = drawer()
+    app = window.app
+    app.accounts = FakeAccounts()
+    app.background = now
+    app.open_page = lambda _url: None
+    app.choose_model = lambda _model: None
+    app.set_auto_mode = lambda _on: None
+    app.read_connectors = lambda: [Connector("wiki", url="https://w.example/mcp")]
+    app.save_connector = lambda _c: True
+    app.remove_connector = lambda _n: True
+    app.connector_states = lambda: {"wiki": State("connected")}
+    window.show_providers()
+    shown = texts(window)
+    assert "Connectors" in shown
+    assert "https://w.example/mcp" in shown and "Connected" in shown
