@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from osiris.harness.engine_config import ENGINE_CONFIG, edit, read
 from osiris.harness.picker import Entry
@@ -98,3 +98,9 @@ def offered_servers(states: dict[str, State], own: str) -> list[Entry]:
         for name, state in sorted(states.items())
         if state.status == "connected" and name != own
     ]
+
+
+class Servers(Protocol):
+    def connector_states(self, directory: Path) -> dict[str, State]: ...
+
+    def resources(self, directory: Path) -> list[Entry]: ...

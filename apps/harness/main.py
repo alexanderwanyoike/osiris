@@ -62,6 +62,7 @@ from osiris.apps.tool_server import NAME as TOOLS, undo  # noqa: E402
 
 from osiris.harness import admin  # noqa: E402
 from osiris.harness.changes import file_changes  # noqa: E402
+from osiris.harness.connectors import Servers, offered_servers  # noqa: E402
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
 from osiris.harness.harness import Answer, Asking, Harness  # noqa: E402
 from osiris.harness.history import (  # noqa: E402
@@ -614,6 +615,7 @@ class Application(Adw.Application):
         self.look: Look | None = None
         self.accounts: OpencodeAccounts | None = None
         self.skills: Skills | None = None
+        self.servers: Servers | None = None
         #: What the message box's picker lists, by the sign that opens it.
         self.offers: dict[str, list[Entry]] = {}
         self.files = RealFileSystem()
@@ -1076,7 +1078,7 @@ class Application(Adw.Application):
             return
         directory = self.harness.directory
         here = project_program(directory, self.home)
-        programs, skills = self.programs(), self.skills
+        programs, skills, servers = self.programs(), self.skills, self.servers
 
         def gather() -> dict[str, list[Entry]]:
             try:
@@ -1084,7 +1086,9 @@ class Application(Adw.Application):
             except ProgramError:
                 # A folder in ~/Code the person made themselves.
                 files = []
-            return {"@": project_files(directory, files),
+            connected = (offered_servers(servers.connector_states(directory), TOOLS)
+                         + servers.resources(directory)) if servers else []
+            return {"@": project_files(directory, files) + connected,
                     "/": skills.skills(directory) if skills else []}
 
         def found(offers: dict[str, list[Entry]]) -> None:
@@ -1414,6 +1418,7 @@ class Application(Adw.Application):
                                            self.files, self.home))
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 self.skills = engine
+                self.servers = engine
                 GLib.idle_add(self._refresh)
                 GLib.idle_add(lambda: self.refresh_offers() or False)
                 GLib.idle_add(self.start_waiting)
