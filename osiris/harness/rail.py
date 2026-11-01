@@ -61,3 +61,17 @@ def ticks(
             zip(turns, placed(tops, total), seen, strict=True)
         )
     ]
+
+
+#: Room each tick takes down the column.
+PITCH = 10.0
+#: The most of the rail the column may take, so it reads as a compact strip.
+REACH = 0.55
+
+
+def column(count: int, height: float) -> tuple[float, float]:
+    """Where the column of ``count`` ticks starts and how far apart they
+    stand, centred on a rail ``height`` tall: evenly by order, never by how
+    long each question and answer run."""
+    pitch = min(PITCH, height * REACH / count) if count else PITCH
+    return (height - pitch * count) / 2, pitch
