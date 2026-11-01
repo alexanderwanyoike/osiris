@@ -40,3 +40,15 @@ class Panels:
         if tab not in group.tabs:
             group.tabs.append(tab)
         group.selected = tab
+
+    def close(self, tab: Tab) -> None:
+        """The tab before it is selected; a group left empty closes."""
+        group = next((g for g in self.groups if tab in g.tabs), None)
+        if group is None:
+            return
+        place = group.tabs.index(tab)
+        group.tabs.remove(tab)
+        if not group.tabs:
+            self.groups.remove(group)
+        elif group.selected == tab:
+            group.selected = group.tabs[max(place - 1, 0)]
