@@ -17,6 +17,7 @@ from osiris.harness.engine import (
     Text,
     Tokens,
     ToolCalled,
+    ToolFinished,
     ToolRequested,
 )
 from osiris.harness.harness import Allowed, Refused
@@ -102,6 +103,23 @@ def test_a_step_carries_the_input_of_its_tool_call() -> None:
     talk.apply(ToolCalled(S, "call_1", {"command": "ls /etc"}, executed=False))
     talk.apply(Allowed(S, "shell", Tier.ANYTHING, ("ls /etc",), "call_1"))
     assert talk.turns[-1].steps[0].input == {"command": "ls /etc"}
+
+
+def test_a_step_carries_what_its_tool_call_gave_back() -> None:
+    talk = Conversation()
+    talk.asked("list /etc")
+    talk.apply(Allowed(S, "shell", Tier.ANYTHING, ("ls /etc",), "call_1"))
+    talk.apply(ToolFinished(S, "call_1", "NetworkManager\nUPower\n", exit=0))
+    step = talk.turns[-1].steps[0]
+    assert (step.output, step.exit, step.error) == ("NetworkManager\nUPower\n", 0, "")
+
+
+def test_a_step_whose_tool_failed_carries_why() -> None:
+    talk = Conversation()
+    talk.asked("read the notes")
+    talk.apply(Allowed(S, "read", Tier.LOOK, ("notes.txt",), "call_1"))
+    talk.apply(ToolFinished(S, "call_1", "", error="File not found"))
+    assert talk.turns[-1].steps[0].error == "File not found"
 
 
 def test_an_allowed_action_is_not_shown_as_refused() -> None:
