@@ -114,3 +114,21 @@ def command_of(typed: str) -> tuple[str, ...]:
         return tuple(shlex.split(typed))
     except ValueError:
         return ()
+
+
+_SAID = {
+    "connected": ("Connected", "success"),
+    "pending": ("Starting", "muted"),
+    "disabled": ("Off", "muted"),
+    "needs_auth": ("Needs signing in", "warning"),
+}
+
+
+def said_of(state: State | None) -> tuple[str, str]:
+    """A server's state in plain words, and the tone it is shown in. One the
+    Engine has not reported has not been started for the folder yet."""
+    if state is None:
+        return "Not started yet", "muted"
+    if state.status == "failed":
+        return f"Failed: {state.error}" if state.error else "Failed", "danger"
+    return _SAID.get(state.status, (state.status, "muted"))
