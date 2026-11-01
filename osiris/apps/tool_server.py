@@ -80,10 +80,11 @@ something cannot be done that way, tell the person."""
 #: What the model may touch beyond its tools, by the person's choice
 #: (osiris.harness.trust).
 REACH = {
-    False: "nothing outside that folder is\nyours to touch, and you cannot run "
-    "commands.",
-    True: "the person has allowed you\neverything: you may run commands and read "
-    "or change any file, though a\nProgram's code still belongs in its own folder.",
+    False: "a command, or a change\noutside that folder, asks the person first, "
+    "who may say no; ask only for\nwhat the request needs.",
+    True: "the person has turned on\nauto mode: commands and changes run without "
+    "asking unless their rules forbid\nthem, though a Program's code still belongs "
+    "in its own folder.",
 }
 
 
