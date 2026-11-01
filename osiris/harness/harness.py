@@ -35,6 +35,11 @@ REFUSED = (
 )
 
 
+#: Why a step was refused, in the person's words: the two rules that refuse.
+ONLY_IN_PROGRAMS = "Files are read and edited only inside a Program"
+ONLY_WITH_EVERYTHING = "Runs only with Allow everything on"
+
+
 @dataclass(frozen=True)
 class Allowed:
     session: str
@@ -50,6 +55,7 @@ class Refused:
     action: str
     resources: tuple[str, ...]
     call: str = ""
+    reason: str = ""
 
 
 #: The Engine's own file tools, allowed only on files inside a Program: reading
@@ -304,7 +310,10 @@ class Harness:
                     action=action,
                     resources=list(resources),
                 )
-                return Refused(session, action, resources, call)
+                reason = (
+                    ONLY_IN_PROGRAMS if action in FILE_TIERS else ONLY_WITH_EVERYTHING
+                )
+                return Refused(session, action, resources, call, reason)
             case Failed(session, message):
                 self._log.write("failed", session=session, message=message)
             case Stopped(session):
