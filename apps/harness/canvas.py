@@ -1,6 +1,7 @@
 """The Canvas: what a Conversation made, beside it in Expanded
-(docs/HARNESS-LAYOUT.md). For now each Program it touched, its code shown
-read-only in the Theme's colours, editing handed to Code (ADR 0016).
+(docs/HARNESS-LAYOUT.md): its Programs' files and its changes, each kind in a
+group of tabs, code read-only in the Theme's colours, editing handed to Code
+(ADR 0016).
 """
 from collections.abc import Callable
 from pathlib import Path
@@ -10,9 +11,10 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("GtkSource", "5")
-from gi.repository import Adw, Gio, GObject, Gtk, GtkSource, Pango  # noqa: E402
+from gi.repository import Adw, Gio, Gtk, GtkSource, Pango  # noqa: E402
 
 from osiris.harness.engine import FileChange  # noqa: E402
+from osiris.harness.panels import Kind, Panels, Tab  # noqa: E402
 from osiris.harness.review import file_lines  # noqa: E402
 from osiris.programs.programs import Program  # noqa: E402
 
@@ -22,6 +24,9 @@ TREE_BESIDE = "max-width: 900sp"
 
 
 class Canvas(Gtk.Box):
+    """Groups of tabs, one for each kind of thing shown, tiled side by side
+    under a toolbar (#194). ``panels`` decides what is open; this draws it."""
+
     def __init__(self, *, read: Callable[[Path], str],
                  open_in_code: Callable[[Path, Path], None],
                  scheme: GtkSource.StyleScheme | None = None):
@@ -30,61 +35,176 @@ class Canvas(Gtk.Box):
         self._read = read
         self._open_in_code = open_in_code
         self._scheme = scheme
-        self._views: dict[Adw.TabPage, GtkSource.View] = {}
-        #: The tab of a question's changes, kept while Programs come and go.
-        self._changes: Adw.TabPage | None = None
-        self.tabs = Adw.TabView(vexpand=True)
-        self._items = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
-        self._items.add_css_class("navigation-sidebar")
-        self._items.connect("row-activated", self._picked)
-        self._picker = Gtk.MenuButton(icon_name="view-list-symbolic",
-                                      tooltip_text="Everything in this conversation",
-                                      popover=Gtk.Popover(child=self._items))
-        self._picker.add_css_class("flat")
-        self.strip = Adw.TabBar(view=self.tabs, autohide=False, expand_tabs=False,
-                                end_action_widget=self._picker)
+        self.panels = Panels()
+        #: Each group's tabs, by kind, and the widget that holds them.
+        self.views: dict[Kind, Adw.TabView] = {}
+        self._groups: dict[Kind, Gtk.Widget] = {}
+        self._pages: dict[Tab, Adw.TabPage] = {}
+        self._sources: dict[Tab, GtkSource.View] = {}
+        #: The group last opened or chosen in, whose code is current.
+        self._focus: Kind | None = None
+        self._programs: dict[str, tuple[Program, list[Path]]] = {}
+        self.tree = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
+        self.tree.add_css_class("navigation-sidebar")
+        self.tree.connect("row-activated", self._tree_activated)
         self.toolbar = Gtk.Box(spacing=4, halign=Gtk.Align.END)
         self.toolbar.add_css_class("harness-canvas-toolbar")
         files = Gtk.Button(icon_name="folder-symbolic", tooltip_text="Files")
         files.add_css_class("flat")
+        files.connect("clicked", lambda _b: self.show_files())
         self.toolbar.append(files)
+        self._tiles = Gtk.Box(vexpand=True, hexpand=True)
+        self._paneds: list[Gtk.Paned] = []
         self.append(self.toolbar)
-        self.append(self.strip)
-        self.append(self.tabs)
+        self.append(self._tiles)
 
     def show(self, programs: list[tuple[Program, list[Path]]]) -> None:
-        """A tab for each Program, keeping the one on screen if it is still there."""
-        selected = self.tabs.get_selected_page()
-        keep = selected.get_title() if selected is not None else None
-        for index in reversed(range(self.tabs.get_n_pages())):
-            page = self.tabs.get_nth_page(index)
-            if page is not self._changes:
-                self.tabs.close_page(page)
-        self._views = {page: view for page, view in self._views.items()
-                       if page is self._changes}
-        self._items.remove_all()
-        for program, files in programs:
-            content, view = self._page(program, files)
-            page = self.tabs.append(content)
-            page.set_title(program.manifest.label)
-            self._views[page] = view
-            self._items.append(Gtk.Label(label=program.manifest.label, xalign=0))
-            if program.manifest.label == keep:
-                self.tabs.set_selected_page(page)
+        """The Programs whose files can be opened; tabs of any gone close, and
+        with no file open, what the first runs opens."""
+        self._programs = {p.manifest.name: (p, files) for p, files in programs}
+        self._fill_tree()
+        for tab in list(self._open(Kind.CODE)):
+            if tab.key.split("/", 1)[0] not in self._programs:
+                self.close(tab)
+        if not self._open(Kind.CODE):
+            self.show_files()
+
+    def show_files(self) -> None:
+        """Open the code group on what the first Program runs, or bring its
+        file tree forward when it is open."""
+        if self._open(Kind.CODE):
+            self._split.set_show_sidebar(True)
+            return
+        for program, files in self._programs.values():
+            first = _first_file(program, files)
+            if first is not None:
+                self.open_file(program.manifest.name, first)
+                return
+
+    def open_file(self, name: str, relative: Path) -> None:
+        tab = Tab(Kind.CODE, f"{name}/{relative}", relative.name)
+        if tab not in self._pages:
+            program, _ = self._programs[name]
+            content, view = self._code_page(program, relative)
+            self._add(tab, content, view)
+        self._opened(tab)
 
     def show_changes(self, question: str, files: tuple[FileChange, ...],
                      on_comment: Callable[[str, tuple[int, int], str], None]) -> None:
         """A question's changes in a tab of their own: the files it changed,
         each opening to its diff, and a comment on picked lines."""
-        if self._changes is not None:
-            self.tabs.close_page(self._changes)
-            self._views.pop(self._changes, None)
+        tab = Tab(Kind.CHANGES, question, f"Changes: {question}")
+        if tab in self._pages:
+            self.close(tab)
         content, view = self._changes_page(files, on_comment)
-        page = self.tabs.append(content)
-        page.set_title(f"Changes: {question}")
-        self._changes = page
-        self._views[page] = view
-        self.tabs.set_selected_page(page)
+        self._add(tab, content, view)
+        self._opened(tab)
+
+    def close(self, tab: Tab) -> None:
+        page = self._pages.get(tab)
+        if page is not None:
+            self.views[tab.kind].close_page(page)
+
+    def _open(self, kind: Kind) -> list[Tab]:
+        return next((g.tabs for g in self.panels.groups if g.kind is kind), [])
+
+    def _add(self, tab: Tab, content: Gtk.Widget, view: GtkSource.View) -> None:
+        page = self._view(tab.kind).append(content)
+        page.set_title(tab.title)
+        self._pages[tab] = page
+        self._sources[tab] = view
+
+    def _opened(self, tab: Tab) -> None:
+        self.panels.open(tab)
+        self._focus = tab.kind
+        self.views[tab.kind].set_selected_page(self._pages[tab])
+        self._tile()
+
+    def _view(self, kind: Kind) -> Adw.TabView:
+        """The group's tabs, made the first time it opens."""
+        if kind in self.views:
+            return self.views[kind]
+        view = Adw.TabView(vexpand=True, hexpand=True)
+        view.connect("close-page", self._closing)
+        view.connect("notify::selected-page", lambda *_: setattr(self, "_focus", kind))
+        group = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        group.add_css_class("harness-canvas-group")
+        group.append(Adw.TabBar(view=view, autohide=False, expand_tabs=False))
+        group.append(view)
+        self.views[kind] = view
+        self._groups[kind] = self._beside_tree(group) if kind is Kind.CODE else group
+        return view
+
+    def _beside_tree(self, group: Gtk.Widget) -> Gtk.Widget:
+        """The code group, with the Programs' files beside it."""
+        self._split = Adw.OverlaySplitView(
+            sidebar=Gtk.ScrolledWindow(child=self.tree,
+                                       hscrollbar_policy=Gtk.PolicyType.NEVER),
+            content=group, min_sidebar_width=170, max_sidebar_width=220,
+            vexpand=True)
+        holder = Adw.BreakpointBin(child=self._split, width_request=280,
+                                   height_request=200, vexpand=True, hexpand=True)
+        narrow = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(TREE_BESIDE))
+        narrow.add_setter(self._split, "collapsed", True)
+        holder.add_breakpoint(narrow)
+        return holder
+
+    def _closing(self, view: Adw.TabView, page: Adw.TabPage) -> bool:
+        tab = next(t for t, p in self._pages.items() if p is page)
+        del self._pages[tab]
+        self._sources.pop(tab, None)
+        self.panels.close(tab)
+        view.close_page_finish(page, True)
+        self._tile()
+        return True
+
+    def _tile(self) -> None:
+        """The open groups side by side: the first, then the rest stacked."""
+        for paned in self._paneds:
+            paned.set_start_child(None)
+            paned.set_end_child(None)
+        self._paneds = []
+        while (child := self._tiles.get_first_child()) is not None:
+            self._tiles.remove(child)
+        shown = [self._groups[group.kind] for group in self.panels.groups]
+        if not shown:
+            return
+        self._tiles.append(self._side_by_side(shown))
+
+    def _side_by_side(self, shown: list[Gtk.Widget]) -> Gtk.Widget:
+        if len(shown) == 1:
+            return shown[0]
+        stack = shown[-1]
+        for widget in reversed(shown[1:-1]):
+            stack = self._paned(Gtk.Orientation.VERTICAL, widget, stack)
+        return self._paned(Gtk.Orientation.HORIZONTAL, shown[0], stack)
+
+    def _paned(self, orientation: Gtk.Orientation, start: Gtk.Widget,
+               end: Gtk.Widget) -> Gtk.Paned:
+        paned = Gtk.Paned(orientation=orientation, start_child=start, end_child=end,
+                          wide_handle=False, hexpand=True, vexpand=True)
+        self._paneds.append(paned)
+        return paned
+
+    def _fill_tree(self) -> None:
+        self.tree.remove_all()
+        for name, (program, files) in self._programs.items():
+            heading = Gtk.ListBoxRow(activatable=False, selectable=False,
+                                     child=Gtk.Label(label=program.manifest.label,
+                                                     xalign=0))
+            heading.add_css_class("harness-tree-heading")
+            self.tree.append(heading)
+            for relative in files:
+                row = Gtk.ListBoxRow(child=Gtk.Label(
+                    label=str(relative), xalign=0,
+                    ellipsize=Pango.EllipsizeMode.MIDDLE))
+                row.opens = (name, relative)
+                self.tree.append(row)
+
+    def _tree_activated(self, _tree, row) -> None:
+        opens = getattr(row, "opens", None)
+        if opens is not None:
+            self.open_file(*opens)
 
     def _changes_page(self, files: tuple[FileChange, ...],
                       on_comment: Callable[[str, tuple[int, int], str], None],
@@ -148,87 +268,45 @@ class Canvas(Gtk.Box):
         return page, view
 
     def current_view(self) -> GtkSource.View | None:
-        page = self.tabs.get_selected_page()
-        return self._views.get(page) if page is not None else None
+        group = next((g for g in self.panels.groups if g.kind is self._focus), None)
+        if group is None or group.selected is None:
+            return None
+        return self._sources.get(group.selected)
 
     def restyle(self, scheme: GtkSource.StyleScheme | None) -> None:
         self._scheme = scheme
-        for view in self._views.values():
+        for view in self._sources.values():
             view.get_buffer().set_style_scheme(scheme)
 
-    def _picked(self, _list, row) -> None:
-        self.tabs.set_selected_page(self.tabs.get_nth_page(row.get_index()))
-        self._picker.popdown()
-
-    def _page(self, program: Program,
-              files: list[Path]) -> tuple[Gtk.Widget, GtkSource.View]:
-        buffer = GtkSource.Buffer()
+    def _code_page(self, program: Program,
+                   relative: Path) -> tuple[Gtk.Widget, GtkSource.View]:
+        buffer = GtkSource.Buffer(
+            language=GtkSource.LanguageManager.get_default().guess_language(
+                relative.name, None))
         if self._scheme is not None:
             buffer.set_style_scheme(self._scheme)
+        buffer.set_text(self._read(program.source / relative))
         view = GtkSource.View(buffer=buffer, editable=False, cursor_visible=False,
                               monospace=True, show_line_numbers=True, left_margin=12,
                               right_margin=12, top_margin=12, bottom_margin=12,
                               wrap_mode=Gtk.WrapMode.WORD_CHAR)
         view.add_css_class("harness-code")
-        where = Gtk.Label(xalign=0, hexpand=True, ellipsize=Pango.EllipsizeMode.START)
+        where = Gtk.Label(label=f"{program.manifest.name} / {relative}", xalign=0,
+                          hexpand=True, ellipsize=Pango.EllipsizeMode.START)
         where.add_css_class("harness-meta")
-        shown: list[Path] = []
-
-        def show_file(relative: Path) -> None:
-            shown[:] = [relative]
-            buffer.set_text(self._read(program.source / relative))
-            language = GtkSource.LanguageManager.get_default().guess_language(
-                relative.name, None)
-            buffer.set_language(language)
-            where.set_text(f"{program.manifest.name} / {relative}")
-
-        tree = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
-        tree.add_css_class("navigation-sidebar")
-        for relative in files:
-            row = Gtk.ListBoxRow(child=Gtk.Label(label=str(relative), xalign=0,
-                                                 ellipsize=Pango.EllipsizeMode.MIDDLE))
-            row.relative = relative
-            tree.append(row)
-        tree.connect("row-activated", lambda _t, row: show_file(row.relative))
-
-        files_toggle = Gtk.ToggleButton(icon_name="folder-symbolic", tooltip_text="Files",
-                                        active=True)
-        files_toggle.add_css_class("flat")
         open_code = Gtk.Button(icon_name="document-edit-symbolic",
                                tooltip_text="Open in Code")
         open_code.add_css_class("flat")
-        open_code.connect("clicked", lambda _b: self._open_in_code(
-            program.source, shown[0] if shown else Path(".")))
+        open_code.connect("clicked",
+                          lambda _b: self._open_in_code(program.source, relative))
         bar = Gtk.Box(spacing=6)
         bar.add_css_class("harness-path")
-        bar.append(files_toggle)
         bar.append(where)
         bar.append(open_code)
-
-        split = Adw.OverlaySplitView(
-            sidebar=Gtk.ScrolledWindow(child=tree, hscrollbar_policy=Gtk.PolicyType.NEVER),
-            content=Gtk.ScrolledWindow(child=view, vexpand=True, hexpand=True,
-                                       hscrollbar_policy=Gtk.PolicyType.NEVER),
-            min_sidebar_width=170, max_sidebar_width=220, vexpand=True)
-        files_toggle.bind_property(
-            "active", split, "show-sidebar",
-            GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
-        holder = Adw.BreakpointBin(child=split, width_request=280, height_request=200,
-                                   vexpand=True)
-        narrow = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(TREE_BESIDE))
-        narrow.add_setter(split, "collapsed", True)
-        narrow.add_setter(files_toggle, "active", False)
-        holder.add_breakpoint(narrow)
-
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         page.append(bar)
-        page.append(holder)
-        first = _first_file(program, files)
-        if first is not None:
-            show_file(first)
-            for row in _rows(tree):
-                if row.relative == first:
-                    tree.select_row(row)
+        page.append(Gtk.ScrolledWindow(child=view, vexpand=True, hexpand=True,
+                                       hscrollbar_policy=Gtk.PolicyType.NEVER))
         return page, view
 
 
@@ -238,13 +316,6 @@ def _first_file(program: Program, files: list[Path]) -> Path | None:
         if Path(word) in files:
             return Path(word)
     return files[0] if files else None
-
-
-def _rows(tree: Gtk.ListBox):
-    index = 0
-    while (row := tree.get_row_at_index(index)) is not None:
-        yield row
-        index += 1
 
 
 def open_in_code(folder: Path, file: Path) -> None:
