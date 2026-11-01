@@ -32,7 +32,7 @@ from osiris.harness.opencode import (
     Service,
     locate,
 )
-from osiris.harness.picker import Entry
+from osiris.harness.picker import Entry, Reference
 from osiris.platform import FakeFileSystem, FakeHttpClient, FakeIdentity, FakeRunner
 
 URL = "http://127.0.0.1:49374"
@@ -849,3 +849,25 @@ class TestConnectors:
             ),
             Entry("resource", "file:///n.txt", "notes.txt", "files"),
         ]
+
+    def test_a_picked_resource_goes_as_an_attachment_by_its_own_uri(self) -> None:
+        path = f"{URL}/api/session/{SESSION}/prompt"
+        http = FakeHttpClient(replies={("POST", path): {"data": {"id": "msg_1"}}})
+        home = Entry("resource", "wiki://home", "Home page", "wiki")
+        engine(http).send(SESSION, "see @Home page", (Reference(home, 4, 14),))
+        _, _, body = http.requests[0]
+        assert isinstance(body, dict)
+        assert body["files"] == [
+            {
+                "uri": "wiki://home",
+                "name": "Home page",
+                "mention": {"start": 4, "end": 14, "text": "@Home page"},
+            }
+        ]
+
+    def test_a_picked_server_is_named_in_the_text_and_attaches_nothing(self) -> None:
+        path = f"{URL}/api/session/{SESSION}/prompt"
+        http = FakeHttpClient(replies={("POST", path): {"data": {"id": "msg_1"}}})
+        wiki = Entry("connector", "wiki", "wiki", "")
+        engine(http).send(SESSION, "ask @wiki", (Reference(wiki, 4, 9),))
+        assert http.requests == [("POST", path, {"text": "ask @wiki"})]
