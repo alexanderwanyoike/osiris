@@ -791,3 +791,13 @@ class TestOffered:
         )
         offered = engine(http).skills(Path("/home/tester/Code/timer"))
         assert offered == [Entry("skill", "review", "review", "Review the changes")]
+
+    def test_a_skill_is_typed_by_its_id_not_its_display_name(self) -> None:
+        """The Engine names a skill "OpenCode" for show; /opencode loads it."""
+        where = "location%5Bdirectory%5D=%2Fhome%2Ftester"
+        skill = {"id": "opencode", "name": "OpenCode", "path": "/x", "content": ""}
+        http = FakeHttpClient(
+            replies={("GET", f"{URL}/api/skill?{where}"): {"data": [skill]}}
+        )
+        offered = engine(http).skills(Path("/home/tester"))
+        assert offered == [Entry("skill", "opencode", "opencode", "")]
