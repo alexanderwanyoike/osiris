@@ -44,6 +44,7 @@ sys.path.insert(0, HERE)
 
 from admin_card import AdminCard  # noqa: E402
 from approval_card import ApprovalCard  # noqa: E402
+from going_back import going_back_dialog  # noqa: E402
 from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
 from canvas import Canvas, open_in_code  # noqa: E402
@@ -468,8 +469,8 @@ class Drawer(Gtk.ApplicationWindow):
                             program_card=self.app.program_card,
                             admin_card=self.app.admin_card,
                             approval_card=self.app.approval_card,
-                            edit=self.app.go_back,
-                            try_again=lambda turn: self.app.go_back(turn, again=True),
+                            edit=self.app.ask_to_go_back,
+                            try_again=lambda turn: self.app.ask_to_go_back(turn, True),
                             may_go_back=lambda turn: self.app.conversation.can_go_back(turn))
             self.views.append(view)
             self.turns.append(view)
@@ -1081,6 +1082,13 @@ class Application(Adw.Application):
             self.update_canvas()
 
         self.background(lambda: harness.resume(session), opened)
+
+    def ask_to_go_back(self, turn: Turn, again: bool = False) -> None:
+        """Say what going back loses, and go back only on the person's yes."""
+        dialog = going_back_dialog(self.conversation.losing(turn), again=again)
+        dialog.connect("response", lambda _d, response: response == "back"
+                       and self.go_back(turn, again))
+        dialog.present(self.drawer)
 
     def go_back(self, turn: Turn, again: bool = False) -> None:
         """Go back to before a question: the Engine puts its files back and
