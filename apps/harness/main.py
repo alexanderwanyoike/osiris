@@ -51,6 +51,7 @@ from browser import Page  # noqa: E402
 from canvas import Canvas, open_in_code  # noqa: E402
 from connectors_page import ConnectorsPage  # noqa: E402
 from composer_picker import Picker  # noqa: E402
+from rail import Rail  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
 from render import TurnView  # noqa: E402
 from sidebar import Sidebar  # noqa: E402
@@ -82,6 +83,7 @@ from osiris.harness.history import (  # noqa: E402
 )
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
+from osiris.harness.rail import ticks  # noqa: E402
 from osiris.harness.picker import Entry, Reference, Skills, project_files  # noqa: E402
 from osiris.harness.engine import (  # noqa: E402
     Failed,
@@ -259,7 +261,17 @@ class Drawer(Gtk.ApplicationWindow):
         bottom.append(composer)
         bottom.append(self.footer)
         chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
-        chat.append(self.scroller)
+        self.rail = Rail(on_jump=self.rail_jump)
+        self.rail.set_halign(Gtk.Align.END)
+        self.rail.set_margin_top(12)
+        self.rail.set_margin_bottom(12)
+        self.rail.set_margin_end(2)
+        railed = Gtk.Overlay(child=self.scroller, vexpand=True)
+        railed.add_overlay(self.rail)
+        chat.append(railed)
+        rail_view = self.scroller.get_vadjustment()
+        rail_view.connect("value-changed", lambda _a: self._update_rail())
+        rail_view.connect("changed", lambda _a: self._update_rail())
         chat.append(Adw.Clamp(maximum_size=READABLE, child=bottom))
         self.canvas = Canvas(read=lambda path: path.read_text(errors="replace"),
                              open_in_code=open_in_code,
@@ -591,6 +603,27 @@ class Drawer(Gtk.ApplicationWindow):
         self.footer.set_text(self.app.footer_line())
         self._show_waiting(conversation.waiting)
         self._follow()
+        self._update_rail()
+
+    def _tops(self) -> list[float]:
+        """Where each question starts in the scrolled Conversation."""
+        content = self.scroller.get_child()
+        return [view.compute_point(content, Graphene.Point())[1].y
+                for view in self.views]
+
+    def _update_rail(self) -> None:
+        turns = self.app.conversation.turns
+        # One question has no length to show.
+        shown = len(turns) > 1 and len(self.views) == len(turns)
+        self.rail.set_visible(shown)
+        if not shown:
+            return
+        view = self.scroller.get_vadjustment()
+        self.rail.show_ticks(ticks(turns, self._tops(), view.get_upper(),
+                                   view.get_value(), view.get_page_size()))
+
+    def rail_jump(self, index: int) -> None:
+        self.scroller.get_vadjustment().set_value(max(self._tops()[index] - 12, 0))
 
     def _show_waiting(self, waiting) -> None:
         while (row := self.waiting.get_first_child()) is not None:
