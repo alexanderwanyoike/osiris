@@ -78,6 +78,8 @@ GLASS_TINT = 0.10
 
 #: How far line numbers fade from muted text toward the background.
 GUTTER_FADE = 0.45
+#: How far a token's background fades from the accent to the surface.
+TOKEN_WASH = 0.8
 
 
 def _frosted(c: Mapping[str, str], *, lift: float) -> str:
@@ -145,6 +147,13 @@ def inline_style(theme: Mapping[str, Any]) -> InlineStyle:
     return InlineStyle(
         code_foreground=c["foreground"], code_background=c["surfaceMuted"]
     )
+
+
+def token_colours(theme: Mapping[str, Any]) -> tuple[str, str]:
+    """A picked file or skill in the message box: foreground and background."""
+    c = _colours(theme)
+    wash = Colour(c["accent"]).mix(Colour(c["surface"]), TOKEN_WASH)
+    return c["accent"], wash.hex
 
 
 def source_scheme(theme: Mapping[str, Any]) -> str:
