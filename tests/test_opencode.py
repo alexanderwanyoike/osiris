@@ -15,8 +15,10 @@ from osiris.harness.engine import (
     Finished,
     ModelRef,
     Past,
+    FileChange,
     PastTurn,
     Reply,
+    Revert,
     Stopped,
     Text,
     Tokens,
@@ -273,6 +275,48 @@ class TestSessions:
         assert http.requests == [
             ("POST", path, {"decision": decision, "message": "why"})
         ]
+
+
+class TestGoingBack:
+    STAGE = f"{URL}/api/session/{SESSION}/revert/stage"
+    PATCH = "--- a/y.txt\n+++ /dev/null\n@@ -1 +0,0 @@\n-y\n"
+
+    def test_going_back_stages_the_engines_revert_and_names_what_it_restores(
+        self,
+    ) -> None:
+        """As opencode 2.2.4 does: staging puts the files back at once and
+        lists each, with the snapshot it restored from."""
+        reply = {
+            "data": {
+                "messageID": "msg_2",
+                "snapshot": "116a7001",
+                "files": [
+                    {
+                        "file": "y.txt",
+                        "patch": self.PATCH,
+                        "additions": 0,
+                        "deletions": 1,
+                        "status": "deleted",
+                    }
+                ],
+            }
+        }
+        http = FakeHttpClient(replies={("POST", self.STAGE): reply})
+        staged = engine(http).revert(SESSION, "msg_2")
+        assert http.requests == [
+            ("POST", self.STAGE, {"messageID": "msg_2", "files": True})
+        ]
+        assert staged == Revert(
+            files=(FileChange("y.txt", "deleted", 0, 1, self.PATCH),),
+            restorable=True,
+        )
+
+    def test_outside_a_git_repository_the_files_cannot_be_restored(self) -> None:
+        """As opencode 2.2.4 does there: no snapshot, and no files, even though
+        the question changed some."""
+        reply = {"data": {"messageID": "msg_2", "files": []}}
+        http = FakeHttpClient(replies={("POST", self.STAGE): reply})
+        assert engine(http).revert(SESSION, "msg_2") == Revert((), restorable=False)
 
 
 class TestEvents:
