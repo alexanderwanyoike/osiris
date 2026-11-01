@@ -80,6 +80,7 @@ def app() -> tuple[App, FakeEngine]:
         withdrawn=[],
         waiting=None,
         problem=None,
+        servers=None,
     )
     stand_in.send_notification = lambda session, notification: stand_in.sent.append(
         (session, notification)

@@ -92,3 +92,30 @@ def test_fresh_offers_reach_a_picker_already_open() -> None:
     stand_in.skills = SimpleNamespace(skills=lambda _directory: [])
     stand_in.refresh_offers()
     assert stand_in.drawer.picker_refreshes == 1
+
+
+def test_at_offers_the_projects_files_then_its_servers_and_their_resources() -> None:
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from osiris.harness.connectors import State
+    from osiris.harness.harness import Harness
+
+    from tests.test_harness import GPT, HOME
+
+    project = HOME / "Code" / "timer"
+    stand_in, engine = app()
+    stand_in.harness = Harness(engine, stand_in.log, GPT, directory=project)
+    stand_in.programs = lambda: SimpleNamespace(files=lambda _name: [Path("README.md")])
+    stand_in.skills = None
+    home = Entry("resource", "wiki://home", "Home", "wiki")
+    stand_in.servers = SimpleNamespace(
+        connector_states=lambda _d: {"wiki": State("connected")},
+        resources=lambda _d: [home],
+    )
+    stand_in.refresh_offers()
+    assert [entry.label for entry in stand_in.offered("@")] == [
+        "README.md",
+        "wiki",
+        "Home",
+    ]
