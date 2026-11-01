@@ -249,3 +249,10 @@ def test_a_files_header_names_its_program_and_path_beside_its_icon() -> None:
     header = next(w for w in widgets(page) if "harness-path" in w.get_css_classes())
     assert "Timer \u203a src \u203a clock.py" in texts(header)
     assert any(isinstance(w, Gtk.Image) for w in widgets(header))
+
+
+def test_code_has_room_between_its_lines_and_around_it() -> None:
+    widget, _ = canvas()
+    view = widget.current_view()
+    assert view.get_pixels_below_lines() >= 2
+    assert view.get_left_margin() >= 16 and view.get_top_margin() >= 16
