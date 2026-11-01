@@ -30,7 +30,8 @@ class Canvas(Gtk.Box):
 
     def __init__(self, *, read: Callable[[Path], str],
                  open_in_code: Callable[[Path, Path], None],
-                 scheme: GtkSource.StyleScheme | None = None):
+                 scheme: GtkSource.StyleScheme | None = None,
+                 on_changes: Callable[[], None] = lambda: None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.add_css_class("harness-canvas")
         self._read = read
@@ -54,6 +55,10 @@ class Canvas(Gtk.Box):
         files.add_css_class("flat")
         files.connect("clicked", lambda _b: self.show_files())
         self.toolbar.append(files)
+        changes = Gtk.Button(icon_name="osiris-changes-symbolic", tooltip_text="Changes")
+        changes.add_css_class("flat")
+        changes.connect("clicked", lambda _b: on_changes())
+        self.toolbar.append(changes)
         self._tiles = Gtk.Box(vexpand=True, hexpand=True)
         self._paneds: list[Gtk.Paned] = []
         self.append(self.toolbar)
