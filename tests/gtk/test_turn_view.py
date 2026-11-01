@@ -448,3 +448,26 @@ def test_an_answer_that_may_not_be_tried_again_has_no_arrow() -> None:
         isinstance(w, Gtk.Button) and w.get_icon_name() == "view-refresh-symbolic"
         for w in widgets(view)
     )
+
+
+def test_an_answer_that_edited_files_shows_its_changes_from_an_icon_by_its_time() -> (
+    None
+):
+    shown: list[Turn] = []
+    turn = edited(State.DONE)
+    view = TurnView(
+        turn,
+        on_undo=lambda _t: None,
+        program_card=lambda _n: Gtk.Label(),
+        show_changes=shown.append,
+    )
+    view.update(turn, STYLE, None)
+    icon = icon_button(view, "view-dual-symbolic")
+    assert any(
+        "harness-meta" in w.get_css_classes()
+        for w in widgets(icon.get_parent())
+        if isinstance(w, Gtk.Label)
+    )
+    assert icon.get_tooltip_text().startswith("Show what this answer changed")
+    icon.emit("clicked")
+    assert shown == [turn]
