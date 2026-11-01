@@ -1413,6 +1413,7 @@ class Application(Adw.Application):
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
                 self.skills = engine
                 GLib.idle_add(self._refresh)
+                GLib.idle_add(lambda: self.refresh_offers() or False)
                 GLib.idle_add(self.start_waiting)
                 GLib.idle_add(lambda: self.load_history() or False)
                 for event in engine.events():
