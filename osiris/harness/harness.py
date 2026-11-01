@@ -25,6 +25,7 @@ from osiris.harness.engine import (
     ToolRequested,
 )
 from osiris.harness.log import HarnessLog
+from osiris.harness.picker import Reference
 from osiris.harness.titles import title_of
 from osiris.platform import HttpError
 
@@ -125,7 +126,7 @@ class Harness:
         #: Actions held for the person, by session and request.
         self._waiting: dict[tuple[str, str], Asking] = {}
 
-    def ask(self, text: str) -> str:
+    def ask(self, text: str, references: tuple[Reference, ...] = ()) -> str:
         """Send a question; while the session works it waits and steers the
         model at its next step. Answers where it waits."""
         directory, session = self._directory, self._session
@@ -135,7 +136,7 @@ class Harness:
             self._engine.rename(session, title_of(text))
         self._running[session] = directory
         self._log.write("sent", session=session, text=text)
-        return self._engine.send(session, text)
+        return self._engine.send(session, text, references)
 
     def send_now(self, text: str) -> str:
         """Send while the session works, stopping its step at once so the
