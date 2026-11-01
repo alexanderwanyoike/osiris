@@ -360,21 +360,32 @@ popover.harness-picker-popover > contents {
 .harness-connector-state.harness-danger { color: @harness_danger; background-color: alpha(@harness_danger, 0.14); }
 .harness-connector-form .harness-problem { color: @harness_danger; font-size: 0.9em; }
 
-/* The Conversation rail: a tick per question at the edge, faint until its
-   part of the Conversation is on screen; a question that changed something or
-   waits on the person keeps its own colour. */
-.harness-rail-tick { padding: 0 3px; }
+/* The Conversation rail: a compact column of short, faint ticks, one per
+   question. Those on screen are a shade brighter and the current one longer;
+   the tick under the pointer grows most and its neighbours a little. */
 .harness-rail-line {
     min-height: 2px;
+    min-width: 7px;
+    margin-right: 4px;
     border-radius: 1px;
-    color: alpha(@harness_fg, 0.22);
+    color: alpha(@harness_fg, 0.16);
     background-color: currentColor;
-    transition: color 150ms ease-out, min-height 120ms ease-out;
+    transition: min-width 140ms ease-out, color 140ms ease-out;
 }
-.harness-rail-tick.lit .harness-rail-line { color: alpha(@harness_fg, 0.7); }
-.harness-rail-tick.changed .harness-rail-line { color: alpha(@harness_success, 0.45); }
-.harness-rail-tick.changed.lit .harness-rail-line { color: @harness_success; }
-.harness-rail-tick.waiting .harness-rail-line { color: alpha(@harness_warning, 0.5); }
+.harness-rail-tick.lit .harness-rail-line { color: alpha(@harness_fg, 0.34); }
+.harness-rail-tick.current .harness-rail-line { min-width: 12px; color: alpha(@harness_fg, 0.85); }
+.harness-rail-tick.changed .harness-rail-line { color: alpha(@harness_success, 0.3); }
+.harness-rail-tick.changed.lit .harness-rail-line { color: alpha(@harness_success, 0.6); }
+.harness-rail-tick.waiting .harness-rail-line { color: alpha(@harness_warning, 0.6); }
 .harness-rail-tick.waiting.lit .harness-rail-line { color: @harness_warning; }
-.harness-rail-tick:hover .harness-rail-line { min-height: 4px; }
-.harness-rail-band { border-radius: 4px; background-color: alpha(@harness_fg, 0.05); }
+.harness-rail-tick.near-2 .harness-rail-line { min-width: 9px; }
+.harness-rail-tick.near-1 .harness-rail-line { min-width: 12px; }
+.harness-rail-tick.near-0 .harness-rail-line { min-width: 17px; color: alpha(@harness_fg, 0.95); }
+popover.harness-rail-card > contents {
+    background-color: @harness_raised;
+    color: @harness_fg;
+    border: 1px solid alpha(@harness_fg, 0.08);
+    border-radius: 14px;
+    padding: 8px 12px;
+    box-shadow: 0 6px 12px alpha(@harness_sunken, 0.40);
+}
