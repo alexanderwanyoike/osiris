@@ -3,7 +3,6 @@ shell in a Program's folder, in the Theme's terminal colours and font."""
 
 from __future__ import annotations
 
-import os
 import time
 from pathlib import Path
 
@@ -52,18 +51,12 @@ def test_it_is_drawn_in_the_themes_terminal_font_and_background(
 
 
 def test_closing_it_ends_the_shell(tmp_path: Path) -> None:
+    """GLib reaps the shell; the main loop turns until it has."""
     shell = started(tmp_path)
     pid = shell.pid
     shell.close()
+    context = GLib.MainContext.default()
     deadline = time.monotonic() + 5
-    while time.monotonic() < deadline:
-        try:
-            os.waitpid(pid, os.WNOHANG)
-            os.kill(pid, 0)
-        except ChildProcessError, ProcessLookupError:
-            break
-        time.sleep(0.05)
-    assert (
-        not Path(f"/proc/{pid}").exists()
-        or "Z" in Path(f"/proc/{pid}/stat").read_text().split()[2]
-    )
+    while Path(f"/proc/{pid}").exists() and time.monotonic() < deadline:
+        context.iteration(False)
+    assert not Path(f"/proc/{pid}").exists()
