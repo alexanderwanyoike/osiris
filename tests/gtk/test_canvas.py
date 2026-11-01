@@ -566,3 +566,17 @@ def test_the_toolbar_opens_the_conversation_panel_once() -> None:
     (group,) = widget.panels.groups
     assert group.kind is Kind.CONVERSATION and len(group.tabs) == 1
     assert about.get_ancestor(Canvas) is widget
+
+
+def test_the_conversation_panel_opens_again_after_its_tab_is_closed() -> None:
+    about = Gtk.Label(label="about this Conversation")
+    widget = Canvas(
+        read=lambda path: SOURCES[path.name],
+        open_in_code=lambda _folder, _file: None,
+        conversation=about,
+    )
+    widget.show_conversation()
+    (tab,) = widget.panels.groups[0].tabs
+    widget.close(tab)
+    widget.show_conversation()
+    assert about.get_ancestor(Canvas) is widget
