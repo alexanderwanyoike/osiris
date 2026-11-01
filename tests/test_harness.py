@@ -285,7 +285,7 @@ def test_a_typed_reply_refuses_the_action_and_reaches_thoth() -> None:
 
 
 def test_allowing_for_the_conversation_stops_asking_there_only() -> None:
-    subject, engine, _ = asked_to_list_etc()
+    subject, _, _ = asked_to_list_etc()
     subject.answer("ses_1", "per_1", Answer.CONVERSATION)
     again = subject.handle(ToolRequested("ses_1", "per_2", "shell", ("ls /usr",)))
     other = subject.handle(ToolRequested("ses_1", "per_3", "shell", ("rm /tmp/x",)))
