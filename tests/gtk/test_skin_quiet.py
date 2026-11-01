@@ -80,7 +80,8 @@ def test_dividers_hide_until_the_pointer_is_on_them(sheet: Path) -> None:
     and shows a faint line where the pointer is."""
     text = sheet.read_text()
     rest = re.search(
-        r"\.harness-drawer paned > separator[^{]*\{[^}]*background-color:\s*transparent",
+        r"\.harness-drawer paned > separator[^{]*\{"
+        r"[^}]*background-color:\s*transparent",
         text,
     )
     hover = re.search(r"\.harness-drawer paned > separator:hover\s*\{", text)
