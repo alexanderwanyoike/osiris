@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 
 from osiris.harness.activity import THINKING, WRITING, Step
@@ -18,6 +18,7 @@ from osiris.harness.engine import (
     Stopped,
     Text,
     ToolCalled,
+    ToolFinished,
 )
 from osiris.harness.harness import Allowed, Decision, Refused
 from osiris.harness.log import Change
@@ -141,8 +142,17 @@ class Conversation:
     def _input(self, call: str) -> Mapping[str, object] | None:
         return self._inputs.pop(call, None) if call else None
 
-    def _step(self, turn: Turn, event: ToolCalled | Allowed | Refused) -> None:
+    def _step(
+        self, turn: Turn, event: ToolCalled | Allowed | Refused | ToolFinished
+    ) -> None:
         match event:
+            case ToolFinished(_, call, output, error, exit_status):
+                turn.steps = [
+                    replace(step, output=output, error=error, exit=exit_status)
+                    if step.call == call
+                    else step
+                    for step in turn.steps
+                ]
             case ToolCalled(_, call, arguments, _):
                 self._inputs[call] = arguments
             case Allowed(_, action, _, resources, call):
@@ -173,7 +183,7 @@ class Conversation:
                 turn.doing = THINKING
                 self._step_ended = True
                 self.tokens_spent += tokens.input + tokens.output + tokens.reasoning
-            case ToolCalled() | Allowed() | Refused():
+            case ToolCalled() | Allowed() | Refused() | ToolFinished():
                 self._step(turn, event)
             case Finished():
                 turn.state = State.DONE

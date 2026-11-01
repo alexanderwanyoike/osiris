@@ -94,6 +94,10 @@ class Step:
     #: The Engine's tool call this step decided on, and what the model gave it.
     call: str = ""
     input: Mapping[str, object] | None = None
+    #: What the tool gave back once it ran, or why it failed.
+    output: str = ""
+    error: str = ""
+    exit: int | None = None
 
     @property
     def doing(self) -> str:
