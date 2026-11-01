@@ -20,6 +20,10 @@ class Notice:
 
 def notice_of(conversation: Conversation) -> Notice:
     turn = conversation.turns[-1]
+    if turn.held is not None:
+        return Notice(
+            "Osiris is waiting for you", f"{conversation.title}\n{turn.held.question}"
+        )
     if turn.state is State.FAILED:
         return Notice(
             "Osiris could not finish", f"{conversation.title}\n{_start(turn.error)}"
