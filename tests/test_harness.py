@@ -770,3 +770,22 @@ def test_a_sudo_command_is_known_before_the_engine_is_told_to_run_it() -> None:
     engine.reply = lambda *_args, **_kwargs: seen.append(subject.running_sudo())  # type: ignore[method-assign]
     subject.handle(ToolRequested("ses_1", "per_1", "shell", ("sudo pacman -S cowsay",)))
     assert seen == ["ses_1"]
+
+
+def test_going_back_keeps_the_engines_revert_and_is_logged() -> None:
+    from osiris.harness.engine import FileChange
+
+    subject, engine, files = harness()
+    subject.ask("make y.txt")
+    subject.handle(Finished("ses_1"))
+    change = FileChange("y.txt", "deleted", 0, 1, "-y\n")
+    engine.revert_gives = Revert((change,), restorable=True)
+    assert subject.go_back("ses_1", "msg_1") == Revert((change,), restorable=True)
+    assert engine.reverted == [("ses_1", "msg_1")]
+    assert engine.reverts_kept == ["ses_1"]
+    entry = entries(files)[-1]
+    assert (entry["kind"], entry["message"], entry["files"]) == (
+        "went-back",
+        "msg_1",
+        ["y.txt"],
+    )
