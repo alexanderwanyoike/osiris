@@ -3,7 +3,12 @@ config so they are theirs and the Engine reloads them."""
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from osiris.harness.connectors import Connector, connectors
+from osiris.harness.engine_config import ENGINE_CONFIG
+from osiris.platform import FakeFileSystem
 
 CONFIG = {
     "permissions": [],
@@ -63,3 +68,25 @@ def test_removing_a_connector_leaves_the_others() -> None:
     assert connectors(removed(CONFIG, "wiki")) == [
         Connector("files", command=("npx", "files"), on=False)
     ]
+
+
+HOME = Path("/home/tester")
+
+
+def test_a_saved_connector_is_in_the_engines_config_and_read_back() -> None:
+    from osiris.harness.connectors import read_connectors, save_connector
+
+    files = FakeFileSystem()
+    files.write(HOME / ENGINE_CONFIG, json.dumps({"permissions": []}))
+    assert save_connector(files, HOME, Connector("wiki", url="https://w/mcp"))
+    assert read_connectors(files, HOME) == [Connector("wiki", url="https://w/mcp")]
+    assert json.loads(files.read(HOME / ENGINE_CONFIG))["permissions"] == []
+
+
+def test_a_commented_config_is_left_and_saving_says_so() -> None:
+    from osiris.harness.connectors import save_connector
+
+    files = FakeFileSystem()
+    files.write((HOME / ENGINE_CONFIG).with_suffix(".jsonc"), "// mine\n{}")
+    assert not save_connector(files, HOME, Connector("wiki", url="https://w/mcp"))
+    assert not files.exists(HOME / ENGINE_CONFIG)
