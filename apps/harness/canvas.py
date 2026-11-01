@@ -33,7 +33,8 @@ class Canvas(Gtk.Box):
                  open_in_code: Callable[[Path, Path], None],
                  scheme: GtkSource.StyleScheme | None = None,
                  on_changes: Callable[[], None] = lambda: None,
-                 terminal: Callable[[Path], Gtk.Widget] | None = None):
+                 terminal: Callable[[Path], Gtk.Widget] | None = None,
+                 page: Callable[[str, Callable[[str], None]], Gtk.Widget] | None = None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.add_css_class("harness-canvas")
         self._read = read
@@ -49,6 +50,9 @@ class Canvas(Gtk.Box):
         self._focus: Kind | None = None
         self._programs: dict[str, tuple[Program, list[Path]]] = {}
         self._terminal = terminal
+        self._page = page
+        #: Pages opened so far, which keys each one's tab.
+        self._pages_opened = 0
         #: Terminals opened so far, which names each one's tab.
         self._shells = 0
         #: What each tab shows, ended when its tab closes.
@@ -71,6 +75,10 @@ class Canvas(Gtk.Box):
         shell.add_css_class("flat")
         shell.connect("clicked", lambda _b: self.open_terminal())
         self.toolbar.append(shell)
+        globe = Gtk.Button(icon_name="web-browser-symbolic", tooltip_text="Browser")
+        globe.add_css_class("flat")
+        globe.connect("clicked", lambda _b: self.show_browser())
+        self.toolbar.append(globe)
         self._tiles = Gtk.Box(vexpand=True, hexpand=True)
         self._paneds: list[Gtk.Paned] = []
         self.append(self.toolbar)
@@ -126,6 +134,27 @@ class Canvas(Gtk.Box):
         self._shells += 1
         tab = Tab(Kind.TERMINAL, f"terminal-{self._shells}", folder.name)
         self._add(tab, self._terminal(folder), None)
+        self._opened(tab)
+
+    def show_browser(self) -> None:
+        """Bring the browser group forward, or open it on a new page."""
+        if self._open(Kind.BROWSER):
+            self._focus = Kind.BROWSER
+            return
+        self.open_page("")
+
+    def open_page(self, at: str) -> None:
+        """A page in a tab of its own, named by its title once it has one."""
+        if self._page is None:
+            return
+        self._pages_opened += 1
+        tab = Tab(Kind.BROWSER, f"page-{self._pages_opened}", "New page")
+
+        def titled(title: str) -> None:
+            if title and tab in self._pages:
+                self._pages[tab].set_title(title)
+
+        self._add(tab, self._page(at, titled), None)
         self._opened(tab)
 
     def _folder(self) -> Path | None:
