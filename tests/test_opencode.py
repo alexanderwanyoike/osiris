@@ -453,6 +453,36 @@ class TestEvents:
             ToolFinished(SESSION, "call_e29c", "NetworkManager\nUPower\n", exit=0)
         ]
 
+    def test_a_subagent_gives_back_its_answer_without_the_engines_wrapper(
+        self,
+    ) -> None:
+        """As opencode 2.2.4 reports the reviewer's answer: the child session's
+        reply, wrapped in a tag naming it."""
+        answered = {
+            "type": "session.tool.success",
+            "data": {
+                "sessionID": SESSION,
+                "id": "call_DL72",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": '<subagent sessionID="ses_child" state="completed">\n'
+                        "Verdict: pass - It works.\n\n## Spec\nNothing found.\n"
+                        "</subagent>",
+                    }
+                ],
+                "metadata": {"sessionID": "ses_child", "status": "completed"},
+                "executed": False,
+            },
+        }
+        assert self.events(answered) == [
+            ToolFinished(
+                SESSION,
+                "call_DL72",
+                "Verdict: pass - It works.\n\n## Spec\nNothing found.",
+            )
+        ]
+
     def test_a_tool_that_failed_says_why(self) -> None:
         failed = {
             "type": "session.tool.failed",
