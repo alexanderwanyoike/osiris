@@ -704,6 +704,7 @@ class Application(Adw.Application):
         def answered(decision) -> None:
             if decision is not None:
                 self._apply(decision)
+            self.load_history()
 
         self.background(lambda: harness.answer(asking.session, asking.request,
                                                 answer, reply), answered)
