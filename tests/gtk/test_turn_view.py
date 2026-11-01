@@ -297,3 +297,33 @@ def test_the_task_list_stays_once_the_answer_ends() -> None:
         tasks=[Task("Create c.txt", Progress.DONE)],
     )
     assert "Create c.txt" in texts(drawn(turn))
+
+
+def test_a_question_offers_going_back_to_before_it_when_it_may() -> None:
+    went: list[Turn] = []
+    turn = Turn("make y.txt", "Made it.", State.DONE, message="msg_2")
+    view = TurnView(
+        turn,
+        on_undo=lambda _t: None,
+        program_card=lambda _n: Gtk.Label(),
+        go_back=went.append,
+        may_go_back=lambda _t: True,
+    )
+    view.update(turn, STYLE, None)
+    back = find(view, Gtk.Button, "Go back")
+    assert "before this question" in back.get_tooltip_text()
+    back.emit("clicked")
+    assert went == [turn]
+
+
+def test_no_going_back_is_offered_when_it_may_not() -> None:
+    turn = Turn("make y.txt", "", State.ANSWERING, message="msg_2")
+    view = TurnView(
+        turn,
+        on_undo=lambda _t: None,
+        program_card=lambda _n: Gtk.Label(),
+        go_back=lambda _t: None,
+        may_go_back=lambda _t: False,
+    )
+    view.update(turn, STYLE, None)
+    assert "Go back" not in texts(view)
