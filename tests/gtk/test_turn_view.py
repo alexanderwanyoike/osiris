@@ -299,34 +299,40 @@ def test_the_task_list_stays_once_the_answer_ends() -> None:
     assert "Create c.txt" in texts(drawn(turn))
 
 
-def test_a_question_offers_going_back_to_before_it_when_it_may() -> None:
-    went: list[Turn] = []
+def test_a_question_offers_edit_and_try_again_when_it_may() -> None:
+    """Both go back to before it first (#158)."""
+    edited: list[Turn] = []
+    again: list[Turn] = []
     turn = Turn("make y.txt", "Made it.", State.DONE, message="msg_2")
     view = TurnView(
         turn,
         on_undo=lambda _t: None,
         program_card=lambda _n: Gtk.Label(),
-        go_back=went.append,
+        edit=edited.append,
+        try_again=again.append,
         may_go_back=lambda _t: True,
     )
     view.update(turn, STYLE, None)
-    back = find(view, Gtk.Button, "Go back")
-    assert "before this question" in back.get_tooltip_text()
-    back.emit("clicked")
-    assert went == [turn]
+    edit = find(view, Gtk.Button, "Edit")
+    assert "before this question" in edit.get_tooltip_text()
+    edit.emit("clicked")
+    find(view, Gtk.Button, "Try again").emit("clicked")
+    assert (edited, again) == ([turn], [turn])
 
 
-def test_no_going_back_is_offered_when_it_may_not() -> None:
+def test_neither_is_offered_when_it_may_not_go_back() -> None:
     turn = Turn("make y.txt", "", State.ANSWERING, message="msg_2")
     view = TurnView(
         turn,
         on_undo=lambda _t: None,
         program_card=lambda _n: Gtk.Label(),
-        go_back=lambda _t: None,
+        edit=lambda _t: None,
+        try_again=lambda _t: None,
         may_go_back=lambda _t: False,
     )
     view.update(turn, STYLE, None)
-    assert "Go back" not in texts(view)
+    assert "Edit" not in texts(view)
+    assert "Try again" not in texts(view)
 
 
 def test_a_note_about_the_question_is_shown_under_its_answer() -> None:
