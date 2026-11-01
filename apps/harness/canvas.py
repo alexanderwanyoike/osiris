@@ -43,6 +43,12 @@ class Canvas(Gtk.Box):
         self._picker.add_css_class("flat")
         self.strip = Adw.TabBar(view=self.tabs, autohide=False, expand_tabs=False,
                                 end_action_widget=self._picker)
+        self.toolbar = Gtk.Box(spacing=4, halign=Gtk.Align.END)
+        self.toolbar.add_css_class("harness-canvas-toolbar")
+        files = Gtk.Button(icon_name="folder-symbolic", tooltip_text="Files")
+        files.add_css_class("flat")
+        self.toolbar.append(files)
+        self.append(self.toolbar)
         self.append(self.strip)
         self.append(self.tabs)
 
