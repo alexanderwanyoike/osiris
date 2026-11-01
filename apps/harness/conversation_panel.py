@@ -10,6 +10,19 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Pango  # noqa: E402
 
 from osiris.harness.connectors import State, said_of  # noqa: E402
+from osiris.harness.context import Slice, grid  # noqa: E402
+
+#: The context grid's squares, each a slice of the window, and per row.
+SQUARES = 100
+ACROSS = 20
+#: What each kind is called in the legend.
+NAMES = {
+    "instructions": "Instructions",
+    "questions": "Your questions",
+    "answers": "Answers",
+    "tools": "Tool calls",
+    "free": "Free",
+}
 
 
 def _section(title: str) -> tuple[Gtk.Box, Gtk.Box]:
@@ -50,6 +63,8 @@ class ConversationPanel(Gtk.Box):
         self.append(where)
         connectors, self._connectors = _section("Connectors")
         self.append(connectors)
+        context, self._context = _section("Context")
+        self.append(context)
 
     def show_where(self, project: str, branch: str, model: str) -> None:
         self.project.words.set_text(project)
@@ -72,6 +87,35 @@ class ConversationPanel(Gtk.Box):
             said.set_css_classes(["harness-connector-state", f"harness-{tone}"])
             line.append(said)
             self._connectors.append(line)
+
+    def show_context(self, shared: list[Slice], used: int, window: int) -> None:
+        _clear(self._context)
+        total = Gtk.Label(label=f"{used:,} of {window:,} tokens", xalign=0)
+        total.add_css_class("harness-context-total")
+        self._context.append(total)
+        squares = Gtk.Grid(row_spacing=3, column_spacing=3)
+        squares.add_css_class("harness-context-grid")
+        for at, kind in enumerate(grid(shared, SQUARES)):
+            square = Gtk.Box(css_classes=["harness-context-square", kind])
+            squares.attach(square, at % ACROSS, at // ACROSS, 1, 1)
+        self._context.append(squares)
+        legend = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        for part in shared:
+            line = Gtk.Box(spacing=8)
+            line.append(Gtk.Box(css_classes=["harness-context-square", part.kind],
+                                valign=Gtk.Align.CENTER))
+            line.append(Gtk.Label(label=NAMES[part.kind], xalign=0, hexpand=True))
+            share = Gtk.Label(label=f"{round(part.tokens * 100 / window)}%"
+                              if window else "")
+            share.add_css_class("harness-meta")
+            line.append(share)
+            legend.append(line)
+        self._context.append(legend)
+        note = Gtk.Label(label="Approximate: the Engine says how much is in use, "
+                               "not by what, so each share is estimated from the "
+                               "messages it keeps.", xalign=0, wrap=True)
+        note.add_css_class("harness-meta")
+        self._context.append(note)
 
 
 def _clear(box: Gtk.Box) -> None:
