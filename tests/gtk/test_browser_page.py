@@ -43,3 +43,15 @@ def test_a_page_opened_at_an_address_shows_it_in_its_address_line(
     page = Page(f"file://{tmp_path}/a.html")
     settle(lambda: page.view.get_title() == "A")
     assert find(page, Gtk.Entry).get_text() == f"file://{tmp_path}/a.html"
+
+
+def test_a_new_page_shows_where_to_start_until_something_loads(
+    tmp_path: Path,
+) -> None:
+    from browser import Page
+
+    page = Page()
+    assert page.stack.get_visible_child_name() == "start"
+    (tmp_path / "b.html").write_text("<title>B</title>")
+    page.load(f"file://{tmp_path}/b.html")
+    assert page.stack.get_visible_child_name() == "web"
