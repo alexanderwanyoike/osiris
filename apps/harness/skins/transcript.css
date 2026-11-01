@@ -206,9 +206,21 @@ window.harness-drawer, window.harness-drawer.background { background-color: tran
 .harness-group-header { min-height: 30px; padding: 0 4px; border-bottom: 1px solid alpha(@harness_fg, 0.06); }
 .harness-group-header > button { color: @harness_muted; min-height: 22px; min-width: 22px; padding: 0; }
 .harness-group-header > button:hover { color: @harness_fg; }
-.harness-group-tab { border-radius: 5px; transition: background-color 120ms ease-out; }
-.harness-group-tab:hover { background-color: alpha(@harness_fg, 0.04); }
-.harness-group-tab.selected { background-color: alpha(@harness_fg, 0.08); }
+.harness-group-tab {
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: background-color 140ms ease-out, border-color 140ms ease-out, box-shadow 140ms ease-out;
+}
+.harness-group-tab:hover { background-color: alpha(@harness_fg, 0.045); }
+.harness-group-tab.selected {
+    background-color: alpha(@harness_fg, 0.075);
+    border-color: alpha(@harness_fg, 0.07);
+    box-shadow: inset 0 -2px alpha(@harness_accent, 0.9);
+}
+.harness-group-tab.selected > button label { font-weight: 500; }
+.harness-group-tab image { color: @harness_muted; -gtk-icon-size: 13px; }
+.harness-group-tab.selected image { color: @harness_accent; }
+.harness-group-tab > button.harness-tab-close image { color: @harness_muted; -gtk-icon-size: 12px; }
 .harness-group-tab > button { min-height: 20px; padding: 0 2px 0 8px; color: @harness_muted; font-size: 0.8em; background: none; }
 .harness-group-tab.selected > button { color: @harness_fg; }
 .harness-group-tab > button.harness-tab-close { min-width: 16px; min-height: 16px; padding: 0; margin-right: 3px; -gtk-icon-size: 12px; opacity: 0; transition: opacity 120ms ease-out; }
