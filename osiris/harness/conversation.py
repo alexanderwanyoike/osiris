@@ -9,6 +9,7 @@ from enum import Enum
 
 from osiris.harness.activity import THINKING, WRITING, Step
 from osiris.harness.admin import Request
+from osiris.harness.detail import patched_file
 from osiris.harness.engine import (
     Answered,
     Delivered,
@@ -133,6 +134,8 @@ def _from_code(call: str, arguments: Mapping[str, object]) -> list[Step]:
 def _ran(name: str, call: str, arguments: Mapping[str, object]) -> Step:
     """A tool the Engine ran without asking, as the step it would have been."""
     subject = next((arguments[key] for key in _SUBJECT if key in arguments), None)
+    if subject is None and isinstance(patch := arguments.get("patchText"), str):
+        subject = patched_file(patch)
     resources = (str(subject),) if subject is not None else ()
     return Step(_ACTIONS.get(name, name), resources, True, call, arguments)
 

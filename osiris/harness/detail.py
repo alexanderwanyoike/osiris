@@ -65,6 +65,12 @@ def _command(step: Step) -> Detail:
 _PATCHED = re.compile(r"^\*\*\* (?:Update|Add|Delete) File: (.+)$", re.MULTILINE)
 
 
+def patched_file(patch: str) -> str | None:
+    """The first file a patch changes."""
+    named = _PATCHED.search(patch)
+    return named.group(1) if named else None
+
+
 def _patch(step: Step, patch: str) -> Detail:
     """A change made with the patch tool: its first file, and its lines."""
     named = _PATCHED.search(patch)
