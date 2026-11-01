@@ -14,6 +14,7 @@ from osiris.harness.activity import Step
 class Kind(Enum):
     COMMAND = "command"
     CHANGE = "change"
+    LOOK = "look"
 
 
 @dataclass(frozen=True)
@@ -69,11 +70,25 @@ def _change(step: Step) -> Detail:
     return Detail(Kind.CHANGE, path or " ".join(step.resources), lines)
 
 
+def _look(step: Step) -> Detail:
+    """A read, listing or search: the path or pattern, and where it looked."""
+    inputs = step.input or {}
+    pattern = _text(inputs, "pattern", "query")
+    path = _text(inputs, "path", "filePath", "file_path")
+    asked = f"{pattern} in {path}" if pattern and path else pattern or path
+    return Detail(Kind.LOOK, asked or " ".join(step.resources), _output(step))
+
+
 _KINDS: dict[str, Callable[[Step], Detail]] = {
     "shell": _command,
     "bash": _command,
     "edit": _change,
     "write": _change,
+    "read": _look,
+    "list": _look,
+    "glob": _look,
+    "grep": _look,
+    "external_directory": _look,
 }
 
 
