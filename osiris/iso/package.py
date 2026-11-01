@@ -136,6 +136,7 @@ RUNTIME = (
     "dconf", "glib2",
     "grub", "os-prober", "plymouth", "mkinitcpio",
     "opencode", "python-markdown-it-py", "gtksourceview5", "python-mcp", "vte4",
+    "webkitgtk-6.0",
 )  # fmt: skip
 
 
