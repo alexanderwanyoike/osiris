@@ -335,7 +335,7 @@ popover.harness-picker-popover > contents {
     border: 1px solid alpha(@harness_fg, 0.08);
     border-radius: 16px;
     padding: 6px 0;
-    box-shadow: 0 10px 30px alpha(black, 0.35);
+    box-shadow: 0 10px 30px alpha(@harness_sunken, 0.45);
 }
 .harness-picker-popover scrolledwindow, .harness-picker { background-color: transparent; }
 .harness-picker row { min-height: 28px; padding: 0 10px; margin: 0 6px; border-radius: 10px; }
