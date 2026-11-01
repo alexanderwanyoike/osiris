@@ -397,7 +397,7 @@ class Drawer(Gtk.ApplicationWindow):
         text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
         if text.strip():
             buffer.set_text("")
-            self.app.send_now(text.strip())
+            self.app.send_now(text.strip(), self.picker.references(text.strip()))
 
     def _hold_back(self) -> None:
         """Messages still waiting go back to the composer, sent to no one."""
@@ -1297,7 +1297,7 @@ class Application(Adw.Application):
 
         self.background(lambda: harness.ask(text, references), queued)
 
-    def send_now(self, text: str) -> None:
+    def send_now(self, text: str, references: tuple[Reference, ...] = ()) -> None:
         """Sent while busy, cutting in: it waits shown until the Engine,
         having stopped the step under way, takes it next."""
         if self.harness is None:
@@ -1308,7 +1308,7 @@ class Application(Adw.Application):
             conversation.queued(message, text)
             self.drawer.refresh()
 
-        self.background(lambda: harness.send_now(text), sent)
+        self.background(lambda: harness.send_now(text, references), sent)
 
     def unqueue(self, message: str) -> str:
         """Take a waiting message back from the Engine; its text."""
