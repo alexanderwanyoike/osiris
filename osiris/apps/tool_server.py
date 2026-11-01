@@ -60,7 +60,14 @@ folder, named as "icon" in its osiris-program.json; give one to any Program
 that lacks it. Keep its osiris-program.json true: build and run are lists of words run
 in its folder. Commit every change with commit_program, one atomic change per
 commit with a message saying what it does. check_program finds Python that does
-not compile. The person tries and installs a Program themselves, from the card
+not compile. Before you tell the person a Program is done, run check_program
+and the Program's own tests and fix what fails; then ask the reviewer subagent
+to review the change, giving it the Program's folder, the person's own words
+for what they asked, and the commit the change started from. End your answer
+with its verdict line as it gave it, pass, partial or fail, and keep its report
+for when the person asks. Never call a Program done on a partial or a fail:
+fix what it found and have it reviewed again, or tell the person what is left.
+The person tries and installs a Program themselves, from the card
 under your answer; a failed build comes back to you to fix.
 
 You can make and change Skins too: the shape of the desktop (windows, panel,

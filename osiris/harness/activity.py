@@ -67,6 +67,9 @@ PHRASES = {
         "search the web for",
         shown=_as_written,
     ),
+    "subagent": Phrase(
+        "Asking", "Asked", "ask", shown=lambda agent: f"the {agent}", unnamed="a helper"
+    ),
     "bash": _COMMAND,
     "shell": _COMMAND,
     "osiris_list_themes": Phrase(

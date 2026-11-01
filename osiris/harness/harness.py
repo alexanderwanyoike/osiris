@@ -14,7 +14,6 @@ from osiris.harness.engine import (
     Engine,
     Event,
     Failed,
-    FileChange,
     Finished,
     ModelRef,
     Past,
@@ -62,7 +61,8 @@ _SUDO = re.compile(r"\bsudo\b")
 
 @dataclass(frozen=True)
 class Asking:
-    """An action outside the tier, held until the person answers its card."""
+    """An action the Engine's rules ask about, held until the person answers its
+    card."""
 
     session: str
     request: str
@@ -120,6 +120,8 @@ class Harness:
         #: sessions, and whether it runs sudo.
         self._last_command: dict[str, tuple[int, bool]] = {}
         self._commands_noted = 0
+        #: Sessions cut in on: the stop that follows resumes at once.
+        self._cutting_in: set[str] = set()
         #: Actions held for the person, by session and request.
         self._waiting: dict[tuple[str, str], Asking] = {}
 
@@ -134,6 +136,18 @@ class Harness:
         self._running[session] = directory
         self._log.write("sent", session=session, text=text)
         return self._engine.send(session, text)
+
+    def send_now(self, text: str) -> str:
+        """Send while the session works, stopping its step at once so the
+        model takes this next. Answers where it waits until then."""
+        session = self._session
+        working = session is not None and session in self._running
+        message = self.ask(text)
+        if session is not None and working:
+            self._cutting_in.add(session)
+            self._engine.cut_in(session)
+            self._log.write("cut-in", session=session)
+        return message
 
     def withdraw(self, message: str) -> None:
         """Take back a message still waiting in the session on screen."""
@@ -210,10 +224,6 @@ class Harness:
 
     def move(self, session: str, folder: Path) -> None:
         self._engine.move(session, folder)
-
-    def changes(self, session: str, message: str) -> tuple[FileChange, ...]:
-        """What a question changed, file by file, as the Engine has it."""
-        return self._engine.changes(session, message)
 
     def go_back(self, session: str, message: str, questions: int = 1) -> Revert | None:
         """Go back to before ``message``: its files and the Conversation, which
@@ -305,7 +315,7 @@ class Harness:
             always = answer is Answer.ALWAYS
             self._reply(session, request, Reply.ALWAYS if always else Reply.ONCE, "")
         self._log.write(
-            "answered",
+            "replied",
             session=session,
             action=asking.action,
             resources=list(asking.resources),
@@ -330,6 +340,18 @@ class Harness:
         if isinstance(command := event.input.get("command"), str):
             self._noted_command(event.session, (command,))
 
+    def _ended(self, event: Event) -> None:
+        """A session that ends is no longer running, unless it was cut in on:
+        the Engine goes on with the message at once."""
+        if not isinstance(event, Finished | Stopped | Failed):
+            return
+        for held in [key for key in self._waiting if key[0] == event.session]:
+            del self._waiting[held]
+        cut_in = event.session in self._cutting_in
+        self._cutting_in.discard(event.session)
+        if not (cut_in and isinstance(event, Stopped)):
+            self._running.pop(event.session, None)
+
     def handle(self, event: Event) -> Event | Decision | None:
         """Log what the Engine reports and apply policy; the event is passed on.
 
@@ -337,8 +359,7 @@ class Harness:
         """
         if event.session != self._session and event.session not in self._running:
             return None
-        if isinstance(event, Finished | Stopped | Failed):
-            self._running.pop(event.session, None)
+        self._ended(event)
         match event:
             case Answered(session, model, tokens, cost):
                 self._log.write(
