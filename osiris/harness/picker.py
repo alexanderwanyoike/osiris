@@ -48,6 +48,11 @@ def matching(entries: list[Entry], query: str) -> list[Entry]:
     return starts + contains
 
 
+def project_files(source: Path, files: list[Path]) -> list[Entry]:
+    """``files``, relative to the Program at ``source``, as @ offers them."""
+    return [Entry("file", str(source / path), str(path), "") for path in files]
+
+
 @dataclass(frozen=True)
 class Reference:
     """An entry picked into a message, mentioned at ``start`` to ``end``."""
