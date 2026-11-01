@@ -129,3 +129,37 @@ def test_a_long_description_does_not_widen_the_picker() -> None:
     entry.get_buffer().set_text("/")
     _minimum, natural, _b, _c = picker.list.measure(Gtk.Orientation.HORIZONTAL, -1)
     assert natural <= 480
+
+
+def settle() -> None:
+    import time
+
+    from gi.repository import GLib
+
+    context, deadline = GLib.MainContext.default(), time.monotonic() + 0.5
+    while time.monotonic() < deadline:
+        context.iteration(False)
+
+
+def docked(text: str, offered: list[Entry]):
+    """A picker over a message box 600 wide, as the drawer lays it out."""
+    from composer_picker import Picker
+
+    entry = Gtk.TextView(hexpand=True)
+    composer = Gtk.Box(width_request=600)
+    composer.append(entry)
+    window = Gtk.Window(child=composer)
+    window.present()
+    settle()
+    picker = Picker(entry, lambda _sign: offered, anchor=composer)
+    entry.get_buffer().set_text(text)
+    settle()
+    return picker, composer
+
+
+def test_the_picker_is_a_card_as_wide_as_the_message_box_it_sits_over() -> None:
+    picker, composer = docked("@", [README, CLOCK])
+    card = picker.popover.get_child()
+    minimum, _natural, _b, _c = card.measure(Gtk.Orientation.HORIZONTAL, -1)
+    assert picker.popover.get_parent() is composer
+    assert minimum == composer.get_width() == 600
