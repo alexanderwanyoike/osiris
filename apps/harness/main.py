@@ -69,6 +69,7 @@ from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
 from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
+from osiris.harness.status import Status, status_of  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.harness.trust import allow_everything, allows_everything  # noqa: E402
 from osiris.harness.unread import Unread  # noqa: E402
@@ -450,8 +451,7 @@ class Drawer(Gtk.ApplicationWindow):
 
     def show_history(self, projects, loose) -> None:
         self.sidebar.show_history(projects, loose, getattr(self.app, "session", None),
-                                  getattr(self.app, "running", frozenset()),
-                                  getattr(self.app, "unread_sessions", frozenset()))
+                                  getattr(self.app, "statuses", {}))
 
     def clear(self) -> None:
         for view in self.views:
@@ -951,6 +951,19 @@ class Application(Adw.Application):
     @property
     def unread_sessions(self) -> frozenset[str]:
         return self.unread.sessions()
+
+    @property
+    def statuses(self) -> dict[str, Status]:
+        """How each Conversation stands, for the sidebar."""
+        unread = self.unread_sessions
+        open_now = [(self.session, self.conversation), *self.backgrounded.items()]
+        waiting = {s for s, c in open_now if s is not None and c.waits_for_person}
+        found = {
+            session: status_of(session, running=self.running, waiting=waiting,
+                               unread=unread)
+            for session in self.running | unread | waiting
+        }
+        return {session: status for session, status in found.items() if status}
 
     def load_history(self) -> None:
         if self.harness is None:
