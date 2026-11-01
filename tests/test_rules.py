@@ -35,3 +35,14 @@ def test_with_no_rules_the_engine_starts_with_careful_ones() -> None:
     assert effect(rules, "external_directory", "/etc/*") == "ask"
     assert effect(rules, "osiris_apply_theme", "*") == "allow"
     assert effect(rules, "someone_elses_tool", "*") == "ask"
+
+
+def test_what_else_the_engines_config_says_is_kept() -> None:
+    files = FakeFileSystem()
+    files.write(ENGINE, json.dumps({"model": "openai/gpt-5.5", "snapshots": True}))
+    write_starting_rules(files, HOME)
+    config = json.loads(files.read(ENGINE))
+    assert config["model"] == "openai/gpt-5.5"
+    assert config["snapshots"] is True
+    assert config["permissions"]
+
