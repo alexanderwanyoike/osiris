@@ -51,6 +51,10 @@ class Picker:
         self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.BROWSE)
         self.list.add_css_class("harness-picker")
         self.list.connect("row-activated", lambda _l, row: self._complete(row.entry))
+        # The chosen row follows the pointer, so only one row is ever lit.
+        pointer = Gtk.EventControllerMotion()
+        pointer.connect("motion", self.pointed)
+        self.list.add_controller(pointer)
         # Without autohide the popover leaves the keyboard with the message
         # box, so typing carries on filtering while it is open.
         self.card = Gtk.ScrolledWindow(child=self.list, max_content_height=HEIGHT,
@@ -95,6 +99,11 @@ class Picker:
             self.popover.popdown()
             return True
         return False
+
+    def pointed(self, _controller, _x: float, y: float) -> None:
+        row = self.list.get_row_at_y(int(y))
+        if row is not None and row is not self.list.get_selected_row():
+            self.list.select_row(row)
 
     def _move(self, step: int) -> None:
         row = self.list.get_selected_row()
