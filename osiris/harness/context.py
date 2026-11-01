@@ -13,6 +13,18 @@ from dataclasses import dataclass
 KINDS = ("instructions", "questions", "answers", "tools")
 
 
+#: Characters to a token, near enough for an estimate.
+CHARACTERS = 4
+
+
+@dataclass(frozen=True)
+class ContextUse:
+    #: Each kind's estimated tokens.
+    sizes: dict[str, int]
+    #: Tokens in use, as the Engine reported them for its last step.
+    used: int
+
+
 @dataclass(frozen=True)
 class Slice:
     kind: str

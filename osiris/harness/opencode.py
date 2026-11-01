@@ -16,6 +16,7 @@ from typing import Any
 
 from osiris.harness.accounts import Method, ModelInfo, Provider, SignIn, SignInState
 from osiris.harness.connectors import State
+from osiris.harness.context import CHARACTERS, KINDS, ContextUse
 from osiris.harness.engine import (
     Answered,
     Delivered,
@@ -82,6 +83,32 @@ def locate(files: FileSystem, identity: Identity, runner: CommandRunner) -> Serv
 _UNRESERVED = frozenset(
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
 )
+
+
+def _sized(message: dict[str, Any]) -> list[tuple[str, str]]:
+    """A context message's parts, each with the kind it counts as."""
+    if message["type"] == "system":
+        return [("instructions", message.get("text", ""))]
+    if message["type"] == "user":
+        return [("questions", message.get("text", ""))]
+    if message["type"] != "assistant":
+        return []
+    return [
+        ("tools", json.dumps(part))
+        if part["type"] == "tool"
+        else ("answers", part.get("text", ""))
+        for part in message.get("content", [])
+    ]
+
+
+def _in_use(tokens: dict[str, Any]) -> int:
+    cache = tokens.get("cache", {})
+    return int(
+        tokens["input"]
+        + cache.get("read", 0)
+        + cache.get("write", 0)
+        + tokens["output"]
+    )
 
 
 def _in(directory: Path) -> str:
@@ -196,6 +223,23 @@ class OpencodeEngine:
             url,
             body={"config": {"type": "local", "command": command}},
             headers=self._service.headers(),
+        )
+
+    def context_use(self, session: str) -> ContextUse:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/session/{session}/context",
+            headers=self._service.headers(),
+        )
+        characters = dict.fromkeys(KINDS, 0)
+        used = 0
+        for message in reply["data"]:
+            for kind, text in _sized(message):
+                characters[kind] += len(text)
+            if message["type"] == "assistant":
+                used = _in_use(message["tokens"])
+        return ContextUse(
+            {kind: count // CHARACTERS for kind, count in characters.items()}, used
         )
 
     def connector_states(self, directory: Path) -> dict[str, State]:
