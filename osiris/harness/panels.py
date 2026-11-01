@@ -13,6 +13,7 @@ class Kind(Enum):
     CHANGES = "changes"
     TERMINAL = "terminal"
     BROWSER = "browser"
+    CONVERSATION = "conversation"
 
 
 @dataclass(frozen=True)
