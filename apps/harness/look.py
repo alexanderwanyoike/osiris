@@ -20,6 +20,7 @@ from osiris.harness.style import (  # noqa: E402
     SCHEME_FILE,
     SCHEME_ID,
     SKIN_FILE,
+    code_font_css,
     colours_css,
     inline_style,
     skin_name,
@@ -91,7 +92,8 @@ class Look:
     def reload(self) -> None:
         theme = self._theme()
         self.style = inline_style(theme)
-        self._provider.load_from_string(colours_css(theme) + self._skin())
+        self._provider.load_from_string(
+            colours_css(theme) + code_font_css(theme) + self._skin())
         scheme_path = self._home / SCHEME_FILE
         scheme_path.parent.mkdir(parents=True, exist_ok=True)
         scheme_path.write_text(source_scheme(theme))
