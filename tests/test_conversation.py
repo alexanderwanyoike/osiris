@@ -122,6 +122,13 @@ def test_a_step_whose_tool_failed_carries_why() -> None:
     assert talk.turns[-1].steps[0].error == "File not found"
 
 
+def test_a_refused_step_carries_the_rule_that_refused_it() -> None:
+    talk = Conversation()
+    talk.asked("list /etc")
+    talk.apply(Refused(S, "shell", ("ls /etc",), "call_1", "Runs only with X on"))
+    assert talk.turns[-1].steps[0].refused_by == "Runs only with X on"
+
+
 def test_an_allowed_action_is_not_shown_as_refused() -> None:
     talk = Conversation()
     talk.asked("make it calm")
