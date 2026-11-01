@@ -369,10 +369,16 @@ class OpencodeEngine:
                 yield event
 
 
+def _uri(entry: Entry) -> str:
+    """A Project's file by its path; a server's resource by its own URI."""
+    return f"file://{entry.key}" if entry.kind == "file" else entry.key
+
+
 def _attachments(
     text: str, references: tuple[Reference, ...]
 ) -> dict[str, list[dict[str, Any]]]:
-    """Picked files and skills, each with where the text mentions it."""
+    """Picked files, resources and skills, each with where the text mentions
+    it; a picked server is only named in the text."""
     found: dict[str, list[dict[str, Any]]] = {}
     for ref in references:
         mention = {
@@ -380,10 +386,10 @@ def _attachments(
             "end": ref.end,
             "text": text[ref.start : ref.end],
         }
-        if ref.entry.kind == "file":
+        if ref.entry.kind in ("file", "resource"):
             found.setdefault("files", []).append(
                 {
-                    "uri": f"file://{ref.entry.key}",
+                    "uri": _uri(ref.entry),
                     "name": ref.entry.label,
                     "mention": mention,
                 }
