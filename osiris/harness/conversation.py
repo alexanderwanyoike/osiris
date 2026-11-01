@@ -68,6 +68,16 @@ class Turn:
         return any(step.action == "edit" and step.allowed for step in self.steps)
 
     @property
+    def commits(self) -> list[tuple[str, str]]:
+        """Each Program commit the question made, as (Program, commit): the
+        commit its Undo would revert."""
+        return [
+            (change.undo["name"], change.undo["commit"])
+            for change in self.changes
+            if change.undo and change.undo.get("action") == "revert_commit"
+        ]
+
+    @property
     def programs(self) -> list[str]:
         """The Programs this turn changed, each once, in the order they changed."""
         named = (change.program for change in self.changes if change.program)
