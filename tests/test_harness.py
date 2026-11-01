@@ -57,7 +57,6 @@ class FakeEngine:
     cut: list[str] = field(default_factory=list)
     reverted: list[tuple[str, str]] = field(default_factory=list)
     reverts_kept: list[str] = field(default_factory=list)
-    changed: tuple[FileChange, ...] = ()
     reverts_cancelled: list[str] = field(default_factory=list)
     revert_gives: Revert = field(default_factory=lambda: Revert((), restorable=True))
     switched: list[tuple[str, ModelRef]] = field(default_factory=list)
@@ -97,9 +96,6 @@ class FakeEngine:
     def revert(self, session: str, message: str) -> Revert:
         self.reverted.append((session, message))
         return self.revert_gives
-
-    def changes(self, session: str, message: str) -> tuple[FileChange, ...]:
-        return self.changed
 
     def keep_revert(self, session: str) -> None:
         self.reverts_kept.append(session)
@@ -790,7 +786,6 @@ def test_a_sudo_command_is_known_before_the_engine_is_told_to_run_it() -> None:
 
 
 def test_going_back_keeps_the_engines_revert_and_is_logged() -> None:
-    from osiris.harness.engine import FileChange
 
     subject, engine, files = harness()
     subject.ask("make y.txt")
