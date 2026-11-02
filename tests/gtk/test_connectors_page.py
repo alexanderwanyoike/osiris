@@ -279,3 +279,14 @@ def test_a_server_needing_sign_in_shows_the_button_in_place_of_its_state() -> No
 def test_what_a_server_runs_stays_on_one_line() -> None:
     shown = page(Store(Connector("linear", url="https://mcp.linear.app/mcp")))
     assert shown.row("linear").get_subtitle_lines() == 1
+
+
+def test_a_connector_cannot_take_the_name_osiris_uses_for_its_own_tools() -> None:
+    store = Store()
+    shown = page(store)
+    shown.add.emit("clicked")
+    shown.name.set_text("osiris")
+    shown.reach.set_text("npx something")
+    shown.done.emit("clicked")
+    assert store.saved == {}
+    assert "own tools" in shown.problem.get_text()
