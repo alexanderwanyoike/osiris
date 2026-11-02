@@ -11,6 +11,8 @@ from look import Look
 
 from osiris.apps.user_css import UserCss
 
+from .conftest import widgets
+
 
 def test_the_drawers_look_outranks_the_user_sheet(tmp_path: Path) -> None:
     """A Skin's sheet redefining libadwaita's window colour leaves the
@@ -72,3 +74,130 @@ def test_a_panels_tabs_are_slim_in_every_look(tmp_path: Path) -> None:
         height = tab.get_height()
         window.destroy()
         assert 0 < height <= 20, (look, height)
+
+
+def test_the_pickers_chosen_entry_keeps_its_name_in_the_text_colour_in_every_look(
+    tmp_path: Path,
+) -> None:
+    """The chosen row is marked by a soft fill, as the person's reference
+    shows, not by recolouring its name."""
+    from composer_picker import Picker
+    from gi.repository import Gdk
+
+    from osiris.harness.picker import Entry
+
+    readme = Entry("file", "/home/tester/Code/timer/README.md", "README.md", "")
+    for skin in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(skin)
+        look = Look(tmp_path, lambda: None)
+        entry = Gtk.TextView()
+        window = Gtk.Window(child=entry)
+        window.present()
+        picker = Picker(entry, lambda _sign: [readme])
+        entry.get_buffer().set_text("@")
+        row = picker.list.get_selected_row()
+        label = next(
+            w for w in widgets(row) if "harness-picker-label" in w.get_css_classes()
+        )
+        text = Gdk.RGBA()
+        text.parse(look.theme["colors"]["foreground"])
+        window.destroy()
+        assert label.get_color().equal(text), skin
+
+
+def test_a_working_connector_says_so_in_the_themes_success_colour_in_every_look(
+    tmp_path: Path,
+) -> None:
+    from connectors_page import ConnectorsPage
+    from gi.repository import Gdk
+
+    from osiris.harness.connectors import Connector, State
+
+    from .conftest import now
+
+    wiki = Connector("wiki", url="https://w.example/mcp")
+    for skin in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(skin)
+        look = Look(tmp_path, lambda: None)
+        page = ConnectorsPage(
+            read=lambda: [wiki],
+            save=lambda _c: True,
+            remove=lambda _n: True,
+            states=lambda: {"wiki": State("connected")},
+            background=now,
+        )
+        window = Gtk.Window(child=page)
+        window.present()
+        said = next(
+            w for w in widgets(page) if "harness-connector-state" in w.get_css_classes()
+        )
+        success = Gdk.RGBA()
+        success.parse(look.theme["colors"]["success"])
+        window.destroy()
+        assert said.get_color().equal(success), skin
+
+
+def test_a_question_waiting_on_the_person_ticks_in_the_themes_warning_in_every_look(
+    tmp_path: Path,
+) -> None:
+    from gi.repository import Gdk
+    from rail import Rail
+
+    from osiris.harness.rail import Tick
+
+    for skin in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(skin)
+        look = Look(tmp_path, lambda: None)
+        shown = Rail(on_jump=lambda _i: None)
+        shown.show_ticks([Tick(0.5, True, "waiting", "list /etc")])
+        window = Gtk.Window(child=shown)
+        window.present()
+        line = next(
+            w for w in widgets(shown) if "harness-rail-line" in w.get_css_classes()
+        )
+        warning = Gdk.RGBA()
+        warning.parse(look.theme["colors"]["warning"])
+        window.destroy()
+        assert line.get_color().equal(warning), skin
+
+
+def test_a_question_that_changed_something_ticks_in_the_themes_accent(
+    tmp_path: Path,
+) -> None:
+    """Tints follow the Theme's own accent rather than a fixed green."""
+    from gi.repository import Gdk
+    from rail import Rail
+
+    from osiris.harness.rail import Tick
+
+    for skin in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(skin)
+        look = Look(tmp_path, lambda: None)
+        shown = Rail(on_jump=lambda _i: None)
+        shown.show_ticks([Tick(0.5, True, "changed", "make it calm", current=True)])
+        window = Gtk.Window(child=shown)
+        window.present()
+        line = next(
+            w for w in widgets(shown) if "harness-rail-line" in w.get_css_classes()
+        )
+        accent = Gdk.RGBA()
+        accent.parse(look.theme["colors"]["accent"])
+        window.destroy()
+        assert line.get_color().equal(accent), skin
+
+
+def test_no_look_flashes_a_glow_at_the_end_of_a_scroll(tmp_path: Path) -> None:
+    """The person found the glow at the top and bottom of a scroll annoying."""
+    import re
+
+    for look in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(look)
+        loaded = Look(tmp_path, lambda: None)._provider.to_string()
+        rules = re.findall(r"([^{}]*overshoot[^{}]*)\{([^}]*)\}", loaded)
+        assert rules, look
+        assert all("background-image: none" in body for _, body in rules), look

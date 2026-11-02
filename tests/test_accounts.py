@@ -189,3 +189,53 @@ def test_sign_in_methods_opencode_marks_as_legacy_are_not_offered() -> None:
     labels = [m.label for m in accounts(http).providers()[0].methods]
     assert "Codex device code (legacy)" not in labels
     assert "Sign in with ChatGPT" in labels
+
+
+# As opencode 2.2.4 lists the sign-in an MCP server needs.
+LINEAR = {
+    "id": "mcp_27245be96d0b1111",
+    "name": "linear",
+    "metadata": {"source": "mcp"},
+    "methods": [{"id": "mcp_27245be96d0b1111", "type": "oauth", "label": "linear"}],
+    "connections": [],
+}
+
+
+def test_a_connectors_sign_in_is_not_offered_as_a_model_provider() -> None:
+    http = FakeHttpClient(
+        replies={("GET", f"{URL}/api/integration"): {"data": [OPENAI, LINEAR]}}
+    )
+    assert [p.id for p in accounts(http).providers()] == ["openai"]
+
+
+def test_a_connector_signs_in_by_its_servers_own_sign_in_page() -> None:
+    integration = LINEAR["id"]
+    start = f"{URL}/api/integration/{integration}/connect/oauth"
+    attempt = {
+        "attemptID": "att_2",
+        "url": "https://linear.app/oauth/authorize?x=1",
+        "instructions": "",
+        "mode": "auto",
+        "time": {"created": 1, "expires": 2},
+    }
+    http = FakeHttpClient(
+        replies={
+            ("GET", f"{URL}/api/integration/{integration}"): {"data": LINEAR},
+            ("POST", start): {"data": attempt},
+        }
+    )
+    sign_in = accounts(http).connector_sign_in(integration)
+    assert http.requests[-1] == ("POST", start, {"methodID": integration})
+    assert sign_in.url == "https://linear.app/oauth/authorize?x=1"
+
+
+def test_a_model_says_how_large_its_context_window_is() -> None:
+    terra = {
+        "id": "gpt-6.1-terra",
+        "modelID": "gpt-6.1-terra",
+        "providerID": "openai",
+        "name": "GPT-6.1 Terra",
+        "limit": {"context": 628000, "input": 500000, "output": 128000},
+    }
+    http = FakeHttpClient(replies={("GET", f"{URL}/api/model"): {"data": [terra]}})
+    assert accounts(http).models()[0].context == 628000

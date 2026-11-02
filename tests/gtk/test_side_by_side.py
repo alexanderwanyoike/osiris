@@ -3,6 +3,7 @@ answers it, and what it is still doing reaches it, not the one on screen."""
 
 from __future__ import annotations
 
+import time
 from types import SimpleNamespace
 from typing import Any
 
@@ -26,6 +27,11 @@ class FakeDrawer:
         self.changes: list[tuple[str, object, Any]] = []
         self.pages: list[str] = []
         self.refreshes = 0
+        self.picker_refreshes = 0
+        self.picker = SimpleNamespace(refresh=self._picker_refreshed)
+
+    def _picker_refreshed(self) -> None:
+        self.picker_refreshes += 1
 
     def clear(self) -> None:
         pass
@@ -75,6 +81,10 @@ def app() -> tuple[App, FakeEngine]:
         withdrawn=[],
         waiting=None,
         problem=None,
+        servers=None,
+        saved=None,
+        requests=None,
+        files=files,
     )
     stand_in.send_notification = lambda session, notification: stand_in.sent.append(
         (session, notification)
@@ -182,8 +192,8 @@ def test_the_sidebar_is_refreshed_once_a_question_has_its_session_working() -> N
     stand_in, _ = app()
     stand_in.conversation.asked("make it calm")
     stand_in._send("make it calm")
-    context = GLib.MainContext.default()
-    for _ in range(50):
+    context, deadline = GLib.MainContext.default(), time.monotonic() + 2
+    while stand_in.histories == 0 and time.monotonic() < deadline:
         context.iteration(False)
     assert stand_in.histories == 1
 

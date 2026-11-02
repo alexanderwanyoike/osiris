@@ -32,6 +32,7 @@ from osiris.harness.opencode import (
     Service,
     locate,
 )
+from osiris.harness.picker import Entry, Reference
 from osiris.platform import FakeFileSystem, FakeHttpClient, FakeIdentity, FakeRunner
 
 URL = "http://127.0.0.1:49374"
@@ -186,6 +187,41 @@ class TestSessions:
         http = FakeHttpClient(replies={("POST", path): {"data": {}}})
         engine(http).send(SESSION, "hello")
         assert http.requests == [("POST", path, {"text": "hello"})]
+
+    def test_files_and_skills_picked_go_with_the_text_as_attachments(self) -> None:
+        """As opencode 2.2.4 takes them: each with where it is mentioned."""
+        from osiris.harness.picker import Entry, Reference
+
+        path = f"{URL}/api/session/{SESSION}/prompt"
+        http = FakeHttpClient(replies={("POST", path): {"data": {}}})
+        readme = Entry("file", "/home/tester/Code/timer/README.md", "README.md", "")
+        review = Entry("skill", "review", "review", "Review a change")
+        text = "/review @README.md please"
+        engine(http).send(
+            SESSION, text, (Reference(review, 0, 7), Reference(readme, 8, 18))
+        )
+        assert http.requests == [
+            (
+                "POST",
+                path,
+                {
+                    "text": text,
+                    "files": [
+                        {
+                            "uri": "file:///home/tester/Code/timer/README.md",
+                            "name": "README.md",
+                            "mention": {"start": 8, "end": 18, "text": "@README.md"},
+                        }
+                    ],
+                    "skills": [
+                        {
+                            "id": "review",
+                            "mention": {"start": 0, "end": 7, "text": "/review"},
+                        }
+                    ],
+                },
+            )
+        ]
 
     def test_sending_gives_back_where_the_message_waits_until_delivered(self) -> None:
         """As opencode 2.2.4 answers a prompt: with the inbox item it made."""
@@ -736,3 +772,231 @@ class TestHistory:
             }
         )
         assert engine(http).where(SESSION) == Path("/home/tester/Code/pomodoro")
+
+
+class TestOffered:
+    def test_the_skills_in_a_folder_are_offered_with_their_descriptions(
+        self,
+    ) -> None:
+        where = "location%5Bdirectory%5D=%2Fhome%2Ftester%2FCode%2Ftimer"
+        skill = {
+            "id": "review",
+            "name": "review",
+            "description": "Review the changes",
+            "path": "/home/tester/.config/opencode/skills/review/SKILL.md",
+            "content": "...",
+        }
+        http = FakeHttpClient(
+            replies={("GET", f"{URL}/api/skill?{where}"): {"data": [skill]}}
+        )
+        offered = engine(http).skills(Path("/home/tester/Code/timer"))
+        assert offered == [Entry("skill", "review", "review", "Review the changes")]
+
+    def test_a_skill_is_typed_by_its_id_not_its_display_name(self) -> None:
+        """The Engine names a skill "OpenCode" for show; /opencode loads it."""
+        where = "location%5Bdirectory%5D=%2Fhome%2Ftester"
+        skill = {"id": "opencode", "name": "OpenCode", "path": "/x", "content": ""}
+        http = FakeHttpClient(
+            replies={("GET", f"{URL}/api/skill?{where}"): {"data": [skill]}}
+        )
+        offered = engine(http).skills(Path("/home/tester"))
+        assert offered == [Entry("skill", "opencode", "opencode", "")]
+
+
+class TestConnectors:
+    WHERE = "location%5Bdirectory%5D=%2Fhome%2Ftester"
+
+    def test_each_servers_state_is_read_with_its_reason(self) -> None:
+        from osiris.harness.connectors import State
+
+        servers = [
+            {"name": "wiki", "status": {"status": "failed", "error": "refused"}},
+            {"name": "files", "status": {"status": "connected"}},
+            {
+                "name": "tracker",
+                "status": {"status": "needs_auth", "error": "sign in"},
+                "integrationID": "mcp-tracker",
+            },
+        ]
+        http = FakeHttpClient(
+            replies={("GET", f"{URL}/api/mcp?{self.WHERE}"): {"data": servers}}
+        )
+        assert engine(http).connector_states(Path("/home/tester")) == {
+            "wiki": State("failed", "refused"),
+            "files": State("connected"),
+            "tracker": State("needs_auth", "sign in", "mcp-tracker"),
+        }
+
+    def test_the_servers_resources_are_offered_by_name(self) -> None:
+        catalog = {
+            "resources": [
+                {
+                    "server": "wiki",
+                    "name": "Home page",
+                    "uri": "wiki://home",
+                    "description": "The wiki's front page",
+                },
+                {"server": "files", "name": "notes.txt", "uri": "file:///n.txt"},
+            ],
+            "templates": [],
+        }
+        http = FakeHttpClient(
+            replies={("GET", f"{URL}/api/mcp/resource?{self.WHERE}"): {"data": catalog}}
+        )
+        assert engine(http).resources(Path("/home/tester")) == [
+            Entry(
+                "resource", "wiki://home", "Home page", "wiki: The wiki's front page"
+            ),
+            Entry("resource", "file:///n.txt", "notes.txt", "files"),
+        ]
+
+    def test_a_picked_resource_goes_as_an_attachment_by_its_own_uri(self) -> None:
+        path = f"{URL}/api/session/{SESSION}/prompt"
+        http = FakeHttpClient(replies={("POST", path): {"data": {"id": "msg_1"}}})
+        home = Entry("resource", "wiki://home", "Home page", "wiki")
+        engine(http).send(SESSION, "see @Home page", (Reference(home, 4, 14),))
+        _, _, body = http.requests[0]
+        assert isinstance(body, dict)
+        assert body["files"] == [
+            {
+                "uri": "wiki://home",
+                "name": "Home page",
+                "mention": {"start": 4, "end": 14, "text": "@Home page"},
+            }
+        ]
+
+    def test_a_picked_server_is_named_in_the_text_and_attaches_nothing(self) -> None:
+        path = f"{URL}/api/session/{SESSION}/prompt"
+        http = FakeHttpClient(replies={("POST", path): {"data": {"id": "msg_1"}}})
+        wiki = Entry("connector", "wiki", "wiki", "")
+        engine(http).send(SESSION, "ask @wiki", (Reference(wiki, 4, 9),))
+        assert http.requests == [("POST", path, {"text": "ask @wiki"})]
+
+
+class TestContext:
+    def test_what_fills_the_context_is_sized_by_kind_with_the_tokens_in_use(
+        self,
+    ) -> None:
+        from osiris.harness.context import ContextUse
+
+        messages = [
+            {"type": "system", "text": "i" * 400},
+            {"type": "user", "text": "q" * 40},
+            {
+                "type": "assistant",
+                "content": [
+                    {"type": "tool", "name": "read", "state": {"output": "x" * 70}},
+                    {"type": "text", "text": "a" * 80},
+                ],
+                "tokens": {
+                    "input": 2675,
+                    "output": 37,
+                    "reasoning": 0,
+                    "cache": {"read": 8448, "write": 0},
+                },
+            },
+            {"type": "idle", "outcome": "succeeded"},
+        ]
+        path = f"{URL}/api/session/{SESSION}/context"
+        http = FakeHttpClient(replies={("GET", path): {"data": messages}})
+        use = engine(http).context_use(SESSION)
+        assert use == ContextUse(
+            # About four characters a token; a tool call by all it carries.
+            {"instructions": 100, "questions": 10, "answers": 20, "tools": 31},
+            used=11_160,
+        )
+
+    def test_an_answer_without_token_counts_is_sized_but_counts_no_tokens(
+        self,
+    ) -> None:
+        """An answer that was stopped has no token counts of its own."""
+        messages = [
+            {
+                "type": "assistant",
+                "content": [{"type": "text", "text": "a" * 40}],
+                "tokens": {"input": 100, "output": 5, "reasoning": 0, "cache": {}},
+            },
+            {"type": "assistant", "content": [{"type": "text", "text": "b" * 40}]},
+        ]
+        path = f"{URL}/api/session/{SESSION}/context"
+        http = FakeHttpClient(replies={("GET", path): {"data": messages}})
+        use = engine(http).context_use(SESSION)
+        assert use.used == 105
+        assert use.sizes["answers"] == 20
+
+
+class TestSkills:
+    def test_each_skill_comes_with_where_it_was_found_and_what_it_says(self) -> None:
+        from osiris.harness.skill_rules import SkillInfo
+
+        where = "location%5Bdirectory%5D=%2Fhome%2Ftester"
+        skill = {
+            "id": "review",
+            "name": "Review",
+            "description": "Review a change",
+            "path": "/home/tester/.config/opencode/skills/review/SKILL.md",
+            "content": "# Review\nRead the diff.",
+        }
+        http = FakeHttpClient(
+            replies={("GET", f"{URL}/api/skill?{where}"): {"data": [skill]}}
+        )
+        assert engine(http).skill_details(Path("/home/tester")) == [
+            SkillInfo(
+                "review",
+                "Review",
+                "Review a change",
+                "/home/tester/.config/opencode/skills/review/SKILL.md",
+                "# Review\nRead the diff.",
+            )
+        ]
+
+
+class TestSavedRules:
+    def test_each_rule_saved_by_always_allow_comes_with_its_project(self) -> None:
+        from osiris.harness.saved_rules import SavedRule
+
+        rule = {
+            "id": "rule_1",
+            "projectID": "prj_1",
+            "action": "bash",
+            "resource": "npm *",
+            "time": {"created": 1, "updated": 1},
+        }
+        project = {
+            "id": "prj_1",
+            "canonical": "/home/tester/Code/timer",
+            "time": {},
+            "sandboxes": [],
+        }
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{URL}/api/permission/saved"): {"data": [rule]},
+                ("GET", f"{URL}/api/project"): [project],
+            }
+        )
+        assert engine(http).saved_rules() == [
+            SavedRule("rule_1", "bash", "npm *", Path("/home/tester/Code/timer"))
+        ]
+
+    def test_a_saved_rule_is_removed_by_its_id(self) -> None:
+        path = f"{URL}/api/permission/saved/rule_1"
+        http = FakeHttpClient(replies={("DELETE", path): None})
+        engine(http).remove_saved_rule("rule_1")
+        assert http.requests == [("DELETE", path, None)]
+
+
+class TestWaiting:
+    def test_requests_still_waiting_in_a_session_are_read_as_asked(self) -> None:
+        waiting = {
+            "id": "per_1",
+            "sessionID": SESSION,
+            "action": "bash",
+            "resources": ["ls /etc"],
+            "save": ["ls *"],
+            "source": {"type": "tool", "messageID": "msg_1", "id": "call_1"},
+        }
+        path = f"{URL}/api/session/{SESSION}/permission"
+        http = FakeHttpClient(replies={("GET", path): {"data": [waiting]}})
+        assert engine(http).waiting(SESSION) == [
+            ToolRequested(SESSION, "per_1", "bash", ("ls /etc",), "call_1", ("ls *",))
+        ]
