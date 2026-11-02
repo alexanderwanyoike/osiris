@@ -208,3 +208,33 @@ def test_a_change_goes_to_the_question_of_the_session_that_made_it() -> None:
         [Change("Made Pomodoro", None, "pomodoro")]
     ]
     assert subject.changes_by_question("ses_B") == [[]]
+
+
+def test_each_question_gets_back_the_skills_proposed_while_answering_it() -> None:
+    from osiris.harness.proposals import Proposal
+
+    subject = log()
+    subject.write("sent", session="ses_1", text="tidy my imports")
+    subject.write(
+        "proposed-skill",
+        session="ses_1",
+        name="tidy-imports",
+        description="Sort imports",
+        body="Run ruff.",
+    )
+    subject.write("sent", session="ses_2", text="elsewhere")
+    subject.write(
+        "proposed-skill", session="ses_2", name="other", description="", body=""
+    )
+    subject.write("sent", session="ses_1", text="thanks")
+    assert subject.proposals_by_question("ses_1") == [
+        [Proposal("tidy-imports", "Sort imports", "Run ruff.")],
+        [],
+    ]
+
+
+def test_a_proposal_kept_or_declined_says_so() -> None:
+    subject = log()
+    subject.write("skill-decided", name="tidy-imports", kept=True)
+    subject.write("skill-decided", name="other", kept=False)
+    assert subject.decided() == {"tidy-imports": True, "other": False}
