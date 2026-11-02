@@ -794,3 +794,20 @@ def test_each_widget_is_a_card_of_its_own() -> None:
 def test_the_conversation_panel_is_filled_as_it_comes_on_screen() -> None:
     window = shown_widgets(2100)
     assert window.app.panel_updates >= 1
+
+
+def test_the_messages_are_never_under_the_cards_however_wide_they_draw() -> None:
+    from osiris.harness.context import Slice
+    from osiris.harness.widgets_place import GAP
+    from tests.gtk.test_composer_picker import settle
+
+    window = shown_widgets(1000)
+    # A context grid is the widest thing a card holds.
+    window.conversation_panel.show_context(
+        [Slice("questions", 10), Slice("free", 90)], used=10, window=100
+    )
+    window._place_widgets()
+    settle()
+    panel = window.conversation_panel
+    right = panel.get_margin_start() + panel.get_width()
+    assert window.transcript_clamp.get_margin_start() >= right + GAP
