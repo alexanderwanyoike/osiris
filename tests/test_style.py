@@ -216,9 +216,14 @@ class TestContextRing:
         ring = ring_colours(OBSIDIAN)
         assert all(Colour(ring.at(a)).oklch[1] >= least for a in (0.25, 0.5, 0.75))
 
-    def test_the_rings_track_is_a_faint_line_on_the_card(self) -> None:
+    @pytest.mark.parametrize("theme", [OBSIDIAN, DAWN], ids=["obsidian", "dawn"])
+    def test_the_rings_track_shows_on_the_card_and_its_fill_on_the_track(
+        self, theme: dict[str, dict[str, str]]
+    ) -> None:
         from osiris.harness.style import ring_colours
 
-        colours = OBSIDIAN["colors"]
-        track = ring_colours(OBSIDIAN).track
-        assert track not in (colours["surfaceMuted"].lower(), colours["foreground"])
+        card = Colour(theme["colors"]["surfaceMuted"])
+        ring = ring_colours(theme)
+        track = Colour(ring.track)
+        assert track.contrast(card) >= 1.3
+        assert all(Colour(ring.at(a)).contrast(track) >= 2 for a in (0.0, 1.0))
