@@ -43,14 +43,22 @@ for candidate in ("/usr/share/osiris/lib", REPO):
 sys.path.insert(0, HERE)
 
 from admin_card import AdminCard  # noqa: E402
+from allowed_tab import AllowedTab  # noqa: E402
 from approval_card import ApprovalCard  # noqa: E402
 from going_back import going_back_dialog  # noqa: E402
 from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
+from browser import Page  # noqa: E402
 from canvas import Canvas, open_in_code  # noqa: E402
+from connectors_page import ConnectorsPage  # noqa: E402
+from conversation_panel import ConversationPanel  # noqa: E402
+from composer_picker import Picker  # noqa: E402
+from rail import Rail  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
+from proposal_card import ProposalCard  # noqa: E402
 from render import TurnView  # noqa: E402
 from sidebar import Sidebar  # noqa: E402
+from skills_tab import SkillsTab  # noqa: E402
 from terminal import Terminal  # noqa: E402
 from skin_store import EngineSkinStore  # noqa: E402
 from theme_store import EngineStore, user_wallpapers  # noqa: E402
@@ -60,6 +68,15 @@ from osiris.apps.tool_server import NAME as TOOLS, undo  # noqa: E402
 
 from osiris.harness import admin  # noqa: E402
 from osiris.harness.changes import file_changes  # noqa: E402
+from osiris.harness.connectors import (  # noqa: E402
+    Connector,
+    Servers,
+    State as ConnectorState,
+    offered_servers,
+    read_connectors,
+    remove_connector,
+    save_connector,
+)
 from osiris.harness.conversation import Conversation, State, Turn  # noqa: E402
 from osiris.harness.harness import Answer, Asking, Harness  # noqa: E402
 from osiris.harness.history import (  # noqa: E402
@@ -70,16 +87,38 @@ from osiris.harness.history import (  # noqa: E402
 )
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
-from osiris.harness.engine import Failed, Finished, ModelRef, Stopped  # noqa: E402
+from osiris.harness.proposals import Proposal, skill_file, skill_path  # noqa: E402
+from osiris.harness.rail import ticks  # noqa: E402
+from osiris.harness.saved_rules import SavedRule  # noqa: E402
+from osiris.harness.skill_rules import (  # noqa: E402
+    SkillInfo,
+    choose_skill,
+    origin_of,
+    skill_choice,
+)
+from osiris.harness.context import slices  # noqa: E402
+from osiris.harness.titles import title_of  # noqa: E402
+from osiris.harness.where import branch, project_name  # noqa: E402
+from osiris.harness.widgets_place import GAP, place  # noqa: E402
+from osiris.harness.picker import Entry, Reference, Skills, project_files  # noqa: E402
+from osiris.harness.engine import (  # noqa: E402
+    Failed,
+    Finished,
+    ModelRef,
+    Stopped,
+    ToolCalled,
+    ToolFinished,
+)
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.review import comment  # noqa: E402
 from osiris.harness.reviewer import write_reviewer  # noqa: E402
 from osiris.harness.rules import switch_on_task_list, write_starting_rules  # noqa: E402
 from osiris.harness.status import Status, status_of  # noqa: E402
+from osiris.harness.style import ring_colours, token_colours  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.harness.trust import auto_mode_on, turn_auto_mode  # noqa: E402
 from osiris.harness.unread import Unread  # noqa: E402
-from osiris.programs.programs import Programs  # noqa: E402
+from osiris.programs.programs import ProgramError, Programs  # noqa: E402
 from osiris.provision.upgrade import Upgrade  # noqa: E402
 from osiris.platform import (  # noqa: E402
     CommandError,
@@ -155,10 +194,16 @@ class Drawer(Gtk.ApplicationWindow):
                                         tooltip_text="Expand")
         self.expand_button.add_css_class("flat")
         self.expand_button.connect("clicked", self._toggle_expanded)
-        header = Gtk.Box(spacing=8)
+        header = self._header = Gtk.Box(spacing=8)
         header.add_css_class("harness-header")
         header.append(self.sidebar_toggle)
         header.append(new)
+        # Shown only where the widgets can be: see _place_widgets.
+        self.panel_toggle = Gtk.ToggleButton(icon_name="view-grid-symbolic",
+                                             tooltip_text="This Conversation",
+                                             visible=False)
+        self.panel_toggle.add_css_class("flat")
+        header.append(self.panel_toggle)
         header.append(self.title)
         self.canvas_toggle = Gtk.ToggleButton(icon_name="sidebar-show-right-symbolic",
                                               tooltip_text="Canvas", sensitive=False)
@@ -174,8 +219,9 @@ class Drawer(Gtk.ApplicationWindow):
                              margin_top=12, margin_bottom=12)
         self.views: list[TurnView] = []
         # Expanded to the whole screen, lines stay a readable length.
+        self.transcript_clamp = Adw.Clamp(maximum_size=READABLE, child=self.turns)
         self.scroller = Gtk.ScrolledWindow(
-            child=Adw.Clamp(maximum_size=READABLE, child=self.turns), vexpand=True,
+            child=self.transcript_clamp, vexpand=True,
             hscrollbar_policy=Gtk.PolicyType.NEVER)
 
         self.entry = Gtk.TextView(wrap_mode=Gtk.WrapMode.WORD_CHAR, accepts_tab=False,
@@ -224,6 +270,8 @@ class Drawer(Gtk.ApplicationWindow):
         composer.add_css_class("harness-composer")
         composer.append(typed)
         composer.append(controls)
+        self.picker = Picker(self.entry, self.app.offered, anchor=composer,
+                             on_open=lambda _sign: self.app.refresh_offers())
 
         self.footer = Gtk.Label(xalign=0, wrap=True)
         self.footer.add_css_class("harness-meta")
@@ -235,15 +283,53 @@ class Drawer(Gtk.ApplicationWindow):
         bottom.append(self.waiting)
         bottom.append(composer)
         bottom.append(self.footer)
-        chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
-        chat.append(self.scroller)
-        chat.append(Adw.Clamp(maximum_size=READABLE, child=bottom))
+        chat = self._chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
+        self.conversation_panel = ConversationPanel()
+        self._restyle_colours()
+        self.conversation_panel.connect("map", lambda _p: self.app.update_panel())
+        self.rail = Rail(on_jump=self.rail_jump)
+        self.rail.set_halign(Gtk.Align.END)
+        self.rail.set_margin_top(12)
+        self.rail.set_margin_bottom(12)
+        # Clear of the scrollbar, which shows at the very edge while scrolling.
+        self.rail.set_margin_end(10)
+        railed = self._railed = Gtk.Overlay(child=self.scroller, vexpand=True)
+        railed.add_overlay(self.rail)
+        # The Conversation's widgets go where there is room for them, never
+        # over the messages: placed by _place_widgets as its size changes or
+        # Thoth expands.
+        self.conversation_panel.set_visible(False)
+        railed.add_overlay(self.conversation_panel)
+        # Told of every change in the Conversation's size, as a Box is not:
+        # its layout manager allocates it without a size_allocate to hook.
+        sized = Gtk.DrawingArea(can_target=False)
+        sized.connect("resize", lambda _a, _w, _h: GLib.idle_add(
+            lambda: self._place_widgets() or False))
+        railed.add_overlay(sized)
+        self.panel_toggle.connect("toggled", lambda _b: self._place_widgets())
+        chat.append(railed)
+        rail_view = self.scroller.get_vadjustment()
+        rail_view.connect("value-changed", lambda _a: self._update_rail())
+        rail_view.connect("changed", lambda _a: self._update_rail())
+        self.composer_clamp = Adw.Clamp(maximum_size=READABLE, child=bottom)
+        chat.append(self.composer_clamp)
         self.canvas = Canvas(read=lambda path: path.read_text(errors="replace"),
                              open_in_code=open_in_code,
                              on_changes=lambda: self.app.show_all_changes(),
                              terminal=lambda folder: Terminal(folder, self.app.look.theme),
+                             page=lambda at, on_title: Page(at, on_title),
+                             home=getattr(app, "home", None),
                              scheme=app.look.scheme if app.look is not None else None)
         self.canvas.set_visible(False)
+        # The Canvas's toolbar sits at the top bar's right, shown with the
+        # Canvas toggle; any of its buttons opens the Canvas.
+        self._header.insert_child_after(self.canvas.toolbar, self.title)
+        self.canvas_toggle.bind_property("visible", self.canvas.toolbar, "visible",
+                                         GObject.BindingFlags.SYNC_CREATE)
+        button = self.canvas.toolbar.get_first_child()
+        while button is not None:
+            button.connect("clicked", lambda _b: self._open_canvas())
+            button = button.get_next_sibling()
         body = Gtk.Paned(start_child=chat, end_child=self.canvas,
                          shrink_start_child=False, resize_end_child=True,
                          wide_handle=False, position=480)
@@ -329,6 +415,7 @@ class Drawer(Gtk.ApplicationWindow):
             "xsi-go-next-symbolic" if self.expanded else "xsi-go-previous-symbolic")
         self.expand_button.set_tooltip_text("Back to the drawer" if self.expanded
                                             else "Expand")
+        self._place_widgets()
 
     def _realize(self, _window) -> None:
         # Kept out of the dock and the window switcher: it is reached from
@@ -354,7 +441,7 @@ class Drawer(Gtk.ApplicationWindow):
         text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
         if text.strip():
             buffer.set_text("")
-            self.app.ask(text.strip())
+            self.app.ask(text.strip(), self.picker.references(text.strip()))
 
     def _composer_key(self, _controller, keyval, _code, state) -> bool:
         # Enter asks; Shift+Enter starts a new line.
@@ -376,7 +463,7 @@ class Drawer(Gtk.ApplicationWindow):
         text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
         if text.strip():
             buffer.set_text("")
-            self.app.send_now(text.strip())
+            self.app.send_now(text.strip(), self.picker.references(text.strip()))
 
     def _hold_back(self) -> None:
         """Messages still waiting go back to the composer, sent to no one."""
@@ -438,10 +525,38 @@ class Drawer(Gtk.ApplicationWindow):
             auto_mode_on=self.app.in_auto_mode,
             on_auto_mode=self.app.set_auto_mode,
         )
+        connectors = ConnectorsPage(
+            read=self.app.read_connectors, save=self.app.save_connector,
+            remove=self.app.remove_connector, states=self.app.connector_states,
+            background=self.app.background,
+            later=lambda seconds, then: GLib.timeout_add_seconds(
+                seconds, lambda: then() or False),
+            sign_in=self.app.accounts.connector_sign_in,
+            sign_in_state=lambda attempt: self.app.accounts.sign_in_state(
+                attempt.provider, attempt.attempt),
+            open_page=self.app.open_page)
+        tabs = Adw.ViewStack(vhomogeneous=False)
+        tabs.add_titled_with_icon(page, "providers", "Models",
+                                  "preferences-system-symbolic")
+        tabs.add_titled_with_icon(connectors, "connectors", "MCP",
+                                  "network-server-symbolic")
+        skills = SkillsTab(read=self.app.read_skills, choice=self.app.skill_choice,
+                           choose=self.app.choose_skill, origin=self.app.skill_origin,
+                           background=self.app.background)
+        tabs.add_titled_with_icon(skills, "skills", "Skills",
+                                  "applications-science-symbolic")
+        allowed = AllowedTab(read=self.app.read_saved_rules,
+                             remove=self.app.remove_saved_rule,
+                             project_name=lambda path: project_name(path, self.app.home),
+                             background=self.app.background)
+        tabs.add_titled_with_icon(allowed, "allowed", "Allowed",
+                                  "security-high-symbolic")
+        switcher = Adw.InlineViewSwitcher(stack=tabs, halign=Gtk.Align.CENTER)
         holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
                          margin_start=16, margin_end=16, margin_top=8)
         holder.append(back)
-        holder.append(page)
+        holder.append(switcher)
+        holder.append(tabs)
         self.pages.add_named(Gtk.ScrolledWindow(child=holder, vexpand=True), "providers")
         self.pages.set_visible_child_name("providers")
 
@@ -454,6 +569,9 @@ class Drawer(Gtk.ApplicationWindow):
         act(*args)
         if self.split.get_collapsed():
             self.sidebar_toggle.set_active(False)
+
+    def open_page(self, at: str) -> None:
+        self.canvas.open_page(at)
 
     def show_changes(self, question: str, files, on_comment) -> None:
         self.canvas.show_changes(question, files, on_comment)
@@ -470,6 +588,10 @@ class Drawer(Gtk.ApplicationWindow):
             self.canvas_toggle.set_active(True)
         elif not programs:
             self.canvas_toggle.set_active(False)
+
+    def _open_canvas(self) -> None:
+        self.canvas_toggle.set_sensitive(True)
+        self.canvas_toggle.set_active(True)
 
     def _canvas_toggled(self, toggle) -> None:
         # As in the prototype: the Canvas takes the sidebar's room.
@@ -491,8 +613,18 @@ class Drawer(Gtk.ApplicationWindow):
             self.turns.remove(view)
         self.views = []
 
+    def _restyle_colours(self) -> None:
+        """What the Skin's stylesheet cannot colour: the picker's tokens and
+        the context ring, drawn from the Theme's colours directly."""
+        look = self.app.look
+        if look is not None and look.theme is not None:
+            self.picker.restyle(token_colours(look.theme))
+            self.conversation_panel.restyle(ring_colours(look.theme))
+
     def refresh(self, restyle: bool = False) -> None:
         conversation, look = self.app.conversation, self.app.look
+        if restyle:
+            self._restyle_colours()
         fresh = len(self.views)
         while len(self.views) < len(conversation.turns):
             view = TurnView(conversation.turns[len(self.views)],
@@ -504,7 +636,8 @@ class Drawer(Gtk.ApplicationWindow):
                             try_again=lambda turn: self.app.ask_to_go_back(turn, True),
                             may_go_back=lambda turn: self.app.conversation.can_go_back(turn),
                             may_try_again=lambda turn:
-                                self.app.conversation.can_try_again(turn))
+                                self.app.conversation.can_try_again(turn),
+                            proposal_card=self.app.proposal_card)
             self.views.append(view)
             self.turns.append(view)
         newest = len(self.views) - 1
@@ -526,6 +659,44 @@ class Drawer(Gtk.ApplicationWindow):
         self.footer.set_text(self.app.footer_line())
         self._show_waiting(conversation.waiting)
         self._follow()
+        self._update_rail()
+
+    def _place_widgets(self) -> None:
+        """Float the widgets in the margin the messages leave, move the
+        messages over for them, or leave them out, with their button."""
+        panel = self.conversation_panel
+        where, card = place(self._chat.get_width(), READABLE, self.expanded,
+                            panel.least())
+        panel.set_size_request(card, -1)
+        self.panel_toggle.set_visible(where != "hidden")
+        shown = self.panel_toggle.get_active() and where != "hidden"
+        aside = card + 2 * GAP if shown and where == "beside" else 0
+        self.transcript_clamp.set_margin_start(aside)
+        self.composer_clamp.set_margin_start(aside)
+        panel.set_visible(shown)
+
+    def _tops(self) -> list[float]:
+        """Where each question starts in the scrolled Conversation."""
+        # Measured from the content the viewport scrolls, not the viewport,
+        # which would give where each is on screen.
+        content = self.scroller.get_child().get_child()
+        return [view.compute_point(content, Graphene.Point())[1].y
+                for view in self.views]
+
+    def _update_rail(self) -> None:
+        turns = self.app.conversation.turns
+        view = self.scroller.get_vadjustment()
+        total, top, height = view.get_upper(), view.get_value(), view.get_page_size()
+        # Shown where there is a length to find one's way in: questions to tell
+        # apart, more than fits on one screen.
+        shown = len(self.views) == len(turns) > 1 and total > height
+        self.rail.set_visible(shown)
+        if not shown:
+            return
+        self.rail.show_ticks(ticks(turns, self._tops(), total, top, height))
+
+    def rail_jump(self, index: int) -> None:
+        self.scroller.get_vadjustment().set_value(max(self._tops()[index] - 12, 0))
 
     def _show_waiting(self, waiting) -> None:
         while (row := self.waiting.get_first_child()) is not None:
@@ -575,6 +746,14 @@ class Application(Adw.Application):
         self.pasts: list = []
         self.look: Look | None = None
         self.accounts: OpencodeAccounts | None = None
+        self.skills: Skills | None = None
+        self.servers: Servers | None = None
+        self.contexts: OpencodeEngine | None = None
+        self.skill_list: OpencodeEngine | None = None
+        self.saved: OpencodeEngine | None = None
+        self.requests: OpencodeEngine | None = None
+        #: What the message box's picker lists, by the sign that opens it.
+        self.offers: dict[str, list[Entry]] = {}
         self.files = RealFileSystem()
         self.home = SystemIdentity().home
         self.models: Models = load_models(self.files, self.home)
@@ -1025,7 +1204,148 @@ class Application(Adw.Application):
 
         self.background(gather, show)
 
+    def proposal_card(self, proposal: Proposal) -> Gtk.Widget:
+        decided = self.log.decided().get(proposal.name) if self.log else None
+        return ProposalCard(proposal, decided, on_keep=self.keep_skill,
+                            on_decline=self.decline_skill)
+
+    def keep_skill(self, proposal: Proposal) -> None:
+        """Write a proposed skill among the person's own, and say so."""
+        self.files.write(skill_path(self.home, proposal), skill_file(proposal))
+        self._decided(proposal, kept=True)
+
+    def decline_skill(self, proposal: Proposal) -> None:
+        self._decided(proposal, kept=False)
+
+    def _decided(self, proposal: Proposal, *, kept: bool) -> None:
+        if self.log is not None:
+            self.log.write("skill-decided", name=proposal.name, kept=kept)
+        self.drawer.refresh()
+
+    def read_saved_rules(self) -> list[SavedRule]:
+        return self.saved.saved_rules() if self.saved is not None else []
+
+    def remove_saved_rule(self, rule: SavedRule) -> None:
+        """Take back what Always allow here saved: the Engine asks again."""
+        if self.saved is None:
+            return
+        self.saved.remove_saved_rule(rule.id)
+        if self.log is not None:
+            self.log.write("rule-removed", action=rule.action, resource=rule.resource,
+                           project=str(rule.project) if rule.project else None)
+
+    def read_skills(self) -> list[SkillInfo]:
+        """The skills a session where the Conversation runs can load."""
+        if self.skill_list is None or self.harness is None:
+            return []
+        return self.skill_list.skill_details(self.harness.directory)
+
+    def skill_choice(self, skill: str) -> str:
+        return skill_choice(self.files, self.home, skill)
+
+    def choose_skill(self, skill: str, choice: str) -> bool:
+        return choose_skill(self.files, self.home, skill, choice)
+
+    def skill_origin(self, path: str) -> str:
+        directory = self.harness.directory if self.harness else self.home
+        return origin_of(path, self.home, directory)
+
+    def read_connectors(self) -> list[Connector]:
+        return read_connectors(self.files, self.home)
+
+    def save_connector(self, connector: Connector) -> bool:
+        return save_connector(self.files, self.home, connector)
+
+    def remove_connector(self, name: str) -> bool:
+        return remove_connector(self.files, self.home, name)
+
+    def connector_states(self) -> dict[str, ConnectorState]:
+        """As the Engine finds each server for the Conversation on screen."""
+        if self.servers is None or self.harness is None:
+            return {}
+        return self.servers.connector_states(self.harness.directory)
+
+    def offered(self, sign: str) -> list[Entry]:
+        return self.offers.get(sign, [])
+
+    def refresh_offers(self) -> None:
+        """Gather what the picker lists for where the Conversation runs: the
+        Project's files, and the skills a session there can load."""
+        if self.harness is None:
+            return
+        directory = self.harness.directory
+        here = project_program(directory, self.home)
+        programs, skills, servers = self.programs(), self.skills, self.servers
+
+        def gather() -> dict[str, list[Entry]]:
+            try:
+                files = programs.files(here) if here else []
+            except ProgramError:
+                # A folder in ~/Code the person made themselves.
+                files = []
+            connected = (offered_servers(servers.connector_states(directory), TOOLS)
+                         + servers.resources(directory)) if servers else []
+            offered = skills.skills(directory) if skills else []
+            return {"@": project_files(directory, files) + connected,
+                    # One turned off is kept from Osiris, so not offered to pick.
+                    "/": [e for e in offered if self.skill_choice(e.key) != "off"]}
+
+        def found(offers: dict[str, list[Entry]]) -> None:
+            if self.harness is not None and self.harness.directory == directory:
+                self.offers = offers
+                self.drawer.picker.refresh()
+
+        self.background(gather, found)
+
+    def update_panel(self) -> None:
+        """Fill the Conversation panel: what is known at once now, what needs
+        the Engine or git when it comes back."""
+        if self.harness is None or self.drawer is None:
+            return
+        panel, conversation = self.drawer.conversation_panel, self.conversation
+        directory, session = self.harness.directory, self.session
+        project = project_name(directory, self.home)
+        model = conversation.model or self.models.default
+        turns = conversation.turns
+        panel.show_where(project, "")
+        panel.show_changes(
+            [(at, title_of(turn.question), len(turn.changes))
+             for at, turn in enumerate(turns) if turn.changes],
+            lambda at: self.show_changes(turns[at]))
+        servers, contexts, accounts = self.servers, self.contexts, self.accounts
+
+        def gather():
+            states = servers.connector_states(directory) if servers else {}
+            use = contexts.context_use(session) if contexts and session else None
+            window = next((m.context for m in accounts.models() if m.ref == model),
+                          0) if accounts and model and use else 0
+            return (branch(SubprocessRunner(sink=lambda _line: None), directory),
+                    {name: s for name, s in states.items() if name != TOOLS},
+                    use, window)
+
+        def found(gathered) -> None:
+            if self.session != session:
+                # Another Conversation came on screen meanwhile, such as one
+                # reopening: fill the panel for that one instead.
+                self.update_panel()
+                return
+            checked_out, states, use, window = gathered
+            panel.show_where(project, checked_out)
+            panel.show_connectors(states)
+            if use is not None and window:
+                panel.show_context(slices(use.sizes, use.used, window), use.used, window)
+            else:
+                panel.show_no_context()
+
+        self.background(gather, found)
+
     def update_canvas(self) -> None:
+        # The panel follows the Conversation while it is on screen.
+        if self.drawer is not None and self.drawer.conversation_panel.get_mapped():
+            self.update_panel()
+        # The picker lists what is where the Conversation runs, which changes
+        # whenever its Canvas does.
+        self.refresh_offers()
         # What this run changed, and what the Conversation changed before, as
         # the log has it: a reopened Conversation brings its Canvas back.
         earlier = self.log.programs_of(self.session) if self.log and self.session else []
@@ -1114,24 +1434,43 @@ class Application(Adw.Application):
             self.drawer.refresh()
             self.load_history()
             self.update_canvas()
+            self.restore_waiting(session)
 
         self.background(lambda: harness.resume(session), opened)
 
+    def restore_waiting(self, session: str) -> None:
+        """Bring back the cards of requests the Engine still waits on, which a
+        restart of the drawer lost while the Engine kept them."""
+        if self.requests is None or self.harness is None:
+            return
+        requests, harness = self.requests, self.harness
+
+        def handled() -> list:
+            found = (harness.handle(event) for event in requests.waiting(session))
+            return [result for result in found if result is not None]
+
+        def shown(results: list) -> None:
+            for result in results:
+                self._apply(result)
+
+        self.background(handled, shown)
+
     def show_all_changes(self) -> None:
-        """Every question's changes that made commits, newest first."""
-        for turn in reversed(self.conversation.turns):
-            if turn.commits:
-                self.show_changes(turn)
+        """Every question's changes that made commits, in the order asked, read
+        together so they open in that order; the newest is left on screen."""
+        self._show_changes([t for t in self.conversation.turns if t.commits])
 
     def show_changes(self, turn: Turn) -> None:
         """What a question changed, on the Canvas; a comment on it is asked."""
+        self._show_changes([turn])
 
+    def _show_changes(self, turns: list[Turn]) -> None:
         def commented(path: str, lines: tuple[int, int], text: str) -> None:
             self.ask(comment(path, lines, text))
 
         programs = self.programs()
 
-        def read() -> tuple[tuple, list[str]]:
+        def read(turn: Turn) -> tuple[tuple, list[str]]:
             found, gone = [], []
             for name, commit in turn.commits:
                 try:
@@ -1140,16 +1479,16 @@ class Application(Adw.Application):
                     gone.append(name)
             return tuple(found), gone
 
-        def shown(result: tuple[tuple, list[str]]) -> None:
-            files, gone = result
-            if gone and not files:
-                turn.note = (f"{', '.join(dict.fromkeys(gone))} is gone, so what this "
-                             "question changed in it cannot be shown.")
-                self.drawer.refresh()
-                return
-            self.drawer.show_changes(turn.question, files, commented)
+        def shown(results: list[tuple[tuple, list[str]]]) -> None:
+            for turn, (files, gone) in zip(turns, results, strict=True):
+                if gone and not files:
+                    turn.note = (f"{', '.join(dict.fromkeys(gone))} is gone, so what "
+                                 "this question changed in it cannot be shown.")
+                else:
+                    self.drawer.show_changes(turn.question, files, commented)
+            self.drawer.refresh()
 
-        self.background(read, shown)
+        self.background(lambda: [read(turn) for turn in turns], shown)
 
     def ask_to_go_back(self, turn: Turn, again: bool = False) -> None:
         """Say what going back loses, and go back only on the person's yes."""
@@ -1218,7 +1557,8 @@ class Application(Adw.Application):
         return Conversation.restored(past,
                                      tokens_spent=self.log.tokens_spent(session),
                                      changes=self.log.changes_by_question(session),
-                                     undone=self.log.undone())
+                                     undone=self.log.undone(),
+                                     proposals=self.log.proposals_by_question(session))
 
     def new_conversation(self, folder: Path | None = None) -> bool:
         """A new Conversation, in ``folder``'s Project or in none; False if the
@@ -1246,17 +1586,18 @@ class Application(Adw.Application):
         self.backgrounded[self.session] = self.conversation
         return True
 
-    def ask(self, text: str) -> None:
+    def ask(self, text: str, references: tuple[Reference, ...] = ()) -> None:
         if self.harness is None:
             return
         if self.conversation.busy:
-            self._queue(text)
+            self._queue(text, references)
             return
         turn = self.conversation.asked(text)
         self.drawer.refresh()
-        threading.Thread(target=self._send, args=(text, turn), daemon=True).start()
+        threading.Thread(target=self._send, args=(text, turn, references),
+                         daemon=True).start()
 
-    def _queue(self, text: str) -> None:
+    def _queue(self, text: str, references: tuple[Reference, ...] = ()) -> None:
         """Sent while busy: it waits in the Engine's inbox and steers the
         answer at its next step."""
         harness, conversation = self.harness, self.conversation
@@ -1265,9 +1606,9 @@ class Application(Adw.Application):
             conversation.queued(message, text)
             self.drawer.refresh()
 
-        self.background(lambda: harness.ask(text), queued)
+        self.background(lambda: harness.ask(text, references), queued)
 
-    def send_now(self, text: str) -> None:
+    def send_now(self, text: str, references: tuple[Reference, ...] = ()) -> None:
         """Sent while busy, cutting in: it waits shown until the Engine,
         having stopped the step under way, takes it next."""
         if self.harness is None:
@@ -1278,7 +1619,7 @@ class Application(Adw.Application):
             conversation.queued(message, text)
             self.drawer.refresh()
 
-        self.background(lambda: harness.send_now(text), sent)
+        self.background(lambda: harness.send_now(text, references), sent)
 
     def unqueue(self, message: str) -> str:
         """Take a waiting message back from the Engine; its text."""
@@ -1292,9 +1633,10 @@ class Application(Adw.Application):
         if self.harness is not None:
             threading.Thread(target=self.harness.stop, daemon=True).start()
 
-    def _send(self, text: str, turn: Turn | None = None) -> None:
+    def _send(self, text: str, turn: Turn | None = None,
+              references: tuple[Reference, ...] = ()) -> None:
         try:
-            message = self.harness.ask(text)
+            message = self.harness.ask(text, references)
         except HttpError as error:
             GLib.idle_add(self._failed_to_send, str(error))
             return
@@ -1338,7 +1680,14 @@ class Application(Adw.Application):
                                        auto_mode=lambda: auto_mode_on(
                                            self.files, self.home))
                 self.accounts = OpencodeAccounts(UrllibClient(), service)
+                self.skills = engine
+                self.servers = engine
+                self.contexts = engine
+                self.skill_list = engine
+                self.saved = engine
+                self.requests = engine
                 GLib.idle_add(self._refresh)
+                GLib.idle_add(lambda: self.refresh_offers() or False)
                 GLib.idle_add(self.start_waiting)
                 GLib.idle_add(lambda: self.load_history() or False)
                 for event in engine.events():
@@ -1362,8 +1711,15 @@ class Application(Adw.Application):
         if conversation is None:
             return False
         conversation.apply(event)
+        if isinstance(event, ToolFinished | Finished | Stopped | Failed) and self.log:
+            ran = self.log.ran_by_question(event.session)
+            conversation.ran(ran[-1] if ran else [])
         if isinstance(event, Asking):
             self._waiting(event.session, conversation)
+        if (isinstance(event, ToolCalled) and event.name == "webfetch"
+                and conversation is self.conversation
+                and isinstance(url := event.input.get("url"), str)):
+            self.drawer.open_page(url)
         if isinstance(event, Finished | Stopped | Failed):
             looking = self.open and conversation is self.conversation
             if self.unread.ended(event, looking=looking):
@@ -1400,6 +1756,8 @@ class Application(Adw.Application):
             asked = self.log.changes_by_question(session)
             changes = asked[-1] if asked else []
             conversation.changed(changes)
+            proposed = self.log.proposals_by_question(session)
+            conversation.proposed(proposed[-1] if proposed else [])
             worked_on = [c.program for c in changes if c.program]
             if worked_on and self.harness is not None:
                 harness, folder = self.harness, self.home / CODE_DIR / worked_on[0]
