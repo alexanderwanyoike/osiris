@@ -390,9 +390,17 @@ popover.harness-rail-card > contents {
     box-shadow: 0 6px 12px alpha(@harness_sunken, 0.40);
 }
 
-/* The Conversation panel: quiet headed sections; context as small squares in
+/* The Conversation's widgets: floating cards, each a quiet headed section; context as small squares in
    the Theme's colours, one colour per kind, free space barely there. */
 .harness-panel-heading { font-size: 0.8em; font-weight: 600; color: @harness_muted; }
+.harness-panel-section.card {
+    background-color: alpha(@harness_raised, 0.92);
+    color: @harness_fg;
+    border: 1px solid alpha(@harness_fg, 0.08);
+    border-radius: 16px;
+    padding: 12px 14px;
+    box-shadow: 0 6px 18px alpha(@harness_sunken, 0.35);
+}
 .harness-panel-fact image { color: @harness_muted; }
 .harness-context-total { font-weight: 600; }
 .harness-context-square, .harness-context-swatch {
