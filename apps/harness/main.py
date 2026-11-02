@@ -54,6 +54,7 @@ from conversation_panel import ConversationPanel  # noqa: E402
 from composer_picker import Picker  # noqa: E402
 from rail import Rail  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
+from proposal_card import ProposalCard  # noqa: E402
 from render import TurnView  # noqa: E402
 from sidebar import Sidebar  # noqa: E402
 from skills_tab import SkillsTab  # noqa: E402
@@ -623,7 +624,8 @@ class Drawer(Gtk.ApplicationWindow):
                             try_again=lambda turn: self.app.ask_to_go_back(turn, True),
                             may_go_back=lambda turn: self.app.conversation.can_go_back(turn),
                             may_try_again=lambda turn:
-                                self.app.conversation.can_try_again(turn))
+                                self.app.conversation.can_try_again(turn),
+                            proposal_card=self.app.proposal_card)
             self.views.append(view)
             self.turns.append(view)
         newest = len(self.views) - 1
@@ -1187,6 +1189,11 @@ class Application(Adw.Application):
             self.drawer.show_history(*group(pasts, home))
 
         self.background(gather, show)
+
+    def proposal_card(self, proposal: Proposal) -> Gtk.Widget:
+        decided = self.log.decided().get(proposal.name) if self.log else None
+        return ProposalCard(proposal, decided, on_keep=self.keep_skill,
+                            on_decline=self.decline_skill)
 
     def keep_skill(self, proposal: Proposal) -> None:
         """Write a proposed skill among the person's own, and say so."""
