@@ -544,14 +544,7 @@ def _tool(
             session, data["id"], data.get("input", {}), data["executed"], name
         )
     if kind == "permission.asked":
-        return ToolRequested(
-            session,
-            data["id"],
-            data["action"],
-            tuple(data["resources"]),
-            (data.get("source") or {}).get("id", ""),
-            tuple(data.get("save") or ()),
-        )
+        return _requested(session, data)
     return _finished(session, data)
 
 
