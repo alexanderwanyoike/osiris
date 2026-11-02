@@ -40,7 +40,7 @@ def test_each_connector_shows_with_its_state() -> None:
 def test_with_no_connectors_it_says_where_to_add_one() -> None:
     shown = panel()
     shown.show_connectors({})
-    assert any("Settings" in text for text in texts(shown))
+    assert any("Settings, under MCP" in text for text in texts(shown))
 
 
 def test_context_is_a_grid_of_squares_with_a_legend_marked_approximate() -> None:
@@ -134,7 +134,7 @@ def test_a_card_collapses_into_a_pill_that_sums_it_up_and_opens_again() -> None:
     shown.show_connectors(
         {"wiki": State("connected"), "tracker": State("needs_auth", "", "x")}
     )
-    card = shown.cards["Connectors"]
+    card = shown.cards["MCP"]
     card.toggle()
     assert card.has_css_class("pill")
     assert not card.body.get_visible()

@@ -114,7 +114,7 @@ def test_only_connected_servers_are_offered_and_not_osiris_own() -> None:
         "osiris": State("connected"),
     }
     assert offered_servers(states, own="osiris") == [
-        Entry("connector", "wiki", "wiki", "Connector")
+        Entry("connector", "wiki", "wiki", "MCP server")
     ]
 
 

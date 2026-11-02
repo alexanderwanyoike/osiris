@@ -665,7 +665,7 @@ def test_settings_hold_the_persons_connectors_beside_their_providers() -> None:
     app.connector_states = lambda: {"wiki": State("connected")}
     window.show_providers()
     shown = texts(window)
-    assert "Connectors" in shown
+    assert "MCP" in shown
     assert "https://w.example/mcp" in shown and "Connected" in shown
 
 
