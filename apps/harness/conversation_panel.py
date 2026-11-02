@@ -94,9 +94,8 @@ class ConversationPanel(Gtk.Box):
         rows = self._card("Where", "folder-open-symbolic")
         self.project = _fact("folder-symbolic")
         self.branch = _fact("osiris-branch-symbolic")
-        self.model = _fact("starred-symbolic")
-        for fact in (self.project, self.branch, self.model):
-            rows.append(fact)
+        rows.append(self.project)
+        rows.append(self.branch)
         self._connectors = self._card("Connectors", "network-server-symbolic")
         self._context = self._card("Context", "view-grid-symbolic")
         self.show_no_context()
@@ -115,11 +114,10 @@ class ConversationPanel(Gtk.Box):
         self.append(card)
         return card.body
 
-    def show_where(self, project: str, branch: str, model: str) -> None:
+    def show_where(self, project: str, branch: str) -> None:
         self.project.words.set_text(project)
         self.branch.words.set_text(branch)
         self.branch.set_visible(bool(branch))
-        self.model.words.set_text(model)
         self.cards["Where"].summary.set_text(project)
 
     def show_connectors(self, states: dict[str, State]) -> None:

@@ -1302,10 +1302,9 @@ class Application(Adw.Application):
         panel, conversation = self.drawer.conversation_panel, self.conversation
         directory, session = self.harness.directory, self.session
         project = project_name(directory, self.home)
-        label = conversation.model_label(self.models.default)
         model = conversation.model or self.models.default
         turns = conversation.turns
-        panel.show_where(project, "", label)
+        panel.show_where(project, "")
         panel.show_changes(
             [(at, title_of(turn.question), len(turn.changes))
              for at, turn in enumerate(turns) if turn.changes],
@@ -1328,7 +1327,7 @@ class Application(Adw.Application):
                 self.update_panel()
                 return
             checked_out, states, use, window = gathered
-            panel.show_where(project, checked_out, label)
+            panel.show_where(project, checked_out)
             panel.show_connectors(states)
             if use is not None and window:
                 panel.show_context(slices(use.sizes, use.used, window), use.used, window)
