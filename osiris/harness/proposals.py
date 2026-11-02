@@ -3,6 +3,7 @@ the answer and written among the person's own skills only when they keep it."""
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,10 +26,13 @@ class Proposal:
 
 
 def skill_file(proposal: Proposal) -> str:
-    """A SKILL.md the Engine reads: its name and description up front."""
+    """A SKILL.md the Engine reads: its name and description up front. The
+    description is written as a JSON string, which YAML reads as one quoted
+    value whatever colons, quotes or line breaks the model put in it."""
     return (
-        f"---\nname: {proposal.name}\ndescription: {proposal.description}\n---\n\n"
-        f"{proposal.body.strip()}\n"
+        f"---\nname: {proposal.name}\n"
+        f"description: {json.dumps(proposal.description, ensure_ascii=False)}\n"
+        f"---\n\n{proposal.body.strip()}\n"
     )
 
 

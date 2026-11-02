@@ -13,7 +13,7 @@ def test_a_kept_proposal_is_a_skill_file_the_engine_reads() -> None:
     assert skill_file(TIDY) == (
         "---\n"
         "name: tidy-imports\n"
-        "description: Sort and group Python imports\n"
+        'description: "Sort and group Python imports"\n'
         "---\n"
         "\n"
         "Run ruff.\n"
@@ -36,3 +36,16 @@ def test_only_a_plain_name_can_name_a_skill() -> None:
     assert not plain("Tidy Imports")
     assert not plain("")
     assert not plain("-x")
+
+
+def test_a_description_with_a_colon_or_a_quote_still_reads_as_one_value() -> None:
+    """Front matter is YAML: unquoted, "Use when: x" would not parse."""
+    import json
+
+    awkward = Proposal("tidy-imports", 'Use when: imports are "messy"', "Run ruff.")
+    line = next(
+        line
+        for line in skill_file(awkward).splitlines()
+        if line.startswith("description:")
+    )
+    assert json.loads(line.removeprefix("description: ")) == awkward.description
