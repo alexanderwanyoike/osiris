@@ -272,7 +272,7 @@ popover.harness-picker-popover > contents {
 .harness-picker-label { color: @harness_fg; font-size: 0.93em; }
 .harness-picker .harness-meta { font-size: 0.93em; }
 
-/* Connectors in Settings: each server's state as a small pill in the Theme's
+/* MCP servers in Settings: each server's state as a small pill in the Theme's
    own colour for it. */
 .harness-connector-state {
     font-size: 0.82em;
