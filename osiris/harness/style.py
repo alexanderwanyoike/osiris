@@ -151,7 +151,7 @@ def inline_style(theme: Mapping[str, Any]) -> InlineStyle:
 
 
 #: How far the context ring's track lifts from the card toward the text.
-TRACK_LIFT = 0.12
+TRACK_LIFT = 0.2
 #: How much more vivid than the Theme's colours the ring is: it warns.
 VIVID = 1.35
 
