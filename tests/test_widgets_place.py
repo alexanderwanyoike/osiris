@@ -1,11 +1,11 @@
 """Where the Conversation's widgets go (#169), by the room there is: never
-over the messages."""
+over the messages, and as wide as a share of the Conversation."""
 
 from __future__ import annotations
 
 import pytest
 
-from osiris.harness.widgets_place import place
+from osiris.harness.widgets_place import LEAST, MOST, SHARE, place
 
 
 @pytest.mark.parametrize(
@@ -21,4 +21,13 @@ from osiris.harness.widgets_place import place
     ],
 )
 def test_the_widgets_go_where_there_is_room_for_them(width: int, where: str) -> None:
-    assert place(width, readable=760, card=260) == where
+    assert place(width, readable=820)[0] == where
+
+
+def test_a_card_is_a_share_of_the_conversations_width() -> None:
+    assert place(1200, readable=820)[1] == round(1200 * SHARE)
+
+
+def test_a_card_is_never_too_narrow_to_read_nor_wider_than_it_needs() -> None:
+    assert place(500, readable=820)[1] == LEAST
+    assert place(4000, readable=820)[1] == MOST
