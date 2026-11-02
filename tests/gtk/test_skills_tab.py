@@ -65,3 +65,28 @@ def test_a_skill_opens_to_show_what_it_says() -> None:
     )
     review.set_expanded(True)
     assert "# Review\nRead the diff, then the tests." in texts(review)
+
+
+def choosers(shown) -> dict[str, Gtk.DropDown]:
+    return {d.skill: d for d in widgets(shown) if isinstance(d, Gtk.DropDown)}
+
+
+def test_each_skill_shows_its_choice_and_a_new_one_is_kept() -> None:
+    from skills_tab import CHOICES
+
+    shown, choices = tab()
+    picked = choosers(shown)
+    assert CHOICES[picked["report"].get_selected()] == "off"
+    assert CHOICES[picked["review"].get_selected()] == "on"
+    picked["review"].set_selected(CHOICES.index("ask"))
+    assert choices.made["review"] == "ask"
+
+
+def test_a_choice_that_could_not_be_kept_says_why_and_goes_back() -> None:
+    from skills_tab import CHOICES
+
+    shown, _ = tab(Choices(writable=False))
+    review = choosers(shown)["review"]
+    review.set_selected(CHOICES.index("off"))
+    assert CHOICES[review.get_selected()] == "on"
+    assert any("comments" in w for w in texts(shown))
