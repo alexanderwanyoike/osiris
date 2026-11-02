@@ -476,7 +476,7 @@ popover.harness-picker-popover > contents {
 .harness-picker-label { color: @harness_fg; font-size: 0.93em; }
 .harness-picker .harness-meta { font-size: 0.93em; }
 
-/* Connectors in Settings: each server's state as a small pill in the Theme's
+/* MCP servers in Settings: each server's state as a small pill in the Theme's
    own colour for it. */
 .harness-connector-state {
     font-size: 0.82em;
@@ -522,4 +522,64 @@ popover.harness-rail-card > contents {
     border-radius: 12px;
     padding: 8px 12px;
     box-shadow: 0 6px 12px alpha(@harness_sunken, 0.40);
+}
+
+/* The Conversation's widgets: floating cards, each a quiet headed section;
+   context as small squares in the Theme's accent and text tones, one per
+   kind, free space barely there. */
+.harness-panel-heading { font-size: 0.8em; font-weight: 600; color: @harness_muted; }
+.harness-panel-section.card {
+    background-color: @harness_raised;
+    color: @harness_fg;
+    border: 1px solid alpha(@harness_fg, 0.08);
+    border-radius: 8px;
+    padding: 12px 14px;
+    box-shadow: 0 6px 18px alpha(@harness_sunken, 0.35);
+}
+.harness-panel-fact image { color: @harness_muted; }
+.harness-context-total { font-weight: 600; }
+.harness-context-square, .harness-context-swatch {
+    min-width: 10px;
+    min-height: 10px;
+    border-radius: 2px;
+    background-color: alpha(@harness_fg, 0.08);
+}
+.harness-context-square.instructions, .harness-context-swatch.instructions { background-color: alpha(@harness_fg, 0.35); }
+.harness-context-square.questions, .harness-context-swatch.questions { background-color: @harness_accent; }
+.harness-context-square.answers, .harness-context-swatch.answers { background-color: alpha(@harness_accent, 0.5); }
+.harness-context-square.tools, .harness-context-swatch.tools { background-color: alpha(@harness_fg, 0.7); }
+.harness-panel-changes { background-color: transparent; }
+.harness-panel-changes row { padding: 6px 8px; border-radius: 8px; }
+.harness-panel-changes row:hover { background-color: alpha(@harness_fg, 0.05); }
+
+/* A folded widget is its header alone: its name and what it comes to. */
+.harness-panel-header image { color: @harness_muted; -gtk-icon-size: 14px; }
+.harness-panel-chevron { opacity: 0.6; }
+.harness-panel-header:hover .harness-panel-chevron { opacity: 1; }
+.harness-panel-summary { color: @harness_muted; font-size: 0.9em; }
+.harness-panel-section.card.folded { padding: 7px 14px; }
+.harness-panel-section.card.folded .harness-panel-heading { color: @harness_fg; }
+
+/* A skill Osiris proposes, read in full on a card under its answer; a skill's
+   own text on the Skills tab. */
+.harness-proposal-card {
+    background-color: @harness_raised;
+    border: 1px solid alpha(@harness_fg, 0.08);
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+.harness-proposal-name { font-weight: 600; }
+.harness-proposal-body, .harness-skill-text {
+    font-family: monospace;
+    font-size: 0.9em;
+    color: alpha(@harness_fg, 0.85);
+}
+
+/* No glow flashes where a scroll meets its end. */
+scrolledwindow > overshoot.top,
+scrolledwindow > overshoot.bottom,
+scrolledwindow > overshoot.left,
+scrolledwindow > overshoot.right {
+    background: none;
+    box-shadow: none;
 }

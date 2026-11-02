@@ -18,6 +18,7 @@ from osiris.harness.engine import FileChange  # noqa: E402
 from osiris.harness.file_tree import Node, tree  # noqa: E402
 from osiris.harness.panels import Kind, Panels, Tab  # noqa: E402
 from osiris.harness.review import file_lines  # noqa: E402
+from osiris.harness.titles import title_of  # noqa: E402
 from osiris.programs.programs import Program  # noqa: E402
 
 #: Narrower than this a Program's file tree slides over its code instead of
@@ -124,7 +125,7 @@ class Canvas(Gtk.Box):
                      on_comment: Callable[[str, tuple[int, int], str], None]) -> None:
         """A question's changes in a tab of their own: the files it changed,
         each opening to its diff, and a comment on picked lines."""
-        tab = Tab(Kind.CHANGES, question, question)
+        tab = Tab(Kind.CHANGES, question, title_of(question))
         if tab in self._pages:
             self.close(tab)
         content, view = self._changes_page(files, on_comment)

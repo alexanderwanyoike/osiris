@@ -79,7 +79,7 @@ The first slice of ROADMAP P3.5:
   (`files` with a `file://` URI, or `skills` by id), each with where it is
   mentioned. Tokens are found again when the message is sent, so one edited
   or deleted since is not sent.
-- **It can use connectors.** Settings has a Connectors tab beside Models: the
+- **It can use MCP servers.** Settings has an MCP tab beside Models: the
   person's MCP servers, each added by a name and either the command that
   starts it or the web address it answers at, switched on or off, changed or
   removed there. They are kept in the Engine's own config under
@@ -100,13 +100,57 @@ The first slice of ROADMAP P3.5:
   success colour, one waiting on the person in its warning colour. Hovering a
   tick shows the start of its question, and clicking it scrolls there. It
   shows once there are two questions, or one answer longer than the screen.
+- **It says what it is working with.** Expanded, a button beside New
+  conversation shows the Conversation's widgets: four cards on its left for
+  where it runs (its Project and the branch checked out there), its MCP
+  servers and how each is, its context and its changes. They never cover
+  the messages: they float in the margin the centred messages leave; with
+  less room the messages move over to make a column for them; with less
+  still, as the Canvas is widened, they and their button go, and come back
+  when the room does. A card is a share of the Conversation's width (22%,
+  between 220 and 300 pixels), never narrower than it draws, and all of them
+  as wide, folded or not. Each card folds to its header, saying what it comes
+  to: the Project, "2 of 3 connected", "1% used", "4 questions". Context is a
+  grid of a hundred small squares, each a slice of the model's context window
+  (`limit.context` from `GET /api/model`), coloured by what fills it, with a
+  legend giving each kind's share; a ring leads its header, folded or not,
+  showing how full the window is, in a more vivid form of the Theme's accent
+  until 60% full, then turning to its danger colour, wholly by 95%. opencode 2.2.4 reports the tokens in use (the last step's
+  input, cache and output) but not by kind, so the shares are estimated from
+  the messages it keeps (`GET /api/session/{id}/context`), about four
+  characters to a token, and what they do not account for is the Engine's
+  own instructions; the card says it is approximate. Each question that
+  changed something is listed and opens its changes on the Canvas. The cards
+  are filled as they come on screen and again as each answer ends.
+- **It has skills.** Settings has a Skills tab: each skill the Engine can
+  load where the Conversation runs (`GET /api/skill`), with where it came
+  from (with the Engine, yours, or this Project), what it is for, and the
+  whole of it to read. Each can be on, asked about first or off, kept as a
+  `skill` permission rule of its own in the Engine's config, after the rules
+  it overrides since the last match wins; one turned off is not offered under
+  `/`. After a long or hard task Osiris may propose a skill with its
+  `propose_skill` tool, which writes nothing: the proposal is logged, and a
+  card under the answer shows it in full with Keep it and No thanks. Only
+  Keep it writes it, as `~/.config/opencode/skills/<name>/SKILL.md`; a name
+  that is not plain lower-case words joined by hyphens is refused, so it
+  cannot name a folder elsewhere. The decision is logged and the card says it.
+- **What was allowed for good can be taken back.** Settings has an Allowed
+  tab: each rule "Always allow here" saved in the Engine
+  (`GET /api/permission/saved`), with what it allows and its Project (from
+  `GET /api/project`); taking one back (`DELETE /api/permission/saved/{id}`)
+  makes the Engine ask about it again, and is logged (`rule-removed`).
+- **A card outlives a restart.** When a Conversation opens, the requests its
+  session still waits on (`GET /api/session/{id}/permission`) are read as
+  they were asked and their cards come back, so a restart of the drawer no
+  longer leaves an answer hanging.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
   question. Every step it took, allowed or refused, is kept under the answer,
   whether the person allowed it, auto mode did, or the Engine's rules ran it
   without asking (named by the tool's `session.tool.input.started`; an Osiris
-  tool run from opencode's tool catalogue is read from the catalogue's code),
+  tool run from opencode's tool catalogue is the one the tool server logs as
+  it runs it, `ran`, however the model's code reached it),
   folded away as "Used 4 tools", each in the past tense ("Edited
   pomodoro/main.py") or as "Not allowed to run ls /etc". Each step opens to
   what it asked for and what came back, drawn for its kind

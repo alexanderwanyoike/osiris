@@ -82,6 +82,9 @@ def app() -> tuple[App, FakeEngine]:
         waiting=None,
         problem=None,
         servers=None,
+        saved=None,
+        requests=None,
+        files=files,
     )
     stand_in.send_notification = lambda session, notification: stand_in.sent.append(
         (session, notification)

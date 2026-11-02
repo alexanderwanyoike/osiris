@@ -16,6 +16,7 @@ from typing import Any
 
 from osiris.harness.accounts import Method, ModelInfo, Provider, SignIn, SignInState
 from osiris.harness.connectors import State
+from osiris.harness.context import CHARACTERS, KINDS, ContextUse
 from osiris.harness.engine import (
     Answered,
     Delivered,
@@ -36,6 +37,8 @@ from osiris.harness.engine import (
     ToolRequested,
 )
 from osiris.harness.picker import Entry, Reference
+from osiris.harness.saved_rules import SavedRule
+from osiris.harness.skill_rules import SkillInfo
 from osiris.harness.titles import title_of
 from osiris.platform import CommandRunner, FileSystem, HttpClient, HttpError, Identity
 
@@ -82,6 +85,32 @@ def locate(files: FileSystem, identity: Identity, runner: CommandRunner) -> Serv
 _UNRESERVED = frozenset(
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
 )
+
+
+def _sized(message: dict[str, Any]) -> list[tuple[str, str]]:
+    """A context message's parts, each with the kind it counts as."""
+    if message["type"] == "system":
+        return [("instructions", message.get("text", ""))]
+    if message["type"] == "user":
+        return [("questions", message.get("text", ""))]
+    if message["type"] != "assistant":
+        return []
+    return [
+        ("tools", json.dumps(part))
+        if part["type"] == "tool"
+        else ("answers", part.get("text", ""))
+        for part in message.get("content", [])
+    ]
+
+
+def _in_use(tokens: dict[str, Any]) -> int:
+    cache = tokens.get("cache", {})
+    return int(
+        tokens["input"]
+        + cache.get("read", 0)
+        + cache.get("write", 0)
+        + tokens["output"]
+    )
 
 
 def _in(directory: Path) -> str:
@@ -198,6 +227,23 @@ class OpencodeEngine:
             headers=self._service.headers(),
         )
 
+    def context_use(self, session: str) -> ContextUse:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/session/{session}/context",
+            headers=self._service.headers(),
+        )
+        characters = dict.fromkeys(KINDS, 0)
+        used = 0
+        for message in reply["data"]:
+            for kind, text in _sized(message):
+                characters[kind] += len(text)
+            if message["type"] == "assistant" and "tokens" in message:
+                used = _in_use(message["tokens"])
+        return ContextUse(
+            {kind: count // CHARACTERS for kind, count in characters.items()}, used
+        )
+
     def connector_states(self, directory: Path) -> dict[str, State]:
         reply: Any = self._http.request(
             "GET",
@@ -228,6 +274,59 @@ class OpencodeEngine:
             )
             for found in reply["data"]["resources"]
         ]
+
+    def skill_details(self, directory: Path) -> list[SkillInfo]:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/skill{_in(directory)}",
+            headers=self._service.headers(),
+        )
+        return [
+            SkillInfo(
+                found["id"],
+                found["name"],
+                found.get("description", ""),
+                found["path"],
+                found["content"],
+            )
+            for found in reply["data"]
+        ]
+
+    def saved_rules(self) -> list[SavedRule]:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/permission/saved",
+            headers=self._service.headers(),
+        )
+        projects: Any = self._http.request(
+            "GET", f"{self._service.url}/api/project", headers=self._service.headers()
+        )
+        where = {project["id"]: Path(project["canonical"]) for project in projects}
+        return [
+            SavedRule(
+                rule["id"],
+                rule["action"],
+                rule["resource"],
+                where.get(rule["projectID"]),
+            )
+            for rule in reply["data"]
+        ]
+
+    def remove_saved_rule(self, rule: str) -> None:
+        self._http.request(
+            "DELETE",
+            f"{self._service.url}/api/permission/saved/{rule}",
+            headers=self._service.headers(),
+        )
+
+    def waiting(self, session: str) -> list[ToolRequested]:
+        """What the session still waits to be allowed, as it was asked."""
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/session/{session}/permission",
+            headers=self._service.headers(),
+        )
+        return [_requested(session, request) for request in reply["data"]]
 
     def skills(self, directory: Path) -> list[Entry]:
         reply: Any = self._http.request(
@@ -445,15 +544,19 @@ def _tool(
             session, data["id"], data.get("input", {}), data["executed"], name
         )
     if kind == "permission.asked":
-        return ToolRequested(
-            session,
-            data["id"],
-            data["action"],
-            tuple(data["resources"]),
-            (data.get("source") or {}).get("id", ""),
-            tuple(data.get("save") or ()),
-        )
+        return _requested(session, data)
     return _finished(session, data)
+
+
+def _requested(session: str, data: dict[str, Any]) -> ToolRequested:
+    return ToolRequested(
+        session,
+        data["id"],
+        data["action"],
+        tuple(data["resources"]),
+        (data.get("source") or {}).get("id", ""),
+        tuple(data.get("save") or ()),
+    )
 
 
 class _Reader:
@@ -593,7 +696,11 @@ class OpencodeAccounts:
             "GET", self._service.url + "/api/model", headers=self._service.headers()
         )
         return [
-            ModelInfo(ModelRef(entry["providerID"], entry["id"]), entry["name"])
+            ModelInfo(
+                ModelRef(entry["providerID"], entry["id"]),
+                entry["name"],
+                (entry.get("limit") or {}).get("context", 0),
+            )
             for entry in reply["data"]
         ]
 

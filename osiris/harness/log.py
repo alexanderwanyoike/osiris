@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from osiris.harness.proposals import Proposal
 from osiris.platform import FileSystem
 
 #: Relative to the home: the person's data, not configuration.
@@ -109,7 +110,32 @@ class HarnessLog:
     def changes_by_question(self, session: str) -> list[list[Change]]:
         """For each question the session was asked, in order, the changes it
         led to: those naming the session, logged after it."""
-        questions: list[list[Change]] = []
+        return self._by_question(
+            session,
+            "changed",
+            lambda e: Change(e["summary"], e["undo"], e.get("program")),
+        )
+
+    def proposals_by_question(self, session: str) -> list[list[Proposal]]:
+        """For each question the session was asked, in order, the skills
+        proposed while answering it."""
+        return self._by_question(
+            session,
+            "proposed-skill",
+            lambda e: Proposal(e["name"], e["description"], e["body"]),
+        )
+
+    def ran_by_question(self, session: str) -> list[list[str]]:
+        """For each question the session was asked, the tool server's tools
+        that ran while answering it, as the Engine names them."""
+        return self._by_question(session, "ran", lambda e: str(e["tool"]))
+
+    def _by_question[T](
+        self, session: str, kind: str, made: Callable[[dict[str, Any]], T]
+    ) -> list[list[T]]:
+        """For each question the session was asked, the entries of ``kind``
+        logged while answering it, made into what they record."""
+        questions: list[list[T]] = []
         asking = ""
         for entry in self._entries():
             if entry["kind"] == "sent":
@@ -119,14 +145,20 @@ class HarnessLog:
             elif entry["kind"] == "went-back" and entry.get("session") == session:
                 del questions[len(questions) - entry.get("questions", 0) :]
             elif (
-                entry["kind"] == "changed"
+                entry["kind"] == kind
                 and questions
                 and _made_by(entry, asking) == session
             ):
-                questions[-1].append(
-                    Change(entry["summary"], entry["undo"], entry.get("program"))
-                )
+                questions[-1].append(made(entry))
         return questions
+
+    def decided(self) -> dict[str, bool]:
+        """Each proposed skill the person kept or declined, by name."""
+        return {
+            entry["name"]: entry["kept"]
+            for entry in self._entries()
+            if entry["kind"] == "skill-decided"
+        }
 
     def undone(self) -> list[tuple[str, ...]]:
         """The changes of each answer the person undid, by their summaries."""
