@@ -16,6 +16,10 @@ from osiris.harness.engine_config import ENGINE_CONFIG, edit, read
 from osiris.harness.picker import Entry
 from osiris.platform import FileSystem
 
+#: The name Osiris attaches its own tool server under, which no connector of
+#: the person's may take.
+OWN_TOOLS = "osiris"
+
 
 @dataclass(frozen=True)
 class Connector:
@@ -95,7 +99,7 @@ def offered_servers(states: dict[str, State], own: str) -> list[Entry]:
     """The servers @ offers: those working now, but not ``own``, the tool
     server Osiris attaches for itself."""
     return [
-        Entry("connector", name, name, "Connector")
+        Entry("connector", name, name, "MCP server")
         for name, state in sorted(states.items())
         if state.status == "connected" and name != own
     ]

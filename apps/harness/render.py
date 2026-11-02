@@ -20,6 +20,7 @@ from osiris.harness.detail import Kind, Line, detail, folded  # noqa: E402
 from osiris.harness.admin import Request  # noqa: E402
 from osiris.harness.conversation import State, Turn  # noqa: E402
 from osiris.harness.tasks import Progress, Task  # noqa: E402
+from osiris.harness.proposals import Proposal  # noqa: E402
 from osiris.harness.markdown import (  # noqa: E402
     Code,
     Heading,
@@ -350,9 +351,11 @@ class TurnView(Gtk.Box):
                  edit: Callable[[Turn], None] | None = None,
                  try_again: Callable[[Turn], None] | None = None,
                  may_go_back: Callable[[Turn], bool] = lambda _turn: False,
-                 may_try_again: Callable[[Turn], bool] = lambda _turn: False):
+                 may_try_again: Callable[[Turn], bool] = lambda _turn: False,
+                 proposal_card: Callable[[Proposal], Gtk.Widget] | None = None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-turn")
+        self._proposal_card = proposal_card
         self._on_undo = on_undo
         self._program_card = program_card
         self._admin_card = admin_card
@@ -463,6 +466,9 @@ class TurnView(Gtk.Box):
             self.extras.append(self._changes(turn))
         for name in turn.programs:
             self.extras.append(self._program_card(name))
+        if self._proposal_card is not None:
+            for proposal in turn.proposals:
+                self.extras.append(self._proposal_card(proposal))
         if turn.admin is not None and self._admin_card is not None:
             self.extras.append(self._admin_card(turn.admin))
         if turn.held is not None and self._approval_card is not None:

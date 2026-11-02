@@ -64,3 +64,19 @@ def grid(shared: list[Slice], squares: int) -> list[str]:
         for part, count in zip(shared, counts, strict=True)
         for _ in range(count)
     ]
+
+
+#: How full the window is when its ring starts to turn to the danger colour,
+#: and when it has: well before full, while there is time to start afresh.
+WARM = 0.6
+FULL = 0.95
+
+
+def filled(used: int, window: int) -> float:
+    """How much of ``window`` is in use, as a share of it."""
+    return min(used / window, 1.0) if window else 0.0
+
+
+def alarm(used: int, window: int) -> float:
+    """How far the ring has turned from the accent to the danger colour."""
+    return min(max((filled(used, window) - WARM) / (FULL - WARM), 0.0), 1.0)

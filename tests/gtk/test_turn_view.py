@@ -410,3 +410,18 @@ def test_an_answer_has_no_row_of_text_buttons_for_going_back_or_changes() -> Non
     view.update(turn, STYLE, None)
     labels = {w.get_label() for w in widgets(view) if isinstance(w, Gtk.Button)}
     assert not labels & {"Edit", "Try again", "Changes"}
+
+
+def test_a_skill_proposed_while_answering_has_its_card_under_the_answer() -> None:
+    from osiris.harness.proposals import Proposal
+
+    tidy = Proposal("tidy-imports", "Sort imports", "Run ruff.")
+    turn = Turn("tidy my imports", "Done.", State.DONE, proposals=[tidy])
+    view = TurnView(
+        turn,
+        on_undo=lambda _t: None,
+        program_card=lambda name: Gtk.Label(label=name),
+        proposal_card=lambda p: Gtk.Label(label=f"card for {p.name}"),
+    )
+    view.update(turn, STYLE, None)
+    assert "card for tidy-imports" in texts(view)
