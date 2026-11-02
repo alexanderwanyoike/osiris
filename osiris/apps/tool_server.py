@@ -252,6 +252,7 @@ def server(
     *,
     skins: SkinStore | None = None,
     auto_mode: bool = False,
+    skill_taken: Callable[[str], bool] = lambda _name: False,
 ) -> MCPServer:
     """The tools, acting on ``store``; every change they make is written to
     ``log`` with the step that undoes it."""
@@ -442,13 +443,15 @@ def server(
         )
         return f"Made the {label} wallpaper and applied it as {theme_label}."
 
-    _propose_tool(tools, logged)
+    _propose_tool(tools, logged, skill_taken)
     if skins is not None:
         _skin_tools(tools, skins, logged)
     return tools
 
 
-def _propose_tool(tools: MCPServer, logged: _Logged) -> None:
+def _propose_tool(
+    tools: MCPServer, logged: _Logged, taken: Callable[[str], bool]
+) -> None:
     @tools.tool(annotations=ANNOTATIONS[TIERS["propose_skill"]])
     @explained
     def propose_skill(name: str, description: str, body: str) -> str:
@@ -465,6 +468,11 @@ def _propose_tool(tools: MCPServer, logged: _Logged) -> None:
             raise ProposalError(
                 f"{name!r} cannot name a skill: use lower-case words joined by "
                 "hyphens, such as tidy-imports."
+            )
+        if taken(name):
+            raise ProposalError(
+                f"There is already a skill called {name}; propose it under another "
+                "name."
             )
         logged.write("proposed-skill", name=name, description=description, body=body)
         return (
