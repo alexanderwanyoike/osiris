@@ -212,6 +212,9 @@ class _Tools(MCPServer):
     """Keeps, for the length of each call, the session that made it: one
     server serves every Conversation in a Project."""
 
+    #: Where each call is logged as it runs; set once the log is known.
+    ran: _Logged | None = None
+
     async def call_tool(
         self,
         name: str,
@@ -220,6 +223,10 @@ class _Tools(MCPServer):
     ) -> CallToolResult | InputRequiredResult:
         token = _asking.set(_session_of(context))
         try:
+            # Said here, by the server that runs it, so the Harness shows every
+            # call however the model's code reached it.
+            if self.ran is not None:
+                self.ran.write("ran", tool=f"{NAME}_{name}")
             return await super().call_tool(name, arguments, context)
         finally:
             _asking.reset(token)
@@ -253,6 +260,7 @@ def server(
         instructions=instructions(auto_mode=auto_mode),
         log_level="WARNING",
     )
+    tools.ran = logged
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["list_themes"]])
     @explained

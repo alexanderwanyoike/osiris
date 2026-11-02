@@ -125,6 +125,11 @@ class HarnessLog:
             lambda e: Proposal(e["name"], e["description"], e["body"]),
         )
 
+    def ran_by_question(self, session: str) -> list[list[str]]:
+        """For each question the session was asked, the tool server's tools
+        that ran while answering it, as the Engine names them."""
+        return self._by_question(session, "ran", lambda e: str(e["tool"]))
+
     def _by_question[T](
         self, session: str, kind: str, made: Callable[[dict[str, Any]], T]
     ) -> list[list[T]]:
