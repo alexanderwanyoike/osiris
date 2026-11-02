@@ -764,7 +764,8 @@ def test_with_the_canvas_open_the_widgets_stay_while_there_is_room() -> None:
 
     window = shown_widgets(2400)
     window.canvas.set_visible(True)
-    window.canvas.get_parent().set_position(1500)
+    # Too narrow for the margin, wide enough for a column.
+    window.canvas.get_parent().set_position(1100)
     settle()
     card = window.conversation_panel.get_size_request()[0]
     assert window.conversation_panel.get_visible()
