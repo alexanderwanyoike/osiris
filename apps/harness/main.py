@@ -56,6 +56,7 @@ from rail import Rail  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
 from render import TurnView  # noqa: E402
 from sidebar import Sidebar  # noqa: E402
+from skills_tab import SkillsTab  # noqa: E402
 from terminal import Terminal  # noqa: E402
 from skin_store import EngineSkinStore  # noqa: E402
 from theme_store import EngineStore, user_wallpapers  # noqa: E402
@@ -85,6 +86,12 @@ from osiris.harness.history import (  # noqa: E402
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
 from osiris.harness.rail import ticks  # noqa: E402
+from osiris.harness.skill_rules import (  # noqa: E402
+    SkillInfo,
+    choose_skill,
+    origin_of,
+    skill_choice,
+)
 from osiris.harness.context import slices  # noqa: E402
 from osiris.harness.titles import title_of  # noqa: E402
 from osiris.harness.where import branch, project_name  # noqa: E402
@@ -528,6 +535,11 @@ class Drawer(Gtk.ApplicationWindow):
                                   "preferences-system-symbolic")
         tabs.add_titled_with_icon(connectors, "connectors", "Connectors",
                                   "network-server-symbolic")
+        skills = SkillsTab(read=self.app.read_skills, choice=self.app.skill_choice,
+                           choose=self.app.choose_skill, origin=self.app.skill_origin,
+                           background=self.app.background)
+        tabs.add_titled_with_icon(skills, "skills", "Skills",
+                                  "applications-science-symbolic")
         switcher = Adw.InlineViewSwitcher(stack=tabs, halign=Gtk.Align.CENTER)
         holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
                          margin_start=16, margin_end=16, margin_top=8)
@@ -722,6 +734,7 @@ class Application(Adw.Application):
         self.skills: Skills | None = None
         self.servers: Servers | None = None
         self.contexts: OpencodeEngine | None = None
+        self.skill_list: OpencodeEngine | None = None
         #: What the message box's picker lists, by the sign that opens it.
         self.offers: dict[str, list[Entry]] = {}
         self.files = RealFileSystem()
@@ -1174,6 +1187,22 @@ class Application(Adw.Application):
 
         self.background(gather, show)
 
+    def read_skills(self) -> list[SkillInfo]:
+        """The skills a session where the Conversation runs can load."""
+        if self.skill_list is None or self.harness is None:
+            return []
+        return self.skill_list.skill_details(self.harness.directory)
+
+    def skill_choice(self, skill: str) -> str:
+        return skill_choice(self.files, self.home, skill)
+
+    def choose_skill(self, skill: str, choice: str) -> bool:
+        return choose_skill(self.files, self.home, skill, choice)
+
+    def skill_origin(self, path: str) -> str:
+        directory = self.harness.directory if self.harness else self.home
+        return origin_of(path, self.home, directory)
+
     def read_connectors(self) -> list[Connector]:
         return read_connectors(self.files, self.home)
 
@@ -1587,6 +1616,7 @@ class Application(Adw.Application):
                 self.skills = engine
                 self.servers = engine
                 self.contexts = engine
+                self.skill_list = engine
                 GLib.idle_add(self._refresh)
                 GLib.idle_add(lambda: self.refresh_offers() or False)
                 GLib.idle_add(self.start_waiting)
