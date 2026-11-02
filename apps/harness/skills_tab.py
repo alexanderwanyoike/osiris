@@ -47,7 +47,8 @@ class SkillsTab(Gtk.Box):
 
     def _row(self, skill: SkillInfo) -> Gtk.Widget:
         about = " · ".join(filter(None, (self._origin(skill.path), skill.description)))
-        row = Adw.ExpanderRow(title=skill.name, subtitle=about, use_markup=False)
+        row = Adw.ExpanderRow(title=skill.name, subtitle=about, use_markup=False,
+                              subtitle_lines=2)
         says = Gtk.Label(label=skill.content, xalign=0, wrap=True, selectable=True,
                          margin_top=10, margin_bottom=10, margin_start=14,
                          margin_end=14)
