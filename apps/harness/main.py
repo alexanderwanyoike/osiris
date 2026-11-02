@@ -638,7 +638,8 @@ class Drawer(Gtk.ApplicationWindow):
         """Float the widgets in the margin the messages leave, move the
         messages over for them, or leave them out, with their button."""
         panel = self.conversation_panel
-        where, card = place(self._chat.get_width(), READABLE, self.expanded)
+        where, card = place(self._chat.get_width(), READABLE, self.expanded,
+                            panel.least())
         panel.set_size_request(card, -1)
         self.panel_toggle.set_visible(where != "hidden")
         shown = self.panel_toggle.get_active() and where != "hidden"

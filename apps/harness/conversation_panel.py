@@ -102,6 +102,13 @@ class ConversationPanel(Gtk.Box):
         self.show_no_context()
         self._changes = self._card("Changes", "osiris-changes-symbolic")
 
+    def least(self) -> int:
+        """The narrowest the cards draw what they hold: their natural width,
+        which they take, set to the left as they are. Measured card by card:
+        the panel itself measures nothing while hidden."""
+        return max(card.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
+                   for card in self.cards.values())
+
     def _card(self, title: str, icon: str) -> Gtk.Box:
         """A new card on the panel, and the box its rows go in."""
         card = self.cards[title] = Card(title, icon)
