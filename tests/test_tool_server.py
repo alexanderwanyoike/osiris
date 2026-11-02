@@ -509,3 +509,23 @@ def test_every_tool_the_server_runs_is_logged_for_its_question() -> None:
     log.write("sent", session="ses_1", text="list my themes")
     call(FakeThemeStore(), "list_themes", {}, log)
     assert log.ran_by_question("ses_1") == [["osiris_list_themes"]]
+
+
+def test_a_skill_is_never_proposed_under_a_name_already_taken() -> None:
+    """Keeping it would write over the person's own, or Osiris's reviewer."""
+    log = new_log()
+    log.write("sent", session="ses_1", text="propose a review skill")
+    subject = server(
+        FakeThemeStore(),
+        new_programs(),
+        log,
+        new_wallpapers(),
+        skill_taken=lambda name: name == "review",
+    )
+    with pytest.raises(ToolError, match="already"):
+        asyncio.run(
+            subject.call_tool(
+                "propose_skill", {"name": "review", "description": "x", "body": "x"}
+            )
+        )
+    assert log.proposals_by_question("ses_1") == [[]]
