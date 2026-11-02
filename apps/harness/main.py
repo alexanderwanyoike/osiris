@@ -85,6 +85,7 @@ from osiris.harness.history import (  # noqa: E402
 )
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
+from osiris.harness.proposals import Proposal, skill_file, skill_path  # noqa: E402
 from osiris.harness.rail import ticks  # noqa: E402
 from osiris.harness.skill_rules import (  # noqa: E402
     SkillInfo,
@@ -1187,6 +1188,19 @@ class Application(Adw.Application):
 
         self.background(gather, show)
 
+    def keep_skill(self, proposal: Proposal) -> None:
+        """Write a proposed skill among the person's own, and say so."""
+        self.files.write(skill_path(self.home, proposal), skill_file(proposal))
+        self._decided(proposal, kept=True)
+
+    def decline_skill(self, proposal: Proposal) -> None:
+        self._decided(proposal, kept=False)
+
+    def _decided(self, proposal: Proposal, *, kept: bool) -> None:
+        if self.log is not None:
+            self.log.write("skill-decided", name=proposal.name, kept=kept)
+        self.drawer.refresh()
+
     def read_skills(self) -> list[SkillInfo]:
         """The skills a session where the Conversation runs can load."""
         if self.skill_list is None or self.harness is None:
@@ -1686,6 +1700,8 @@ class Application(Adw.Application):
             asked = self.log.changes_by_question(session)
             changes = asked[-1] if asked else []
             conversation.changed(changes)
+            proposed = self.log.proposals_by_question(session)
+            conversation.proposed(proposed[-1] if proposed else [])
             worked_on = [c.program for c in changes if c.program]
             if worked_on and self.harness is not None:
                 harness, folder = self.harness, self.home / CODE_DIR / worked_on[0]

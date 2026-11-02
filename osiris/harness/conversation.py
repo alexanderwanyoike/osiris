@@ -25,6 +25,7 @@ from osiris.harness.engine import (
 )
 from osiris.harness.harness import Allowed, Asking, Decision, Refused
 from osiris.harness.log import Change
+from osiris.harness.proposals import Proposal
 from osiris.harness.status import Status
 from osiris.harness.tasks import TASK_TOOL, Task, tasks_of
 from osiris.harness.titles import title_of
@@ -49,6 +50,8 @@ class Turn:
     doing: str = THINKING
     error: str = ""
     changes: list[Change] = field(default_factory=list)
+    #: Skills proposed while answering, for the person to keep or not.
+    proposals: list[Proposal] = field(default_factory=list)
     undone: bool = False
     #: A command of this answer's waiting for the administrator password.
     admin: Request | None = None
@@ -279,6 +282,11 @@ class Conversation:
         """Record what the latest question led to, as the Harness log has it."""
         if self.turns:
             self.turns[-1].changes = changes
+
+    def proposed(self, proposals: list[Proposal]) -> None:
+        """Record the skills the latest answer proposed, as the log has them."""
+        if self.turns:
+            self.turns[-1].proposals = proposals
 
     def _input(self, call: str) -> Mapping[str, object] | None:
         return self._inputs.pop(call, None) if call else None
