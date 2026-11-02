@@ -51,6 +51,8 @@ class SignInState:
 class ModelInfo:
     ref: ModelRef
     name: str
+    #: Tokens its context window holds; 0 where the Engine does not say.
+    context: int = 0
 
 
 @runtime_checkable
@@ -64,6 +66,10 @@ class Accounts(Protocol):
     def sign_in_state(self, provider: str, attempt: str) -> SignInState: ...
 
     def finish_sign_in(self, provider: str, attempt: str, code: str | None) -> None: ...
+
+    def connector_sign_in(self, integration: str) -> SignIn:
+        """Start signing in to an MCP server, through the Engine's integration."""
+        ...
 
     def models(self) -> list[ModelInfo]:
         """The models reachable with the accounts connected now."""

@@ -3,6 +3,7 @@ answers it, and what it is still doing reaches it, not the one on screen."""
 
 from __future__ import annotations
 
+import time
 from types import SimpleNamespace
 from typing import Any
 
@@ -24,7 +25,13 @@ class FakeDrawer:
         self.entry = SimpleNamespace(grab_focus=lambda: None)
         self.drafts: list[str] = []
         self.changes: list[tuple[str, object, Any]] = []
+        self.pages: list[str] = []
         self.refreshes = 0
+        self.picker_refreshes = 0
+        self.picker = SimpleNamespace(refresh=self._picker_refreshed)
+
+    def _picker_refreshed(self) -> None:
+        self.picker_refreshes += 1
 
     def clear(self) -> None:
         pass
@@ -40,6 +47,9 @@ class FakeDrawer:
 
     def show_changes(self, question: str, files: object, on_comment: Any) -> None:
         self.changes.append((question, files, on_comment))
+
+    def open_page(self, at: str) -> None:
+        self.pages.append(at)
 
 
 class App(SimpleNamespace):
@@ -71,6 +81,10 @@ def app() -> tuple[App, FakeEngine]:
         withdrawn=[],
         waiting=None,
         problem=None,
+        servers=None,
+        saved=None,
+        requests=None,
+        files=files,
     )
     stand_in.send_notification = lambda session, notification: stand_in.sent.append(
         (session, notification)
@@ -178,8 +192,8 @@ def test_the_sidebar_is_refreshed_once_a_question_has_its_session_working() -> N
     stand_in, _ = app()
     stand_in.conversation.asked("make it calm")
     stand_in._send("make it calm")
-    context = GLib.MainContext.default()
-    for _ in range(50):
+    context, deadline = GLib.MainContext.default(), time.monotonic() + 2
+    while stand_in.histories == 0 and time.monotonic() < deadline:
         context.iteration(False)
     assert stand_in.histories == 1
 
@@ -307,7 +321,8 @@ def test_a_questions_changes_come_from_its_commits_and_a_comment_reaches_thoth()
     )
 
 
-def test_changes_from_the_toolbar_open_each_questions_newest_first() -> None:
+def test_changes_from_the_toolbar_open_each_questions_in_order_newest_last() -> None:
+    """The newest, opened last, is the one on screen."""
     from osiris.harness.log import Change
     from osiris.platform import FakeRunner
     from osiris.platform.process import Result
@@ -337,8 +352,8 @@ def test_changes_from_the_toolbar_open_each_questions_newest_first() -> None:
         )
     stand_in.show_all_changes()
     assert [question for question, _, _ in stand_in.drawer.changes] == [
-        "add --times",
         "make a coin flip",
+        "add --times",
     ]
 
 
@@ -367,6 +382,18 @@ def test_changes_whose_program_is_gone_say_so_on_their_question() -> None:
     stand_in.show_changes(turn)
     assert stand_in.drawer.changes == []
     assert "coin-flip" in turn.note
+
+
+def test_a_page_thoth_reads_opens_in_the_browser_group() -> None:
+    """So the person can follow its sources (#197)."""
+    from osiris.harness.engine import ToolCalled
+
+    stand_in, _ = app()
+    asked(stand_in, "what is a GtkLabel?")
+    page = "https://docs.gtk.org/gtk4/class.Label.html"
+    heard(stand_in, ToolCalled("ses_1", "call_1", {"url": page}, False, "webfetch"))
+    heard(stand_in, ToolCalled("ses_1", "call_2", {"path": "/etc/x"}, False, "read"))
+    assert stand_in.drawer.pages == [page]
 
 
 def test_a_message_sent_now_waits_shown_while_the_engine_cuts_in() -> None:
