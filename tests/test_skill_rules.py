@@ -53,3 +53,22 @@ def test_a_choice_is_kept_in_the_engines_config_and_read_back() -> None:
     assert choose_skill(files, home, "review", "ask")
     assert skill_choice(files, home, "review") == "ask"
     assert skill_choice(files, home, "report") == "on"
+
+
+def test_where_a_skill_came_from_is_said_by_its_path() -> None:
+    from pathlib import Path
+
+    from osiris.harness.skill_rules import origin_of
+
+    home = Path("/home/tester")
+    project = home / "Code" / "timer"
+    assert origin_of("/builtin/report.md", home, project) == "Comes with the Engine"
+    assert (
+        origin_of(f"{home}/.config/opencode/skills/review/SKILL.md", home, project)
+        == "Yours"
+    )
+    assert origin_of(f"{home}/.claude/skills/tidy/SKILL.md", home, project) == "Yours"
+    assert (
+        origin_of(f"{project}/.opencode/skills/build/SKILL.md", home, project)
+        == "This Project"
+    )
