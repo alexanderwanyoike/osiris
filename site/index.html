@@ -49,18 +49,48 @@
         <h2>The agent</h2>
         <p>Press <kbd>Super</kbd> + <kbd>A</kbd> and a sidebar opens. This is
           Osiris's agent: you type what you want, and it does it, using the AI
-          model you connected.</p>
+          model you connected. Expand it to fill the screen and work beside it.</p>
         <p>Ask for an app, say a Pomodoro timer, and the agent writes one. Try it,
           then install it into your applications menu and pin it to the dock. It
           writes Python, C or C++, Rust, Go or JavaScript.</p>
         <p>Ask for a new look or a moving wallpaper, and it makes one and puts it
           on your desktop. Every change comes with an Undo button.</p>
-        <p>The agent can only do what Osiris allows: look around, make changes
-          that can be undone, and edit the code of the apps it wrote. Anything else
-          is refused, and you see what it tried.</p>
       </div>
       <figure class="shot">
-        <img src="screenshots/harness.png" alt="The sidebar expanded: the conversation that made Pomodoro, beside its code" loading="lazy">
+        <img src="screenshots/agent.png" alt="The agent expanded on Tokyo Night: the conversation that made Daily Habits, its code, and the app itself in the same colours" loading="lazy">
+      </figure>
+    </section>
+    <section id="asks" class="feature reverse">
+      <div class="copy">
+        <h2>It asks first</h2>
+        <p>Before the agent runs a command or changes a file, it asks on a card.
+          Allow it once, allow it from then on in that project, or say no, or
+          tell it what to do instead.</p>
+        <p>It shows its plan as it goes. Send a message while it works and it
+          takes it into account; Send now cuts in.</p>
+        <p>What you allowed for good is listed in Settings, where you can take it
+          back. Auto mode lets it go ahead without asking.</p>
+      </div>
+      <figure class="shot">
+        <img src="screenshots/asks.png" alt="A card asking to run git commit, with Allow once, Always allow here and Deny, under the agent's plan" loading="lazy">
+      </figure>
+    </section>
+    <section id="canvas" class="feature">
+      <div class="copy">
+        <h2>Work beside it</h2>
+        <p>Next to the conversation is the Canvas: the code of the apps the agent
+          writes, what each question changed, a terminal, and a browser for
+          looking things up. Pick lines in a change to comment on them.</p>
+        <p>Type <kbd>@</kbd> to add a file to a message, or a source from an MCP
+          server, and <kbd>/</kbd> to use a skill. Connect MCP servers in
+          Settings to give the agent more tools and data.</p>
+        <p>Expanded, cards beside the conversation show where it runs, which servers
+          are connected, how full the model's context is, and what changed. After
+          hard work the agent can suggest a skill for next time, which you keep
+          or not.</p>
+      </div>
+      <figure class="shot">
+        <img src="screenshots/canvas.png" alt="Typing @ in a message lists the app's files, MCP servers and their sources, beside the app's code and a change on the Canvas" loading="lazy">
       </figure>
     </section>
 
