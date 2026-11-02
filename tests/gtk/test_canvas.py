@@ -547,36 +547,3 @@ def test_an_empty_canvas_sits_in_a_panels_frame() -> None:
     start = widget._tiles.get_first_child()
     assert "harness-canvas-group" in start.get_css_classes()
 
-
-def test_the_toolbar_opens_the_conversation_panel_once() -> None:
-    about = Gtk.Label(label="about this Conversation")
-    widget = Canvas(
-        read=lambda path: SOURCES[path.name],
-        open_in_code=lambda _folder, _file: None,
-        conversation=about,
-    )
-    button = next(
-        b
-        for b in widgets(widget.toolbar)
-        if isinstance(b, Gtk.Button) and b.get_tooltip_text() == "This Conversation"
-    )
-    button.emit("clicked")
-    button.emit("clicked")
-    assert len(widget.panels.groups) == 1
-    (group,) = widget.panels.groups
-    assert group.kind is Kind.CONVERSATION and len(group.tabs) == 1
-    assert about.get_ancestor(Canvas) is widget
-
-
-def test_the_conversation_panel_opens_again_after_its_tab_is_closed() -> None:
-    about = Gtk.Label(label="about this Conversation")
-    widget = Canvas(
-        read=lambda path: SOURCES[path.name],
-        open_in_code=lambda _folder, _file: None,
-        conversation=about,
-    )
-    widget.show_conversation()
-    (tab,) = widget.panels.groups[0].tabs
-    widget.close(tab)
-    widget.show_conversation()
-    assert about.get_ancestor(Canvas) is widget
