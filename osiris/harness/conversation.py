@@ -223,11 +223,13 @@ class Conversation:
         tokens_spent: int = 0,
         changes: list[list[Change]] | None = None,
         undone: list[tuple[str, ...]] | None = None,
+        proposals: list[list[Proposal]] | None = None,
     ) -> Conversation:
         """A past Conversation as it ended, with what each answer changed.
 
-        ``changes`` holds one list per question the log saw, matched to the
-        latest answers: answers from before the log began have none."""
+        ``changes`` and ``proposals`` hold one list per question the log saw,
+        matched to the latest answers: answers from before the log began have
+        none."""
         talk = cls()
         talk.tokens_spent = tokens_spent
         for turn in past:
@@ -247,6 +249,10 @@ class Conversation:
         ):
             answer.changes = made
             answer.undone = bool(made) and tuple(c.summary for c in made) in undid
+        for answer, proposed in zip(
+            reversed(talk.turns), reversed(proposals or []), strict=False
+        ):
+            answer.proposals = proposed
         return talk
 
     def queued(self, message: str, text: str) -> None:

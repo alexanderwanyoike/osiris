@@ -1514,7 +1514,8 @@ class Application(Adw.Application):
         return Conversation.restored(past,
                                      tokens_spent=self.log.tokens_spent(session),
                                      changes=self.log.changes_by_question(session),
-                                     undone=self.log.undone())
+                                     undone=self.log.undone(),
+                                     proposals=self.log.proposals_by_question(session))
 
     def new_conversation(self, folder: Path | None = None) -> bool:
         """A new Conversation, in ``folder``'s Project or in none; False if the
