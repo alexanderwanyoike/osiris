@@ -649,10 +649,10 @@ def test_the_context_ring_follows_the_theme() -> None:
     panel = window.conversation_panel
     panel.show_context([Slice("questions", 10), Slice("free", 90)], 10, 100)
     ring = panel.ring
-    assert ring.colour == ring_colours(OBSIDIAN).accent
+    assert ring.colour == ring_colours(OBSIDIAN).at(0.0)
     app.look.theme = DAWN
     window.refresh(restyle=True)
-    assert ring.colour == ring_colours(DAWN).accent
+    assert ring.colour == ring_colours(DAWN).at(0.0)
 
 
 def test_opening_the_picker_fetches_what_it_offers_afresh() -> None:

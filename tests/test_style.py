@@ -20,6 +20,7 @@ from osiris.harness.style import (
     skin_name,
     source_scheme,
 )
+from osiris.model.colour import Colour
 
 THEMES = Path(__file__).resolve().parent.parent / "shell" / "themes"
 
@@ -196,14 +197,24 @@ class TestTokens:
 
 
 class TestContextRing:
-    def test_the_ring_fills_in_the_accent_and_turns_to_danger(self) -> None:
+    def test_the_ring_is_a_more_vivid_accent_turning_to_danger(self) -> None:
         from osiris.harness.style import ring_colours
 
         colours = OBSIDIAN["colors"]
         ring = ring_colours(OBSIDIAN)
-        assert ring.at(0.0) == colours["accent"].lower()
-        assert ring.at(1.0) == colours["danger"].lower()
-        assert ring.at(0.5) not in (ring.at(0.0), ring.at(1.0))
+        accent = Colour(colours["accent"]).oklch
+        danger = Colour(colours["danger"]).oklch
+        calm, full = Colour(ring.at(0.0)).oklch, Colour(ring.at(1.0)).oklch
+        assert abs(calm[2] - accent[2]) < 2 and calm[1] > accent[1]
+        assert abs(full[2] - danger[2]) < 2 and full[1] > danger[1]
+
+    def test_the_ring_stays_vivid_on_its_way_to_danger(self) -> None:
+        from osiris.harness.style import ring_colours
+
+        colours = OBSIDIAN["colors"]
+        least = min(Colour(colours[k]).oklch[1] for k in ("accent", "danger"))
+        ring = ring_colours(OBSIDIAN)
+        assert all(Colour(ring.at(a)).oklch[1] >= least for a in (0.25, 0.5, 0.75))
 
     def test_the_rings_track_is_a_faint_line_on_the_card(self) -> None:
         from osiris.harness.style import ring_colours

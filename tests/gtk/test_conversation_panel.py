@@ -108,13 +108,15 @@ def test_the_ring_turns_to_the_danger_colour_as_the_window_fills() -> None:
     from osiris.harness.style import RingColours
 
     shown = panel()
-    shown.restyle(RingColours("#222222", "#0000ff", "#ff0000"))
+    first = RingColours("#222222", "#3050c0", "#c03040")
+    shown.restyle(first)
     shown.show_context([Slice("questions", 10), Slice("free", 90)], 10, 100)
-    assert ring_of(shown).colour == "#0000ff"
+    assert ring_of(shown).colour == first.at(0.0)
     shown.show_context([Slice("questions", 97), Slice("free", 3)], 97, 100)
-    assert ring_of(shown).colour == "#ff0000"
-    shown.restyle(RingColours("#222222", "#00ff00", "#ffff00"))
-    assert ring_of(shown).colour == "#ffff00"
+    assert ring_of(shown).colour == first.at(1.0)
+    second = RingColours("#222222", "#30a050", "#c0a030")
+    shown.restyle(second)
+    assert ring_of(shown).colour == second.at(1.0)
 
 
 def test_each_question_that_changed_something_opens_its_changes() -> None:
