@@ -106,9 +106,8 @@ def test_a_kind_present_but_under_one_percent_says_so_rather_than_none() -> None
 
 
 def test_long_questions_do_not_widen_the_cards() -> None:
-    from gi.repository import Gtk
-
     from conversation_panel import CARD
+    from gi.repository import Gtk
 
     shown = panel()
     shown.show_changes([(0, "a very long question that goes on " * 6, 1)], print)
