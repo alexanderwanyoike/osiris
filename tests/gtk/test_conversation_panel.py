@@ -127,7 +127,7 @@ def test_with_nothing_asked_yet_context_says_so() -> None:
     assert "0 of 100 tokens" not in words
 
 
-def test_a_card_collapses_into_a_pill_that_sums_it_up_and_opens_again() -> None:
+def test_a_card_folds_to_its_header_which_sums_it_up_and_opens_again() -> None:
     from osiris.harness.connectors import State
 
     shown = panel()
@@ -136,17 +136,17 @@ def test_a_card_collapses_into_a_pill_that_sums_it_up_and_opens_again() -> None:
     )
     card = shown.cards["MCP"]
     card.toggle()
-    assert card.has_css_class("pill")
+    assert card.has_css_class("folded")
     assert not card.body.get_visible()
     assert card.summary.get_visible()
     assert card.summary.get_text() == "1 of 2 connected"
     card.toggle()
-    assert not card.has_css_class("pill")
+    assert not card.has_css_class("folded")
     assert card.body.get_visible()
     assert not card.summary.get_visible()
 
 
-def test_each_pill_sums_up_its_card() -> None:
+def test_each_folded_card_sums_itself_up() -> None:
     from osiris.harness.context import Slice
 
     shown = panel()

@@ -30,7 +30,7 @@ NAMES = {
 
 
 class Card(Gtk.Box):
-    """A titled widget that collapses into a pill summing it up."""
+    """A titled widget that folds to its header, which sums it up."""
 
     def __init__(self, title: str, icon: str):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
@@ -60,14 +60,14 @@ class Card(Gtk.Box):
         self.append(self.body)
 
     def toggle(self) -> None:
-        pill = not self.has_css_class("pill")
-        if pill:
-            self.add_css_class("pill")
+        folded = not self.has_css_class("folded")
+        if folded:
+            self.add_css_class("folded")
         else:
-            self.remove_css_class("pill")
-        self.body.set_visible(not pill)
-        self.summary.set_visible(pill)
-        self._chevron.set_from_icon_name("pan-down-symbolic" if pill else "pan-up-symbolic")
+            self.remove_css_class("folded")
+        self.body.set_visible(not folded)
+        self.summary.set_visible(folded)
+        self._chevron.set_from_icon_name("pan-down-symbolic" if folded else "pan-up-symbolic")
 
 
 def _fact(icon: str, text: str = "") -> Gtk.Box:

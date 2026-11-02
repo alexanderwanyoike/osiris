@@ -557,8 +557,8 @@ popover.harness-rail-card > contents {
 .harness-panel-chevron { opacity: 0.6; }
 .harness-panel-header:hover .harness-panel-chevron { opacity: 1; }
 .harness-panel-summary { color: @harness_muted; font-size: 0.9em; }
-.harness-panel-section.card.pill { padding: 7px 14px; }
-.harness-panel-section.card.pill .harness-panel-heading { color: @harness_fg; }
+.harness-panel-section.card.folded { padding: 7px 14px; }
+.harness-panel-section.card.folded .harness-panel-heading { color: @harness_fg; }
 
 /* A skill Osiris proposes, read in full on a card under its answer; a skill's
    own text on the Skills tab. */
