@@ -107,6 +107,7 @@ from osiris.harness.engine import (  # noqa: E402
     ModelRef,
     Stopped,
     ToolCalled,
+    ToolFinished,
 )
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.review import comment  # noqa: E402
@@ -1708,6 +1709,9 @@ class Application(Adw.Application):
         if conversation is None:
             return False
         conversation.apply(event)
+        if isinstance(event, ToolFinished | Finished | Stopped | Failed) and self.log:
+            ran = self.log.ran_by_question(event.session)
+            conversation.ran(ran[-1] if ran else [])
         if isinstance(event, Asking):
             self._waiting(event.session, conversation)
         if (isinstance(event, ToolCalled) and event.name == "webfetch"
