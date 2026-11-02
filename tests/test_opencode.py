@@ -949,3 +949,37 @@ class TestSkills:
                 "# Review\nRead the diff.",
             )
         ]
+
+
+class TestSavedRules:
+    def test_each_rule_saved_by_always_allow_comes_with_its_project(self) -> None:
+        from osiris.harness.saved_rules import SavedRule
+
+        rule = {
+            "id": "rule_1",
+            "projectID": "prj_1",
+            "action": "bash",
+            "resource": "npm *",
+            "time": {"created": 1, "updated": 1},
+        }
+        project = {
+            "id": "prj_1",
+            "canonical": "/home/tester/Code/timer",
+            "time": {},
+            "sandboxes": [],
+        }
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{URL}/api/permission/saved"): {"data": [rule]},
+                ("GET", f"{URL}/api/project"): [project],
+            }
+        )
+        assert engine(http).saved_rules() == [
+            SavedRule("rule_1", "bash", "npm *", Path("/home/tester/Code/timer"))
+        ]
+
+    def test_a_saved_rule_is_removed_by_its_id(self) -> None:
+        path = f"{URL}/api/permission/saved/rule_1"
+        http = FakeHttpClient(replies={("DELETE", path): None})
+        engine(http).remove_saved_rule("rule_1")
+        assert http.requests == [("DELETE", path, None)]
