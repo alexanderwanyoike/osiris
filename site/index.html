@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Osiris</title>
-  <meta name="description" content="Osiris is a Linux operating system with an AI agent, based on Arch Linux with the Cinnamon desktop.">
+  <meta name="description" content="Osiris is an AI operating system: a Linux desktop you can ask for things, based on Arch Linux with the Cinnamon desktop.">
   <meta property="og:title" content="Osiris">
-  <meta property="og:description" content="A Linux operating system with an AI agent.">
-  <meta property="og:image" content="screenshots/desktop.png">
+  <meta property="og:description" content="An AI operating system.">
+  <meta property="og:image" content="screenshots/home.png">
   <link rel="icon" href="logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -18,8 +18,9 @@
       <span>Osiris</span>
     </a>
     <nav>
-      <a href="#agent">The agent</a>
-      <a href="#themes">Themes</a>
+      <a href="#ask">Ask for it</a>
+      <a href="#look">One look</a>
+      <a href="#yours">Yours</a>
       <a href="#get">Get it</a>
       <a class="github" href="https://github.com/alexanderwanyoike/osiris">GitHub</a>
     </nav>
@@ -29,125 +30,107 @@
     <section class="hero">
       <img class="mark" src="logo.svg" alt="The Osiris mark" width="120" height="120">
       <h1>Osiris</h1>
-      <p class="lead">A Linux operating system with an AI agent.</p>
-      <p class="sub">Based on Arch Linux, with the Cinnamon desktop. The agent can
-        change how your desktop looks and write small apps for you, using an AI
-        model from a provider you connect, such as OpenAI. The apps it writes show
-        up in your menu and match your theme.</p>
+      <p class="lead">An AI operating system.</p>
+      <p class="sub">Osiris is a Linux desktop you can ask for things. Ask for an
+        app and it writes one. Ask for a new look and the whole desktop changes
+        with it. Built on Arch Linux and Cinnamon, using an AI model from a
+        provider you connect, such as OpenAI.</p>
       <div class="actions">
         <a class="button primary" href="#get">Get Osiris</a>
         <a class="button" href="https://github.com/alexanderwanyoike/osiris">View the code</a>
       </div>
       <p class="status">Early development (alpha). Free and open source.</p>
       <figure class="shot hero-shot">
-        <img src="screenshots/desktop.png" alt="The Osiris desktop: a terminal and Pomodoro, a timer the agent wrote, both on the Tokyo Night theme" loading="eager">
+        <img src="screenshots/home.png" alt="Osiris open beside the desktop, having just built Focus Timer: its card offers Try and Install, and the timer runs next to it" loading="eager">
       </figure>
     </section>
 
-    <section id="agent" class="feature">
+    <section id="ask" class="part">
+      <h2>Ask for it</h2>
+      <p>Press <kbd>Super</kbd> + <kbd>A</kbd> and Osiris opens beside your
+        desktop. Type what you want.</p>
+    </section>
+    <section class="feature">
       <div class="copy">
-        <h2>The agent</h2>
-        <p>Press <kbd>Super</kbd> + <kbd>A</kbd> and a sidebar opens. This is
-          Osiris's agent: you type what you want, and it does it, using the AI
-          model you connected. Expand it to fill the screen and work beside it.</p>
-        <p>Ask for an app, say a Pomodoro timer, and the agent writes one. Try it,
-          then install it into your applications menu and pin it to the dock. It
-          writes Python, C or C++, Rust, Go or JavaScript.</p>
-        <p>Ask for a new look or a moving wallpaper, and it makes one and puts it
-          on your desktop. Every change comes with an Undo button.</p>
+        <h3>Apps</h3>
+        <p>Ask for an app, say a focus timer, and Osiris writes it, tests it
+          and shows it on a card. Try it, then install it into your applications
+          menu and pin it to the dock.</p>
+        <p>It writes Python, C or C++, Rust, Go or JavaScript, and its apps
+          follow your theme like everything else.</p>
+        <h3>Looks</h3>
+        <p>Ask for a calm theme for working late, or rain running down the window
+          as a wallpaper, and it makes one and puts it on your desktop. Every
+          change comes with an Undo button.</p>
       </div>
       <figure class="shot">
-        <img src="screenshots/agent.png" alt="The agent expanded on Tokyo Night: the conversation that made Daily Habits, its code, and the app itself in the same colours" loading="lazy">
+        <img src="screenshots/agent.png" alt="Osiris expanded: the conversation that made Focus Timer, its code, and the timer running in the same colours" loading="lazy">
       </figure>
     </section>
-    <section id="asks" class="feature reverse">
+    <section class="feature reverse">
       <div class="copy">
-        <h2>It asks first</h2>
-        <p>Before the agent runs a command or changes a file, it asks on a card.
-          Allow it once, allow it from then on in that project, or say no, or
-          tell it what to do instead.</p>
-        <p>It shows its plan as it goes. Send a message while it works and it
-          takes it into account; Send now cuts in.</p>
-        <p>What you allowed for good is listed in Settings, where you can take it
-          back. Auto mode lets it go ahead without asking.</p>
+        <h3>Work beside it</h3>
+        <p>Expand Osiris to fill the screen. Next to the conversation, the Canvas
+          shows the code of the apps it writes, what each question changed, a
+          terminal and a browser.</p>
+        <p>Type <kbd>@</kbd> to add a file to a message and <kbd>/</kbd> to use
+          a skill. Connect MCP servers in Settings to give it more tools.</p>
       </div>
       <figure class="shot">
-        <img src="screenshots/asks.png" alt="A card asking to run git commit, with Allow once, Always allow here and Deny, under the agent's plan" loading="lazy">
-      </figure>
-    </section>
-    <section id="canvas" class="feature">
-      <div class="copy">
-        <h2>Work beside it</h2>
-        <p>Next to the conversation is the Canvas: the code of the apps the agent
-          writes, what each question changed, a terminal, and a browser for
-          looking things up. Pick lines in a change to comment on them.</p>
-        <p>Type <kbd>@</kbd> to add a file to a message, or a source from an MCP
-          server, and <kbd>/</kbd> to use a skill. Connect MCP servers in
-          Settings to give the agent more tools and data.</p>
-        <p>Expanded, cards beside the conversation show where it runs, which servers
-          are connected, how full the model's context is, and what changed. After
-          hard work the agent can suggest a skill for next time, which you keep
-          or not.</p>
-      </div>
-      <figure class="shot">
-        <img src="screenshots/canvas.png" alt="Typing @ in a message lists the app's files, MCP servers and their sources, beside the app's code and a change on the Canvas" loading="lazy">
+        <img src="screenshots/canvas.png" alt="Typing @ lists the app's files and MCP servers, beside the app's code and a change on the Canvas" loading="lazy">
       </figure>
     </section>
 
-    <section id="themes" class="feature reverse">
+    <section id="look" class="part">
+      <h2>One look</h2>
+      <p>Everything on screen looks like one system, the apps Osiris writes
+        included. Change it in one press, without logging out.</p>
+    </section>
+    <section class="feature">
       <div class="copy">
-        <h2>Themes</h2>
-        <p>A theme sets the colours of everything at once: apps, window borders,
-          the panel, the dock, the app launcher, the terminal, folder icons and the
-          wallpaper. Apps the agent writes follow it too. Switching is instant, no
-          logging out.</p>
-        <p>Press <kbd>Super</kbd> + <kbd>T</kbd> to flip through the seven themes
-          that come with Osiris, or make your own from a colour or a picture.</p>
-        <p>Wallpapers move. Each one is a small program on your graphics card,
-          animating slowly in the theme's colours.</p>
+        <h3>Themes are the colours</h3>
+        <p>A theme colours everything at once: apps, window borders, the panel,
+          the dock, the launcher, the terminal, folder icons and the
+          wallpaper.</p>
+        <p>Press <kbd>Super</kbd> + <kbd>T</kbd> to flip through the seven that
+          come with Osiris, or make your own from a colour or a picture.</p>
       </div>
       <figure class="shot">
         <img src="screenshots/switcher.png" alt="Super+T, the theme switcher" loading="lazy">
       </figure>
     </section>
-
-    <section class="wide">
+    <section class="feature reverse">
+      <div class="copy">
+        <h3>Skins are the shape</h3>
+        <p>A skin sets corners, buttons, title bars, the panel, the dock, fonts
+          and icons, in whatever colours the theme gives it.</p>
+        <p>Press <kbd>Super</kbd> + <kbd>S</kbd> to flip through the seven that
+          come with Osiris, import one you downloaded, or ask Osiris for one.</p>
+      </div>
       <figure class="shot">
-        <img src="screenshots/light.png" alt="The same desktop on the light Rose Pine Dawn theme" loading="lazy">
-        <figcaption>The same desktop on Rose Pine Dawn. The terminal and Pomodoro change with it.</figcaption>
+        <img src="screenshots/skins.png" alt="Super+S, the skin switcher, showing Graphite" loading="lazy">
       </figure>
     </section>
-
+    <section id="yours" class="part">
+      <h2>Yours</h2>
+      <p>What Osiris makes belongs to you, and so do the choices you make.</p>
+    </section>
     <section class="cards">
       <article>
         <h3>Your code</h3>
-        <p>Each app the agent writes is a folder in <code>~/Code</code>, kept in git,
-          so you can see every change it made and carry on in any editor.</p>
+        <p>Each app Osiris writes is a folder in <code>~/Code</code>, kept in git,
+          so you can see every change and carry on in any editor.</p>
       </article>
       <article>
         <h3>Your model</h3>
-        <p>The agent runs on <a href="https://opencode.ai">opencode</a>. Connect
+        <p>Osiris runs on <a href="https://opencode.ai">opencode</a>. Connect
           the AI provider you want, with your own account or key.</p>
       </article>
       <article>
         <h3>Your settings</h3>
-        <p>Updating Osiris never overwrites your theme, your dock, your terminal
-          settings or files you have edited.</p>
+        <p>Updating Osiris never overwrites your theme, your skin, your dock,
+          your terminal settings or files you have edited.</p>
       </article>
-    </section>
-
-    <section id="install" class="feature">
-      <div class="copy">
-        <h2>Installing</h2>
-        <p>The live ISO starts the full desktop with an Install Osiris icon on it.
-          The installer asks for your region, disk, filesystem, encryption and
-          account, then uses Arch's own archinstall to do the work.</p>
-        <p>Wipe a disk or install next to another system, use ext4 or btrfs, and
-          encrypt the system if you want. It works on BIOS and UEFI computers.</p>
-      </div>
-      <figure class="shot">
-        <img src="screenshots/greeter.png" alt="The Osiris login screen" loading="lazy">
-      </figure>
     </section>
 
     <section id="get" class="get">
@@ -162,6 +145,10 @@
         <code>/dev/sdX</code> with your stick; everything on it is erased.</p>
       <pre><code>sha256sum -c osiris-0.4.0-x86_64.iso.sha256
 sudo dd if=osiris-0.4.0-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync</code></pre>
+      <p>The stick starts the full desktop with an Install Osiris icon. The
+        installer asks for your region, disk, filesystem, encryption and account,
+        then uses Arch's own archinstall. It works on BIOS and UEFI computers, can
+        install next to another system, and can encrypt it.</p>
       <p>Or build it yourself on Arch Linux; the
         <a href="https://github.com/alexanderwanyoike/osiris#building-it-yourself">README</a>
         explains how.</p>
