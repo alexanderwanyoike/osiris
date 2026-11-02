@@ -538,7 +538,7 @@ class Drawer(Gtk.ApplicationWindow):
         tabs = Adw.ViewStack(vhomogeneous=False)
         tabs.add_titled_with_icon(page, "providers", "Models",
                                   "preferences-system-symbolic")
-        tabs.add_titled_with_icon(connectors, "connectors", "Connectors",
+        tabs.add_titled_with_icon(connectors, "connectors", "MCP",
                                   "network-server-symbolic")
         skills = SkillsTab(read=self.app.read_skills, choice=self.app.skill_choice,
                            choose=self.app.choose_skill, origin=self.app.skill_origin,

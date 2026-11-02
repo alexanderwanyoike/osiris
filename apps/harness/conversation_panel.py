@@ -96,7 +96,7 @@ class ConversationPanel(Gtk.Box):
         self.branch = _fact("osiris-branch-symbolic")
         rows.append(self.project)
         rows.append(self.branch)
-        self._connectors = self._card("Connectors", "network-server-symbolic")
+        self._connectors = self._card("MCP", "network-server-symbolic")
         self._context = self._card("Context", "view-grid-symbolic")
         self.show_no_context()
         self._changes = self._card("Changes", "osiris-changes-symbolic")
@@ -123,10 +123,10 @@ class ConversationPanel(Gtk.Box):
     def show_connectors(self, states: dict[str, State]) -> None:
         _clear(self._connectors)
         working = sum(state.status == "connected" for state in states.values())
-        self.cards["Connectors"].summary.set_text(
+        self.cards["MCP"].summary.set_text(
             f"{working} of {len(states)} connected" if states else "None")
         if not states:
-            none = Gtk.Label(label="None yet. Add one in Settings, under Connectors.",
+            none = Gtk.Label(label="None yet. Add a server in Settings, under MCP.",
                              xalign=0, wrap=True, max_width_chars=30)
             none.add_css_class("harness-meta")
             self._connectors.append(none)

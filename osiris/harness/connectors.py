@@ -99,7 +99,7 @@ def offered_servers(states: dict[str, State], own: str) -> list[Entry]:
     """The servers @ offers: those working now, but not ``own``, the tool
     server Osiris attaches for itself."""
     return [
-        Entry("connector", name, name, "Connector")
+        Entry("connector", name, name, "MCP server")
         for name, state in sorted(states.items())
         if state.status == "connected" and name != own
     ]
