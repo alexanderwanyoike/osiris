@@ -905,3 +905,21 @@ class TestContext:
             {"instructions": 100, "questions": 10, "answers": 20, "tools": 31},
             used=11_160,
         )
+
+    def test_an_answer_without_token_counts_is_sized_but_counts_no_tokens(
+        self,
+    ) -> None:
+        """An answer that was stopped has no token counts of its own."""
+        messages = [
+            {
+                "type": "assistant",
+                "content": [{"type": "text", "text": "a" * 40}],
+                "tokens": {"input": 100, "output": 5, "reasoning": 0, "cache": {}},
+            },
+            {"type": "assistant", "content": [{"type": "text", "text": "b" * 40}]},
+        ]
+        path = f"{URL}/api/session/{SESSION}/context"
+        http = FakeHttpClient(replies={("GET", path): {"data": messages}})
+        use = engine(http).context_use(SESSION)
+        assert use.used == 105
+        assert use.sizes["answers"] == 20
