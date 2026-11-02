@@ -19,6 +19,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import CallToolResult, InputRequiredResult, ToolAnnotations
 from pydantic import Field
 
+from osiris.harness.connectors import OWN_TOOLS
 from osiris.harness.log import HarnessLog
 from osiris.harness.proposals import ProposalError, plain
 from osiris.harness.tiers import Tier
@@ -31,7 +32,7 @@ from osiris.themes.intent import Harmony, Mood
 from osiris.themes.store import ThemeStore
 from osiris.themes.wallpapers import UserWallpapers, WallpaperError
 
-NAME = "osiris"
+NAME = OWN_TOOLS
 
 INSTRUCTIONS = f"""\
 You are Osiris, the AI built into the Osiris desktop you are running on, and
@@ -212,6 +213,9 @@ class _Tools(MCPServer):
     """Keeps, for the length of each call, the session that made it: one
     server serves every Conversation in a Project."""
 
+    #: Where each call is logged as it runs; set once the log is known.
+    ran: _Logged | None = None
+
     async def call_tool(
         self,
         name: str,
@@ -220,6 +224,10 @@ class _Tools(MCPServer):
     ) -> CallToolResult | InputRequiredResult:
         token = _asking.set(_session_of(context))
         try:
+            # Said here, by the server that runs it, so the Harness shows every
+            # call however the model's code reached it.
+            if self.ran is not None:
+                self.ran.write("ran", tool=f"{NAME}_{name}")
             return await super().call_tool(name, arguments, context)
         finally:
             _asking.reset(token)
@@ -244,6 +252,7 @@ def server(
     *,
     skins: SkinStore | None = None,
     auto_mode: bool = False,
+    skill_taken: Callable[[str], bool] = lambda _name: False,
 ) -> MCPServer:
     """The tools, acting on ``store``; every change they make is written to
     ``log`` with the step that undoes it."""
@@ -253,6 +262,7 @@ def server(
         instructions=instructions(auto_mode=auto_mode),
         log_level="WARNING",
     )
+    tools.ran = logged
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["list_themes"]])
     @explained
@@ -433,13 +443,15 @@ def server(
         )
         return f"Made the {label} wallpaper and applied it as {theme_label}."
 
-    _propose_tool(tools, logged)
+    _propose_tool(tools, logged, skill_taken)
     if skins is not None:
         _skin_tools(tools, skins, logged)
     return tools
 
 
-def _propose_tool(tools: MCPServer, logged: _Logged) -> None:
+def _propose_tool(
+    tools: MCPServer, logged: _Logged, taken: Callable[[str], bool]
+) -> None:
     @tools.tool(annotations=ANNOTATIONS[TIERS["propose_skill"]])
     @explained
     def propose_skill(name: str, description: str, body: str) -> str:
@@ -456,6 +468,11 @@ def _propose_tool(tools: MCPServer, logged: _Logged) -> None:
             raise ProposalError(
                 f"{name!r} cannot name a skill: use lower-case words joined by "
                 "hyphens, such as tidy-imports."
+            )
+        if taken(name):
+            raise ProposalError(
+                f"There is already a skill called {name}; propose it under another "
+                "name."
             )
         logged.write("proposed-skill", name=name, description=description, body=body)
         return (

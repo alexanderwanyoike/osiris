@@ -18,13 +18,13 @@ from .test_side_by_side import app
 
 class Panel:
     def __init__(self) -> None:
-        self.where: list[tuple[str, str, str]] = []
+        self.where: list[tuple[str, str]] = []
         self.connectors: list[dict[str, State]] = []
         self.context: list[object] = []
         self.changes: list[list[tuple[int, str, int]]] = []
 
-    def show_where(self, project: str, branch: str, model: str) -> None:
-        self.where.append((project, branch, model))
+    def show_where(self, project: str, branch: str) -> None:
+        self.where.append((project, branch))
 
     def show_connectors(self, states: dict[str, State]) -> None:
         self.connectors.append(states)

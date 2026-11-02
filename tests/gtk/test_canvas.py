@@ -118,6 +118,16 @@ def test_a_questions_changes_open_in_a_tab_of_their_own() -> None:
     assert "+2" in shown and "\u22121" in shown  # a minus sign, as drawn
 
 
+def test_a_question_of_several_lines_names_its_tab_on_one_line() -> None:
+    widget, _ = canvas()
+    widget.show_changes(
+        "About README.md, line 3:\n\nSay rings loudly instead.",
+        (),
+        on_comment=lambda *_: None,
+    )
+    assert titles(widget, Kind.CHANGES) == ["About README.md, line 3:"]
+
+
 def test_the_first_file_opens_on_its_diff_in_the_themes_code_colours() -> None:
     widget, _ = changed()
     assert code(widget) == PATCH

@@ -43,6 +43,7 @@ for candidate in ("/usr/share/osiris/lib", REPO):
 sys.path.insert(0, HERE)
 
 from admin_card import AdminCard  # noqa: E402
+from allowed_tab import AllowedTab  # noqa: E402
 from approval_card import ApprovalCard  # noqa: E402
 from going_back import going_back_dialog  # noqa: E402
 from look import Look  # noqa: E402
@@ -88,6 +89,7 @@ from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
 from osiris.harness.proposals import Proposal, skill_file, skill_path  # noqa: E402
 from osiris.harness.rail import ticks  # noqa: E402
+from osiris.harness.saved_rules import SavedRule  # noqa: E402
 from osiris.harness.skill_rules import (  # noqa: E402
     SkillInfo,
     choose_skill,
@@ -105,13 +107,14 @@ from osiris.harness.engine import (  # noqa: E402
     ModelRef,
     Stopped,
     ToolCalled,
+    ToolFinished,
 )
 from osiris.harness.opencode import OpencodeAccounts, OpencodeEngine, locate  # noqa: E402
 from osiris.harness.review import comment  # noqa: E402
 from osiris.harness.reviewer import write_reviewer  # noqa: E402
 from osiris.harness.rules import switch_on_task_list, write_starting_rules  # noqa: E402
 from osiris.harness.status import Status, status_of  # noqa: E402
-from osiris.harness.style import token_colours  # noqa: E402
+from osiris.harness.style import ring_colours, token_colours  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.harness.trust import auto_mode_on, turn_auto_mode  # noqa: E402
 from osiris.harness.unread import Unread  # noqa: E402
@@ -269,7 +272,6 @@ class Drawer(Gtk.ApplicationWindow):
         composer.append(controls)
         self.picker = Picker(self.entry, self.app.offered, anchor=composer,
                              on_open=lambda _sign: self.app.refresh_offers())
-        self._restyle_tokens()
 
         self.footer = Gtk.Label(xalign=0, wrap=True)
         self.footer.add_css_class("harness-meta")
@@ -283,6 +285,7 @@ class Drawer(Gtk.ApplicationWindow):
         bottom.append(self.footer)
         chat = self._chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         self.conversation_panel = ConversationPanel()
+        self._restyle_colours()
         self.conversation_panel.connect("map", lambda _p: self.app.update_panel())
         self.rail = Rail(on_jump=self.rail_jump)
         self.rail.set_halign(Gtk.Align.END)
@@ -535,13 +538,19 @@ class Drawer(Gtk.ApplicationWindow):
         tabs = Adw.ViewStack(vhomogeneous=False)
         tabs.add_titled_with_icon(page, "providers", "Models",
                                   "preferences-system-symbolic")
-        tabs.add_titled_with_icon(connectors, "connectors", "Connectors",
+        tabs.add_titled_with_icon(connectors, "connectors", "MCP",
                                   "network-server-symbolic")
         skills = SkillsTab(read=self.app.read_skills, choice=self.app.skill_choice,
                            choose=self.app.choose_skill, origin=self.app.skill_origin,
                            background=self.app.background)
         tabs.add_titled_with_icon(skills, "skills", "Skills",
                                   "applications-science-symbolic")
+        allowed = AllowedTab(read=self.app.read_saved_rules,
+                             remove=self.app.remove_saved_rule,
+                             project_name=lambda path: project_name(path, self.app.home),
+                             background=self.app.background)
+        tabs.add_titled_with_icon(allowed, "allowed", "Allowed",
+                                  "security-high-symbolic")
         switcher = Adw.InlineViewSwitcher(stack=tabs, halign=Gtk.Align.CENTER)
         holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
                          margin_start=16, margin_end=16, margin_top=8)
@@ -604,15 +613,18 @@ class Drawer(Gtk.ApplicationWindow):
             self.turns.remove(view)
         self.views = []
 
-    def _restyle_tokens(self) -> None:
+    def _restyle_colours(self) -> None:
+        """What the Skin's stylesheet cannot colour: the picker's tokens and
+        the context ring, drawn from the Theme's colours directly."""
         look = self.app.look
         if look is not None and look.theme is not None:
             self.picker.restyle(token_colours(look.theme))
+            self.conversation_panel.restyle(ring_colours(look.theme))
 
     def refresh(self, restyle: bool = False) -> None:
         conversation, look = self.app.conversation, self.app.look
         if restyle:
-            self._restyle_tokens()
+            self._restyle_colours()
         fresh = len(self.views)
         while len(self.views) < len(conversation.turns):
             view = TurnView(conversation.turns[len(self.views)],
@@ -738,6 +750,8 @@ class Application(Adw.Application):
         self.servers: Servers | None = None
         self.contexts: OpencodeEngine | None = None
         self.skill_list: OpencodeEngine | None = None
+        self.saved: OpencodeEngine | None = None
+        self.requests: OpencodeEngine | None = None
         #: What the message box's picker lists, by the sign that opens it.
         self.offers: dict[str, list[Entry]] = {}
         self.files = RealFileSystem()
@@ -1208,6 +1222,18 @@ class Application(Adw.Application):
             self.log.write("skill-decided", name=proposal.name, kept=kept)
         self.drawer.refresh()
 
+    def read_saved_rules(self) -> list[SavedRule]:
+        return self.saved.saved_rules() if self.saved is not None else []
+
+    def remove_saved_rule(self, rule: SavedRule) -> None:
+        """Take back what Always allow here saved: the Engine asks again."""
+        if self.saved is None:
+            return
+        self.saved.remove_saved_rule(rule.id)
+        if self.log is not None:
+            self.log.write("rule-removed", action=rule.action, resource=rule.resource,
+                           project=str(rule.project) if rule.project else None)
+
     def read_skills(self) -> list[SkillInfo]:
         """The skills a session where the Conversation runs can load."""
         if self.skill_list is None or self.harness is None:
@@ -1279,10 +1305,9 @@ class Application(Adw.Application):
         panel, conversation = self.drawer.conversation_panel, self.conversation
         directory, session = self.harness.directory, self.session
         project = project_name(directory, self.home)
-        label = conversation.model_label(self.models.default)
         model = conversation.model or self.models.default
         turns = conversation.turns
-        panel.show_where(project, "", label)
+        panel.show_where(project, "")
         panel.show_changes(
             [(at, title_of(turn.question), len(turn.changes))
              for at, turn in enumerate(turns) if turn.changes],
@@ -1305,7 +1330,7 @@ class Application(Adw.Application):
                 self.update_panel()
                 return
             checked_out, states, use, window = gathered
-            panel.show_where(project, checked_out, label)
+            panel.show_where(project, checked_out)
             panel.show_connectors(states)
             if use is not None and window:
                 panel.show_context(slices(use.sizes, use.used, window), use.used, window)
@@ -1409,8 +1434,26 @@ class Application(Adw.Application):
             self.drawer.refresh()
             self.load_history()
             self.update_canvas()
+            self.restore_waiting(session)
 
         self.background(lambda: harness.resume(session), opened)
+
+    def restore_waiting(self, session: str) -> None:
+        """Bring back the cards of requests the Engine still waits on, which a
+        restart of the drawer lost while the Engine kept them."""
+        if self.requests is None or self.harness is None:
+            return
+        requests, harness = self.requests, self.harness
+
+        def handled() -> list:
+            found = (harness.handle(event) for event in requests.waiting(session))
+            return [result for result in found if result is not None]
+
+        def shown(results: list) -> None:
+            for result in results:
+                self._apply(result)
+
+        self.background(handled, shown)
 
     def show_all_changes(self) -> None:
         """Every question's changes that made commits, in the order asked, read
@@ -1641,6 +1684,8 @@ class Application(Adw.Application):
                 self.servers = engine
                 self.contexts = engine
                 self.skill_list = engine
+                self.saved = engine
+                self.requests = engine
                 GLib.idle_add(self._refresh)
                 GLib.idle_add(lambda: self.refresh_offers() or False)
                 GLib.idle_add(self.start_waiting)
@@ -1666,6 +1711,9 @@ class Application(Adw.Application):
         if conversation is None:
             return False
         conversation.apply(event)
+        if isinstance(event, ToolFinished | Finished | Stopped | Failed) and self.log:
+            ran = self.log.ran_by_question(event.session)
+            conversation.ran(ran[-1] if ran else [])
         if isinstance(event, Asking):
             self._waiting(event.session, conversation)
         if (isinstance(event, ToolCalled) and event.name == "webfetch"

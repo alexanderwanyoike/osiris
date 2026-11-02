@@ -58,11 +58,11 @@ class Picker:
         pointer = Gtk.EventControllerMotion()
         pointer.connect("motion", self.pointed)
         self.list.add_controller(pointer)
-        # Without autohide the popover leaves the keyboard with the message
-        # box, so typing carries on filtering while it is open.
         self.card = Gtk.ScrolledWindow(child=self.list, max_content_height=HEIGHT,
                                        propagate_natural_height=True,
                                        hscrollbar_policy=Gtk.PolicyType.NEVER)
+        # Without autohide the popover leaves the keyboard with the message
+        # box, so typing carries on filtering while it is open.
         self.popover = Gtk.Popover(child=self.card, autohide=False, has_arrow=False,
                                    position=Gtk.PositionType.TOP)
         self.popover.add_css_class("harness-picker-popover")

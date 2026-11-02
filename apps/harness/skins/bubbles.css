@@ -345,7 +345,7 @@ popover.harness-picker-popover > contents {
 .harness-picker-label { color: @harness_fg; font-size: 0.93em; }
 .harness-picker .harness-meta { font-size: 0.93em; }
 
-/* Connectors in Settings: each server's state as a small pill in the Theme's
+/* MCP servers in Settings: each server's state as a small pill in the Theme's
    own colour for it. */
 .harness-connector-state {
     font-size: 0.82em;
@@ -401,7 +401,7 @@ popover.harness-rail-card > contents {
     background-color: @harness_raised;
     color: @harness_fg;
     border: 1px solid alpha(@harness_fg, 0.08);
-    border-radius: 16px;
+    border-radius: 10px;
     padding: 12px 14px;
     box-shadow: 0 6px 18px alpha(@harness_sunken, 0.35);
 }
@@ -421,13 +421,13 @@ popover.harness-rail-card > contents {
 .harness-panel-changes row { padding: 6px 8px; border-radius: 8px; }
 .harness-panel-changes row:hover { background-color: alpha(@harness_fg, 0.05); }
 
-/* A widget folds into a pill: its name and what it comes to, on one line. */
+/* A folded widget is its header alone: its name and what it comes to. */
 .harness-panel-header image { color: @harness_muted; -gtk-icon-size: 14px; }
 .harness-panel-chevron { opacity: 0.6; }
 .harness-panel-header:hover .harness-panel-chevron { opacity: 1; }
 .harness-panel-summary { color: @harness_muted; font-size: 0.9em; }
-.harness-panel-section.card.pill { border-radius: 999px; padding: 7px 14px; }
-.harness-panel-section.card.pill .harness-panel-heading { color: @harness_fg; }
+.harness-panel-section.card.folded { padding: 7px 14px; }
+.harness-panel-section.card.folded .harness-panel-heading { color: @harness_fg; }
 
 /* A skill Osiris proposes, read in full on a card under its answer; a skill's
    own text on the Skills tab. */
@@ -442,4 +442,13 @@ popover.harness-rail-card > contents {
     font-family: monospace;
     font-size: 0.9em;
     color: alpha(@harness_fg, 0.85);
+}
+
+/* No glow flashes where a scroll meets its end. */
+scrolledwindow > overshoot.top,
+scrolledwindow > overshoot.bottom,
+scrolledwindow > overshoot.left,
+scrolledwindow > overshoot.right {
+    background: none;
+    box-shadow: none;
 }

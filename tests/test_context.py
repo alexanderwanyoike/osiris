@@ -52,3 +52,22 @@ def test_a_kind_with_any_tokens_gets_at_least_one_square() -> None:
 
     shared = [Slice("instructions", 1), Slice("free", 999)]
     assert grid(shared, 10).count("instructions") == 1
+
+
+def test_how_full_the_window_is_never_passes_full() -> None:
+    from osiris.harness.context import filled
+
+    assert filled(used=25_000, window=100_000) == 0.25
+    assert filled(used=120_000, window=100_000) == 1.0
+    assert filled(used=10, window=0) == 0.0
+
+
+def test_the_ring_warns_only_as_the_window_nears_full() -> None:
+    from osiris.harness.context import FULL, WARM, alarm
+
+    assert alarm(used=50, window=100) == 0.0
+    assert alarm(used=round(WARM * 100), window=100) == 0.0
+    halfway = (WARM + FULL) / 2
+    assert abs(alarm(used=round(halfway * 1000), window=1000) - 0.5) < 0.01
+    assert alarm(used=round(FULL * 100), window=100) == 1.0
+    assert alarm(used=100, window=100) == 1.0

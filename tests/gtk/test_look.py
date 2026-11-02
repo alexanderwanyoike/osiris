@@ -188,3 +188,16 @@ def test_a_question_that_changed_something_ticks_in_the_themes_accent(
         accent.parse(look.theme["colors"]["accent"])
         window.destroy()
         assert line.get_color().equal(accent), skin
+
+
+def test_no_look_flashes_a_glow_at_the_end_of_a_scroll(tmp_path: Path) -> None:
+    """The person found the glow at the top and bottom of a scroll annoying."""
+    import re
+
+    for look in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(look)
+        loaded = Look(tmp_path, lambda: None)._provider.to_string()
+        rules = re.findall(r"([^{}]*overshoot[^{}]*)\{([^}]*)\}", loaded)
+        assert rules, look
+        assert all("background-image: none" in body for _, body in rules), look

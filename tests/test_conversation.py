@@ -155,26 +155,25 @@ def test_what_auto_mode_allows_is_shown_once() -> None:
     assert [step.call for step in talk.turns[-1].steps] == ["c1"]
 
 
-@pytest.mark.parametrize(
-    ("code", "actions"),
-    [
-        ('await tools["osiris"].list_themes({});', ["osiris_list_themes"]),
-        (
-            "await tools.osiris.create_theme(i); await tools.osiris.apply_theme(t)",
-            ["osiris_create_theme", "osiris_apply_theme"],
-        ),
-        ('await tools.shell({ command: "uname -s" });', []),
-    ],
-)
-def test_osiris_tools_run_from_the_tool_catalogue_are_steps(
-    code: str, actions: list[str]
-) -> None:
-    """As opencode 2.2.4 does: they run inside the catalogue's code and are
-    reported only as that code; any other tool it calls is reported itself."""
+def test_the_catalogues_code_is_not_read_for_steps() -> None:
+    """What it runs comes from the tool server (#183): code written another way
+    would hide a step."""
     talk = Conversation()
     talk.asked("make it calm")
+    code = "await tools.osiris.create_theme(i); await tools.osiris.apply_theme(t)"
     talk.apply(ToolCalled(S, "c1", {"code": code}, False, "execute"))
-    assert [step.action for step in talk.turns[-1].steps] == actions
+    assert talk.turns[-1].steps == []
+
+
+def test_each_tool_the_server_ran_is_a_step_once() -> None:
+    talk = Conversation()
+    talk.asked("make it calm")
+    talk.ran(["osiris_create_theme"])
+    talk.ran(["osiris_create_theme", "osiris_apply_theme"])
+    assert [step.action for step in talk.turns[-1].steps] == [
+        "osiris_create_theme",
+        "osiris_apply_theme",
+    ]
 
 
 def todos(*items: tuple[str, str]) -> dict[str, object]:
