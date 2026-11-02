@@ -43,6 +43,7 @@ for candidate in ("/usr/share/osiris/lib", REPO):
 sys.path.insert(0, HERE)
 
 from admin_card import AdminCard  # noqa: E402
+from allowed_tab import AllowedTab  # noqa: E402
 from approval_card import ApprovalCard  # noqa: E402
 from going_back import going_back_dialog  # noqa: E402
 from look import Look  # noqa: E402
@@ -88,6 +89,7 @@ from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
 from osiris.harness.proposals import Proposal, skill_file, skill_path  # noqa: E402
 from osiris.harness.rail import ticks  # noqa: E402
+from osiris.harness.saved_rules import SavedRule  # noqa: E402
 from osiris.harness.skill_rules import (  # noqa: E402
     SkillInfo,
     choose_skill,
@@ -542,6 +544,12 @@ class Drawer(Gtk.ApplicationWindow):
                            background=self.app.background)
         tabs.add_titled_with_icon(skills, "skills", "Skills",
                                   "applications-science-symbolic")
+        allowed = AllowedTab(read=self.app.read_saved_rules,
+                             remove=self.app.remove_saved_rule,
+                             project_name=lambda path: project_name(path, self.app.home),
+                             background=self.app.background)
+        tabs.add_titled_with_icon(allowed, "allowed", "Allowed",
+                                  "security-high-symbolic")
         switcher = Adw.InlineViewSwitcher(stack=tabs, halign=Gtk.Align.CENTER)
         holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
                          margin_start=16, margin_end=16, margin_top=8)
@@ -738,6 +746,7 @@ class Application(Adw.Application):
         self.servers: Servers | None = None
         self.contexts: OpencodeEngine | None = None
         self.skill_list: OpencodeEngine | None = None
+        self.saved: OpencodeEngine | None = None
         #: What the message box's picker lists, by the sign that opens it.
         self.offers: dict[str, list[Entry]] = {}
         self.files = RealFileSystem()
@@ -1208,6 +1217,18 @@ class Application(Adw.Application):
             self.log.write("skill-decided", name=proposal.name, kept=kept)
         self.drawer.refresh()
 
+    def read_saved_rules(self) -> list[SavedRule]:
+        return self.saved.saved_rules() if self.saved is not None else []
+
+    def remove_saved_rule(self, rule: SavedRule) -> None:
+        """Take back what Always allow here saved: the Engine asks again."""
+        if self.saved is None:
+            return
+        self.saved.remove_saved_rule(rule.id)
+        if self.log is not None:
+            self.log.write("rule-removed", action=rule.action, resource=rule.resource,
+                           project=str(rule.project) if rule.project else None)
+
     def read_skills(self) -> list[SkillInfo]:
         """The skills a session where the Conversation runs can load."""
         if self.skill_list is None or self.harness is None:
@@ -1641,6 +1662,7 @@ class Application(Adw.Application):
                 self.servers = engine
                 self.contexts = engine
                 self.skill_list = engine
+                self.saved = engine
                 GLib.idle_add(self._refresh)
                 GLib.idle_add(lambda: self.refresh_offers() or False)
                 GLib.idle_add(self.start_waiting)
