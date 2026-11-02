@@ -100,19 +100,26 @@ The first slice of ROADMAP P3.5:
   success colour, one waiting on the person in its warning colour. Hovering a
   tick shows the start of its question, and clicking it scrolls there. It
   shows once there are two questions, or one answer longer than the screen.
-- **It says what it is working with.** A button beside New conversation
-  floats the Conversation's widgets as cards on its left: where the
-  Conversation runs (its Project, the branch checked out there, the model),
-  its connectors and how each is, its context and its changes. Context is a
-  grid of a hundred small squares, each a slice of the model's context window
-  (`limit.context` from `GET /api/model`), coloured by what fills it, with a
-  legend giving each kind's share. opencode 2.2.4 reports the tokens in use
-  (the last step's input, cache and output) but not by kind, so the shares
-  are estimated from the messages it keeps (`GET /api/session/{id}/context`),
-  about four characters to a token, and what they do not account for is the
-  Engine's own instructions; the panel says it is approximate. Each question
-  that changed something is listed and opens its changes on the Canvas. The
-  cards are filled as they come on screen and again as each answer ends.
+- **It says what it is working with.** Expanded, a button beside New
+  conversation shows the Conversation's widgets: four cards on its left for
+  where it runs (its Project, the branch checked out there, the model), its
+  connectors and how each is, its context and its changes. They never cover
+  the messages: they float in the margin the centred messages leave; with
+  less room the messages move over to make a column for them; with less
+  still, as the Canvas is widened, they and their button go, and come back
+  when the room does. A card is a share of the Conversation's width (22%,
+  between 220 and 300 pixels), never narrower than it draws. Each card folds
+  into a pill from its header, saying what it comes to: the Project, "2 of 3
+  connected", "1% used", "4 questions". Context is a grid of a hundred small
+  squares, each a slice of the model's context window (`limit.context` from
+  `GET /api/model`), coloured by what fills it, with a legend giving each
+  kind's share. opencode 2.2.4 reports the tokens in use (the last step's
+  input, cache and output) but not by kind, so the shares are estimated from
+  the messages it keeps (`GET /api/session/{id}/context`), about four
+  characters to a token, and what they do not account for is the Engine's
+  own instructions; the card says it is approximate. Each question that
+  changed something is listed and opens its changes on the Canvas. The cards
+  are filled as they come on screen and again as each answer ends.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
