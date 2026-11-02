@@ -111,10 +111,11 @@ The first slice of ROADMAP P3.5:
   between 220 and 300 pixels), never narrower than it draws, and all of them
   as wide, folded or not. Each card folds to its header, saying what it comes
   to: the Project, "2 of 3 connected", "1% used", "4 questions". Context is a
-  ring of how full the model's context window is (`limit.context` from
-  `GET /api/model`), in the Theme's accent until 60% full, then turning to
-  its danger colour, wholly by 95%; a legend under it gives each kind's
-  share. opencode 2.2.4 reports the tokens in use (the last step's
+  grid of a hundred small squares, each a slice of the model's context window
+  (`limit.context` from `GET /api/model`), coloured by what fills it, with a
+  legend giving each kind's share; a ring leads its header, folded or not,
+  showing how full the window is, in the Theme's accent until 60% full, then
+  turning to its danger colour, wholly by 95%. opencode 2.2.4 reports the tokens in use (the last step's
   input, cache and output) but not by kind, so the shares are estimated from
   the messages it keeps (`GET /api/session/{id}/context`), about four
   characters to a token, and what they do not account for is the Engine's
