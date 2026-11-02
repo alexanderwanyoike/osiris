@@ -548,6 +548,3 @@ popover.harness-rail-card > contents {
 .harness-panel-changes { background-color: transparent; }
 .harness-panel-changes row { padding: 6px 8px; border-radius: 8px; }
 .harness-panel-changes row:hover { background-color: alpha(@harness_fg, 0.05); }
-/* With no room in the Conversation the cards drop down from their button as
-   they are, with no box of the popover's own around them. */
-popover.harness-widgets-dropdown > contents { background: none; border: none; box-shadow: none; padding: 0 14px 14px 0; }
