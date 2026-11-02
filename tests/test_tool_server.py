@@ -494,11 +494,11 @@ def test_a_proposed_skill_is_logged_for_the_question_being_answered() -> None:
 def test_a_skill_with_a_name_that_could_lead_elsewhere_is_refused() -> None:
     log = new_log()
     log.write("sent", session="ses_1", text="tidy my imports")
-    result = call(
-        FakeThemeStore(),
-        "propose_skill",
-        {"name": "../evil", "description": "x", "body": "x"},
-        log,
-    )
-    assert result.is_error
+    with pytest.raises(ToolError, match="cannot name a skill"):
+        call(
+            FakeThemeStore(),
+            "propose_skill",
+            {"name": "../evil", "description": "x", "body": "x"},
+            log,
+        )
     assert log.proposals_by_question("ses_1") == [[]]
