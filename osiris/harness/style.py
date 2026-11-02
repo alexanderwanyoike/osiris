@@ -9,6 +9,7 @@ Skin works under any Theme.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 from xml.sax.saxutils import quoteattr
 
@@ -147,6 +148,28 @@ def inline_style(theme: Mapping[str, Any]) -> InlineStyle:
     return InlineStyle(
         code_foreground=c["foreground"], code_background=c["surfaceMuted"]
     )
+
+
+#: How far the context ring's track lifts from the card toward the text.
+TRACK_LIFT = 0.12
+
+
+@dataclass(frozen=True)
+class RingColours:
+    track: str
+    accent: str
+    danger: str
+
+    def at(self, alarm: float) -> str:
+        """The ring's colour ``alarm`` of the way from the accent to danger."""
+        return Colour(self.accent).mix(Colour(self.danger), alarm).hex
+
+
+def ring_colours(theme: Mapping[str, Any]) -> RingColours:
+    """The context ring's colours, drawn on a card's raised surface."""
+    c = _colours(theme)
+    track = Colour(c["surfaceMuted"]).mix(Colour(c["foreground"]), TRACK_LIFT)
+    return RingColours(track.hex, c["accent"], c["danger"])
 
 
 def token_colours(theme: Mapping[str, Any]) -> tuple[str, str]:
