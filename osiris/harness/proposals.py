@@ -3,6 +3,7 @@ the answer and written among the person's own skills only when they keep it."""
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,3 +30,9 @@ def skill_file(proposal: Proposal) -> str:
 
 def skill_path(home: Path, proposal: Proposal) -> Path:
     return home / SKILLS / proposal.name / "SKILL.md"
+
+
+def plain(name: str) -> bool:
+    """Lower-case letters and digits, joined by single hyphens: it names a
+    folder, so nothing in it may lead elsewhere."""
+    return re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", name) is not None
