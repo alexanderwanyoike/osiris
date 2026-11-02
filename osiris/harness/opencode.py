@@ -37,6 +37,7 @@ from osiris.harness.engine import (
     ToolRequested,
 )
 from osiris.harness.picker import Entry, Reference
+from osiris.harness.saved_rules import SavedRule
 from osiris.harness.skill_rules import SkillInfo
 from osiris.harness.titles import title_of
 from osiris.platform import CommandRunner, FileSystem, HttpClient, HttpError, Identity
@@ -290,6 +291,33 @@ class OpencodeEngine:
             )
             for found in reply["data"]
         ]
+
+    def saved_rules(self) -> list[SavedRule]:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/permission/saved",
+            headers=self._service.headers(),
+        )
+        projects: Any = self._http.request(
+            "GET", f"{self._service.url}/api/project", headers=self._service.headers()
+        )
+        where = {project["id"]: Path(project["canonical"]) for project in projects}
+        return [
+            SavedRule(
+                rule["id"],
+                rule["action"],
+                rule["resource"],
+                where.get(rule["projectID"]),
+            )
+            for rule in reply["data"]
+        ]
+
+    def remove_saved_rule(self, rule: str) -> None:
+        self._http.request(
+            "DELETE",
+            f"{self._service.url}/api/permission/saved/{rule}",
+            headers=self._service.headers(),
+        )
 
     def skills(self, directory: Path) -> list[Entry]:
         reply: Any = self._http.request(
