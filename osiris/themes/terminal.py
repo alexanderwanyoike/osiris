@@ -23,6 +23,12 @@ theme = {THEME}
 _PALETTE = [f"regular{n}" for n in range(8)] + [f"bright{n}" for n in range(8)]
 
 
+def palette(theme: Mapping[str, Any]) -> tuple[str, ...]:
+    """The Theme's ANSI colours in order, those it names."""
+    t = theme.get("terminal", {})
+    return tuple(t[key] for key in _PALETTE if key in t)
+
+
 def theme_file(theme: Mapping[str, Any], *, mono: str) -> str:
     c, t = theme["colors"], theme.get("terminal", {})
     palette = "\n".join(

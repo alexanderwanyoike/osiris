@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from enum import Enum
@@ -25,6 +24,7 @@ from osiris.harness.engine import (
 )
 from osiris.harness.harness import Allowed, Asking, Decision, Refused
 from osiris.harness.log import Change
+from osiris.harness.proposals import Proposal
 from osiris.harness.status import Status
 from osiris.harness.tasks import TASK_TOOL, Task, tasks_of
 from osiris.harness.titles import title_of
@@ -49,6 +49,10 @@ class Turn:
     doing: str = THINKING
     error: str = ""
     changes: list[Change] = field(default_factory=list)
+    #: The tool server's runs already shown as steps.
+    served: int = 0
+    #: Skills proposed while answering, for the person to keep or not.
+    proposals: list[Proposal] = field(default_factory=list)
     undone: bool = False
     #: A command of this answer's waiting for the administrator password.
     admin: Request | None = None
@@ -114,21 +118,6 @@ _SUBJECT = (
     "query",
     "agent",
 )
-
-
-#: A tool server's tool called from the catalogue's code:
-#: ``tools.osiris.apply_theme(`` or ``tools["osiris"].list_themes(``. Built-in
-#: tools, ``tools.shell(``, are reported as calls of their own.
-_SERVER_CALL = re.compile(r"tools(?:\.(\w+)|\[\"([^\"]+)\"\])\.(\w+)\s*\(")
-
-
-def _from_code(call: str, arguments: Mapping[str, object]) -> list[Step]:
-    """The tool servers' tools the catalogue's code runs, as steps."""
-    code = str(arguments.get("code", ""))
-    return [
-        Step(f"{dotted or quoted}_{tool}", ("*",), True, call, arguments)
-        for dotted, quoted, tool in _SERVER_CALL.findall(code)
-    ]
 
 
 def _ran(name: str, call: str, arguments: Mapping[str, object]) -> Step:
@@ -220,11 +209,13 @@ class Conversation:
         tokens_spent: int = 0,
         changes: list[list[Change]] | None = None,
         undone: list[tuple[str, ...]] | None = None,
+        proposals: list[list[Proposal]] | None = None,
     ) -> Conversation:
         """A past Conversation as it ended, with what each answer changed.
 
-        ``changes`` holds one list per question the log saw, matched to the
-        latest answers: answers from before the log began have none."""
+        ``changes`` and ``proposals`` hold one list per question the log saw,
+        matched to the latest answers: answers from before the log began have
+        none."""
         talk = cls()
         talk.tokens_spent = tokens_spent
         for turn in past:
@@ -244,6 +235,10 @@ class Conversation:
         ):
             answer.changes = made
             answer.undone = bool(made) and tuple(c.summary for c in made) in undid
+        for answer, proposed in zip(
+            reversed(talk.turns), reversed(proposals or []), strict=False
+        ):
+            answer.proposals = proposed
         return talk
 
     def queued(self, message: str, text: str) -> None:
@@ -280,6 +275,22 @@ class Conversation:
         if self.turns:
             self.turns[-1].changes = changes
 
+    def ran(self, tools: list[str]) -> None:
+        """The tool server's tools run so far for the latest question, as it
+        logged them; each becomes a step once."""
+        if not self.turns:
+            return
+        turn = self.turns[-1]
+        for tool in tools[turn.served :]:
+            turn.steps.append(Step(tool, (), True))
+            turn.doing = turn.steps[-1].doing
+        turn.served = max(turn.served, len(tools))
+
+    def proposed(self, proposals: list[Proposal]) -> None:
+        """Record the skills the latest answer proposed, as the log has them."""
+        if self.turns:
+            self.turns[-1].proposals = proposals
+
     def _input(self, call: str) -> Mapping[str, object] | None:
         return self._inputs.pop(call, None) if call else None
 
@@ -290,11 +301,9 @@ class Conversation:
             turn.tasks = tasks_of(arguments)
             return
         self._inputs[call] = arguments
-        ran = _from_code(call, arguments) if name == "execute" else None
-        if ran is None and name:
-            ran = [_ran(name, call, arguments)]
-        if ran:
-            turn.steps += ran
+        # The catalogue's code is no step: the tool server reports what it ran.
+        if name and name != "execute":
+            turn.steps.append(_ran(name, call, arguments))
             turn.doing = turn.steps[-1].doing
 
     def _step(

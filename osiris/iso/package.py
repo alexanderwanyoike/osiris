@@ -135,7 +135,8 @@ RUNTIME = (
     "python-pillow", "python-numpy", "python-cairo", "glslang", "mesa-utils",
     "dconf", "glib2",
     "grub", "os-prober", "plymouth", "mkinitcpio",
-    "opencode", "python-markdown-it-py", "gtksourceview5", "python-mcp",
+    "opencode", "python-markdown-it-py", "gtksourceview5", "python-mcp", "vte4",
+    "webkitgtk-6.0",
 )  # fmt: skip
 
 
