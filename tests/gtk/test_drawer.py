@@ -725,7 +725,8 @@ def shown_widgets(width: int):
 
 
 def test_with_room_beside_the_messages_the_widgets_float_there() -> None:
-    window = shown_widgets(1700)
+    # Wide enough with the sidebar open beside the Conversation.
+    window = shown_widgets(2100)
     overlay = window.conversation_panel.get_ancestor(Gtk.Overlay)
     assert window.scroller.get_ancestor(Gtk.Overlay) is overlay
     assert window.conversation_panel.get_visible()
