@@ -747,6 +747,7 @@ class Application(Adw.Application):
         self.contexts: OpencodeEngine | None = None
         self.skill_list: OpencodeEngine | None = None
         self.saved: OpencodeEngine | None = None
+        self.requests: OpencodeEngine | None = None
         #: What the message box's picker lists, by the sign that opens it.
         self.offers: dict[str, list[Entry]] = {}
         self.files = RealFileSystem()
@@ -1430,8 +1431,26 @@ class Application(Adw.Application):
             self.drawer.refresh()
             self.load_history()
             self.update_canvas()
+            self.restore_waiting(session)
 
         self.background(lambda: harness.resume(session), opened)
+
+    def restore_waiting(self, session: str) -> None:
+        """Bring back the cards of requests the Engine still waits on, which a
+        restart of the drawer lost while the Engine kept them."""
+        if self.requests is None or self.harness is None:
+            return
+        requests, harness = self.requests, self.harness
+
+        def handled() -> list:
+            found = (harness.handle(event) for event in requests.waiting(session))
+            return [result for result in found if result is not None]
+
+        def shown(results: list) -> None:
+            for result in results:
+                self._apply(result)
+
+        self.background(handled, shown)
 
     def show_all_changes(self) -> None:
         """Every question's changes that made commits, in the order asked, read
@@ -1663,6 +1682,7 @@ class Application(Adw.Application):
                 self.contexts = engine
                 self.skill_list = engine
                 self.saved = engine
+                self.requests = engine
                 GLib.idle_add(self._refresh)
                 GLib.idle_add(lambda: self.refresh_offers() or False)
                 GLib.idle_add(self.start_waiting)
