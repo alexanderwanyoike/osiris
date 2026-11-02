@@ -110,29 +110,27 @@ class HarnessLog:
     def changes_by_question(self, session: str) -> list[list[Change]]:
         """For each question the session was asked, in order, the changes it
         led to: those naming the session, logged after it."""
-        questions: list[list[Change]] = []
-        asking = ""
-        for entry in self._entries():
-            if entry["kind"] == "sent":
-                asking = entry.get("session", "")
-                if asking == session:
-                    questions.append([])
-            elif entry["kind"] == "went-back" and entry.get("session") == session:
-                del questions[len(questions) - entry.get("questions", 0) :]
-            elif (
-                entry["kind"] == "changed"
-                and questions
-                and _made_by(entry, asking) == session
-            ):
-                questions[-1].append(
-                    Change(entry["summary"], entry["undo"], entry.get("program"))
-                )
-        return questions
+        return self._by_question(
+            session,
+            "changed",
+            lambda e: Change(e["summary"], e["undo"], e.get("program")),
+        )
 
     def proposals_by_question(self, session: str) -> list[list[Proposal]]:
         """For each question the session was asked, in order, the skills
         proposed while answering it."""
-        questions: list[list[Proposal]] = []
+        return self._by_question(
+            session,
+            "proposed-skill",
+            lambda e: Proposal(e["name"], e["description"], e["body"]),
+        )
+
+    def _by_question[T](
+        self, session: str, kind: str, made: Callable[[dict[str, Any]], T]
+    ) -> list[list[T]]:
+        """For each question the session was asked, the entries of ``kind``
+        logged while answering it, made into what they record."""
+        questions: list[list[T]] = []
         asking = ""
         for entry in self._entries():
             if entry["kind"] == "sent":
@@ -142,13 +140,11 @@ class HarnessLog:
             elif entry["kind"] == "went-back" and entry.get("session") == session:
                 del questions[len(questions) - entry.get("questions", 0) :]
             elif (
-                entry["kind"] == "proposed-skill"
+                entry["kind"] == kind
                 and questions
                 and _made_by(entry, asking) == session
             ):
-                questions[-1].append(
-                    Proposal(entry["name"], entry["description"], entry["body"])
-                )
+                questions[-1].append(made(entry))
         return questions
 
     def decided(self) -> dict[str, bool]:
