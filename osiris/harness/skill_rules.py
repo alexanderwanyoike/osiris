@@ -42,3 +42,19 @@ def choose_skill(files: FileSystem, home: Path, skill: str, choice: str) -> bool
     return edit(
         files, home / ENGINE_CONFIG, lambda config: bool(chosen(config, skill, choice))
     )
+
+
+#: Where the Engine finds a person's own skills, under their home.
+OWN = (".config/opencode/skills", ".claude/skills", ".agents/skills")
+
+
+def origin_of(path: str, home: Path, project: Path) -> str:
+    """Where a skill came from, in a word or two, by where the Engine found it."""
+    found = Path(path)
+    if found.is_relative_to("/builtin"):
+        return "Comes with the Engine"
+    if project != home and found.is_relative_to(project):
+        return "This Project"
+    if any(found.is_relative_to(home / folder) for folder in OWN):
+        return "Yours"
+    return str(found.parent)
