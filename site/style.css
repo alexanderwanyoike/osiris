@@ -238,6 +238,27 @@ main {
   margin-top: 56px;
 }
 
+/* Parts: each of Osiris's three ideas opens with a centred heading */
+
+.part {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 72px 0 8px;
+  text-align: center;
+}
+
+.part h2 {
+  margin: 0 0 12px;
+  font-size: 36px;
+  letter-spacing: -0.01em;
+}
+
+.part p {
+  margin: 0;
+  font-size: 19px;
+  color: var(--foreground-muted);
+}
+
 /* Features */
 
 section {
@@ -260,6 +281,15 @@ section {
   margin: 0 0 14px;
   font-size: 30px;
   letter-spacing: -0.01em;
+}
+
+.feature h3 {
+  margin: 0 0 10px;
+  font-size: 22px;
+}
+
+.feature p + h3 {
+  margin-top: 24px;
 }
 
 .feature p {
