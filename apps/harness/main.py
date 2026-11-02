@@ -1238,8 +1238,10 @@ class Application(Adw.Application):
                 files = []
             connected = (offered_servers(servers.connector_states(directory), TOOLS)
                          + servers.resources(directory)) if servers else []
+            offered = skills.skills(directory) if skills else []
             return {"@": project_files(directory, files) + connected,
-                    "/": skills.skills(directory) if skills else []}
+                    # One turned off is kept from Osiris, so not offered to pick.
+                    "/": [e for e in offered if self.skill_choice(e.key) != "off"]}
 
         def found(offers: dict[str, list[Entry]]) -> None:
             if self.harness is not None and self.harness.directory == directory:
