@@ -155,24 +155,6 @@ class AdminPending:
     caller: int
 
 
-class _Sized(Gtk.Box):
-    """A box that says when its width changes, for what lays out by it."""
-
-    __gtype_name__ = "HarnessSizedBox"
-
-    def __init__(self, on_width, **props):
-        super().__init__(**props)
-        self._on_width = on_width
-        self._width = 0
-
-    def do_size_allocate(self, width, height, baseline):
-        Gtk.Box.do_size_allocate(self, width, height, baseline)
-        if width != self._width:
-            self._width = width
-            # Laid out after this pass: changing sizes during one is refused.
-            GLib.idle_add(lambda: self._on_width(width) or False)
-
-
 class Drawer(Gtk.ApplicationWindow):
     def __init__(self, app: "Application"):
         super().__init__(application=app, title="Osiris", decorated=False)
@@ -290,8 +272,7 @@ class Drawer(Gtk.ApplicationWindow):
         bottom.append(self.waiting)
         bottom.append(composer)
         bottom.append(self.footer)
-        chat = self._chat = _Sized(on_width=lambda _w: self._place_widgets(),
-                                   orientation=Gtk.Orientation.VERTICAL, hexpand=True)
+        chat = self._chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         self.conversation_panel = ConversationPanel()
         self.conversation_panel.connect("map", lambda _p: self.app.update_panel())
         self.rail = Rail(on_jump=self.rail_jump)
@@ -303,10 +284,16 @@ class Drawer(Gtk.ApplicationWindow):
         railed = self._railed = Gtk.Overlay(child=self.scroller, vexpand=True)
         railed.add_overlay(self.rail)
         # The Conversation's widgets go where there is room for them, never
-        # over the messages: placed by _place_widgets as its width changes,
-        # Thoth expands or the Canvas opens.
+        # over the messages: placed by _place_widgets as its size changes or
+        # Thoth expands.
         self.conversation_panel.set_visible(False)
         railed.add_overlay(self.conversation_panel)
+        # Told of every change in the Conversation's size, as a Box is not:
+        # its layout manager allocates it without a size_allocate to hook.
+        sized = Gtk.DrawingArea(can_target=False)
+        sized.connect("resize", lambda _a, _w, _h: GLib.idle_add(
+            lambda: self._place_widgets() or False))
+        railed.add_overlay(sized)
         self.panel_toggle.connect("toggled", lambda _b: self._place_widgets())
         chat.append(railed)
         rail_view = self.scroller.get_vadjustment()
@@ -322,7 +309,6 @@ class Drawer(Gtk.ApplicationWindow):
                              home=getattr(app, "home", None),
                              scheme=app.look.scheme if app.look is not None else None)
         self.canvas.set_visible(False)
-        self.canvas.connect("notify::visible", lambda _c, _p: self._place_widgets())
         # The Canvas's toolbar sits at the top bar's right, shown with the
         # Canvas toggle; any of its buttons opens the Canvas.
         self._header.insert_child_after(self.canvas.toolbar, self.title)
@@ -652,8 +638,7 @@ class Drawer(Gtk.ApplicationWindow):
         """Float the widgets in the margin the messages leave, move the
         messages over for them, or leave them out, with their button."""
         panel = self.conversation_panel
-        where, card = place(self._chat.get_width(), READABLE, self.expanded,
-                            self.canvas.get_visible())
+        where, card = place(self._chat.get_width(), READABLE, self.expanded)
         panel.set_size_request(card, -1)
         self.panel_toggle.set_visible(where != "hidden")
         shown = self.panel_toggle.get_active() and where != "hidden"
