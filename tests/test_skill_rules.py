@@ -37,3 +37,19 @@ def test_turning_a_skill_back_on_leaves_no_rule_of_its_own() -> None:
     config = chosen({"permissions": list(CAREFUL)}, "review", "off")
     config = chosen(config, "review", "on")
     assert config["permissions"] == CAREFUL
+
+
+def test_a_choice_is_kept_in_the_engines_config_and_read_back() -> None:
+    import json
+    from pathlib import Path
+
+    from osiris.harness.engine_config import ENGINE_CONFIG
+    from osiris.harness.skill_rules import choose_skill, skill_choice
+    from osiris.platform import FakeFileSystem
+
+    home = Path("/home/tester")
+    files = FakeFileSystem()
+    files.write(home / ENGINE_CONFIG, json.dumps({"permissions": CAREFUL}))
+    assert choose_skill(files, home, "review", "ask")
+    assert skill_choice(files, home, "review") == "ask"
+    assert skill_choice(files, home, "report") == "on"
