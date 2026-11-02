@@ -766,3 +766,17 @@ def test_the_conversation_panel_is_filled_as_it_comes_on_screen() -> None:
     window.panel_toggle.set_active(True)
     settle()
     assert window.app.panel_updates >= 1
+
+
+def test_widgets_dropped_down_come_back_into_the_conversation_given_room() -> None:
+    from tests.gtk.test_composer_picker import settle
+
+    window = shown_widgets(440)
+    window._widgets_dropdown.popdown()
+    settle()
+    # As when the Canvas closes: the Conversation has the room again.
+    window._chat.get_width = lambda: 1600
+    window.panel_toggle.set_active(True)
+    settle()
+    assert window.conversation_panel.get_ancestor(Gtk.Popover) is None
+    assert window.conversation_panel.get_mapped()
