@@ -110,8 +110,7 @@ class ConversationPanel(Gtk.Box):
             line.append(Gtk.Box(css_classes=["harness-context-swatch", part.kind],
                                 valign=Gtk.Align.CENTER))
             line.append(Gtk.Label(label=NAMES[part.kind], xalign=0, hexpand=True))
-            share = Gtk.Label(label=f"{round(part.tokens * 100 / window)}%"
-                              if window else "")
+            share = Gtk.Label(label=_share(part.tokens, window))
             share.add_css_class("harness-meta")
             line.append(share)
             legend.append(line)
@@ -149,3 +148,12 @@ class ConversationPanel(Gtk.Box):
 def _clear(box: Gtk.Box) -> None:
     while (child := box.get_first_child()) is not None:
         box.remove(child)
+
+
+def _share(tokens: int, window: int) -> str:
+    """A kind's share of the window; one present but too small to round to a
+    percent still shows."""
+    if not window:
+        return ""
+    percent = round(tokens * 100 / window)
+    return "<1%" if tokens and not percent else f"{percent}%"
