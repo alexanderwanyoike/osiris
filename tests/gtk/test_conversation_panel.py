@@ -84,7 +84,9 @@ def test_the_context_header_has_a_ring_of_how_full_the_window_is() -> None:
     from osiris.harness.context import Slice
 
     shown = panel()
-    shown.show_context([Slice("questions", 10_000), Slice("free", 90_000)], 10_000, 100_000)
+    shown.show_context(
+        [Slice("questions", 10_000), Slice("free", 90_000)], 10_000, 100_000
+    )
     ring = ring_of(shown)
     assert ring.share == 0.1
     assert not ring.is_ancestor(shown.cards["Context"].body)
