@@ -758,13 +758,28 @@ def test_the_drawer_shows_no_widgets_however_wide() -> None:
     assert not window.panel_toggle.get_visible()
 
 
-def test_with_the_canvas_open_there_are_no_widgets() -> None:
+def test_with_the_canvas_open_the_widgets_stay_while_there_is_room() -> None:
+    from osiris.harness.widgets_place import GAP
     from tests.gtk.test_composer_picker import settle
 
-    window = shown_widgets(2100)
+    window = shown_widgets(2400)
     window.canvas.set_visible(True)
+    window.canvas.get_parent().set_position(1500)
+    settle()
+    card = window.conversation_panel.get_size_request()[0]
+    assert window.conversation_panel.get_visible()
+    assert window.transcript_clamp.get_margin_start() == card + 2 * GAP
+
+
+def test_widening_the_canvas_until_there_is_no_room_takes_the_widgets_away() -> None:
+    from tests.gtk.test_composer_picker import settle
+
+    window = shown_widgets(2400)
+    window.canvas.set_visible(True)
+    window.canvas.get_parent().set_position(500)
     settle()
     assert not window.conversation_panel.get_visible()
+    assert window.transcript_clamp.get_margin_start() == 0
 
 
 def test_each_widget_is_a_card_of_its_own() -> None:

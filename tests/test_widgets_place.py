@@ -1,6 +1,6 @@
 """Where the Conversation's widgets go (#169), by the room there is: never
-over the messages, only expanded with the Canvas closed, and as wide as a
-share of the Conversation."""
+over the messages, only expanded, and as wide as a share of the
+Conversation. The Canvas open beside it only takes room."""
 
 from __future__ import annotations
 
@@ -21,23 +21,17 @@ from osiris.harness.widgets_place import LEAST, MOST, SHARE, place
     ],
 )
 def test_the_widgets_go_where_there_is_room_for_them(width: int, where: str) -> None:
-    assert place(width, readable=820, expanded=True, canvas=False)[0] == where
+    assert place(width, readable=820, expanded=True)[0] == where
 
 
 def test_the_drawer_shows_no_widgets() -> None:
-    assert place(1600, readable=820, expanded=False, canvas=False)[0] == "hidden"
-
-
-def test_with_the_canvas_open_there_are_no_widgets() -> None:
-    assert place(1600, readable=820, expanded=True, canvas=True)[0] == "hidden"
+    assert place(1600, readable=820, expanded=False)[0] == "hidden"
 
 
 def test_a_card_is_a_share_of_the_conversations_width() -> None:
-    assert place(1200, readable=820, expanded=True, canvas=False)[1] == round(
-        1200 * SHARE
-    )
+    assert place(1200, readable=820, expanded=True)[1] == round(1200 * SHARE)
 
 
 def test_a_card_is_never_too_narrow_to_read_nor_wider_than_it_needs() -> None:
-    assert place(500, readable=820, expanded=True, canvas=False)[1] == LEAST
-    assert place(4000, readable=820, expanded=True, canvas=False)[1] == MOST
+    assert place(500, readable=820, expanded=True)[1] == LEAST
+    assert place(4000, readable=820, expanded=True)[1] == MOST
