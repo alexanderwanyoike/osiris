@@ -318,21 +318,6 @@ def edited(state: State) -> Turn:
     return turn
 
 
-def test_an_answer_still_editing_or_that_edited_nothing_offers_no_changes() -> None:
-    for turn in (edited(State.ANSWERING), finished()):
-        view = TurnView(
-            turn,
-            on_undo=lambda _t: None,
-            program_card=lambda _n: Gtk.Label(),
-            show_changes=lambda _t: None,
-        )
-        view.update(turn, STYLE, None)
-        assert not any(
-            isinstance(w, Gtk.Button) and w.get_icon_name() == "view-dual-symbolic"
-            for w in widgets(view)
-        )
-
-
 def icon_button(root: Gtk.Widget, icon: str) -> Gtk.Button:
     return next(
         w
@@ -410,29 +395,6 @@ def test_an_answer_that_may_not_be_tried_again_has_no_arrow() -> None:
     )
 
 
-def test_an_answer_that_edited_files_shows_its_changes_from_an_icon_by_its_time() -> (
-    None
-):
-    shown: list[Turn] = []
-    turn = edited(State.DONE)
-    view = TurnView(
-        turn,
-        on_undo=lambda _t: None,
-        program_card=lambda _n: Gtk.Label(),
-        show_changes=shown.append,
-    )
-    view.update(turn, STYLE, None)
-    icon = icon_button(view, "view-dual-symbolic")
-    assert any(
-        "harness-meta" in w.get_css_classes()
-        for w in widgets(icon.get_parent())
-        if isinstance(w, Gtk.Label)
-    )
-    assert icon.get_tooltip_text().startswith("Show what this answer changed")
-    icon.emit("clicked")
-    assert shown == [turn]
-
-
 def test_an_answer_has_no_row_of_text_buttons_for_going_back_or_changes() -> None:
     """Only quiet icons: the words made every answer look busy."""
     turn = edited(State.DONE)
@@ -444,35 +406,22 @@ def test_an_answer_has_no_row_of_text_buttons_for_going_back_or_changes() -> Non
         try_again=lambda _t: None,
         may_go_back=lambda _t: True,
         may_try_again=lambda _t: True,
-        show_changes=lambda _t: None,
     )
     view.update(turn, STYLE, None)
     labels = {w.get_label() for w in widgets(view) if isinstance(w, Gtk.Button)}
     assert not labels & {"Edit", "Try again", "Changes"}
 
 
-def test_a_reopened_answer_whose_question_made_commits_still_shows_its_changes() -> (
-    None
-):
-    """Its commits come from the Harness log, which outlives the Engine's
-    steps."""
-    turn = Turn(
-        "tidy main.py",
-        "Tidied.",
-        State.DONE,
-        changes=[
-            Change(
-                "coin-flip: Tidy",
-                {"action": "revert_commit", "name": "coin-flip", "commit": "abc"},
-                "coin-flip",
-            )
-        ],
-    )
+def test_a_skill_proposed_while_answering_has_its_card_under_the_answer() -> None:
+    from osiris.harness.proposals import Proposal
+
+    tidy = Proposal("tidy-imports", "Sort imports", "Run ruff.")
+    turn = Turn("tidy my imports", "Done.", State.DONE, proposals=[tidy])
     view = TurnView(
         turn,
         on_undo=lambda _t: None,
-        program_card=lambda _n: Gtk.Label(),
-        show_changes=lambda _t: None,
+        program_card=lambda name: Gtk.Label(label=name),
+        proposal_card=lambda p: Gtk.Label(label=f"card for {p.name}"),
     )
     view.update(turn, STYLE, None)
-    icon_button(view, "view-dual-symbolic")
+    assert "card for tidy-imports" in texts(view)

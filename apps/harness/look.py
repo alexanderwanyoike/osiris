@@ -91,6 +91,7 @@ class Look:
 
     def reload(self) -> None:
         theme = self._theme()
+        self.theme = theme
         self.style = inline_style(theme)
         self._provider.load_from_string(
             colours_css(theme) + code_font_css(theme) + self._skin())
