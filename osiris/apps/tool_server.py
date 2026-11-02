@@ -20,6 +20,7 @@ from mcp.types import CallToolResult, InputRequiredResult, ToolAnnotations
 from pydantic import Field
 
 from osiris.harness.log import HarnessLog
+from osiris.harness.proposals import ProposalError, plain
 from osiris.harness.tiers import Tier
 from osiris.programs.programs import FOLLOW_THEME, ProgramError, Programs
 from osiris.skins.imports import UnusableDownload
@@ -116,6 +117,8 @@ TIERS = {
     "import_gtk_theme": Tier.UNDOABLE,
     "install_icon_set": Tier.UNDOABLE,
     "install_fonts": Tier.UNDOABLE,
+    # It changes nothing: the person reads it and decides.
+    "propose_skill": Tier.LOOK,
 }
 
 #: A seed as the model must give it; words like "dusk blue" are refused.
@@ -134,6 +137,7 @@ EXPLAINED = (
     SkinpackError,
     UnusableDownload,
     WallpaperError,
+    ProposalError,
 )
 
 
@@ -429,9 +433,35 @@ def server(
         )
         return f"Made the {label} wallpaper and applied it as {theme_label}."
 
+    _propose_tool(tools, logged)
     if skins is not None:
         _skin_tools(tools, skins, logged)
     return tools
+
+
+def _propose_tool(tools: MCPServer, logged: _Logged) -> None:
+    @tools.tool(annotations=ANNOTATIONS[TIERS["propose_skill"]])
+    @explained
+    def propose_skill(name: str, description: str, body: str) -> str:
+        """Propose a skill: how to do a kind of task again, worked out while
+        doing it. The person reads it in full and keeps it or not; nothing is
+        written until they keep it. Propose one only after a long or hard
+        task whose way of working is worth keeping, and say so in a line.
+
+        name: its id, lower-case words joined by hyphens: "tidy-imports".
+        description: one line saying when to use it.
+        body: the skill itself, in Markdown: the steps, checks and pitfalls.
+        """
+        if not plain(name):
+            raise ProposalError(
+                f"{name!r} cannot name a skill: use lower-case words joined by "
+                "hyphens, such as tidy-imports."
+            )
+        logged.write("proposed-skill", name=name, description=description, body=body)
+        return (
+            f"Proposed the {name} skill. The person will read it and keep it or "
+            "not; do not write it yourself."
+        )
 
 
 def _skin_tools(tools: MCPServer, skins: SkinStore, logged: _Logged) -> None:

@@ -11,6 +11,10 @@ from pathlib import Path
 SKILLS = ".config/opencode/skills"
 
 
+class ProposalError(ValueError):
+    """A proposal that cannot become a skill, with what to change."""
+
+
 @dataclass(frozen=True)
 class Proposal:
     #: Its id, lower-case words joined by hyphens, which names its folder.
