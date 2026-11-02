@@ -204,8 +204,10 @@ class Drawer(Gtk.ApplicationWindow):
         header.add_css_class("harness-header")
         header.append(self.sidebar_toggle)
         header.append(new)
+        # Shown only where the widgets can be: see _place_widgets.
         self.panel_toggle = Gtk.ToggleButton(icon_name="view-grid-symbolic",
-                                             tooltip_text="This Conversation")
+                                             tooltip_text="This Conversation",
+                                             visible=False)
         self.panel_toggle.add_css_class("flat")
         header.append(self.panel_toggle)
         header.append(self.title)
@@ -301,15 +303,10 @@ class Drawer(Gtk.ApplicationWindow):
         railed = self._railed = Gtk.Overlay(child=self.scroller, vexpand=True)
         railed.add_overlay(self.rail)
         # The Conversation's widgets go where there is room for them, never
-        # over the messages: placed by _place_widgets as its width changes.
+        # over the messages: placed by _place_widgets as its width changes,
+        # Thoth expands or the Canvas opens.
         self.conversation_panel.set_visible(False)
         railed.add_overlay(self.conversation_panel)
-        self._widgets_dropdown = Gtk.Popover(position=Gtk.PositionType.BOTTOM,
-                                             has_arrow=False)
-        self._widgets_dropdown.add_css_class("harness-widgets-dropdown")
-        self._widgets_dropdown.set_parent(self.panel_toggle)
-        self._widgets_dropdown.connect(
-            "closed", lambda _p: self.panel_toggle.set_active(False))
         self.panel_toggle.connect("toggled", lambda _b: self._place_widgets())
         chat.append(railed)
         rail_view = self.scroller.get_vadjustment()
@@ -325,6 +322,7 @@ class Drawer(Gtk.ApplicationWindow):
                              home=getattr(app, "home", None),
                              scheme=app.look.scheme if app.look is not None else None)
         self.canvas.set_visible(False)
+        self.canvas.connect("notify::visible", lambda _c, _p: self._place_widgets())
         # The Canvas's toolbar sits at the top bar's right, shown with the
         # Canvas toggle; any of its buttons opens the Canvas.
         self._header.insert_child_after(self.canvas.toolbar, self.title)
@@ -419,6 +417,7 @@ class Drawer(Gtk.ApplicationWindow):
             "xsi-go-next-symbolic" if self.expanded else "xsi-go-previous-symbolic")
         self.expand_button.set_tooltip_text("Back to the drawer" if self.expanded
                                             else "Expand")
+        self._place_widgets()
 
     def _realize(self, _window) -> None:
         # Kept out of the dock and the window switcher: it is reached from
@@ -651,28 +650,16 @@ class Drawer(Gtk.ApplicationWindow):
 
     def _place_widgets(self) -> None:
         """Float the widgets in the margin the messages leave, move the
-        messages over for them, or drop them down from their button."""
-        panel, dropdown = self.conversation_panel, self._widgets_dropdown
-        where, card = place(self._chat.get_width(), READABLE)
+        messages over for them, or leave them out, with their button."""
+        panel = self.conversation_panel
+        where, card = place(self._chat.get_width(), READABLE, self.expanded,
+                            self.canvas.get_visible())
         panel.set_size_request(card, -1)
-        shown = self.panel_toggle.get_active()
+        self.panel_toggle.set_visible(where != "hidden")
+        shown = self.panel_toggle.get_active() and where != "hidden"
         aside = card + 2 * GAP if shown and where == "beside" else 0
         self.transcript_clamp.set_margin_start(aside)
         self.composer_clamp.set_margin_start(aside)
-        # Held by the popover's own content box, not the popover itself.
-        in_dropdown = panel.get_ancestor(Gtk.Popover) is dropdown
-        if shown and where == "dropdown":
-            if not in_dropdown:
-                self._railed.remove_overlay(panel)
-                dropdown.set_child(panel)
-            panel.set_visible(True)
-            dropdown.popup()
-            return
-        if in_dropdown:
-            dropdown.set_child(None)
-            self._railed.add_overlay(panel)
-        if dropdown.get_visible():
-            dropdown.popdown()
         panel.set_visible(shown)
 
     def _tops(self) -> list[float]:
