@@ -712,26 +712,22 @@ def test_a_conversation_that_fits_on_one_screen_has_no_rail() -> None:
     assert not window.rail.get_visible()
 
 
-def test_the_conversation_panel_docks_on_the_left_of_the_conversation() -> None:
-    from gi.repository import Adw
+def test_the_widgets_float_as_cards_on_the_conversations_left() -> None:
+    window, _ = drawer()
+    assert not window.conversation_panel.get_visible()
+    window.panel_toggle.set_active(True)
+    assert window.conversation_panel.get_visible()
+    assert window.conversation_panel.get_halign() == Gtk.Align.START
+    overlay = window.conversation_panel.get_ancestor(Gtk.Overlay)
+    assert window.scroller.get_ancestor(Gtk.Overlay) is overlay
+
+
+def test_each_widget_is_a_card_of_its_own() -> None:
+    from tests.gtk.conftest import widgets
 
     window, _ = drawer()
-    window.panel_toggle.set_active(True)
-    assert window.panel_split.get_show_sidebar()
-    assert window.panel_split.get_sidebar_position() == Gtk.PackType.START
-    assert window.conversation_panel.get_ancestor(Adw.OverlaySplitView) is (
-        window.panel_split
-    )
-    assert window.scroller.get_ancestor(Adw.OverlaySplitView) is window.panel_split
-
-
-def test_the_widgets_sit_beside_the_conversation_never_over_it() -> None:
-    window, _ = drawer()
-    window.panel_toggle.set_active(True)
-    assert not window.panel_split.get_collapsed()
-    window.app.expand = lambda _expanded: None
-    window.expand_button.emit("clicked")
-    assert not window.panel_split.get_collapsed()
+    cards = [w for w in widgets(window.conversation_panel) if w.has_css_class("card")]
+    assert len(cards) == 4
 
 
 def test_the_conversation_panel_is_filled_as_it_comes_on_screen() -> None:
