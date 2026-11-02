@@ -659,7 +659,8 @@ class Drawer(Gtk.ApplicationWindow):
         aside = card + 2 * GAP if shown and where == "beside" else 0
         self.transcript_clamp.set_margin_start(aside)
         self.composer_clamp.set_margin_start(aside)
-        in_dropdown = panel.get_parent() is dropdown
+        # Held by the popover's own content box, not the popover itself.
+        in_dropdown = panel.get_ancestor(Gtk.Popover) is dropdown
         if shown and where == "dropdown":
             if not in_dropdown:
                 self._railed.remove_overlay(panel)
