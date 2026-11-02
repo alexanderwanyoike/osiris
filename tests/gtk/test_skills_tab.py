@@ -52,3 +52,16 @@ def test_each_skill_shows_where_it_came_from_and_what_it_is_for() -> None:
     assert "Review" in words and "Report" in words
     assert any("Yours" in w and "Review a change" in w for w in words)
     assert any("Comes with the Engine" in w for w in words)
+
+
+def test_a_skill_opens_to_show_what_it_says() -> None:
+    from gi.repository import Adw
+
+    shown, _ = tab()
+    review = next(
+        w
+        for w in widgets(shown)
+        if isinstance(w, Adw.ExpanderRow) and w.get_title() == "Review"
+    )
+    review.set_expanded(True)
+    assert "# Review\nRead the diff, then the tests." in texts(review)
