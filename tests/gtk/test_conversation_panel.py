@@ -93,3 +93,13 @@ def test_with_nothing_changed_it_says_so() -> None:
     shown = panel()
     shown.show_changes([], lambda _i: None)
     assert "Nothing changed yet." in texts(shown)
+
+
+def test_a_kind_present_but_under_one_percent_says_so_rather_than_none() -> None:
+    from osiris.harness.context import Slice
+
+    shown = panel()
+    shown.show_context(
+        [Slice("questions", 30), Slice("free", 99_970)], used=30, window=100_000
+    )
+    assert "<1%" in texts(shown)
