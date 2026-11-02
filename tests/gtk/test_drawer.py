@@ -79,6 +79,12 @@ class FakeApp(Adw.Application):
     def skill_origin(self, _path: str) -> str:
         return "Yours"
 
+    def read_saved_rules(self) -> list[object]:
+        return []
+
+    def remove_saved_rule(self, _rule: object) -> None:
+        pass
+
     def proposal_card(self, _proposal: object) -> object:
         from gi.repository import Gtk
 
