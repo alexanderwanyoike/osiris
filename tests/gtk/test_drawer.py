@@ -712,12 +712,15 @@ def test_a_conversation_that_fits_on_one_screen_has_no_rail() -> None:
     assert not window.rail.get_visible()
 
 
-def shown_widgets(width: int):
+def shown_widgets(width: int, expanded: bool = True):
     from tests.gtk.test_composer_picker import settle
 
     window, _ = drawer()
     window.set_default_size(width, 800)
     window.present()
+    if expanded:
+        window.app.expand = lambda _expanded: None
+        window.expand_button.emit("clicked")
     settle()
     window.panel_toggle.set_active(True)
     settle()
@@ -742,11 +745,26 @@ def test_with_less_room_the_messages_move_over_for_the_widgets() -> None:
     assert window.composer_clamp.get_margin_start() == card + 2 * GAP
 
 
-def test_with_no_room_the_widgets_drop_down_from_their_button() -> None:
+def test_shrunk_there_are_no_widgets_nor_their_button() -> None:
     window = shown_widgets(440)
-    dropdown = window.conversation_panel.get_ancestor(Gtk.Popover)
-    assert dropdown is not None and dropdown.get_visible()
+    assert not window.conversation_panel.get_visible()
+    assert not window.panel_toggle.get_visible()
     assert window.transcript_clamp.get_margin_start() == 0
+
+
+def test_the_drawer_shows_no_widgets_however_wide() -> None:
+    window = shown_widgets(2100, expanded=False)
+    assert not window.conversation_panel.get_visible()
+    assert not window.panel_toggle.get_visible()
+
+
+def test_with_the_canvas_open_there_are_no_widgets() -> None:
+    from tests.gtk.test_composer_picker import settle
+
+    window = shown_widgets(2100)
+    window.canvas.set_visible(True)
+    settle()
+    assert not window.conversation_panel.get_visible()
 
 
 def test_each_widget_is_a_card_of_its_own() -> None:
@@ -758,25 +776,5 @@ def test_each_widget_is_a_card_of_its_own() -> None:
 
 
 def test_the_conversation_panel_is_filled_as_it_comes_on_screen() -> None:
-    from tests.gtk.test_composer_picker import settle
-
-    window, _ = drawer()
-    window.set_default_size(900, 700)
-    window.present()
-    window.panel_toggle.set_active(True)
-    settle()
+    window = shown_widgets(2100)
     assert window.app.panel_updates >= 1
-
-
-def test_widgets_dropped_down_come_back_into_the_conversation_given_room() -> None:
-    from tests.gtk.test_composer_picker import settle
-
-    window = shown_widgets(440)
-    window._widgets_dropdown.popdown()
-    settle()
-    # As when the Canvas closes: the Conversation has the room again.
-    window._chat.get_width = lambda: 1600
-    window.panel_toggle.set_active(True)
-    settle()
-    assert window.conversation_panel.get_ancestor(Gtk.Popover) is None
-    assert window.conversation_panel.get_mapped()
