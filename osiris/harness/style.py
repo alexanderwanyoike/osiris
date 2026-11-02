@@ -152,6 +152,8 @@ def inline_style(theme: Mapping[str, Any]) -> InlineStyle:
 
 #: How far the context ring's track lifts from the card toward the text.
 TRACK_LIFT = 0.12
+#: How much more vivid than the Theme's colours the ring is: it warns.
+VIVID = 1.35
 
 
 @dataclass(frozen=True)
@@ -161,8 +163,16 @@ class RingColours:
     danger: str
 
     def at(self, alarm: float) -> str:
-        """The ring's colour ``alarm`` of the way from the accent to danger."""
-        return Colour(self.accent).mix(Colour(self.danger), alarm).hex
+        """The ring's colour ``alarm`` of the way from the accent to danger.
+        Turned in OKLCH, the short way round the hues, so it keeps its
+        colour on the way rather than greying as an RGB mix does."""
+        calm, full = Colour(self.accent).oklch, Colour(self.danger).oklch
+        turn = (full[2] - calm[2] + 180) % 360 - 180
+        return Colour.from_oklch(
+            calm[0] + (full[0] - calm[0]) * alarm,
+            (calm[1] + (full[1] - calm[1]) * alarm) * VIVID,
+            calm[2] + turn * alarm,
+        ).hex
 
 
 def ring_colours(theme: Mapping[str, Any]) -> RingColours:
