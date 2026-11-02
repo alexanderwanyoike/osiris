@@ -39,3 +39,15 @@ def test_the_persons_config_sets_nothing_the_theme_does() -> None:
 
 def test_once_seeded_the_persons_config_is_theirs() -> None:
     assert not may_write(CONFIG)
+
+
+def test_the_palette_is_the_sixteen_ansi_colours_in_order() -> None:
+    """One reading of the Theme for ghostty and the Canvas's terminals."""
+    from osiris.themes.terminal import palette
+
+    colours = {f"regular{n}": f"#00000{n}" for n in range(8)}
+    colours |= {f"bright{n}": f"#11111{n}" for n in range(8)}
+    assert palette({"terminal": colours}) == (
+        *(f"#00000{n}" for n in range(8)),
+        *(f"#11111{n}" for n in range(8)),
+    )

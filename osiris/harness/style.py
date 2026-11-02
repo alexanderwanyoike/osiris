@@ -9,6 +9,7 @@ Skin works under any Theme.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 from xml.sax.saxutils import quoteattr
 
@@ -76,6 +77,12 @@ GLASS_EDGE_LIFT = 0.22
 GLASS_TINT = 0.10
 
 
+#: How far line numbers fade from muted text toward the background.
+GUTTER_FADE = 0.45
+#: How far a token's background fades from the accent to the surface.
+TOKEN_WASH = 0.8
+
+
 def _frosted(c: Mapping[str, str], *, lift: float) -> str:
     lifted = Colour(c["surfaceMuted"]).mix(Colour(c["foreground"]), lift)
     return lifted.mix(Colour(c["accent"]), GLASS_TINT).hex
@@ -123,11 +130,63 @@ def colours_css(theme: Mapping[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def code_font_css(theme: Mapping[str, Any]) -> str:
+    """Code in the font the terminal uses, ligatures on as ghostty has them,
+    at one size and line height for every look."""
+    mono = theme.get("ui", {}).get("mono", "monospace")
+    return (
+        ".harness-code, .harness-code text {\n"
+        f'    font-family: "{mono}";\n'
+        '    font-feature-settings: "calt", "liga";\n'
+        "    font-size: 0.92em;\n"
+        "}\n"
+    )
+
+
 def inline_style(theme: Mapping[str, Any]) -> InlineStyle:
     c = _colours(theme)
     return InlineStyle(
         code_foreground=c["foreground"], code_background=c["surfaceMuted"]
     )
+
+
+#: How far the context ring's track lifts from the card toward the text.
+TRACK_LIFT = 0.2
+#: How much more vivid than the Theme's colours the ring is: it warns.
+VIVID = 1.35
+
+
+@dataclass(frozen=True)
+class RingColours:
+    track: str
+    accent: str
+    danger: str
+
+    def at(self, alarm: float) -> str:
+        """The ring's colour ``alarm`` of the way from the accent to danger.
+        Turned in OKLCH, the short way round the hues, so it keeps its
+        colour on the way rather than greying as an RGB mix does."""
+        calm, full = Colour(self.accent).oklch, Colour(self.danger).oklch
+        turn = (full[2] - calm[2] + 180) % 360 - 180
+        return Colour.from_oklch(
+            calm[0] + (full[0] - calm[0]) * alarm,
+            (calm[1] + (full[1] - calm[1]) * alarm) * VIVID,
+            calm[2] + turn * alarm,
+        ).hex
+
+
+def ring_colours(theme: Mapping[str, Any]) -> RingColours:
+    """The context ring's colours, drawn on a card's raised surface."""
+    c = _colours(theme)
+    track = Colour(c["surfaceMuted"]).mix(Colour(c["foreground"]), TRACK_LIFT)
+    return RingColours(track.hex, c["accent"], c["danger"])
+
+
+def token_colours(theme: Mapping[str, Any]) -> tuple[str, str]:
+    """A picked file or skill in the message box: foreground and background."""
+    c = _colours(theme)
+    wash = Colour(c["accent"]).mix(Colour(c["surface"]), TOKEN_WASH)
+    return c["accent"], wash.hex
 
 
 def source_scheme(theme: Mapping[str, Any]) -> str:
@@ -142,7 +201,9 @@ def source_scheme(theme: Mapping[str, Any]) -> str:
         "cursor": {"foreground": c["accent"]},
         "current-line": {"background": c["surface"]},
         "line-numbers": {
-            "foreground": c["foregroundMuted"],
+            "foreground": Colour(c["foregroundMuted"])
+            .mix(Colour(c["background"]), GUTTER_FADE)
+            .hex,
             "background": c["background"],
         },
         "bracket-match": {"background": c["surfaceMuted"], "bold": "true"},

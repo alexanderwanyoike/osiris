@@ -92,6 +92,7 @@ def test_the_server_offers_the_theme_and_program_actions_and_nothing_else() -> N
         "commit_program",
         "check_program",
         "make_wallpaper",
+        "propose_skill",
     }
 
 
@@ -112,6 +113,8 @@ def test_listing_and_checking_are_looks_and_the_rest_undoable_changes() -> None:
         "import_gtk_theme": Tier.UNDOABLE,
         "install_icon_set": Tier.UNDOABLE,
         "install_fonts": Tier.UNDOABLE,
+        # It changes nothing: the person reads it and decides.
+        "propose_skill": Tier.LOOK,
     }
 
 
@@ -470,3 +473,59 @@ def test_the_model_is_told_what_waits_for_the_person_and_what_auto_mode_lets_run
     auto = instructions(auto_mode=True)
     assert "auto mode" in auto
     assert "rules forbid" in auto
+
+
+def test_a_proposed_skill_is_logged_for_the_question_being_answered() -> None:
+    from osiris.harness.proposals import Proposal
+
+    log = new_log()
+    log.write("sent", session="ses_1", text="tidy my imports")
+    call(
+        FakeThemeStore(),
+        "propose_skill",
+        {"name": "tidy-imports", "description": "Sort imports", "body": "Run ruff."},
+        log,
+    )
+    assert log.proposals_by_question("ses_1") == [
+        [Proposal("tidy-imports", "Sort imports", "Run ruff.")]
+    ]
+
+
+def test_a_skill_with_a_name_that_could_lead_elsewhere_is_refused() -> None:
+    log = new_log()
+    log.write("sent", session="ses_1", text="tidy my imports")
+    with pytest.raises(ToolError, match="cannot name a skill"):
+        call(
+            FakeThemeStore(),
+            "propose_skill",
+            {"name": "../evil", "description": "x", "body": "x"},
+            log,
+        )
+    assert log.proposals_by_question("ses_1") == [[]]
+
+
+def test_every_tool_the_server_runs_is_logged_for_its_question() -> None:
+    log = new_log()
+    log.write("sent", session="ses_1", text="list my themes")
+    call(FakeThemeStore(), "list_themes", {}, log)
+    assert log.ran_by_question("ses_1") == [["osiris_list_themes"]]
+
+
+def test_a_skill_is_never_proposed_under_a_name_already_taken() -> None:
+    """Keeping it would write over the person's own, or Osiris's reviewer."""
+    log = new_log()
+    log.write("sent", session="ses_1", text="propose a review skill")
+    subject = server(
+        FakeThemeStore(),
+        new_programs(),
+        log,
+        new_wallpapers(),
+        skill_taken=lambda name: name == "review",
+    )
+    with pytest.raises(ToolError, match="already"):
+        asyncio.run(
+            subject.call_tool(
+                "propose_skill", {"name": "review", "description": "x", "body": "x"}
+            )
+        )
+    assert log.proposals_by_question("ses_1") == [[]]

@@ -39,7 +39,6 @@ def icons() -> dict[str, Gtk.Button]:
         try_again=lambda _t: None,
         may_go_back=lambda _t: True,
         may_try_again=lambda _t: True,
-        show_changes=lambda _t: None,
     )
     view.update(turn, STYLE, None)
     return {
@@ -73,3 +72,36 @@ def test_the_pencil_waits_for_the_pointer_and_the_icons_by_the_time_do_not(
         sheet.read_text(),
     )
     assert shown is not None
+
+
+@pytest.mark.parametrize("sheet", SKINS, ids=lambda s: s.stem)
+def test_dividers_hide_until_the_pointer_is_on_them(sheet: Path) -> None:
+    """Every resize divider in the window is unseen at rest, with room to grab,
+    and shows a faint line where the pointer is."""
+    text = sheet.read_text()
+    rest = re.search(
+        r"\.harness-drawer paned > separator[^{]*\{"
+        r"[^}]*background-color:\s*transparent",
+        text,
+    )
+    hover = re.search(r"\.harness-drawer paned > separator:hover\s*\{", text)
+    assert rest is not None and hover is not None
+    assert not re.search(
+        r"\.harness-canvas paned > separator\s*\{[^}]*background-color:\s*alpha", text
+    )
+
+
+@pytest.mark.parametrize("sheet", SKINS, ids=lambda s: s.stem)
+def test_the_pickers_shadow_stays_on_the_screen_the_drawer_sits_against(
+    sheet: Path,
+) -> None:
+    """The drawer is flush with the screen's edge; a shadow reaching past it
+    makes GTK shrink the card to fit, narrower than the message box."""
+    rule = re.search(
+        r"popover\.harness-picker-popover > contents\s*\{[^}]*box-shadow:\s*"
+        r"(-?\d+)(?:px)?\s+(-?\d+)(?:px)?\s+(\d+)px",
+        sheet.read_text(),
+    )
+    assert rule is not None
+    across, _down, blur = (int(n) for n in rule.groups())
+    assert abs(across) + blur <= 12

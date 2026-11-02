@@ -8,8 +8,9 @@ real layout is built test-first from this page, not from the prototype's code.
 ## What was rejected
 
 - **A workbench.** The first round's panels, toolbars and inner tab bars read
-  as cluttered. The model is Claude's desktop app and Codex: few controls, a
-  lot of quiet space.
+  as cluttered: few controls and a lot of quiet space were wanted instead.
+  Partly reversed on 2026-11-01: the Canvas now has groups of tabs and a small
+  toolbar (see below), kept quiet.
 - **No tabs at all.** The second round showed one Canvas item at a time behind
   a menu; items became hard to find. Tabs stay, but few of them.
 - **The Canvas as code only.** People research, write and plan as much as
@@ -41,15 +42,50 @@ time.
 colour, and what it shows sits flush against it: no boxes inside boxes, no
 second background behind a file tree or a code view.
 
-**A slim tab strip.** One tab per item the Conversation has made or opened. A
-full strip scrolls, and a list button at its end names every item. The Canvas
-adds no tabs of its own: no Files, Terminal or Preview tabs.
+**Groups of tabs, tiled (#194).** Revised on 2026-11-01 after the bolt's VM
+test: one tab strip over everything read as primitive, and closing every tab
+left an empty Canvas with no way back to the files. Each kind of thing now has
+a group of tabs of its own (a Program's files in the code group, a question's
+changes in the Changes group, and terminals and web pages as they come), and
+the groups share the Canvas side by side in the order they opened, the first
+on the left and the rest stacked beside it, with a line between any two to
+resize them. Closing a group's last tab gives its room to the others.
 
-**Code reads like code.** A path bar with a Files toggle, the path and Open in
-Code; below it the file in GtkSourceView with line numbers, in the Theme's
-colours, wrapping only a line that cannot fit. The file tree sits beside the
-code when the Canvas is at least 900sp wide, and below that slides over it from
-the Files toggle (ADR 0016: reading here, editing in Code - OSS).
+**A toolbar in the top bar.** Files (a folder), Changes (plus over minus),
+Terminal and Browser (a globe) sit at the top bar's right, shown whenever the
+Canvas can be, and any of them opens the Canvas. Files opens the code group on
+what the first Program runs, or brings its file tree forward; it stays when
+every group is closed, so the files are always one click away. The toolbar is
+the one place a kind of group is opened from.
+
+**Each panel looks the same (polish pass, 2026-11-01).** A compact header of
+small, left-aligned tabs whose close shows where the pointer is, and the
+panel's own actions at its right (new terminal or page, close the panel).
+Studio frames each panel, the code panel with its file tree, as a card with
+even gaps; Bubbles and Transcript set panels flush with a hairline between.
+Stacked panels share their column evenly when they open. One scale for tabs
+and rows (0.86em) and what is muted (0.8em), rows 28px.
+
+**Terminals in the Canvas (#196).** Terminal in the toolbar opens a terminal
+as a new tab of the terminal group, running the person's shell in the folder
+of the Program being read. It is VTE for GTK 4, drawn in the Theme's terminal
+colours and font and following a Theme change; closing its tab ends its shell.
+VTE draws no font ligatures, by its maintainers' choice, so the desktop's
+terminal stays ghostty. Osiris does not fork VTE; the group moves to ghostty's
+library once that can draw inside another application.
+
+**A browser for research (#197).** Browser (a globe) in the toolbar brings the
+browser group forward, or opens it on a new page: an address line with back,
+forward and reload over WebKitGTK. A full address is kept, a site gets https,
+and anything else is searched for (DuckDuckGo). Each page is a tab named by its
+title, and a page Thoth reads while answering the Conversation on screen opens
+there as a tab, so its sources can be followed.
+
+**Code reads like code.** A path bar with the path and Open in Code; below it
+the file in GtkSourceView with line numbers, in the Theme's colours, wrapping
+only a line that cannot fit. The Programs' files sit beside the code group when
+the Canvas is at least 900sp wide, each under its Program's name, and below
+that slide over it (ADR 0016: reading here, editing in Code - OSS).
 
 **Width decides.** Below 1100sp the Canvas folds into cards under the answer
 that made them; below 760sp the surface is **Compact**, its sidebar collapsed.

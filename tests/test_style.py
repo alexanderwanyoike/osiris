@@ -20,6 +20,7 @@ from osiris.harness.style import (
     skin_name,
     source_scheme,
 )
+from osiris.model.colour import Colour
 
 THEMES = Path(__file__).resolve().parent.parent / "shell" / "themes"
 
@@ -133,6 +134,34 @@ class TestScheme:
         assert found["diff:added-line"]["foreground"] == colours["success"]
         assert found["diff:removed-line"]["foreground"] == colours["danger"]
 
+    def test_line_numbers_sit_quieter_than_muted_text(self) -> None:
+        """Between the muted text and the background, so the code leads."""
+        numbers = styles(source_scheme(OBSIDIAN))["line-numbers"]["foreground"]
+        colours = OBSIDIAN["colors"]
+        assert isinstance(colours, dict)
+
+        def level(hex_colour: str) -> int:
+            return sum(int(hex_colour[i : i + 2], 16) for i in (1, 3, 5))
+
+        assert level(colours["background"]) < level(numbers)
+        assert level(numbers) < level(colours["foregroundMuted"])
+
+
+class TestCodeFont:
+    def test_code_is_set_in_the_themes_terminal_font_with_its_ligatures(self) -> None:
+        """The font ghostty uses, so code reads the same in both."""
+        from osiris.harness.style import code_font_css
+
+        css = code_font_css(OBSIDIAN)
+        assert 'font-family: "FiraCode Nerd Font"' in css
+        assert 'font-feature-settings: "calt", "liga"' in css
+
+    def test_a_theme_naming_no_terminal_font_falls_back_to_monospace(self) -> None:
+        from osiris.harness.style import code_font_css
+
+        plain = {key: value for key, value in OBSIDIAN.items() if key != "ui"}
+        assert 'font-family: "monospace"' in code_font_css(plain)
+
 
 class TestInline:
     def test_inline_code_uses_the_raised_surface(self) -> None:
@@ -158,3 +187,43 @@ class TestSkinChoice:
 
     def test_studio_is_the_look_when_none_is_chosen(self) -> None:
         assert skin_name(None) == "studio"
+
+
+class TestTokens:
+    def test_a_picked_token_is_the_accent_on_a_wash_of_it(self) -> None:
+        from osiris.harness.style import token_colours
+
+        assert token_colours(OBSIDIAN) == ("#7c8aeb", "#2e3048")
+
+
+class TestContextRing:
+    def test_the_ring_is_a_more_vivid_accent_turning_to_danger(self) -> None:
+        from osiris.harness.style import ring_colours
+
+        colours = OBSIDIAN["colors"]
+        ring = ring_colours(OBSIDIAN)
+        accent = Colour(colours["accent"]).oklch
+        danger = Colour(colours["danger"]).oklch
+        calm, full = Colour(ring.at(0.0)).oklch, Colour(ring.at(1.0)).oklch
+        assert abs(calm[2] - accent[2]) < 2 and calm[1] > accent[1]
+        assert abs(full[2] - danger[2]) < 2 and full[1] > danger[1]
+
+    def test_the_ring_stays_vivid_on_its_way_to_danger(self) -> None:
+        from osiris.harness.style import ring_colours
+
+        colours = OBSIDIAN["colors"]
+        least = min(Colour(colours[k]).oklch[1] for k in ("accent", "danger"))
+        ring = ring_colours(OBSIDIAN)
+        assert all(Colour(ring.at(a)).oklch[1] >= least for a in (0.25, 0.5, 0.75))
+
+    @pytest.mark.parametrize("theme", [OBSIDIAN, DAWN], ids=["obsidian", "dawn"])
+    def test_the_rings_track_shows_on_the_card_and_its_fill_on_the_track(
+        self, theme: dict[str, dict[str, str]]
+    ) -> None:
+        from osiris.harness.style import ring_colours
+
+        card = Colour(theme["colors"]["surfaceMuted"])
+        ring = ring_colours(theme)
+        track = Colour(ring.track)
+        assert track.contrast(card) >= 1.3
+        assert all(Colour(ring.at(a)).contrast(track) >= 2 for a in (0.0, 1.0))
