@@ -68,8 +68,6 @@ class Card(Gtk.Box):
         self.body.set_visible(not pill)
         self.summary.set_visible(pill)
         self._chevron.set_visible(not pill)
-        # A pill is as wide as what it says, not the card it folds.
-        self.set_halign(Gtk.Align.START if pill else Gtk.Align.FILL)
 
 
 def _fact(icon: str, text: str = "") -> Gtk.Box:
