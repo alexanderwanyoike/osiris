@@ -14,6 +14,10 @@ from gi.repository import Adw, Gtk  # noqa: E402
 
 from osiris.harness.skill_rules import SkillInfo  # noqa: E402
 
+#: The choices for a skill, in the order offered, and how each is said.
+CHOICES = ["on", "ask", "off"]
+SAID = {"on": "On", "ask": "Ask first", "off": "Off"}
+
 
 class SkillsTab(Gtk.Box):
     def __init__(self, read: Callable[[], list[SkillInfo]],
@@ -22,9 +26,18 @@ class SkillsTab(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         self.add_css_class("harness-skills")
         self._choice, self._choose, self._origin = choice, choose, origin
+        intro = Gtk.Label(
+            label="Skills teach Osiris how to do a kind of task. Turn one off to "
+                  "keep it from Osiris, or have Osiris ask you before it uses one.",
+            xalign=0, wrap=True)
+        intro.add_css_class("harness-meta")
+        self.append(intro)
         self._list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
         self._list.add_css_class("boxed-list")
         self.append(self._list)
+        self._problem = Gtk.Label(xalign=0, wrap=True, visible=False)
+        self._problem.add_css_class("harness-problem")
+        self.append(self._problem)
         background(read, self._show)
 
     def _show(self, skills: list[SkillInfo]) -> None:
@@ -40,4 +53,24 @@ class SkillsTab(Gtk.Box):
                          margin_end=14)
         says.add_css_class("harness-skill-text")
         row.add_row(says)
+        picker = Gtk.DropDown.new_from_strings([SAID[c] for c in CHOICES])
+        picker.set_valign(Gtk.Align.CENTER)
+        picker.skill = skill.id
+        picker.set_selected(CHOICES.index(self._choice(skill.id)))
+        picker.connect("notify::selected", self._chosen)
+        row.add_suffix(picker)
         return row
+
+    def _chosen(self, picker: Gtk.DropDown, _spec) -> None:
+        wanted = CHOICES[picker.get_selected()]
+        kept = self._choice(picker.skill)
+        if wanted == kept:
+            return
+        if not self._choose(picker.skill, wanted):
+            self._problem.set_text("Your opencode config has comments in it, so "
+                                   "Osiris leaves it for you to edit by hand.")
+            self._problem.set_visible(True)
+            # Back to what is kept; this notifies again and returns above.
+            picker.set_selected(CHOICES.index(kept))
+            return
+        self._problem.set_visible(False)
