@@ -101,10 +101,13 @@ class ConversationPanel(Gtk.Box):
         total = Gtk.Label(label=f"{used:,} of {window:,} tokens", xalign=0)
         total.add_css_class("harness-context-total")
         self._context.append(total)
-        squares = Gtk.Grid(row_spacing=3, column_spacing=3)
+        # Columns share the card's width, so the grid runs edge to edge.
+        squares = Gtk.Grid(row_spacing=3, column_spacing=3, hexpand=True,
+                           column_homogeneous=True)
         squares.add_css_class("harness-context-grid")
         for at, kind in enumerate(grid(shared, SQUARES)):
-            square = Gtk.Box(css_classes=["harness-context-square", kind])
+            square = Gtk.Box(css_classes=["harness-context-square", kind],
+                             hexpand=True)
             squares.attach(square, at % ACROSS, at // ACROSS, 1, 1)
         self._context.append(squares)
         legend = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
