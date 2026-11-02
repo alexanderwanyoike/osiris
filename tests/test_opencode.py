@@ -871,3 +871,132 @@ class TestConnectors:
         wiki = Entry("connector", "wiki", "wiki", "")
         engine(http).send(SESSION, "ask @wiki", (Reference(wiki, 4, 9),))
         assert http.requests == [("POST", path, {"text": "ask @wiki"})]
+
+
+class TestContext:
+    def test_what_fills_the_context_is_sized_by_kind_with_the_tokens_in_use(
+        self,
+    ) -> None:
+        from osiris.harness.context import ContextUse
+
+        messages = [
+            {"type": "system", "text": "i" * 400},
+            {"type": "user", "text": "q" * 40},
+            {
+                "type": "assistant",
+                "content": [
+                    {"type": "tool", "name": "read", "state": {"output": "x" * 70}},
+                    {"type": "text", "text": "a" * 80},
+                ],
+                "tokens": {
+                    "input": 2675,
+                    "output": 37,
+                    "reasoning": 0,
+                    "cache": {"read": 8448, "write": 0},
+                },
+            },
+            {"type": "idle", "outcome": "succeeded"},
+        ]
+        path = f"{URL}/api/session/{SESSION}/context"
+        http = FakeHttpClient(replies={("GET", path): {"data": messages}})
+        use = engine(http).context_use(SESSION)
+        assert use == ContextUse(
+            # About four characters a token; a tool call by all it carries.
+            {"instructions": 100, "questions": 10, "answers": 20, "tools": 31},
+            used=11_160,
+        )
+
+    def test_an_answer_without_token_counts_is_sized_but_counts_no_tokens(
+        self,
+    ) -> None:
+        """An answer that was stopped has no token counts of its own."""
+        messages = [
+            {
+                "type": "assistant",
+                "content": [{"type": "text", "text": "a" * 40}],
+                "tokens": {"input": 100, "output": 5, "reasoning": 0, "cache": {}},
+            },
+            {"type": "assistant", "content": [{"type": "text", "text": "b" * 40}]},
+        ]
+        path = f"{URL}/api/session/{SESSION}/context"
+        http = FakeHttpClient(replies={("GET", path): {"data": messages}})
+        use = engine(http).context_use(SESSION)
+        assert use.used == 105
+        assert use.sizes["answers"] == 20
+
+
+class TestSkills:
+    def test_each_skill_comes_with_where_it_was_found_and_what_it_says(self) -> None:
+        from osiris.harness.skill_rules import SkillInfo
+
+        where = "location%5Bdirectory%5D=%2Fhome%2Ftester"
+        skill = {
+            "id": "review",
+            "name": "Review",
+            "description": "Review a change",
+            "path": "/home/tester/.config/opencode/skills/review/SKILL.md",
+            "content": "# Review\nRead the diff.",
+        }
+        http = FakeHttpClient(
+            replies={("GET", f"{URL}/api/skill?{where}"): {"data": [skill]}}
+        )
+        assert engine(http).skill_details(Path("/home/tester")) == [
+            SkillInfo(
+                "review",
+                "Review",
+                "Review a change",
+                "/home/tester/.config/opencode/skills/review/SKILL.md",
+                "# Review\nRead the diff.",
+            )
+        ]
+
+
+class TestSavedRules:
+    def test_each_rule_saved_by_always_allow_comes_with_its_project(self) -> None:
+        from osiris.harness.saved_rules import SavedRule
+
+        rule = {
+            "id": "rule_1",
+            "projectID": "prj_1",
+            "action": "bash",
+            "resource": "npm *",
+            "time": {"created": 1, "updated": 1},
+        }
+        project = {
+            "id": "prj_1",
+            "canonical": "/home/tester/Code/timer",
+            "time": {},
+            "sandboxes": [],
+        }
+        http = FakeHttpClient(
+            replies={
+                ("GET", f"{URL}/api/permission/saved"): {"data": [rule]},
+                ("GET", f"{URL}/api/project"): [project],
+            }
+        )
+        assert engine(http).saved_rules() == [
+            SavedRule("rule_1", "bash", "npm *", Path("/home/tester/Code/timer"))
+        ]
+
+    def test_a_saved_rule_is_removed_by_its_id(self) -> None:
+        path = f"{URL}/api/permission/saved/rule_1"
+        http = FakeHttpClient(replies={("DELETE", path): None})
+        engine(http).remove_saved_rule("rule_1")
+        assert http.requests == [("DELETE", path, None)]
+
+
+class TestWaiting:
+    def test_requests_still_waiting_in_a_session_are_read_as_asked(self) -> None:
+        waiting = {
+            "id": "per_1",
+            "sessionID": SESSION,
+            "action": "bash",
+            "resources": ["ls /etc"],
+            "save": ["ls *"],
+            "source": {"type": "tool", "messageID": "msg_1", "id": "call_1"},
+        }
+        path = f"{URL}/api/session/{SESSION}/permission"
+        http = FakeHttpClient(replies={("GET", path): {"data": [waiting]}})
+        assert engine(http).waiting(SESSION) == [
+            ToolRequested(SESSION, "per_1", "bash", ("ls /etc",), "call_1", ("ls *",))
+        ]

@@ -51,6 +51,8 @@ class SignInState:
 class ModelInfo:
     ref: ModelRef
     name: str
+    #: Tokens its context window holds; 0 where the Engine does not say.
+    context: int = 0
 
 
 @runtime_checkable

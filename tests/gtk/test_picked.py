@@ -143,3 +143,19 @@ def test_the_app_keeps_connectors_in_the_engines_config_and_asks_their_state() -
     assert asked_in == [project]
     assert stand_in.remove_connector("wiki")
     assert stand_in.read_connectors() == []
+
+
+def test_a_skill_turned_off_is_not_offered_under_the_slash() -> None:
+    from types import SimpleNamespace
+
+    from osiris.platform import FakeFileSystem
+
+    stand_in, _engine = app()
+    stand_in.files = FakeFileSystem()
+    stand_in.programs = lambda: SimpleNamespace(files=lambda _name: [])
+    review = Entry("skill", "review", "review", "Review a change")
+    report = Entry("skill", "report", "report", "Report a bug")
+    stand_in.skills = SimpleNamespace(skills=lambda _d: [review, report])
+    assert stand_in.choose_skill("report", "off")
+    stand_in.refresh_offers()
+    assert stand_in.offered("/") == [review]

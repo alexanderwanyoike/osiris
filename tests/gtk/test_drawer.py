@@ -6,7 +6,7 @@ from __future__ import annotations
 import gi
 
 gi.require_version("Adw", "1")
-from gi.repository import Adw  # noqa: E402
+from gi.repository import Adw, Gtk  # noqa: E402
 
 from osiris.harness.conversation import Conversation  # noqa: E402
 from osiris.harness.settings import Models  # noqa: E402
@@ -39,6 +39,7 @@ class FakeApp(Adw.Application):
         self.offers: dict[str, list[object]] = {"@": [], "/": []}
         self.referenced: list[tuple[object, ...]] = []
         self.offers_fetched = 0
+        self.panel_updates = 0
 
     def open_past(self, session: str) -> None:
         self.opened.append(session)
@@ -65,6 +66,32 @@ class FakeApp(Adw.Application):
 
     def connector_states(self) -> dict[str, object]:
         return {}
+
+    def read_skills(self) -> list[object]:
+        return []
+
+    def skill_choice(self, _skill: str) -> str:
+        return "on"
+
+    def choose_skill(self, _skill: str, _choice: str) -> bool:
+        return True
+
+    def skill_origin(self, _path: str) -> str:
+        return "Yours"
+
+    def read_saved_rules(self) -> list[object]:
+        return []
+
+    def remove_saved_rule(self, _rule: object) -> None:
+        pass
+
+    def proposal_card(self, _proposal: object) -> object:
+        from gi.repository import Gtk
+
+        return Gtk.Box()
+
+    def update_panel(self) -> None:
+        self.panel_updates += 1
 
     def undo(self, _turn: object) -> None:
         pass
@@ -609,6 +636,25 @@ def test_tokens_in_the_message_box_follow_the_theme() -> None:
     assert token.foreground_rgba.to_string() == f"rgb({rgb})"
 
 
+def test_the_context_ring_follows_the_theme() -> None:
+    import main
+
+    from osiris.harness.context import Slice
+    from osiris.harness.style import ring_colours
+    from tests.test_style import DAWN, OBSIDIAN
+
+    app = FakeApp()
+    app.look.theme = OBSIDIAN
+    window = main.Drawer(app)
+    panel = window.conversation_panel
+    panel.show_context([Slice("questions", 10), Slice("free", 90)], 10, 100)
+    ring = panel.ring
+    assert ring.colour == ring_colours(OBSIDIAN).at(0.0)
+    app.look.theme = DAWN
+    window.refresh(restyle=True)
+    assert ring.colour == ring_colours(DAWN).at(0.0)
+
+
 def test_opening_the_picker_fetches_what_it_offers_afresh() -> None:
     from osiris.harness.picker import Entry
 
@@ -638,5 +684,192 @@ def test_settings_hold_the_persons_connectors_beside_their_providers() -> None:
     app.connector_states = lambda: {"wiki": State("connected")}
     window.show_providers()
     shown = texts(window)
-    assert "Connectors" in shown
+    assert "MCP" in shown
     assert "https://w.example/mcp" in shown and "Connected" in shown
+
+
+def test_the_rail_has_a_tick_per_question_and_a_click_scrolls_to_it() -> None:
+    from tests.gtk.test_composer_picker import settle
+    from tests.gtk.test_rail import marks
+
+    window, _ = drawer()
+    window.set_default_size(420, 700)
+    window.present()
+    for n in range(3):
+        turn = window.app.conversation.asked(f"question {n}")
+        turn.answer = "an answer that runs on\n\n" * 20
+    window.refresh()
+    settle()
+    assert len(marks(window.rail)) == 3
+    window.rail_jump(0)
+    settle()
+    assert window.scroller.get_vadjustment().get_value() == 0
+
+
+def test_the_current_tick_follows_the_scroll() -> None:
+    from tests.gtk.test_composer_picker import settle
+
+    window, _ = drawer()
+    window.set_default_size(420, 700)
+    window.present()
+    for n in range(4):
+        turn = window.app.conversation.asked(f"question {n}")
+        turn.answer = "an answer that runs on\n\n" * 20
+    window.refresh()
+    settle()
+    view = window.scroller.get_vadjustment()
+    view.set_value(view.get_upper())
+    settle()
+    window.refresh()
+    at_foot = [tick.current for tick in window.rail._ticks]
+    # A refresh near the foot keeps to the newest answer once the loop runs.
+    settle()
+    view.set_value(0)
+    settle()
+    window.refresh()
+    at_head = [tick.current for tick in window.rail._ticks]
+    assert at_foot == [False, False, False, True]
+    assert at_head == [True, False, False, False]
+
+
+def test_the_conversation_keeps_its_scrollbar_beside_the_rail() -> None:
+    from gi.repository import Gtk
+
+    window, _ = drawer()
+    _across, down = window.scroller.get_policy()
+    assert down == Gtk.PolicyType.AUTOMATIC
+
+
+def test_a_conversation_that_fits_on_one_screen_has_no_rail() -> None:
+    from tests.gtk.test_composer_picker import settle
+
+    window, _ = drawer()
+    window.set_default_size(420, 700)
+    window.present()
+    for n in range(2):
+        window.app.conversation.asked(f"question {n}").answer = "short"
+    window.refresh()
+    settle()
+    window.refresh()
+    assert not window.rail.get_visible()
+
+
+def shown_widgets(width: int, expanded: bool = True):
+    from tests.gtk.test_composer_picker import settle
+
+    window, _ = drawer()
+    window.set_default_size(width, 800)
+    window.present()
+    if expanded:
+        window.app.expand = lambda _expanded: None
+        window.expand_button.emit("clicked")
+    settle()
+    window.panel_toggle.set_active(True)
+    settle()
+    return window
+
+
+def test_with_room_beside_the_messages_the_widgets_float_there() -> None:
+    # Wide enough with the sidebar open beside the Conversation.
+    window = shown_widgets(2100)
+    overlay = window.conversation_panel.get_ancestor(Gtk.Overlay)
+    assert window.scroller.get_ancestor(Gtk.Overlay) is overlay
+    assert window.conversation_panel.get_visible()
+    assert window.transcript_clamp.get_margin_start() == 0
+
+
+def test_with_less_room_the_messages_move_over_for_the_widgets() -> None:
+    from osiris.harness.widgets_place import GAP
+
+    window = shown_widgets(1000)
+    card = window.conversation_panel.get_size_request()[0]
+    assert window.transcript_clamp.get_margin_start() == card + 2 * GAP
+    assert window.composer_clamp.get_margin_start() == card + 2 * GAP
+
+
+def test_shrunk_there_are_no_widgets_nor_their_button() -> None:
+    window = shown_widgets(440)
+    assert not window.conversation_panel.get_visible()
+    assert not window.panel_toggle.get_visible()
+    assert window.transcript_clamp.get_margin_start() == 0
+
+
+def test_the_drawer_shows_no_widgets_however_wide() -> None:
+    window = shown_widgets(2100, expanded=False)
+    assert not window.conversation_panel.get_visible()
+    assert not window.panel_toggle.get_visible()
+
+
+def test_with_the_canvas_open_the_widgets_stay_while_there_is_room() -> None:
+    from osiris.harness.widgets_place import GAP
+    from tests.gtk.test_composer_picker import settle
+
+    window = shown_widgets(2400)
+    window.canvas.set_visible(True)
+    # Too narrow for the margin, wide enough for a column.
+    window.canvas.get_parent().set_position(1100)
+    settle()
+    card = window.conversation_panel.get_size_request()[0]
+    assert window.conversation_panel.get_visible()
+    assert window.transcript_clamp.get_margin_start() == card + 2 * GAP
+
+
+def test_widening_the_canvas_until_there_is_no_room_takes_the_widgets_away() -> None:
+    from tests.gtk.test_composer_picker import settle
+
+    window = shown_widgets(2400)
+    window.canvas.set_visible(True)
+    window.canvas.get_parent().set_position(500)
+    settle()
+    assert not window.conversation_panel.get_visible()
+    assert window.transcript_clamp.get_margin_start() == 0
+
+
+def test_each_widget_is_a_card_of_its_own() -> None:
+    from tests.gtk.conftest import widgets
+
+    window, _ = drawer()
+    cards = [w for w in widgets(window.conversation_panel) if w.has_css_class("card")]
+    assert len(cards) == 4
+
+
+def test_the_conversation_panel_is_filled_as_it_comes_on_screen() -> None:
+    window = shown_widgets(2100)
+    assert window.app.panel_updates >= 1
+
+
+def test_the_messages_are_never_under_the_cards_however_wide_they_draw() -> None:
+    from osiris.harness.context import Slice
+    from osiris.harness.widgets_place import GAP
+    from tests.gtk.test_composer_picker import settle
+
+    window = shown_widgets(1000)
+    # A context grid is the widest thing a card holds.
+    window.conversation_panel.show_context(
+        [Slice("questions", 10), Slice("free", 90)], used=10, window=100
+    )
+    window._place_widgets()
+    settle()
+    panel = window.conversation_panel
+    right = panel.get_margin_start() + panel.get_width()
+    assert window.transcript_clamp.get_margin_start() >= right + GAP
+
+
+def test_settings_hold_the_skills_beside_the_connectors() -> None:
+    from osiris.harness.skill_rules import SkillInfo
+    from tests.gtk.conftest import now, texts
+    from tests.gtk.test_providers_page import FakeAccounts
+
+    window, _ = drawer()
+    app = window.app
+    app.accounts = FakeAccounts()
+    app.background = now
+    app.open_page = lambda _url: None
+    app.choose_model = lambda _model: None
+    app.set_auto_mode = lambda _on: None
+    review = SkillInfo("review", "Review", "Review a change", "/x/SKILL.md", "")
+    app.read_skills = lambda: [review]
+    window.show_providers()
+    shown = texts(window)
+    assert "Skills" in shown
+    assert "Review" in shown

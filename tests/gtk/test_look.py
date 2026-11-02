@@ -137,3 +137,67 @@ def test_a_working_connector_says_so_in_the_themes_success_colour_in_every_look(
         success.parse(look.theme["colors"]["success"])
         window.destroy()
         assert said.get_color().equal(success), skin
+
+
+def test_a_question_waiting_on_the_person_ticks_in_the_themes_warning_in_every_look(
+    tmp_path: Path,
+) -> None:
+    from gi.repository import Gdk
+    from rail import Rail
+
+    from osiris.harness.rail import Tick
+
+    for skin in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(skin)
+        look = Look(tmp_path, lambda: None)
+        shown = Rail(on_jump=lambda _i: None)
+        shown.show_ticks([Tick(0.5, True, "waiting", "list /etc")])
+        window = Gtk.Window(child=shown)
+        window.present()
+        line = next(
+            w for w in widgets(shown) if "harness-rail-line" in w.get_css_classes()
+        )
+        warning = Gdk.RGBA()
+        warning.parse(look.theme["colors"]["warning"])
+        window.destroy()
+        assert line.get_color().equal(warning), skin
+
+
+def test_a_question_that_changed_something_ticks_in_the_themes_accent(
+    tmp_path: Path,
+) -> None:
+    """Tints follow the Theme's own accent rather than a fixed green."""
+    from gi.repository import Gdk
+    from rail import Rail
+
+    from osiris.harness.rail import Tick
+
+    for skin in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(skin)
+        look = Look(tmp_path, lambda: None)
+        shown = Rail(on_jump=lambda _i: None)
+        shown.show_ticks([Tick(0.5, True, "changed", "make it calm", current=True)])
+        window = Gtk.Window(child=shown)
+        window.present()
+        line = next(
+            w for w in widgets(shown) if "harness-rail-line" in w.get_css_classes()
+        )
+        accent = Gdk.RGBA()
+        accent.parse(look.theme["colors"]["accent"])
+        window.destroy()
+        assert line.get_color().equal(accent), skin
+
+
+def test_no_look_flashes_a_glow_at_the_end_of_a_scroll(tmp_path: Path) -> None:
+    """The person found the glow at the top and bottom of a scroll annoying."""
+    import re
+
+    for look in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(look)
+        loaded = Look(tmp_path, lambda: None)._provider.to_string()
+        rules = re.findall(r"([^{}]*overshoot[^{}]*)\{([^}]*)\}", loaded)
+        assert rules, look
+        assert all("background-image: none" in body for _, body in rules), look
