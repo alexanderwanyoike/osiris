@@ -103,3 +103,15 @@ def test_a_kind_present_but_under_one_percent_says_so_rather_than_none() -> None
         [Slice("questions", 30), Slice("free", 99_970)], used=30, window=100_000
     )
     assert "<1%" in texts(shown)
+
+
+def test_long_questions_do_not_widen_the_cards() -> None:
+    from gi.repository import Gtk
+
+    from conversation_panel import CARD
+
+    shown = panel()
+    shown.show_changes([(0, "a very long question that goes on " * 6, 1)], print)
+    shown.show_where("a-project-with-a-rather-long-name-indeed", "main", "model")
+    _minimum, natural, _b, _c = shown.measure(Gtk.Orientation.HORIZONTAL, -1)
+    assert natural <= CARD
