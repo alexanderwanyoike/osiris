@@ -176,3 +176,20 @@ def test_a_folded_card_keeps_the_width_of_the_open_ones() -> None:
     widths = {name: card.get_width() for name, card in shown.cards.items()}
     window.destroy()
     assert len(set(widths.values())) == 1, widths
+
+
+def test_a_folded_card_points_down_to_say_it_opens() -> None:
+    from gi.repository import Gtk
+
+    from .conftest import widgets
+
+    card = panel().cards["Context"]
+
+    def chevron() -> str:
+        found = [w for w in widgets(card) if w.has_css_class("harness-panel-chevron")]
+        assert isinstance(found[0], Gtk.Image) and found[0].get_visible()
+        return found[0].get_icon_name()
+
+    assert chevron() == "pan-up-symbolic"
+    card.toggle()
+    assert chevron() == "pan-down-symbolic"
