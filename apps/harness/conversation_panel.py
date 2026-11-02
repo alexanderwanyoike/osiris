@@ -12,13 +12,13 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Pango  # noqa: E402
 
 from osiris.harness.connectors import State, said_of  # noqa: E402
-from osiris.harness.context import Slice, grid  # noqa: E402
+from context_ring import ContextRing  # noqa: E402
+
+from osiris.harness.context import Slice  # noqa: E402
+from osiris.harness.style import RingColours  # noqa: E402
 
 #: Each card's width: the widgets keep it, cutting what is longer.
 CARD = 260
-#: The context grid's squares, each a slice of the window, and per row.
-SQUARES = 100
-ACROSS = 20
 #: What each kind is called in the legend.
 NAMES = {
     "instructions": "Instructions",
@@ -96,6 +96,8 @@ class ConversationPanel(Gtk.Box):
         rows.append(self.branch)
         self._connectors = self._card("MCP", "network-server-symbolic")
         self._context = self._card("Context", "view-grid-symbolic")
+        #: Kept across fills, so its colours stay with it.
+        self.ring = ContextRing()
         self.show_no_context()
         self._changes = self._card("Changes", "osiris-changes-symbolic")
 
@@ -147,18 +149,15 @@ class ConversationPanel(Gtk.Box):
     def show_context(self, shared: list[Slice], used: int, window: int) -> None:
         _clear(self._context)
         self.cards["Context"].summary.set_text(f"{_share(used, window)} used")
-        total = Gtk.Label(label=f"{used:,} of {window:,} tokens", xalign=0)
+        self.ring.show(used, window, _share(used, window))
+        top = Gtk.Box(spacing=14)
+        top.append(self.ring)
+        total = Gtk.Label(label=f"{used:,} of {window:,} tokens", xalign=0,
+                          wrap=True, max_width_chars=1, hexpand=True,
+                          valign=Gtk.Align.CENTER)
         total.add_css_class("harness-context-total")
-        self._context.append(total)
-        # Columns share the card's width, so the grid runs edge to edge.
-        squares = Gtk.Grid(row_spacing=3, column_spacing=3, hexpand=True,
-                           column_homogeneous=True)
-        squares.add_css_class("harness-context-grid")
-        for at, kind in enumerate(grid(shared, SQUARES)):
-            square = Gtk.Box(css_classes=["harness-context-square", kind],
-                             hexpand=True)
-            squares.attach(square, at % ACROSS, at // ACROSS, 1, 1)
-        self._context.append(squares)
+        top.append(total)
+        self._context.append(top)
         legend = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         for part in shared:
             line = Gtk.Box(spacing=8)
@@ -176,6 +175,9 @@ class ConversationPanel(Gtk.Box):
                          max_width_chars=30)
         note.add_css_class("harness-meta")
         self._context.append(note)
+
+    def restyle(self, colours: RingColours) -> None:
+        self.ring.restyle(colours)
 
     def show_changes(self, changed: list[tuple[int, str, int]],
                      on_open: Callable[[int], None]) -> None:
