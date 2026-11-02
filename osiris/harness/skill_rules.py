@@ -4,11 +4,24 @@ rule goes after the rules it overrides."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from osiris.harness.engine_config import ENGINE_CONFIG, edit, read
 from osiris.platform import FileSystem
+
+
+@dataclass(frozen=True)
+class SkillInfo:
+    id: str
+    name: str
+    description: str
+    #: Where the Engine found it; "/builtin/..." for its own.
+    path: str
+    #: What it says, for the person to read.
+    content: str
+
 
 #: A choice on the Skills page, and the effect its rule has.
 EFFECTS = {"off": "deny", "ask": "ask"}

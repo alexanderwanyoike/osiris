@@ -37,6 +37,7 @@ from osiris.harness.engine import (
     ToolRequested,
 )
 from osiris.harness.picker import Entry, Reference
+from osiris.harness.skill_rules import SkillInfo
 from osiris.harness.titles import title_of
 from osiris.platform import CommandRunner, FileSystem, HttpClient, HttpError, Identity
 
@@ -271,6 +272,23 @@ class OpencodeEngine:
                 ": ".join(filter(None, (found["server"], found.get("description")))),
             )
             for found in reply["data"]["resources"]
+        ]
+
+    def skill_details(self, directory: Path) -> list[SkillInfo]:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/skill{_in(directory)}",
+            headers=self._service.headers(),
+        )
+        return [
+            SkillInfo(
+                found["id"],
+                found["name"],
+                found.get("description", ""),
+                found["path"],
+                found["content"],
+            )
+            for found in reply["data"]
         ]
 
     def skills(self, directory: Path) -> list[Entry]:
