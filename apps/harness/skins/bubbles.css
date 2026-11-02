@@ -390,8 +390,9 @@ popover.harness-rail-card > contents {
     box-shadow: 0 6px 12px alpha(@harness_sunken, 0.40);
 }
 
-/* The Conversation's widgets: floating cards, each a quiet headed section; context as small squares in
-   the Theme's colours, one colour per kind, free space barely there. */
+/* The Conversation's widgets: floating cards, each a quiet headed section;
+   context as small squares in the Theme's accent and text tones, one per
+   kind, free space barely there. */
 .harness-panel-heading { font-size: 0.8em; font-weight: 600; color: @harness_muted; }
 .harness-panel-section.card {
     background-color: @harness_raised;
@@ -409,10 +410,10 @@ popover.harness-rail-card > contents {
     border-radius: 2px;
     background-color: alpha(@harness_fg, 0.08);
 }
-.harness-context-square.instructions, .harness-context-swatch.instructions { background-color: alpha(@harness_fg, 0.45); }
+.harness-context-square.instructions, .harness-context-swatch.instructions { background-color: alpha(@harness_fg, 0.35); }
 .harness-context-square.questions, .harness-context-swatch.questions { background-color: @harness_accent; }
 .harness-context-square.answers, .harness-context-swatch.answers { background-color: alpha(@harness_accent, 0.5); }
-.harness-context-square.tools, .harness-context-swatch.tools { background-color: @harness_success; }
+.harness-context-square.tools, .harness-context-swatch.tools { background-color: alpha(@harness_fg, 0.7); }
 .harness-panel-changes { background-color: transparent; }
 .harness-panel-changes row { padding: 6px 8px; border-radius: 8px; }
 .harness-panel-changes row:hover { background-color: alpha(@harness_fg, 0.05); }
