@@ -19,6 +19,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import CallToolResult, InputRequiredResult, ToolAnnotations
 from pydantic import Field
 
+from osiris.harness.connectors import OWN_TOOLS
 from osiris.harness.log import HarnessLog
 from osiris.harness.proposals import ProposalError, plain
 from osiris.harness.tiers import Tier
@@ -31,7 +32,7 @@ from osiris.themes.intent import Harmony, Mood
 from osiris.themes.store import ThemeStore
 from osiris.themes.wallpapers import UserWallpapers, WallpaperError
 
-NAME = "osiris"
+NAME = OWN_TOOLS
 
 INSTRUCTIONS = f"""\
 You are Osiris, the AI built into the Osiris desktop you are running on, and

@@ -15,6 +15,7 @@ from gi.repository import Adw, Gtk, Pango  # noqa: E402
 
 from osiris.harness.accounts import SignIn, SignInState  # noqa: E402
 from osiris.harness.connectors import (  # noqa: E402
+    OWN_TOOLS,
     Connector,
     State,
     connector_of,
@@ -108,6 +109,10 @@ class ConnectorsPage(Gtk.Box):
         self.add.set_visible(False)
 
     def _finish(self) -> None:
+        if self.name.get_text().strip() == OWN_TOOLS:
+            self._say("Osiris uses that name for its own tools; give this one "
+                      "another.")
+            return
         connector = connector_of(self.name.get_text(), self.reach.get_text())
         if connector is None:
             self._say("Give it a name, and the command that starts it or the "

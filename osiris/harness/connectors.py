@@ -16,6 +16,10 @@ from osiris.harness.engine_config import ENGINE_CONFIG, edit, read
 from osiris.harness.picker import Entry
 from osiris.platform import FileSystem
 
+#: The name Osiris attaches its own tool server under, which no connector of
+#: the person's may take.
+OWN_TOOLS = "osiris"
+
 
 @dataclass(frozen=True)
 class Connector:
