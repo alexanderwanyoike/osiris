@@ -355,3 +355,18 @@ popover.harness-rail-card > contents {
 .harness-panel-summary { color: @harness_muted; font-size: 0.9em; }
 .harness-panel-section.card.pill { border-radius: 999px; padding: 7px 14px; }
 .harness-panel-section.card.pill .harness-panel-heading { color: @harness_fg; }
+
+/* A skill Osiris proposes, read in full on a card under its answer; a skill's
+   own text on the Skills tab. */
+.harness-proposal-card {
+    background-color: @harness_raised;
+    border: 1px solid alpha(@harness_fg, 0.08);
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+.harness-proposal-name { font-weight: 600; }
+.harness-proposal-body, .harness-skill-text {
+    font-family: monospace;
+    font-size: 0.9em;
+    color: alpha(@harness_fg, 0.85);
+}
