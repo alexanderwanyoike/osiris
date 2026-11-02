@@ -334,17 +334,16 @@ popover.harness-rail-card > contents {
 }
 .harness-panel-fact image { color: @harness_muted; }
 .harness-context-total { font-weight: 600; }
-.harness-context-ring label { font-size: 0.85em; font-weight: 600; }
-.harness-context-swatch {
+.harness-context-square, .harness-context-swatch {
     min-width: 10px;
     min-height: 10px;
     border-radius: 2px;
     background-color: alpha(@harness_fg, 0.08);
 }
-.harness-context-swatch.instructions { background-color: alpha(@harness_fg, 0.35); }
-.harness-context-swatch.questions { background-color: @harness_accent; }
-.harness-context-swatch.answers { background-color: alpha(@harness_accent, 0.5); }
-.harness-context-swatch.tools { background-color: alpha(@harness_fg, 0.7); }
+.harness-context-square.instructions, .harness-context-swatch.instructions { background-color: alpha(@harness_fg, 0.35); }
+.harness-context-square.questions, .harness-context-swatch.questions { background-color: @harness_accent; }
+.harness-context-square.answers, .harness-context-swatch.answers { background-color: alpha(@harness_accent, 0.5); }
+.harness-context-square.tools, .harness-context-swatch.tools { background-color: alpha(@harness_fg, 0.7); }
 .harness-panel-changes { background-color: transparent; }
 .harness-panel-changes row { padding: 6px 8px; border-radius: 8px; }
 .harness-panel-changes row:hover { background-color: alpha(@harness_fg, 0.05); }

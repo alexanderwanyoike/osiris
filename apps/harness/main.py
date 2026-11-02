@@ -114,7 +114,7 @@ from osiris.harness.review import comment  # noqa: E402
 from osiris.harness.reviewer import write_reviewer  # noqa: E402
 from osiris.harness.rules import switch_on_task_list, write_starting_rules  # noqa: E402
 from osiris.harness.status import Status, status_of  # noqa: E402
-from osiris.harness.style import ring_colours, token_colours  # noqa: E402
+from osiris.harness.style import token_colours  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.harness.trust import auto_mode_on, turn_auto_mode  # noqa: E402
 from osiris.harness.unread import Unread  # noqa: E402
@@ -286,7 +286,6 @@ class Drawer(Gtk.ApplicationWindow):
         bottom.append(self.footer)
         chat = self._chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         self.conversation_panel = ConversationPanel()
-        self._restyle_ring()
         self.conversation_panel.connect("map", lambda _p: self.app.update_panel())
         self.rail = Rail(on_jump=self.rail_jump)
         self.rail.set_halign(Gtk.Align.END)
@@ -619,16 +618,10 @@ class Drawer(Gtk.ApplicationWindow):
         if look is not None and look.theme is not None:
             self.picker.restyle(token_colours(look.theme))
 
-    def _restyle_ring(self) -> None:
-        look = self.app.look
-        if look is not None and look.theme is not None:
-            self.conversation_panel.restyle(ring_colours(look.theme))
-
     def refresh(self, restyle: bool = False) -> None:
         conversation, look = self.app.conversation, self.app.look
         if restyle:
             self._restyle_tokens()
-            self._restyle_ring()
         fresh = len(self.views)
         while len(self.views) < len(conversation.turns):
             view = TurnView(conversation.turns[len(self.views)],
