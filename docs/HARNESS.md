@@ -100,8 +100,8 @@ The first slice of ROADMAP P3.5:
   success colour, one waiting on the person in its warning colour. Hovering a
   tick shows the start of its question, and clicking it scrolls there. It
   shows once there are two questions, or one answer longer than the screen.
-- **It says what it is working with.** The Canvas toolbar's information
-  button opens the Conversation panel in a tab of its own: where the
+- **It says what it is working with.** A button beside New conversation
+  floats the Conversation's widgets as cards on its left: where the
   Conversation runs (its Project, the branch checked out there, the model),
   its connectors and how each is, its context and its changes. Context is a
   grid of a hundred small squares, each a slice of the model's context window
@@ -112,7 +112,7 @@ The first slice of ROADMAP P3.5:
   about four characters to a token, and what they do not account for is the
   Engine's own instructions; the panel says it is approximate. Each question
   that changed something is listed and opens its changes on the Canvas. The
-  panel is filled as it comes on screen and again as each answer ends.
+  cards are filled as they come on screen and again as each answer ends.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
