@@ -636,6 +636,25 @@ def test_tokens_in_the_message_box_follow_the_theme() -> None:
     assert token.foreground_rgba.to_string() == f"rgb({rgb})"
 
 
+def test_the_context_ring_follows_the_theme() -> None:
+    import main
+
+    from osiris.harness.context import Slice
+    from osiris.harness.style import ring_colours
+    from tests.test_style import DAWN, OBSIDIAN
+
+    app = FakeApp()
+    app.look.theme = OBSIDIAN
+    window = main.Drawer(app)
+    panel = window.conversation_panel
+    panel.show_context([Slice("questions", 10), Slice("free", 90)], 10, 100)
+    ring = panel.ring
+    assert ring.colour == ring_colours(OBSIDIAN).accent
+    app.look.theme = DAWN
+    window.refresh(restyle=True)
+    assert ring.colour == ring_colours(DAWN).accent
+
+
 def test_opening_the_picker_fetches_what_it_offers_afresh() -> None:
     from osiris.harness.picker import Entry
 

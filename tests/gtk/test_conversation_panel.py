@@ -71,6 +71,50 @@ def test_context_is_a_grid_of_squares_with_a_legend_marked_approximate() -> None
     assert any("pproximate" in text for text in words)
 
 
+def ring_of(shown):
+    from context_ring import ContextRing
+
+    from .conftest import widgets
+
+    card = shown.cards["Context"]
+    return next(w for w in widgets(card) if isinstance(w, ContextRing))
+
+
+def test_the_context_header_has_a_ring_of_how_full_the_window_is() -> None:
+    from osiris.harness.context import Slice
+
+    shown = panel()
+    shown.show_context([Slice("questions", 10_000), Slice("free", 90_000)], 10_000, 100_000)
+    ring = ring_of(shown)
+    assert ring.share == 0.1
+    assert not ring.is_ancestor(shown.cards["Context"].body)
+    shown.cards["Context"].toggle()
+    assert ring.get_visible() and ring.get_parent().get_visible()
+
+
+def test_the_ring_is_empty_with_nothing_asked() -> None:
+    from osiris.harness.context import Slice
+
+    shown = panel()
+    shown.show_context([Slice("questions", 10), Slice("free", 90)], 10, 100)
+    shown.show_no_context()
+    assert ring_of(shown).share == 0.0
+
+
+def test_the_ring_turns_to_the_danger_colour_as_the_window_fills() -> None:
+    from osiris.harness.context import Slice
+    from osiris.harness.style import RingColours
+
+    shown = panel()
+    shown.restyle(RingColours("#222222", "#0000ff", "#ff0000"))
+    shown.show_context([Slice("questions", 10), Slice("free", 90)], 10, 100)
+    assert ring_of(shown).colour == "#0000ff"
+    shown.show_context([Slice("questions", 97), Slice("free", 3)], 97, 100)
+    assert ring_of(shown).colour == "#ff0000"
+    shown.restyle(RingColours("#222222", "#00ff00", "#ffff00"))
+    assert ring_of(shown).colour == "#ffff00"
+
+
 def test_each_question_that_changed_something_opens_its_changes() -> None:
     from gi.repository import Gtk
 
