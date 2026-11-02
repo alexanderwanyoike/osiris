@@ -12,16 +12,16 @@ def panel():
     return ConversationPanel()
 
 
-def test_it_says_where_the_conversation_runs() -> None:
+def test_it_says_where_the_conversation_runs_and_nothing_else() -> None:
     shown = panel()
-    shown.show_where("timer", "main", "GPT-6.1 Terra")
-    words = texts(shown)
-    assert "timer" in words and "main" in words and "GPT-6.1 Terra" in words
+    shown.show_where("timer", "main")
+    rows = shown.cards["Where"].body
+    assert texts(rows) == ["timer", "main"]
 
 
 def test_a_folder_that_is_no_repository_shows_no_branch() -> None:
     shown = panel()
-    shown.show_where("Home", "", "GPT-6.1 Terra")
+    shown.show_where("Home", "")
     assert not shown.branch.get_visible()
 
 
@@ -111,7 +111,7 @@ def test_long_questions_do_not_widen_the_cards() -> None:
 
     shown = panel()
     shown.show_changes([(0, "a very long question that goes on " * 6, 1)], print)
-    shown.show_where("a-project-with-a-rather-long-name-indeed", "main", "model")
+    shown.show_where("a-project-with-a-rather-long-name-indeed", "main")
     _minimum, natural, _b, _c = shown.measure(Gtk.Orientation.HORIZONTAL, -1)
     assert natural <= CARD + shown.get_margin_start()
 
@@ -150,7 +150,7 @@ def test_each_pill_sums_up_its_card() -> None:
     from osiris.harness.context import Slice
 
     shown = panel()
-    shown.show_where("timer", "main", "GPT")
+    shown.show_where("timer", "main")
     shown.show_context([Slice("questions", 5000), Slice("free", 95_000)], 5000, 100_000)
     shown.show_changes([(0, "make it calm", 2), (2, "tidy", 1)], print)
     summaries = {name: card.summary.get_text() for name, card in shown.cards.items()}
