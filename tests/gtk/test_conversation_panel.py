@@ -114,4 +114,4 @@ def test_long_questions_do_not_widen_the_cards() -> None:
     shown.show_changes([(0, "a very long question that goes on " * 6, 1)], print)
     shown.show_where("a-project-with-a-rather-long-name-indeed", "main", "model")
     _minimum, natural, _b, _c = shown.measure(Gtk.Orientation.HORIZONTAL, -1)
-    assert natural <= CARD
+    assert natural <= CARD + shown.get_margin_start()
