@@ -502,3 +502,10 @@ def test_a_skill_with_a_name_that_could_lead_elsewhere_is_refused() -> None:
             log,
         )
     assert log.proposals_by_question("ses_1") == [[]]
+
+
+def test_every_tool_the_server_runs_is_logged_for_its_question() -> None:
+    log = new_log()
+    log.write("sent", session="ses_1", text="list my themes")
+    call(FakeThemeStore(), "list_themes", {}, log)
+    assert log.ran_by_question("ses_1") == [["osiris_list_themes"]]
