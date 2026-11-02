@@ -14,6 +14,8 @@ from gi.repository import Gtk, Pango  # noqa: E402
 from osiris.harness.connectors import State, said_of  # noqa: E402
 from osiris.harness.context import Slice, grid  # noqa: E402
 
+#: Each card's width: the widgets keep it, cutting what is longer.
+CARD = 260
 #: The context grid's squares, each a slice of the window, and per row.
 SQUARES = 100
 ACROSS = 20
@@ -44,8 +46,9 @@ def _fact(icon: str, text: str = "") -> Gtk.Box:
     line = Gtk.Box(spacing=8)
     line.add_css_class("harness-panel-fact")
     line.append(Gtk.Image(icon_name=icon))
-    words = Gtk.Label(label=text, xalign=0, hexpand=True,
-                      ellipsize=Pango.EllipsizeMode.MIDDLE)
+    # Cut to the card's width rather than widening it.
+    words = Gtk.Label(label=text, xalign=0, hexpand=True, max_width_chars=1,
+                      ellipsize=Pango.EllipsizeMode.END, tooltip_text=text)
     line.append(words)
     line.words = words
     return line
@@ -55,7 +58,7 @@ class ConversationPanel(Gtk.Box):
     def __init__(self):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=10,
                          halign=Gtk.Align.START, valign=Gtk.Align.START,
-                         margin_top=14, margin_start=14, width_request=260)
+                         margin_top=14, margin_start=14, width_request=CARD)
         self.add_css_class("harness-conversation-panel")
         where, rows = _section("Where")
         self.project = _fact("folder-symbolic")
@@ -81,7 +84,7 @@ class ConversationPanel(Gtk.Box):
         _clear(self._connectors)
         if not states:
             none = Gtk.Label(label="None yet. Add one in Settings, under Connectors.",
-                             xalign=0, wrap=True)
+                             xalign=0, wrap=True, max_width_chars=30)
             none.add_css_class("harness-meta")
             self._connectors.append(none)
         for name, state in sorted(states.items()):
@@ -117,7 +120,8 @@ class ConversationPanel(Gtk.Box):
         self._context.append(legend)
         note = Gtk.Label(label="Approximate: the Engine says how much is in use, "
                                "not by what, so each share is estimated from the "
-                               "messages it keeps.", xalign=0, wrap=True)
+                               "messages it keeps.", xalign=0, wrap=True,
+                         max_width_chars=30)
         note.add_css_class("harness-meta")
         self._context.append(note)
 
