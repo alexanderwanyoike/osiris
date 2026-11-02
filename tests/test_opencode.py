@@ -983,3 +983,20 @@ class TestSavedRules:
         http = FakeHttpClient(replies={("DELETE", path): None})
         engine(http).remove_saved_rule("rule_1")
         assert http.requests == [("DELETE", path, None)]
+
+
+class TestWaiting:
+    def test_requests_still_waiting_in_a_session_are_read_as_asked(self) -> None:
+        waiting = {
+            "id": "per_1",
+            "sessionID": SESSION,
+            "action": "bash",
+            "resources": ["ls /etc"],
+            "save": ["ls *"],
+            "source": {"type": "tool", "messageID": "msg_1", "id": "call_1"},
+        }
+        path = f"{URL}/api/session/{SESSION}/permission"
+        http = FakeHttpClient(replies={("GET", path): {"data": [waiting]}})
+        assert engine(http).waiting(SESSION) == [
+            ToolRequested(SESSION, "per_1", "bash", ("ls /etc",), "call_1", ("ls *",))
+        ]
