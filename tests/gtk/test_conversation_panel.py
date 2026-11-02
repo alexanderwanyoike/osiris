@@ -241,3 +241,27 @@ def test_a_folded_card_points_down_to_say_it_opens() -> None:
     assert chevron() == "pan-up-symbolic"
     card.toggle()
     assert chevron() == "pan-down-symbolic"
+
+
+def test_the_filled_ring_glows_beyond_its_line_and_the_track_does_not() -> None:
+    import cairo
+    from context_ring import SIZE, ContextRing
+
+    from osiris.harness.style import RingColours
+
+    ring = ContextRing()
+    ring.restyle(RingColours("#303030", "#3050c0", "#c03040"))
+    ring.show(50, 100)
+    width = ring.get_content_width()
+    assert width > SIZE + 2, "no room around the ring for its glow"
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, width)
+    ring._draw(ring, cairo.Context(surface), width, width)
+    data, stride = surface.get_data(), surface.get_stride()
+
+    def alpha(x: int, y: int) -> int:
+        return data[y * stride + x * 4 + 3]
+
+    middle = width // 2
+    beyond = middle + SIZE // 2 + 1
+    assert alpha(beyond, middle) > 0
+    assert alpha(width - 1 - beyond, middle) == 0
