@@ -79,6 +79,11 @@ class FakeApp(Adw.Application):
     def skill_origin(self, _path: str) -> str:
         return "Yours"
 
+    def proposal_card(self, _proposal: object) -> object:
+        from gi.repository import Gtk
+
+        return Gtk.Box()
+
     def update_panel(self) -> None:
         self.panel_updates += 1
 
