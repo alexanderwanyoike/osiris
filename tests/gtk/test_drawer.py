@@ -712,14 +712,40 @@ def test_a_conversation_that_fits_on_one_screen_has_no_rail() -> None:
     assert not window.rail.get_visible()
 
 
-def test_the_widgets_float_as_cards_on_the_conversations_left() -> None:
+def shown_widgets(width: int):
+    from tests.gtk.test_composer_picker import settle
+
     window, _ = drawer()
-    assert not window.conversation_panel.get_visible()
+    window.set_default_size(width, 800)
+    window.present()
+    settle()
     window.panel_toggle.set_active(True)
-    assert window.conversation_panel.get_visible()
-    assert window.conversation_panel.get_halign() == Gtk.Align.START
+    settle()
+    return window
+
+
+def test_with_room_beside_the_messages_the_widgets_float_there() -> None:
+    window = shown_widgets(1700)
     overlay = window.conversation_panel.get_ancestor(Gtk.Overlay)
     assert window.scroller.get_ancestor(Gtk.Overlay) is overlay
+    assert window.conversation_panel.get_visible()
+    assert window.transcript_clamp.get_margin_start() == 0
+
+
+def test_with_less_room_the_messages_move_over_for_the_widgets() -> None:
+    from osiris.harness.widgets_place import GAP
+
+    window = shown_widgets(1000)
+    card = window.conversation_panel.get_size_request()[0]
+    assert window.transcript_clamp.get_margin_start() == card + 2 * GAP
+    assert window.composer_clamp.get_margin_start() == card + 2 * GAP
+
+
+def test_with_no_room_the_widgets_drop_down_from_their_button() -> None:
+    window = shown_widgets(440)
+    dropdown = window.conversation_panel.get_ancestor(Gtk.Popover)
+    assert dropdown is not None and dropdown.get_visible()
+    assert window.transcript_clamp.get_margin_start() == 0
 
 
 def test_each_widget_is_a_card_of_its_own() -> None:
