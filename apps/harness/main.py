@@ -1226,6 +1226,9 @@ class Application(Adw.Application):
 
         def found(gathered) -> None:
             if self.session != session:
+                # Another Conversation came on screen meanwhile, such as one
+                # reopening: fill the panel for that one instead.
+                self.update_panel()
                 return
             checked_out, states, use, window = gathered
             panel.show_where(project, checked_out, label)
