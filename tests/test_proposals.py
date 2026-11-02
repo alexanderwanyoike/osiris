@@ -25,3 +25,14 @@ def test_it_is_kept_among_the_persons_own_skills() -> None:
     assert skill_path(home, TIDY) == (
         home / ".config/opencode/skills/tidy-imports/SKILL.md"
     )
+
+
+def test_only_a_plain_name_can_name_a_skill() -> None:
+    from osiris.harness.proposals import plain
+
+    assert plain("tidy-imports")
+    assert plain("review2")
+    assert not plain("../etc")
+    assert not plain("Tidy Imports")
+    assert not plain("")
+    assert not plain("-x")
