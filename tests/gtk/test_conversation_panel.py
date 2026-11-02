@@ -125,3 +125,35 @@ def test_with_nothing_asked_yet_context_says_so() -> None:
     words = texts(shown)
     assert "Nothing asked yet." in words
     assert "0 of 100 tokens" not in words
+
+
+def test_a_card_collapses_into_a_pill_that_sums_it_up_and_opens_again() -> None:
+    from osiris.harness.connectors import State
+
+    shown = panel()
+    shown.show_connectors(
+        {"wiki": State("connected"), "tracker": State("needs_auth", "", "x")}
+    )
+    card = shown.cards["Connectors"]
+    card.toggle()
+    assert card.has_css_class("pill")
+    assert not card.body.get_visible()
+    assert card.summary.get_visible()
+    assert card.summary.get_text() == "1 of 2 connected"
+    card.toggle()
+    assert not card.has_css_class("pill")
+    assert card.body.get_visible()
+    assert not card.summary.get_visible()
+
+
+def test_each_pill_sums_up_its_card() -> None:
+    from osiris.harness.context import Slice
+
+    shown = panel()
+    shown.show_where("timer", "main", "GPT")
+    shown.show_context([Slice("questions", 5000), Slice("free", 95_000)], 5000, 100_000)
+    shown.show_changes([(0, "make it calm", 2), (2, "tidy", 1)], print)
+    summaries = {name: card.summary.get_text() for name, card in shown.cards.items()}
+    assert summaries["Where"] == "timer"
+    assert summaries["Context"] == "5% used"
+    assert summaries["Changes"] == "2 questions"
