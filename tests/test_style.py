@@ -193,3 +193,21 @@ class TestTokens:
         from osiris.harness.style import token_colours
 
         assert token_colours(OBSIDIAN) == ("#7c8aeb", "#2e3048")
+
+
+class TestContextRing:
+    def test_the_ring_fills_in_the_accent_and_turns_to_danger(self) -> None:
+        from osiris.harness.style import ring_colours
+
+        colours = OBSIDIAN["colors"]
+        ring = ring_colours(OBSIDIAN)
+        assert ring.at(0.0) == colours["accent"].lower()
+        assert ring.at(1.0) == colours["danger"].lower()
+        assert ring.at(0.5) not in (ring.at(0.0), ring.at(1.0))
+
+    def test_the_rings_track_is_a_faint_line_on_the_card(self) -> None:
+        from osiris.harness.style import ring_colours
+
+        colours = OBSIDIAN["colors"]
+        track = ring_colours(OBSIDIAN).track
+        assert track not in (colours["surfaceMuted"].lower(), colours["foreground"])
