@@ -272,7 +272,6 @@ class Drawer(Gtk.ApplicationWindow):
         composer.append(controls)
         self.picker = Picker(self.entry, self.app.offered, anchor=composer,
                              on_open=lambda _sign: self.app.refresh_offers())
-        self._restyle_tokens()
 
         self.footer = Gtk.Label(xalign=0, wrap=True)
         self.footer.add_css_class("harness-meta")
@@ -286,7 +285,7 @@ class Drawer(Gtk.ApplicationWindow):
         bottom.append(self.footer)
         chat = self._chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         self.conversation_panel = ConversationPanel()
-        self._restyle_ring()
+        self._restyle_colours()
         self.conversation_panel.connect("map", lambda _p: self.app.update_panel())
         self.rail = Rail(on_jump=self.rail_jump)
         self.rail.set_halign(Gtk.Align.END)
@@ -614,21 +613,18 @@ class Drawer(Gtk.ApplicationWindow):
             self.turns.remove(view)
         self.views = []
 
-    def _restyle_tokens(self) -> None:
+    def _restyle_colours(self) -> None:
+        """What the Skin's stylesheet cannot colour: the picker's tokens and
+        the context ring, drawn from the Theme's colours directly."""
         look = self.app.look
         if look is not None and look.theme is not None:
             self.picker.restyle(token_colours(look.theme))
-
-    def _restyle_ring(self) -> None:
-        look = self.app.look
-        if look is not None and look.theme is not None:
             self.conversation_panel.restyle(ring_colours(look.theme))
 
     def refresh(self, restyle: bool = False) -> None:
         conversation, look = self.app.conversation, self.app.look
         if restyle:
-            self._restyle_tokens()
-            self._restyle_ring()
+            self._restyle_colours()
         fresh = len(self.views)
         while len(self.views) < len(conversation.turns):
             view = TurnView(conversation.turns[len(self.views)],
