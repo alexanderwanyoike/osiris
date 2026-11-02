@@ -608,3 +608,14 @@ def test_a_turn_knows_the_program_commits_its_question_made() -> None:
         ],
     )
     assert turn.commits == [("coin-flip", "abc")]
+
+
+def test_a_past_conversation_comes_back_with_the_skills_its_answers_proposed() -> None:
+    from osiris.harness.proposals import Proposal
+
+    tidy = Proposal("tidy-imports", "Sort imports", "Run ruff.")
+    talk = Conversation.restored(
+        [PastTurn("tidy my imports", "Done.", GPT), PastTurn("thanks", "", GPT)],
+        proposals=[[tidy], []],
+    )
+    assert [t.proposals for t in talk.turns] == [[tidy], []]
