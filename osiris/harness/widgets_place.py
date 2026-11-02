@@ -17,11 +17,14 @@ GAP = 14
 NARROWEST = 420
 
 
-def place(width: float, readable: float, expanded: bool) -> tuple[str, int]:
+def place(
+    width: float, readable: float, expanded: bool, least: int = 0
+) -> tuple[str, int]:
     """Where the cards go in a Conversation ``width`` wide, whose messages are
     at most ``readable`` wide and centred ("float", "beside" or "hidden"),
-    and how wide each card is."""
-    card = min(max(round(width * SHARE), LEAST), MOST)
+    and how wide each card is: never narrower than ``least``, the narrowest
+    the cards can draw what they hold."""
+    card = max(min(max(round(width * SHARE), LEAST), MOST), least)
     room = card + 2 * GAP
     if not expanded:
         return "hidden", card
