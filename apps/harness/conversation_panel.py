@@ -67,7 +67,7 @@ class Card(Gtk.Box):
             self.remove_css_class("pill")
         self.body.set_visible(not pill)
         self.summary.set_visible(pill)
-        self._chevron.set_visible(not pill)
+        self._chevron.set_from_icon_name("pan-down-symbolic" if pill else "pan-up-symbolic")
 
 
 def _fact(icon: str, text: str = "") -> Gtk.Box:
