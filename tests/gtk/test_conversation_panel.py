@@ -43,12 +43,16 @@ def test_with_no_connectors_it_says_where_to_add_one() -> None:
     assert any("Settings, under MCP" in text for text in texts(shown))
 
 
-def test_context_is_a_grid_of_squares_with_a_legend_marked_approximate() -> None:
-    from conversation_panel import SQUARES
-
-    from osiris.harness.context import Slice
+def ring_of(shown):
+    from context_ring import ContextRing
 
     from .conftest import widgets
+
+    return next(w for w in widgets(shown) if isinstance(w, ContextRing))
+
+
+def test_context_is_a_ring_of_how_full_with_a_legend_marked_approximate() -> None:
+    from osiris.harness.context import Slice
 
     shown = panel()
     shown.show_context(
@@ -62,13 +66,26 @@ def test_context_is_a_grid_of_squares_with_a_legend_marked_approximate() -> None
         used=10_000,
         window=100_000,
     )
-    squares = [w for w in widgets(shown) if w.has_css_class("harness-context-square")]
-    assert len(squares) == SQUARES
-    assert sum(s.has_css_class("instructions") for s in squares) == SQUARES * 6 // 100
+    assert ring_of(shown).share == 0.1
     words = texts(shown)
+    assert "10%" in words
     assert "10,000 of 100,000 tokens" in words
     assert "Instructions" in words and "6%" in words
     assert any("pproximate" in text for text in words)
+
+
+def test_the_ring_turns_to_the_danger_colour_as_the_window_fills() -> None:
+    from osiris.harness.context import Slice
+    from osiris.harness.style import RingColours
+
+    shown = panel()
+    shown.restyle(RingColours("#222222", "#0000ff", "#ff0000"))
+    shown.show_context([Slice("questions", 10), Slice("free", 90)], 10, 100)
+    assert ring_of(shown).colour == "#0000ff"
+    shown.show_context([Slice("questions", 97), Slice("free", 3)], 97, 100)
+    assert ring_of(shown).colour == "#ff0000"
+    shown.restyle(RingColours("#222222", "#00ff00", "#ffff00"))
+    assert ring_of(shown).colour == "#ffff00"
 
 
 def test_each_question_that_changed_something_opens_its_changes() -> None:
