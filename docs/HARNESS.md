@@ -120,6 +120,18 @@ The first slice of ROADMAP P3.5:
   own instructions; the card says it is approximate. Each question that
   changed something is listed and opens its changes on the Canvas. The cards
   are filled as they come on screen and again as each answer ends.
+- **It has skills.** Settings has a Skills tab: each skill the Engine can
+  load where the Conversation runs (`GET /api/skill`), with where it came
+  from (with the Engine, yours, or this Project), what it is for, and the
+  whole of it to read. Each can be on, asked about first or off, kept as a
+  `skill` permission rule of its own in the Engine's config, after the rules
+  it overrides since the last match wins; one turned off is not offered under
+  `/`. After a long or hard task Osiris may propose a skill with its
+  `propose_skill` tool, which writes nothing: the proposal is logged, and a
+  card under the answer shows it in full with Keep it and No thanks. Only
+  Keep it writes it, as `~/.config/opencode/skills/<name>/SKILL.md`; a name
+  that is not plain lower-case words joined by hyphens is refused, so it
+  cannot name a folder elsewhere. The decision is logged and the card says it.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
