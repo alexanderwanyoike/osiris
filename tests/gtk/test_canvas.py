@@ -546,4 +546,3 @@ def test_an_empty_canvas_sits_in_a_panels_frame() -> None:
     widget = Canvas(read=lambda _p: "", open_in_code=lambda _f, _p: None)
     start = widget._tiles.get_first_child()
     assert "harness-canvas-group" in start.get_css_classes()
-
