@@ -57,3 +57,14 @@ def test_once_decided_it_says_which_and_offers_no_choice() -> None:
     assert not any(isinstance(w, Gtk.Button) for w in widgets(shown))
     shown, _, _ = card(decided=False)
     assert "Not kept" in texts(shown)
+
+
+def test_the_skills_text_never_takes_the_keyboard_and_so_is_never_all_selected() -> (
+    None
+):
+    """When the buttons go, focus would fall to the first label that takes it,
+    and a selectable label selects all it says as it does."""
+    shown, _, _ = card(decided=True)
+    body = next(w for w in widgets(shown) if w.has_css_class("harness-proposal-body"))
+    assert body.get_selectable()
+    assert not body.get_focusable()
