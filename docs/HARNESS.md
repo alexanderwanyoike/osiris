@@ -132,13 +132,23 @@ The first slice of ROADMAP P3.5:
   Keep it writes it, as `~/.config/opencode/skills/<name>/SKILL.md`; a name
   that is not plain lower-case words joined by hyphens is refused, so it
   cannot name a folder elsewhere. The decision is logged and the card says it.
+- **What was allowed for good can be taken back.** Settings has an Allowed
+  tab: each rule "Always allow here" saved in the Engine
+  (`GET /api/permission/saved`), with what it allows and its Project (from
+  `GET /api/project`); taking one back (`DELETE /api/permission/saved/{id}`)
+  makes the Engine ask about it again, and is logged (`rule-removed`).
+- **A card outlives a restart.** When a Conversation opens, the requests its
+  session still waits on (`GET /api/session/{id}/permission`) are read as
+  they were asked and their cards come back, so a restart of the drawer no
+  longer leaves an answer hanging.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
   question. Every step it took, allowed or refused, is kept under the answer,
   whether the person allowed it, auto mode did, or the Engine's rules ran it
   without asking (named by the tool's `session.tool.input.started`; an Osiris
-  tool run from opencode's tool catalogue is read from the catalogue's code),
+  tool run from opencode's tool catalogue is the one the tool server logs as
+  it runs it, `ran`, however the model's code reached it),
   folded away as "Used 4 tools", each in the past tense ("Edited
   pomodoro/main.py") or as "Not allowed to run ls /etc". Each step opens to
   what it asked for and what came back, drawn for its kind
