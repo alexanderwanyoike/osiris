@@ -88,6 +88,7 @@ from osiris.harness.rail import ticks  # noqa: E402
 from osiris.harness.context import slices  # noqa: E402
 from osiris.harness.titles import title_of  # noqa: E402
 from osiris.harness.where import branch, project_name  # noqa: E402
+from osiris.harness.widgets_place import GAP, place  # noqa: E402
 from osiris.harness.picker import Entry, Reference, Skills, project_files  # noqa: E402
 from osiris.harness.engine import (  # noqa: E402
     Failed,
@@ -154,6 +155,24 @@ class AdminPending:
     caller: int
 
 
+class _Sized(Gtk.Box):
+    """A box that says when its width changes, for what lays out by it."""
+
+    __gtype_name__ = "HarnessSizedBox"
+
+    def __init__(self, on_width, **props):
+        super().__init__(**props)
+        self._on_width = on_width
+        self._width = 0
+
+    def do_size_allocate(self, width, height, baseline):
+        Gtk.Box.do_size_allocate(self, width, height, baseline)
+        if width != self._width:
+            self._width = width
+            # Laid out after this pass: changing sizes during one is refused.
+            GLib.idle_add(lambda: self._on_width(width) or False)
+
+
 class Drawer(Gtk.ApplicationWindow):
     def __init__(self, app: "Application"):
         super().__init__(application=app, title="Osiris", decorated=False)
@@ -204,8 +223,9 @@ class Drawer(Gtk.ApplicationWindow):
                              margin_top=12, margin_bottom=12)
         self.views: list[TurnView] = []
         # Expanded to the whole screen, lines stay a readable length.
+        self.transcript_clamp = Adw.Clamp(maximum_size=READABLE, child=self.turns)
         self.scroller = Gtk.ScrolledWindow(
-            child=Adw.Clamp(maximum_size=READABLE, child=self.turns), vexpand=True,
+            child=self.transcript_clamp, vexpand=True,
             hscrollbar_policy=Gtk.PolicyType.NEVER)
 
         self.entry = Gtk.TextView(wrap_mode=Gtk.WrapMode.WORD_CHAR, accepts_tab=False,
@@ -268,7 +288,8 @@ class Drawer(Gtk.ApplicationWindow):
         bottom.append(self.waiting)
         bottom.append(composer)
         bottom.append(self.footer)
-        chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
+        chat = self._chat = _Sized(on_width=lambda _w: self._place_widgets(),
+                                   orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         self.conversation_panel = ConversationPanel()
         self.conversation_panel.connect("map", lambda _p: self.app.update_panel())
         self.rail = Rail(on_jump=self.rail_jump)
@@ -277,19 +298,25 @@ class Drawer(Gtk.ApplicationWindow):
         self.rail.set_margin_bottom(12)
         # Clear of the scrollbar, which shows at the very edge while scrolling.
         self.rail.set_margin_end(10)
-        railed = Gtk.Overlay(child=self.scroller, vexpand=True)
+        railed = self._railed = Gtk.Overlay(child=self.scroller, vexpand=True)
         railed.add_overlay(self.rail)
-        # The Conversation's widgets float as cards on its left, over the room
-        # the messages leave there.
+        # The Conversation's widgets go where there is room for them, never
+        # over the messages: placed by _place_widgets as its width changes.
         self.conversation_panel.set_visible(False)
         railed.add_overlay(self.conversation_panel)
-        self.panel_toggle.bind_property("active", self.conversation_panel, "visible",
-                                        GObject.BindingFlags.SYNC_CREATE)
+        self._widgets_dropdown = Gtk.Popover(position=Gtk.PositionType.BOTTOM,
+                                             has_arrow=False)
+        self._widgets_dropdown.add_css_class("harness-widgets-dropdown")
+        self._widgets_dropdown.set_parent(self.panel_toggle)
+        self._widgets_dropdown.connect(
+            "closed", lambda _p: self.panel_toggle.set_active(False))
+        self.panel_toggle.connect("toggled", lambda _b: self._place_widgets())
         chat.append(railed)
         rail_view = self.scroller.get_vadjustment()
         rail_view.connect("value-changed", lambda _a: self._update_rail())
         rail_view.connect("changed", lambda _a: self._update_rail())
-        chat.append(Adw.Clamp(maximum_size=READABLE, child=bottom))
+        self.composer_clamp = Adw.Clamp(maximum_size=READABLE, child=bottom)
+        chat.append(self.composer_clamp)
         self.canvas = Canvas(read=lambda path: path.read_text(errors="replace"),
                              open_in_code=open_in_code,
                              on_changes=lambda: self.app.show_all_changes(),
@@ -621,6 +648,31 @@ class Drawer(Gtk.ApplicationWindow):
         self._show_waiting(conversation.waiting)
         self._follow()
         self._update_rail()
+
+    def _place_widgets(self) -> None:
+        """Float the widgets in the margin the messages leave, move the
+        messages over for them, or drop them down from their button."""
+        panel, dropdown = self.conversation_panel, self._widgets_dropdown
+        where, card = place(self._chat.get_width(), READABLE)
+        panel.set_size_request(card, -1)
+        shown = self.panel_toggle.get_active()
+        aside = card + 2 * GAP if shown and where == "beside" else 0
+        self.transcript_clamp.set_margin_start(aside)
+        self.composer_clamp.set_margin_start(aside)
+        in_dropdown = panel.get_parent() is dropdown
+        if shown and where == "dropdown":
+            if not in_dropdown:
+                self._railed.remove_overlay(panel)
+                dropdown.set_child(panel)
+            panel.set_visible(True)
+            dropdown.popup()
+            return
+        if in_dropdown:
+            dropdown.set_child(None)
+            self._railed.add_overlay(panel)
+        if dropdown.get_visible():
+            dropdown.popdown()
+        panel.set_visible(shown)
 
     def _tops(self) -> list[float]:
         """Where each question starts in the scrolled Conversation."""
