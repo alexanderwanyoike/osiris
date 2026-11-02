@@ -35,8 +35,7 @@ class Canvas(Gtk.Box):
                  on_changes: Callable[[], None] = lambda: None,
                  terminal: Callable[[Path], Gtk.Widget] | None = None,
                  page: Callable[[str, Callable[[str], None]], Gtk.Widget] | None = None,
-                 home: Path | None = None,
-                 conversation: Gtk.Widget | None = None):
+                 home: Path | None = None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.add_css_class("harness-canvas")
         self._read = read
@@ -54,7 +53,6 @@ class Canvas(Gtk.Box):
         self._terminal = terminal
         self._home = home
         self._page = page
-        self._conversation = conversation
         #: Pages opened so far, which keys each one's tab.
         self._pages_opened = 0
         #: Terminals opened so far, which names each one's tab.
@@ -85,12 +83,6 @@ class Canvas(Gtk.Box):
         globe.add_css_class("flat")
         globe.connect("clicked", lambda _b: self.show_browser())
         self.toolbar.append(globe)
-        about = Gtk.Button(icon_name="dialog-information-symbolic",
-                           tooltip_text="This Conversation",
-                           visible=conversation is not None)
-        about.add_css_class("flat")
-        about.connect("clicked", lambda _b: self.show_conversation())
-        self.toolbar.append(about)
         self._tiles = Gtk.Box(vexpand=True, hexpand=True)
         self._paneds: list[Gtk.Paned] = []
         self._start = self._start_page()
@@ -155,18 +147,6 @@ class Canvas(Gtk.Box):
             self._focus = Kind.BROWSER
             return
         self.open_page("")
-
-    def show_conversation(self) -> None:
-        """Where the Conversation runs, its connectors, context and changes,
-        in a tab of its own; brought forward if open."""
-        if self._conversation is None:
-            return
-        tab = Tab(Kind.CONVERSATION, "conversation", "Conversation")
-        if tab not in self._pages:
-            self._add(tab, Gtk.ScrolledWindow(child=self._conversation,
-                                              hscrollbar_policy=Gtk.PolicyType.NEVER),
-                      None)
-        self._opened(tab)
 
     def open_page(self, at: str) -> None:
         """A page in a tab of its own, named by its title once it has one."""
@@ -551,7 +531,6 @@ _TAB_ICONS = {
     Kind.CHANGES: "osiris-changes-symbolic",
     Kind.TERMINAL: "utilities-terminal-symbolic",
     Kind.BROWSER: "web-browser-symbolic",
-    Kind.CONVERSATION: "dialog-information-symbolic",
 }
 
 #: The group headers that open another tab of their kind: icon and tooltip.

@@ -185,6 +185,10 @@ class Drawer(Gtk.ApplicationWindow):
         header.add_css_class("harness-header")
         header.append(self.sidebar_toggle)
         header.append(new)
+        self.panel_toggle = Gtk.ToggleButton(icon_name="view-grid-symbolic",
+                                             tooltip_text="This Conversation")
+        self.panel_toggle.add_css_class("flat")
+        header.append(self.panel_toggle)
         header.append(self.title)
         self.canvas_toggle = Gtk.ToggleButton(icon_name="sidebar-show-right-symbolic",
                                               tooltip_text="Canvas", sensitive=False)
@@ -286,7 +290,6 @@ class Drawer(Gtk.ApplicationWindow):
                              terminal=lambda folder: Terminal(folder, self.app.look.theme),
                              page=lambda at, on_title: Page(at, on_title),
                              home=getattr(app, "home", None),
-                             conversation=self.conversation_panel,
                              scheme=app.look.scheme if app.look is not None else None)
         self.canvas.set_visible(False)
         # The Canvas's toolbar sits at the top bar's right, shown with the
@@ -298,7 +301,17 @@ class Drawer(Gtk.ApplicationWindow):
         while button is not None:
             button.connect("clicked", lambda _b: self._open_canvas())
             button = button.get_next_sibling()
-        body = Gtk.Paned(start_child=chat, end_child=self.canvas,
+        # The Conversation's widgets dock on its left, beside the messages.
+        self.panel_split = Adw.OverlaySplitView(
+            sidebar=Gtk.ScrolledWindow(child=self.conversation_panel,
+                                       hscrollbar_policy=Gtk.PolicyType.NEVER),
+            content=chat, sidebar_position=Gtk.PackType.START, collapsed=False,
+            show_sidebar=False, min_sidebar_width=250, max_sidebar_width=300)
+        self.panel_split.add_css_class("harness-widgets")
+        self.panel_toggle.bind_property(
+            "active", self.panel_split, "show-sidebar",
+            GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
+        body = Gtk.Paned(start_child=self.panel_split, end_child=self.canvas,
                          shrink_start_child=False, resize_end_child=True,
                          wide_handle=False, position=480)
         self.pages = Gtk.Stack(vexpand=True,
