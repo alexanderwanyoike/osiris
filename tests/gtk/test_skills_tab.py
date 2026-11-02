@@ -90,3 +90,11 @@ def test_a_choice_that_could_not_be_kept_says_why_and_goes_back() -> None:
     review.set_selected(CHOICES.index("off"))
     assert CHOICES[review.get_selected()] == "on"
     assert any("comments" in w for w in texts(shown))
+
+
+def test_a_long_description_keeps_to_two_lines() -> None:
+    from gi.repository import Adw
+
+    shown, _ = tab()
+    rows = [w for w in widgets(shown) if isinstance(w, Adw.ExpanderRow)]
+    assert {row.get_subtitle_lines() for row in rows} == {2}
