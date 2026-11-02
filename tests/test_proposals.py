@@ -13,7 +13,7 @@ def test_a_kept_proposal_is_a_skill_file_the_engine_reads() -> None:
     assert skill_file(TIDY) == (
         "---\n"
         "name: tidy-imports\n"
-        "description: Sort and group Python imports\n"
+        'description: "Sort and group Python imports"\n'
         "---\n"
         "\n"
         "Run ruff.\n"
