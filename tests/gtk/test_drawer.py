@@ -6,7 +6,7 @@ from __future__ import annotations
 import gi
 
 gi.require_version("Adw", "1")
-from gi.repository import Adw  # noqa: E402
+from gi.repository import Adw, Gtk  # noqa: E402
 
 from osiris.harness.conversation import Conversation  # noqa: E402
 from osiris.harness.settings import Models  # noqa: E402
@@ -711,3 +711,35 @@ def test_a_conversation_that_fits_on_one_screen_has_no_rail() -> None:
     window.refresh()
     assert not window.rail.get_visible()
 
+
+def test_the_conversation_panel_docks_on_the_left_of_the_conversation() -> None:
+    from gi.repository import Adw
+
+    window, _ = drawer()
+    window.panel_toggle.set_active(True)
+    assert window.panel_split.get_show_sidebar()
+    assert window.panel_split.get_sidebar_position() == Gtk.PackType.START
+    assert window.conversation_panel.get_ancestor(Adw.OverlaySplitView) is (
+        window.panel_split
+    )
+    assert window.scroller.get_ancestor(Adw.OverlaySplitView) is window.panel_split
+
+
+def test_the_widgets_sit_beside_the_conversation_never_over_it() -> None:
+    window, _ = drawer()
+    window.panel_toggle.set_active(True)
+    assert not window.panel_split.get_collapsed()
+    window.app.expand = lambda _expanded: None
+    window.expand_button.emit("clicked")
+    assert not window.panel_split.get_collapsed()
+
+
+def test_the_conversation_panel_is_filled_as_it_comes_on_screen() -> None:
+    from tests.gtk.test_composer_picker import settle
+
+    window, _ = drawer()
+    window.set_default_size(900, 700)
+    window.present()
+    window.panel_toggle.set_active(True)
+    settle()
+    assert window.app.panel_updates >= 1
