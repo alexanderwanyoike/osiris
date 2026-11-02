@@ -236,7 +236,7 @@ class OpencodeEngine:
         for message in reply["data"]:
             for kind, text in _sized(message):
                 characters[kind] += len(text)
-            if message["type"] == "assistant":
+            if message["type"] == "assistant" and "tokens" in message:
                 used = _in_use(message["tokens"])
         return ContextUse(
             {kind: count // CHARACTERS for kind, count in characters.items()}, used
