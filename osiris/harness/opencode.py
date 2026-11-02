@@ -319,6 +319,15 @@ class OpencodeEngine:
             headers=self._service.headers(),
         )
 
+    def waiting(self, session: str) -> list[ToolRequested]:
+        """What the session still waits to be allowed, as it was asked."""
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/session/{session}/permission",
+            headers=self._service.headers(),
+        )
+        return [_requested(session, request) for request in reply["data"]]
+
     def skills(self, directory: Path) -> list[Entry]:
         reply: Any = self._http.request(
             "GET",
@@ -544,6 +553,17 @@ def _tool(
             tuple(data.get("save") or ()),
         )
     return _finished(session, data)
+
+
+def _requested(session: str, data: dict[str, Any]) -> ToolRequested:
+    return ToolRequested(
+        session,
+        data["id"],
+        data["action"],
+        tuple(data["resources"]),
+        (data.get("source") or {}).get("id", ""),
+        tuple(data.get("save") or ()),
+    )
 
 
 class _Reader:
