@@ -11,8 +11,11 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Pango  # noqa: E402
 
+from context_ring import ContextRing  # noqa: E402
+
 from osiris.harness.connectors import State, said_of  # noqa: E402
 from osiris.harness.context import Slice, grid  # noqa: E402
+from osiris.harness.style import RingColours  # noqa: E402
 
 #: Each card's width: the widgets keep it, cutting what is longer.
 CARD = 260
@@ -30,15 +33,15 @@ NAMES = {
 
 
 class Card(Gtk.Box):
-    """A titled widget that collapses into a pill summing it up."""
+    """A titled widget that folds to its header, which sums it up."""
 
-    def __init__(self, title: str, icon: str):
+    def __init__(self, title: str, lead: Gtk.Widget):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("card")
         self.add_css_class("harness-panel-section")
         header = Gtk.Box(spacing=8)
         header.add_css_class("harness-panel-header")
-        header.append(Gtk.Image(icon_name=icon))
+        header.append(lead)
         heading = Gtk.Label(label=title, xalign=0)
         heading.add_css_class("harness-panel-heading")
         header.append(heading)
@@ -60,16 +63,14 @@ class Card(Gtk.Box):
         self.append(self.body)
 
     def toggle(self) -> None:
-        pill = not self.has_css_class("pill")
-        if pill:
-            self.add_css_class("pill")
+        folded = not self.has_css_class("folded")
+        if folded:
+            self.add_css_class("folded")
         else:
-            self.remove_css_class("pill")
-        self.body.set_visible(not pill)
-        self.summary.set_visible(pill)
-        self._chevron.set_visible(not pill)
-        # A pill is as wide as what it says, not the card it folds.
-        self.set_halign(Gtk.Align.START if pill else Gtk.Align.FILL)
+            self.remove_css_class("folded")
+        self.body.set_visible(not folded)
+        self.summary.set_visible(folded)
+        self._chevron.set_from_icon_name("pan-down-symbolic" if folded else "pan-up-symbolic")
 
 
 def _fact(icon: str, text: str = "") -> Gtk.Box:
@@ -91,16 +92,16 @@ class ConversationPanel(Gtk.Box):
                          margin_top=14, margin_start=14, width_request=CARD)
         self.add_css_class("harness-conversation-panel")
         self.cards: dict[str, Card] = {}
-        rows = self._card("Where", "folder-open-symbolic")
+        rows = self._card("Where", _icon("folder-open-symbolic"))
         self.project = _fact("folder-symbolic")
         self.branch = _fact("osiris-branch-symbolic")
-        self.model = _fact("starred-symbolic")
-        for fact in (self.project, self.branch, self.model):
-            rows.append(fact)
-        self._connectors = self._card("Connectors", "network-server-symbolic")
-        self._context = self._card("Context", "view-grid-symbolic")
+        rows.append(self.project)
+        rows.append(self.branch)
+        self._connectors = self._card("MCP", _icon("network-server-symbolic"))
+        self.ring = ContextRing()
+        self._context = self._card("Context", self.ring)
         self.show_no_context()
-        self._changes = self._card("Changes", "osiris-changes-symbolic")
+        self._changes = self._card("Changes", _icon("osiris-changes-symbolic"))
 
     def least(self) -> int:
         """The narrowest the cards draw what they hold: their natural width,
@@ -109,26 +110,25 @@ class ConversationPanel(Gtk.Box):
         return max(card.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
                    for card in self.cards.values())
 
-    def _card(self, title: str, icon: str) -> Gtk.Box:
+    def _card(self, title: str, lead: Gtk.Widget) -> Gtk.Box:
         """A new card on the panel, and the box its rows go in."""
-        card = self.cards[title] = Card(title, icon)
+        card = self.cards[title] = Card(title, lead)
         self.append(card)
         return card.body
 
-    def show_where(self, project: str, branch: str, model: str) -> None:
+    def show_where(self, project: str, branch: str) -> None:
         self.project.words.set_text(project)
         self.branch.words.set_text(branch)
         self.branch.set_visible(bool(branch))
-        self.model.words.set_text(model)
         self.cards["Where"].summary.set_text(project)
 
     def show_connectors(self, states: dict[str, State]) -> None:
         _clear(self._connectors)
         working = sum(state.status == "connected" for state in states.values())
-        self.cards["Connectors"].summary.set_text(
+        self.cards["MCP"].summary.set_text(
             f"{working} of {len(states)} connected" if states else "None")
         if not states:
-            none = Gtk.Label(label="None yet. Add one in Settings, under Connectors.",
+            none = Gtk.Label(label="None yet. Add a server in Settings, under MCP.",
                              xalign=0, wrap=True, max_width_chars=30)
             none.add_css_class("harness-meta")
             self._connectors.append(none)
@@ -144,6 +144,7 @@ class ConversationPanel(Gtk.Box):
     def show_no_context(self) -> None:
         _clear(self._context)
         self.cards["Context"].summary.set_text("Nothing asked")
+        self.ring.show(0, 0)
         none = Gtk.Label(label="Nothing asked yet.", xalign=0)
         none.add_css_class("harness-meta")
         self._context.append(none)
@@ -151,6 +152,7 @@ class ConversationPanel(Gtk.Box):
     def show_context(self, shared: list[Slice], used: int, window: int) -> None:
         _clear(self._context)
         self.cards["Context"].summary.set_text(f"{_share(used, window)} used")
+        self.ring.show(used, window)
         total = Gtk.Label(label=f"{used:,} of {window:,} tokens", xalign=0)
         total.add_css_class("harness-context-total")
         self._context.append(total)
@@ -181,6 +183,9 @@ class ConversationPanel(Gtk.Box):
         note.add_css_class("harness-meta")
         self._context.append(note)
 
+    def restyle(self, colours: RingColours) -> None:
+        self.ring.restyle(colours)
+
     def show_changes(self, changed: list[tuple[int, str, int]],
                      on_open: Callable[[int], None]) -> None:
         """Each question that changed something, by its place in the
@@ -206,6 +211,10 @@ class ConversationPanel(Gtk.Box):
             rows.append(row)
         rows.connect("row-activated", lambda _l, row: on_open(row.index))
         self._changes.append(rows)
+
+
+def _icon(name: str) -> Gtk.Image:
+    return Gtk.Image(icon_name=name)
 
 
 def _clear(box: Gtk.Box) -> None:

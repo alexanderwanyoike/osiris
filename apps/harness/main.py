@@ -114,7 +114,7 @@ from osiris.harness.review import comment  # noqa: E402
 from osiris.harness.reviewer import write_reviewer  # noqa: E402
 from osiris.harness.rules import switch_on_task_list, write_starting_rules  # noqa: E402
 from osiris.harness.status import Status, status_of  # noqa: E402
-from osiris.harness.style import token_colours  # noqa: E402
+from osiris.harness.style import ring_colours, token_colours  # noqa: E402
 from osiris.harness.settings import Models, load_models, save_models  # noqa: E402
 from osiris.harness.trust import auto_mode_on, turn_auto_mode  # noqa: E402
 from osiris.harness.unread import Unread  # noqa: E402
@@ -272,7 +272,6 @@ class Drawer(Gtk.ApplicationWindow):
         composer.append(controls)
         self.picker = Picker(self.entry, self.app.offered, anchor=composer,
                              on_open=lambda _sign: self.app.refresh_offers())
-        self._restyle_tokens()
 
         self.footer = Gtk.Label(xalign=0, wrap=True)
         self.footer.add_css_class("harness-meta")
@@ -286,6 +285,7 @@ class Drawer(Gtk.ApplicationWindow):
         bottom.append(self.footer)
         chat = self._chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         self.conversation_panel = ConversationPanel()
+        self._restyle_colours()
         self.conversation_panel.connect("map", lambda _p: self.app.update_panel())
         self.rail = Rail(on_jump=self.rail_jump)
         self.rail.set_halign(Gtk.Align.END)
@@ -538,7 +538,7 @@ class Drawer(Gtk.ApplicationWindow):
         tabs = Adw.ViewStack(vhomogeneous=False)
         tabs.add_titled_with_icon(page, "providers", "Models",
                                   "preferences-system-symbolic")
-        tabs.add_titled_with_icon(connectors, "connectors", "Connectors",
+        tabs.add_titled_with_icon(connectors, "connectors", "MCP",
                                   "network-server-symbolic")
         skills = SkillsTab(read=self.app.read_skills, choice=self.app.skill_choice,
                            choose=self.app.choose_skill, origin=self.app.skill_origin,
@@ -613,15 +613,18 @@ class Drawer(Gtk.ApplicationWindow):
             self.turns.remove(view)
         self.views = []
 
-    def _restyle_tokens(self) -> None:
+    def _restyle_colours(self) -> None:
+        """What the Skin's stylesheet cannot colour: the picker's tokens and
+        the context ring, drawn from the Theme's colours directly."""
         look = self.app.look
         if look is not None and look.theme is not None:
             self.picker.restyle(token_colours(look.theme))
+            self.conversation_panel.restyle(ring_colours(look.theme))
 
     def refresh(self, restyle: bool = False) -> None:
         conversation, look = self.app.conversation, self.app.look
         if restyle:
-            self._restyle_tokens()
+            self._restyle_colours()
         fresh = len(self.views)
         while len(self.views) < len(conversation.turns):
             view = TurnView(conversation.turns[len(self.views)],
@@ -1302,10 +1305,9 @@ class Application(Adw.Application):
         panel, conversation = self.drawer.conversation_panel, self.conversation
         directory, session = self.harness.directory, self.session
         project = project_name(directory, self.home)
-        label = conversation.model_label(self.models.default)
         model = conversation.model or self.models.default
         turns = conversation.turns
-        panel.show_where(project, "", label)
+        panel.show_where(project, "")
         panel.show_changes(
             [(at, title_of(turn.question), len(turn.changes))
              for at, turn in enumerate(turns) if turn.changes],
@@ -1328,7 +1330,7 @@ class Application(Adw.Application):
                 self.update_panel()
                 return
             checked_out, states, use, window = gathered
-            panel.show_where(project, checked_out, label)
+            panel.show_where(project, checked_out)
             panel.show_connectors(states)
             if use is not None and window:
                 panel.show_context(slices(use.sizes, use.used, window), use.used, window)

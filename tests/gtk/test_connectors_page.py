@@ -290,3 +290,10 @@ def test_a_connector_cannot_take_the_name_osiris_uses_for_its_own_tools() -> Non
     shown.done.emit("clicked")
     assert store.saved == {}
     assert "own tools" in shown.problem.get_text()
+
+
+def test_the_page_speaks_of_mcp_servers() -> None:
+    shown = page(Store())
+    words = texts(shown)
+    assert "Add a server" in words
+    assert any(text.startswith("MCP servers give Osiris") for text in words)

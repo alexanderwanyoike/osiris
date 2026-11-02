@@ -52,8 +52,8 @@ class ConnectorsPage(Gtk.Box):
         self._said: dict[str, Gtk.Label] = {}
         self._rows: dict[str, Adw.ActionRow] = {}
         intro = Gtk.Label(
-            label="Connectors give Osiris other tools and data: an MCP server it "
-                  "starts with a command, or one it reaches at a web address. "
+            label="MCP servers give Osiris other tools and data: one it starts "
+                  "with a command, or one it reaches at a web address. "
                   "They are kept in your opencode config.",
             xalign=0, wrap=True)
         intro.add_css_class("harness-meta")
@@ -63,7 +63,7 @@ class ConnectorsPage(Gtk.Box):
         self.append(self.connectors)
         face = Gtk.Box(spacing=8)
         face.append(Gtk.Image(icon_name="list-add-symbolic"))
-        face.append(Gtk.Label(label="Add a connector"))
+        face.append(Gtk.Label(label="Add a server"))
         self.add = Gtk.Button(child=face, halign=Gtk.Align.START)
         self.add.add_css_class("flat")
         self.add.connect("clicked", lambda _b: self._open_form())
@@ -161,12 +161,12 @@ class ConnectorsPage(Gtk.Box):
         row.sign_in.connect("clicked", lambda _b: self._begin_sign_in(connector.name))
         row.add_suffix(row.sign_in)
         row.switch = Gtk.Switch(active=connector.on, valign=Gtk.Align.CENTER,
-                                tooltip_text="Use this connector")
+                                tooltip_text="Use this server")
         row.switch.connect("notify::active", lambda switch, _p: self._switched(
             connector, switch.get_active()))
         row.add_suffix(row.switch)
         row.trash = Gtk.Button(icon_name="user-trash-symbolic", valign=Gtk.Align.CENTER,
-                               tooltip_text="Remove this connector")
+                               tooltip_text="Remove this server")
         row.trash.add_css_class("flat")
         row.trash.connect("clicked", lambda _b: self._removed(connector.name))
         row.add_suffix(row.trash)
