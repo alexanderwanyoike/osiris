@@ -67,6 +67,18 @@ class FakeApp(Adw.Application):
     def connector_states(self) -> dict[str, object]:
         return {}
 
+    def read_skills(self) -> list[object]:
+        return []
+
+    def skill_choice(self, _skill: str) -> str:
+        return "on"
+
+    def choose_skill(self, _skill: str, _choice: str) -> bool:
+        return True
+
+    def skill_origin(self, _path: str) -> str:
+        return "Yours"
+
     def update_panel(self) -> None:
         self.panel_updates += 1
 
@@ -811,3 +823,23 @@ def test_the_messages_are_never_under_the_cards_however_wide_they_draw() -> None
     panel = window.conversation_panel
     right = panel.get_margin_start() + panel.get_width()
     assert window.transcript_clamp.get_margin_start() >= right + GAP
+
+
+def test_settings_hold_the_skills_beside_the_connectors() -> None:
+    from osiris.harness.skill_rules import SkillInfo
+    from tests.gtk.conftest import now, texts
+    from tests.gtk.test_providers_page import FakeAccounts
+
+    window, _ = drawer()
+    app = window.app
+    app.accounts = FakeAccounts()
+    app.background = now
+    app.open_page = lambda _url: None
+    app.choose_model = lambda _model: None
+    app.set_auto_mode = lambda _on: None
+    review = SkillInfo("review", "Review", "Review a change", "/x/SKILL.md", "")
+    app.read_skills = lambda: [review]
+    window.show_providers()
+    shown = texts(window)
+    assert "Skills" in shown
+    assert "Review" in shown
