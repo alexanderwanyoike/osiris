@@ -28,6 +28,7 @@ class ProposalCard(Gtk.Box):
         says = Gtk.Label(label=proposal.body, xalign=0, yalign=0, wrap=True,
                          selectable=True)
         says.add_css_class("harness-proposal-body")
+        says.set_focusable(False)
         read = Gtk.ScrolledWindow(child=says, max_content_height=TALLEST,
                                   propagate_natural_height=True,
                                   hscrollbar_policy=Gtk.PolicyType.NEVER)
