@@ -112,10 +112,20 @@ def changed() -> tuple[Canvas, list[tuple[str, tuple[int, int], str]]]:
 def test_a_questions_changes_open_in_a_tab_of_their_own() -> None:
     widget, _ = changed()
     page = widget.views[Kind.CHANGES].get_selected_page()
-    assert page.get_title() == "Changes: tidy main.py"
+    assert page.get_title() == "tidy main.py"
     shown = texts(page.get_child())
     assert "main.py" in shown and "notes.md" in shown
-    assert "+2 \u22121" in shown  # a minus sign, as the Canvas draws it
+    assert "+2" in shown and "\u22121" in shown  # a minus sign, as drawn
+
+
+def test_a_question_of_several_lines_names_its_tab_on_one_line() -> None:
+    widget, _ = canvas()
+    widget.show_changes(
+        "About README.md, line 3:\n\nSay rings loudly instead.",
+        (),
+        on_comment=lambda *_: None,
+    )
+    assert titles(widget, Kind.CHANGES) == ["About README.md, line 3:"]
 
 
 def test_the_first_file_opens_on_its_diff_in_the_themes_code_colours() -> None:
@@ -128,7 +138,7 @@ def test_the_first_file_opens_on_its_diff_in_the_themes_code_colours() -> None:
 def test_showing_the_programs_again_keeps_the_changes_tab() -> None:
     widget, _ = changed()
     widget.show([(program("pomodoro", "Pomodoro"), [Path("main.py")])])
-    assert titles(widget, Kind.CHANGES) == ["Changes: tidy main.py"]
+    assert titles(widget, Kind.CHANGES) == ["tidy main.py"]
 
 
 def test_a_comment_on_picked_lines_reaches_thoth_with_its_file_and_lines() -> None:
@@ -145,7 +155,7 @@ def test_a_comment_on_picked_lines_reaches_thoth_with_its_file_and_lines() -> No
     assert entry.get_text() == ""
 
 
-def test_files_sits_in_a_toolbar_at_the_top_right() -> None:
+def test_files_sits_in_the_canvas_toolbar() -> None:
     widget, _ = canvas()
     files = next(
         w
@@ -154,7 +164,6 @@ def test_files_sits_in_a_toolbar_at_the_top_right() -> None:
     )
     assert files.get_tooltip_text() == "Files"
     assert widget.toolbar.get_halign() is Gtk.Align.END
-    assert widget.get_first_child() is widget.toolbar
 
 
 def test_what_a_program_runs_opens_as_a_tab_in_the_code_group() -> None:
@@ -196,7 +205,6 @@ def test_with_every_group_closed_files_opens_the_code_group_again() -> None:
     for tab in list(widget.panels.groups[0].tabs):
         widget.close(tab)
     assert widget.panels.groups == []
-    assert widget.toolbar.get_parent() is widget
     files = next(
         w
         for w in widgets(widget.toolbar)
@@ -374,3 +382,177 @@ def test_a_pages_tab_is_named_by_its_title() -> None:
     made[0].on_title("GTK Documentation")
     assert made[0].at == "https://docs.gtk.org"
     assert titles(widget, Kind.BROWSER) == ["GTK Documentation"]
+
+
+def header_of(widget: Canvas, kind: Kind) -> Gtk.Widget:
+    group = widget._groups[kind]
+    return next(
+        w for w in widgets(group) if "harness-group-header" in w.get_css_classes()
+    )
+
+
+def header_tabs(widget: Canvas, kind: Kind) -> list[Gtk.Widget]:
+    return [
+        w
+        for w in widgets(header_of(widget, kind))
+        if "harness-group-tab" in w.get_css_classes()
+    ]
+
+
+def test_a_groups_header_names_each_tab_and_marks_the_one_selected() -> None:
+    widget, _ = canvas()
+    widget.tree.emit("row-activated", tree_row(widget, "README.md"))
+    tabs = header_tabs(widget, Kind.CODE)
+    assert [texts(tab)[0] for tab in tabs] == ["main.py", "README.md"]
+    assert ["selected" in t.get_css_classes() for t in tabs] == [False, True]
+
+
+def test_choosing_a_tab_in_the_header_shows_it() -> None:
+    widget, _ = canvas()
+    widget.tree.emit("row-activated", tree_row(widget, "README.md"))
+    first = header_tabs(widget, Kind.CODE)[0]
+    next(w for w in widgets(first) if isinstance(w, Gtk.Button)).emit("clicked")
+    assert code(widget) == "print('tick')\n"
+
+
+def test_a_groups_header_closes_the_whole_group() -> None:
+    widget, _ = changed()
+    close = next(
+        w
+        for w in widgets(header_of(widget, Kind.CHANGES))
+        if isinstance(w, Gtk.Button) and w.get_tooltip_text() == "Close"
+    )
+    close.emit("clicked")
+    assert [g.kind for g in widget.panels.groups] == [Kind.CODE]
+
+
+def test_the_terminal_groups_header_opens_another_terminal() -> None:
+    widget, made = with_terminals()
+    toolbar_button(widget, "utilities-terminal-symbolic").emit("clicked")
+    another = next(
+        w
+        for w in widgets(header_of(widget, Kind.TERMINAL))
+        if isinstance(w, Gtk.Button) and w.get_tooltip_text() == "New terminal"
+    )
+    another.emit("clicked")
+    assert len(made) == 2
+
+
+def test_a_changed_file_shows_its_name_its_folder_and_coloured_counts() -> None:
+    from osiris.harness.engine import FileChange
+
+    widget, _ = canvas()
+    widget.show_changes(
+        "tidy",
+        (FileChange("coin-flip/src/clock.py", "modified", 2, 1, PATCH),),
+        on_comment=lambda *_: None,
+    )
+    page = widget.views[Kind.CHANGES].get_selected_page().get_child()
+    labels = {w.get_text(): w for w in widgets(page) if isinstance(w, Gtk.Label)}
+    assert "clock.py" in labels
+    assert "harness-meta" in labels["coin-flip/src"].get_css_classes()
+    assert "harness-count-added" in labels["+2"].get_css_classes()
+    assert "harness-count-removed" in labels["\u22121"].get_css_classes()
+
+
+def test_a_panel_clips_its_contents_to_its_rounded_corners() -> None:
+    widget, _ = canvas()
+    group = next(
+        w for w in widgets(widget) if "harness-canvas-group" in w.get_css_classes()
+    )
+    assert group.get_overflow() is Gtk.Overflow.HIDDEN
+
+
+def test_stacked_panels_share_their_column_evenly() -> None:
+    import time
+
+    from gi.repository import GLib
+
+    made: list[Gtk.Widget] = []
+    widget = Canvas(
+        read=lambda path: SOURCES[path.name],
+        open_in_code=lambda _f, _p: None,
+        terminal=lambda folder: made.append(FakeTerminal(folder)) or made[-1],
+        page=lambda at, on_title: made.append(FakePage(at, on_title)) or made[-1],
+    )
+    widget.show([(program("pomodoro", "Pomodoro"), [Path("main.py")])])
+    widget.show_changes("tidy", (), on_comment=lambda *_: None)
+    widget.open_terminal()
+    widget.open_page("")
+    window = Gtk.Window(child=widget, default_width=1600, default_height=900)
+    window.present()
+    context = GLib.MainContext.default()
+    deadline = time.monotonic() + 3
+    while time.monotonic() < deadline:
+        context.iteration(False)
+    heights = [
+        widget._groups[kind].get_height()
+        for kind in (Kind.CHANGES, Kind.TERMINAL, Kind.BROWSER)
+    ]
+    window.destroy()
+    assert min(heights) > 0.8 * max(heights)
+
+
+def test_the_code_panels_frame_holds_its_file_tree_too() -> None:
+    widget, _ = canvas()
+    frame = widget._groups[Kind.CODE]
+    assert "harness-canvas-group" in frame.get_css_classes()
+    assert frame.get_overflow() is Gtk.Overflow.HIDDEN
+    assert widget.tree in list(widgets(frame))
+
+
+def tab_icon(tab: Gtk.Widget) -> Gtk.Image:
+    return next(w for w in widgets(tab) if isinstance(w, Gtk.Image))
+
+
+def test_each_tab_carries_an_icon_for_what_it_shows() -> None:
+    widget, _ = with_terminals()
+    widget.show_changes("tidy", (), on_comment=lambda *_: None)
+    widget.open_terminal()
+    (code,) = header_tabs(widget, Kind.CODE)
+    assert tab_icon(code).get_gicon() is not None
+    (changes,) = header_tabs(widget, Kind.CHANGES)
+    assert tab_icon(changes).get_icon_name() == "osiris-changes-symbolic"
+    (shell,) = header_tabs(widget, Kind.TERMINAL)
+    assert tab_icon(shell).get_icon_name() == "utilities-terminal-symbolic"
+
+
+def test_with_no_program_a_terminal_opens_in_the_home_folder() -> None:
+    made: list[FakeTerminal] = []
+    widget = Canvas(
+        read=lambda _p: "",
+        open_in_code=lambda _f, _p: None,
+        terminal=lambda folder: made.append(FakeTerminal(folder)) or made[-1],
+        home=Path("/home/tester"),
+    )
+    widget.open_terminal()
+    assert [t.folder for t in made] == [Path("/home/tester")]
+    assert titles(widget, Kind.TERMINAL) == ["tester"]
+
+
+def test_an_empty_canvas_shows_where_to_start() -> None:
+    made: list[Gtk.Widget] = []
+    widget = Canvas(
+        read=lambda _p: "",
+        open_in_code=lambda _f, _p: None,
+        terminal=lambda folder: made.append(FakeTerminal(folder)) or made[-1],
+        page=lambda at, on_title: made.append(FakePage(at, on_title)) or made[-1],
+        home=Path("/home/tester"),
+    )
+    start = widget._tiles.get_first_child()
+    assert "harness-canvas-start" in start.get_css_classes()
+    find(start, Gtk.Button, "Open a terminal").emit("clicked")
+    assert [g.kind for g in widget.panels.groups] == [Kind.TERMINAL]
+    assert (
+        "harness-canvas-start" not in widget._tiles.get_first_child().get_css_classes()
+    )
+    widget.close(widget.panels.groups[0].tabs[0])
+    find(widget._tiles.get_first_child(), Gtk.Button, "Open a page").emit("clicked")
+    assert [g.kind for g in widget.panels.groups] == [Kind.BROWSER]
+
+
+def test_an_empty_canvas_sits_in_a_panels_frame() -> None:
+    """In Studio, panels are cards; an empty Canvas is one too, not bare glass."""
+    widget = Canvas(read=lambda _p: "", open_in_code=lambda _f, _p: None)
+    start = widget._tiles.get_first_child()
+    assert "harness-canvas-group" in start.get_css_classes()

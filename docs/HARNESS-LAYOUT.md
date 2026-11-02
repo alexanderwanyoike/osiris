@@ -51,10 +51,20 @@ the groups share the Canvas side by side in the order they opened, the first
 on the left and the rest stacked beside it, with a line between any two to
 resize them. Closing a group's last tab gives its room to the others.
 
-**A toolbar at the top right.** Files (a folder) opens the code group on what
-the first Program runs, or brings its file tree forward; it stays when every
-group is closed, so the files are always one click away. The toolbar is the
-one place a kind of group is opened from.
+**A toolbar in the top bar.** Files (a folder), Changes (plus over minus),
+Terminal and Browser (a globe) sit at the top bar's right, shown whenever the
+Canvas can be, and any of them opens the Canvas. Files opens the code group on
+what the first Program runs, or brings its file tree forward; it stays when
+every group is closed, so the files are always one click away. The toolbar is
+the one place a kind of group is opened from.
+
+**Each panel looks the same (polish pass, 2026-11-01).** A compact header of
+small, left-aligned tabs whose close shows where the pointer is, and the
+panel's own actions at its right (new terminal or page, close the panel).
+Studio frames each panel, the code panel with its file tree, as a card with
+even gaps; Bubbles and Transcript set panels flush with a hairline between.
+Stacked panels share their column evenly when they open. One scale for tabs
+and rows (0.86em) and what is muted (0.8em), rows 28px.
 
 **Terminals in the Canvas (#196).** Terminal in the toolbar opens a terminal
 as a new tab of the terminal group, running the person's shell in the folder

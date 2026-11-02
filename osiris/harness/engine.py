@@ -13,6 +13,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
+from osiris.harness.picker import Reference
+
 
 class Reply(Enum):
     """How a ``ToolRequested`` is answered."""
@@ -180,9 +182,12 @@ class Engine(Protocol):
         model, or its own folder."""
         ...
 
-    def send(self, session: str, text: str) -> str:
-        """Send a message; while the session is busy it waits and steers the
-        model at its next step. Answers where it waits."""
+    def send(
+        self, session: str, text: str, references: tuple[Reference, ...] = ()
+    ) -> str:
+        """Send a message, with the files and skills picked in it; while the
+        session is busy it waits and steers the model at its next step.
+        Answers where it waits."""
         ...
 
     def withdraw(self, session: str, message: str) -> None:

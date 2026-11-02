@@ -21,6 +21,9 @@ class FakeAccounts:
     keys: list[tuple[str, str]] = field(default_factory=list)
     started: list[tuple[str, str]] = field(default_factory=list)
 
+    def connector_sign_in(self, integration: str) -> SignIn:
+        return SignIn(integration, "att_1", "https://example.com/sign-in", "", False)
+
     def providers(self) -> list[Provider]:
         return self.listed
 
