@@ -114,3 +114,14 @@ def test_long_questions_do_not_widen_the_cards() -> None:
     shown.show_where("a-project-with-a-rather-long-name-indeed", "main", "model")
     _minimum, natural, _b, _c = shown.measure(Gtk.Orientation.HORIZONTAL, -1)
     assert natural <= CARD + shown.get_margin_start()
+
+
+def test_with_nothing_asked_yet_context_says_so() -> None:
+    from osiris.harness.context import Slice
+
+    shown = panel()
+    shown.show_context([Slice("free", 100)], used=0, window=100)
+    shown.show_no_context()
+    words = texts(shown)
+    assert "Nothing asked yet." in words
+    assert "0 of 100 tokens" not in words

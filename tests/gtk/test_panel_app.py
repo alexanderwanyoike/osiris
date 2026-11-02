@@ -20,7 +20,7 @@ class Panel:
     def __init__(self) -> None:
         self.where: list[tuple[str, str, str]] = []
         self.connectors: list[dict[str, State]] = []
-        self.context: list[tuple[int, int]] = []
+        self.context: list[object] = []
         self.changes: list[list[tuple[int, str, int]]] = []
 
     def show_where(self, project: str, branch: str, model: str) -> None:
@@ -31,6 +31,9 @@ class Panel:
 
     def show_context(self, _shared: object, used: int, window: int) -> None:
         self.context.append((used, window))
+
+    def show_no_context(self) -> None:
+        self.context.append("nothing")
 
     def show_changes(
         self, changed: list[tuple[int, str, int]], _on_open: object
@@ -87,3 +90,13 @@ def test_a_panel_asked_for_before_a_conversation_reopens_is_filled_for_it() -> N
     stand_in.update_panel()
     assert asked == ["ses_past"]
     assert panel.connectors
+
+
+def test_a_conversation_with_nothing_asked_clears_the_context_card() -> None:
+    stand_in, _engine = app()
+    stand_in.models = SimpleNamespace(default=GPT)
+    stand_in.drawer.conversation_panel = panel = Panel()
+    stand_in.contexts = SimpleNamespace(context_use=lambda _s: None)
+    stand_in.accounts = SimpleNamespace(models=lambda: [])
+    stand_in.update_panel()
+    assert panel.context == ["nothing"]
