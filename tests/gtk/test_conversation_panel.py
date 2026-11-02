@@ -157,3 +157,22 @@ def test_each_pill_sums_up_its_card() -> None:
     assert summaries["Where"] == "timer"
     assert summaries["Context"] == "5% used"
     assert summaries["Changes"] == "2 questions"
+
+
+def test_a_folded_card_keeps_the_width_of_the_open_ones() -> None:
+    import time
+
+    from gi.repository import GLib, Gtk
+
+    shown = panel()
+    shown.show_where("timer", "main")
+    shown.cards["MCP"].toggle()
+    window = Gtk.Window(child=shown, default_width=600, default_height=800)
+    window.present()
+    context = GLib.MainContext.default()
+    deadline = time.monotonic() + 5
+    while not shown.get_width() and time.monotonic() < deadline:
+        context.iteration(False)
+    widths = {name: card.get_width() for name, card in shown.cards.items()}
+    window.destroy()
+    assert len(set(widths.values())) == 1, widths
