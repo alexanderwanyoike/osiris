@@ -321,7 +321,7 @@ popover.harness-rail-card > contents {
    the Theme's colours, one colour per kind, free space barely there. */
 .harness-panel-heading { font-size: 0.8em; font-weight: 600; color: @harness_muted; }
 .harness-panel-section.card {
-    background-color: alpha(@harness_raised, 0.92);
+    background-color: @harness_raised;
     color: @harness_fg;
     border: 1px solid alpha(@harness_fg, 0.08);
     border-radius: 10px;
