@@ -65,3 +65,25 @@ def test_the_panel_shows_where_it_runs_its_connectors_context_and_changes() -> N
     assert panel.connectors == [{"wiki": State("connected")}]
     assert panel.context == [(5000, 100_000)]
     assert panel.changes == [[(0, "make it calm", 1)]]
+
+
+def test_a_panel_asked_for_before_a_conversation_reopens_is_filled_for_it() -> None:
+    stand_in, _engine = app()
+    stand_in.models = SimpleNamespace(default=GPT)
+    stand_in.drawer.conversation_panel = panel = Panel()
+    asked: list[object] = []
+    stand_in.contexts = SimpleNamespace(
+        context_use=lambda s: asked.append(s) or ContextUse({}, used=10)
+    )
+    stand_in.accounts = SimpleNamespace(models=lambda: [])
+
+    def reopened_meanwhile(work, done):
+        result = work()
+        if not asked:
+            stand_in.harness.resume("ses_past")
+        done(result)
+
+    stand_in.background = reopened_meanwhile
+    stand_in.update_panel()
+    assert asked == ["ses_past"]
+    assert panel.connectors
