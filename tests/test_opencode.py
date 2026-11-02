@@ -923,3 +923,29 @@ class TestContext:
         use = engine(http).context_use(SESSION)
         assert use.used == 105
         assert use.sizes["answers"] == 20
+
+
+class TestSkills:
+    def test_each_skill_comes_with_where_it_was_found_and_what_it_says(self) -> None:
+        from osiris.harness.skill_rules import SkillInfo
+
+        where = "location%5Bdirectory%5D=%2Fhome%2Ftester"
+        skill = {
+            "id": "review",
+            "name": "Review",
+            "description": "Review a change",
+            "path": "/home/tester/.config/opencode/skills/review/SKILL.md",
+            "content": "# Review\nRead the diff.",
+        }
+        http = FakeHttpClient(
+            replies={("GET", f"{URL}/api/skill?{where}"): {"data": [skill]}}
+        )
+        assert engine(http).skill_details(Path("/home/tester")) == [
+            SkillInfo(
+                "review",
+                "Review",
+                "Review a change",
+                "/home/tester/.config/opencode/skills/review/SKILL.md",
+                "# Review\nRead the diff.",
+            )
+        ]
