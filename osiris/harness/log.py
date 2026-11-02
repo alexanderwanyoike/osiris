@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from osiris.harness.proposals import Proposal
 from osiris.platform import FileSystem
 
 #: Relative to the home: the person's data, not configuration.
@@ -127,6 +128,36 @@ class HarnessLog:
                     Change(entry["summary"], entry["undo"], entry.get("program"))
                 )
         return questions
+
+    def proposals_by_question(self, session: str) -> list[list[Proposal]]:
+        """For each question the session was asked, in order, the skills
+        proposed while answering it."""
+        questions: list[list[Proposal]] = []
+        asking = ""
+        for entry in self._entries():
+            if entry["kind"] == "sent":
+                asking = entry.get("session", "")
+                if asking == session:
+                    questions.append([])
+            elif entry["kind"] == "went-back" and entry.get("session") == session:
+                del questions[len(questions) - entry.get("questions", 0) :]
+            elif (
+                entry["kind"] == "proposed-skill"
+                and questions
+                and _made_by(entry, asking) == session
+            ):
+                questions[-1].append(
+                    Proposal(entry["name"], entry["description"], entry["body"])
+                )
+        return questions
+
+    def decided(self) -> dict[str, bool]:
+        """Each proposed skill the person kept or declined, by name."""
+        return {
+            entry["name"]: entry["kept"]
+            for entry in self._entries()
+            if entry["kind"] == "skill-decided"
+        }
 
     def undone(self) -> list[tuple[str, ...]]:
         """The changes of each answer the person undid, by their summaries."""
