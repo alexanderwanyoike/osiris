@@ -370,3 +370,12 @@ popover.harness-rail-card > contents {
     font-size: 0.9em;
     color: alpha(@harness_fg, 0.85);
 }
+
+/* No glow flashes where a scroll meets its end. */
+scrolledwindow > overshoot.top,
+scrolledwindow > overshoot.bottom,
+scrolledwindow > overshoot.left,
+scrolledwindow > overshoot.right {
+    background: none;
+    box-shadow: none;
+}
