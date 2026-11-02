@@ -269,6 +269,8 @@ class Drawer(Gtk.ApplicationWindow):
         bottom.append(composer)
         bottom.append(self.footer)
         chat = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
+        self.conversation_panel = ConversationPanel()
+        self.conversation_panel.connect("map", lambda _p: self.app.update_panel())
         self.rail = Rail(on_jump=self.rail_jump)
         self.rail.set_halign(Gtk.Align.END)
         self.rail.set_margin_top(12)
@@ -277,13 +279,17 @@ class Drawer(Gtk.ApplicationWindow):
         self.rail.set_margin_end(10)
         railed = Gtk.Overlay(child=self.scroller, vexpand=True)
         railed.add_overlay(self.rail)
+        # The Conversation's widgets float as cards on its left, over the room
+        # the messages leave there.
+        self.conversation_panel.set_visible(False)
+        railed.add_overlay(self.conversation_panel)
+        self.panel_toggle.bind_property("active", self.conversation_panel, "visible",
+                                        GObject.BindingFlags.SYNC_CREATE)
         chat.append(railed)
         rail_view = self.scroller.get_vadjustment()
         rail_view.connect("value-changed", lambda _a: self._update_rail())
         rail_view.connect("changed", lambda _a: self._update_rail())
         chat.append(Adw.Clamp(maximum_size=READABLE, child=bottom))
-        self.conversation_panel = ConversationPanel()
-        self.conversation_panel.connect("map", lambda _p: self.app.update_panel())
         self.canvas = Canvas(read=lambda path: path.read_text(errors="replace"),
                              open_in_code=open_in_code,
                              on_changes=lambda: self.app.show_all_changes(),
@@ -301,17 +307,7 @@ class Drawer(Gtk.ApplicationWindow):
         while button is not None:
             button.connect("clicked", lambda _b: self._open_canvas())
             button = button.get_next_sibling()
-        # The Conversation's widgets dock on its left, beside the messages.
-        self.panel_split = Adw.OverlaySplitView(
-            sidebar=Gtk.ScrolledWindow(child=self.conversation_panel,
-                                       hscrollbar_policy=Gtk.PolicyType.NEVER),
-            content=chat, sidebar_position=Gtk.PackType.START, collapsed=False,
-            show_sidebar=False, min_sidebar_width=250, max_sidebar_width=300)
-        self.panel_split.add_css_class("harness-widgets")
-        self.panel_toggle.bind_property(
-            "active", self.panel_split, "show-sidebar",
-            GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
-        body = Gtk.Paned(start_child=self.panel_split, end_child=self.canvas,
+        body = Gtk.Paned(start_child=chat, end_child=self.canvas,
                          shrink_start_child=False, resize_end_child=True,
                          wide_handle=False, position=480)
         self.pages = Gtk.Stack(vexpand=True,

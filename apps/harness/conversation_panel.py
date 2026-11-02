@@ -1,5 +1,5 @@
-"""The Conversation panel (#169): where a Conversation runs, its connectors,
-its context and its changes, in one place beside it.
+"""The Conversation's widgets (#169): where it runs, its connectors, its
+context and its changes, as cards floating on its left.
 
 What fills the context and how a connector's state is said are decided in
 osiris/harness; this draws them.
@@ -30,6 +30,7 @@ NAMES = {
 def _section(title: str) -> tuple[Gtk.Box, Gtk.Box]:
     """A titled part of the panel, and the box its rows go in."""
     part = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+    part.add_css_class("card")
     part.add_css_class("harness-panel-section")
     heading = Gtk.Label(label=title, xalign=0)
     heading.add_css_class("harness-panel-heading")
@@ -52,9 +53,9 @@ def _fact(icon: str, text: str = "") -> Gtk.Box:
 
 class ConversationPanel(Gtk.Box):
     def __init__(self):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=22,
-                         margin_top=16, margin_bottom=16, margin_start=18,
-                         margin_end=18)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=10,
+                         halign=Gtk.Align.START, valign=Gtk.Align.START,
+                         margin_top=14, margin_start=14, width_request=260)
         self.add_css_class("harness-conversation-panel")
         where, rows = _section("Where")
         self.project = _fact("folder-symbolic")
