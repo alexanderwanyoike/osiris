@@ -1284,6 +1284,8 @@ class Application(Adw.Application):
             panel.show_connectors(states)
             if use is not None and window:
                 panel.show_context(slices(use.sizes, use.used, window), use.used, window)
+            else:
+                panel.show_no_context()
 
         self.background(gather, found)
 

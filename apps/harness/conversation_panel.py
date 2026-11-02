@@ -71,6 +71,7 @@ class ConversationPanel(Gtk.Box):
         self.append(connectors)
         context, self._context = _section("Context")
         self.append(context)
+        self.show_no_context()
         changes, self._changes = _section("Changes")
         self.append(changes)
 
@@ -95,6 +96,12 @@ class ConversationPanel(Gtk.Box):
             said.set_css_classes(["harness-connector-state", f"harness-{tone}"])
             line.append(said)
             self._connectors.append(line)
+
+    def show_no_context(self) -> None:
+        _clear(self._context)
+        none = Gtk.Label(label="Nothing asked yet.", xalign=0)
+        none.add_css_class("harness-meta")
+        self._context.append(none)
 
     def show_context(self, shared: list[Slice], used: int, window: int) -> None:
         _clear(self._context)
