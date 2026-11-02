@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any
 
 from osiris.harness.accounts import Method, ModelInfo, Provider, SignIn, SignInState
+from osiris.harness.connectors import State
+from osiris.harness.context import CHARACTERS, KINDS, ContextUse
 from osiris.harness.engine import (
     Answered,
     Delivered,
@@ -35,6 +37,8 @@ from osiris.harness.engine import (
     ToolRequested,
 )
 from osiris.harness.picker import Entry, Reference
+from osiris.harness.saved_rules import SavedRule
+from osiris.harness.skill_rules import SkillInfo
 from osiris.harness.titles import title_of
 from osiris.platform import CommandRunner, FileSystem, HttpClient, HttpError, Identity
 
@@ -81,6 +85,37 @@ def locate(files: FileSystem, identity: Identity, runner: CommandRunner) -> Serv
 _UNRESERVED = frozenset(
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
 )
+
+
+def _sized(message: dict[str, Any]) -> list[tuple[str, str]]:
+    """A context message's parts, each with the kind it counts as."""
+    if message["type"] == "system":
+        return [("instructions", message.get("text", ""))]
+    if message["type"] == "user":
+        return [("questions", message.get("text", ""))]
+    if message["type"] != "assistant":
+        return []
+    return [
+        ("tools", json.dumps(part))
+        if part["type"] == "tool"
+        else ("answers", part.get("text", ""))
+        for part in message.get("content", [])
+    ]
+
+
+def _in_use(tokens: dict[str, Any]) -> int:
+    cache = tokens.get("cache", {})
+    return int(
+        tokens["input"]
+        + cache.get("read", 0)
+        + cache.get("write", 0)
+        + tokens["output"]
+    )
+
+
+def _in(directory: Path) -> str:
+    """The query naming the folder a request is about."""
+    return f"?location%5Bdirectory%5D={_quoted(str(directory))}"
 
 
 def _quoted(text: str) -> str:
@@ -177,10 +212,7 @@ class OpencodeEngine:
         )
 
     def attach_tools(self, name: str, command: list[str], directory: Path) -> None:
-        url = (
-            f"{self._service.url}/api/experimental/mcp/{name}"
-            f"?location%5Bdirectory%5D={_quoted(str(directory))}"
-        )
+        url = f"{self._service.url}/api/experimental/mcp/{name}{_in(directory)}"
         # opencode keeps a running server whose registration is unchanged, which
         # would keep serving the code from before an update.
         try:
@@ -195,11 +227,111 @@ class OpencodeEngine:
             headers=self._service.headers(),
         )
 
+    def context_use(self, session: str) -> ContextUse:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/session/{session}/context",
+            headers=self._service.headers(),
+        )
+        characters = dict.fromkeys(KINDS, 0)
+        used = 0
+        for message in reply["data"]:
+            for kind, text in _sized(message):
+                characters[kind] += len(text)
+            if message["type"] == "assistant" and "tokens" in message:
+                used = _in_use(message["tokens"])
+        return ContextUse(
+            {kind: count // CHARACTERS for kind, count in characters.items()}, used
+        )
+
+    def connector_states(self, directory: Path) -> dict[str, State]:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/mcp{_in(directory)}",
+            headers=self._service.headers(),
+        )
+        return {
+            server["name"]: State(
+                server["status"]["status"],
+                server["status"].get("error", ""),
+                server.get("integrationID", ""),
+            )
+            for server in reply["data"]
+        }
+
+    def resources(self, directory: Path) -> list[Entry]:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/mcp/resource{_in(directory)}",
+            headers=self._service.headers(),
+        )
+        return [
+            Entry(
+                "resource",
+                found["uri"],
+                found["name"],
+                ": ".join(filter(None, (found["server"], found.get("description")))),
+            )
+            for found in reply["data"]["resources"]
+        ]
+
+    def skill_details(self, directory: Path) -> list[SkillInfo]:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/skill{_in(directory)}",
+            headers=self._service.headers(),
+        )
+        return [
+            SkillInfo(
+                found["id"],
+                found["name"],
+                found.get("description", ""),
+                found["path"],
+                found["content"],
+            )
+            for found in reply["data"]
+        ]
+
+    def saved_rules(self) -> list[SavedRule]:
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/permission/saved",
+            headers=self._service.headers(),
+        )
+        projects: Any = self._http.request(
+            "GET", f"{self._service.url}/api/project", headers=self._service.headers()
+        )
+        where = {project["id"]: Path(project["canonical"]) for project in projects}
+        return [
+            SavedRule(
+                rule["id"],
+                rule["action"],
+                rule["resource"],
+                where.get(rule["projectID"]),
+            )
+            for rule in reply["data"]
+        ]
+
+    def remove_saved_rule(self, rule: str) -> None:
+        self._http.request(
+            "DELETE",
+            f"{self._service.url}/api/permission/saved/{rule}",
+            headers=self._service.headers(),
+        )
+
+    def waiting(self, session: str) -> list[ToolRequested]:
+        """What the session still waits to be allowed, as it was asked."""
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/session/{session}/permission",
+            headers=self._service.headers(),
+        )
+        return [_requested(session, request) for request in reply["data"]]
+
     def skills(self, directory: Path) -> list[Entry]:
         reply: Any = self._http.request(
             "GET",
-            f"{self._service.url}/api/skill"
-            f"?location%5Bdirectory%5D={_quoted(str(directory))}",
+            f"{self._service.url}/api/skill{_in(directory)}",
             headers=self._service.headers(),
         )
         return [
@@ -336,10 +468,16 @@ class OpencodeEngine:
                 yield event
 
 
+def _uri(entry: Entry) -> str:
+    """A Project's file by its path; a server's resource by its own URI."""
+    return f"file://{entry.key}" if entry.kind == "file" else entry.key
+
+
 def _attachments(
     text: str, references: tuple[Reference, ...]
 ) -> dict[str, list[dict[str, Any]]]:
-    """Picked files and skills, each with where the text mentions it."""
+    """Picked files, resources and skills, each with where the text mentions
+    it; a picked server is only named in the text."""
     found: dict[str, list[dict[str, Any]]] = {}
     for ref in references:
         mention = {
@@ -347,10 +485,10 @@ def _attachments(
             "end": ref.end,
             "text": text[ref.start : ref.end],
         }
-        if ref.entry.kind == "file":
+        if ref.entry.kind in ("file", "resource"):
             found.setdefault("files", []).append(
                 {
-                    "uri": f"file://{ref.entry.key}",
+                    "uri": _uri(ref.entry),
                     "name": ref.entry.label,
                     "mention": mention,
                 }
@@ -406,15 +544,19 @@ def _tool(
             session, data["id"], data.get("input", {}), data["executed"], name
         )
     if kind == "permission.asked":
-        return ToolRequested(
-            session,
-            data["id"],
-            data["action"],
-            tuple(data["resources"]),
-            (data.get("source") or {}).get("id", ""),
-            tuple(data.get("save") or ()),
-        )
+        return _requested(session, data)
     return _finished(session, data)
+
+
+def _requested(session: str, data: dict[str, Any]) -> ToolRequested:
+    return ToolRequested(
+        session,
+        data["id"],
+        data["action"],
+        tuple(data["resources"]),
+        (data.get("source") or {}).get("id", ""),
+        tuple(data.get("save") or ()),
+    )
 
 
 class _Reader:
@@ -491,7 +633,12 @@ class OpencodeAccounts:
             self._service.url + "/api/integration",
             headers=self._service.headers(),
         )
-        return [_provider(entry) for entry in reply["data"]]
+        # An MCP server's sign-in is listed too; it belongs to its connector.
+        return [
+            _provider(entry)
+            for entry in reply["data"]
+            if (entry.get("metadata") or {}).get("source") != "mcp"
+        ]
 
     def connect_key(self, provider: str, key: str) -> None:
         self._http.request(
@@ -517,6 +664,16 @@ class OpencodeAccounts:
             needs_code=attempt["mode"] == "code",
         )
 
+    def connector_sign_in(self, integration: str) -> SignIn:
+        """Start signing in to an MCP server, by the sign-in page it offers."""
+        reply: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/integration/{integration}",
+            headers=self._service.headers(),
+        )
+        method = next(m for m in reply["data"]["methods"] if m["type"] == "oauth")
+        return self.start_sign_in(integration, method["id"])
+
     def sign_in_state(self, provider: str, attempt: str) -> SignInState:
         reply: Any = self._http.request(
             "GET",
@@ -539,7 +696,11 @@ class OpencodeAccounts:
             "GET", self._service.url + "/api/model", headers=self._service.headers()
         )
         return [
-            ModelInfo(ModelRef(entry["providerID"], entry["id"]), entry["name"])
+            ModelInfo(
+                ModelRef(entry["providerID"], entry["id"]),
+                entry["name"],
+                (entry.get("limit") or {}).get("context", 0),
+            )
             for entry in reply["data"]
         ]
 

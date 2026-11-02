@@ -9,7 +9,13 @@ from pathlib import Path
 from typing import Protocol
 
 SIGNS = ("@", "/")
-SIGN = {"file": "@", "skill": "/", "command": "/"}
+SIGN = {
+    "file": "@",
+    "resource": "@",
+    "connector": "@",
+    "skill": "/",
+    "command": "/",
+}
 
 
 @dataclass(frozen=True)
@@ -34,7 +40,7 @@ def trigger(text: str, cursor: int) -> Trigger | None:
 
 @dataclass(frozen=True)
 class Entry:
-    #: "file", "skill" or "command".
+    #: "file", "resource", "connector", "skill" or "command".
     kind: str
     #: What it names to the Engine: a path in the Project, a skill's id, a name.
     key: str
