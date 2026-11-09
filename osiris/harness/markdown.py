@@ -223,3 +223,9 @@ def first_line(text: str) -> str:
                 for child in token.children or []
             ).strip()
     return ""
+
+
+def next_step(answer: str) -> str:
+    """An answer made ready for the text of its next step, which starts a
+    paragraph of its own."""
+    return answer.rstrip("\n") + "\n\n" if answer else ""
