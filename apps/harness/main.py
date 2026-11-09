@@ -53,6 +53,7 @@ from canvas import Canvas, open_in_code  # noqa: E402
 from connectors_page import ConnectorsPage  # noqa: E402
 from conversation_panel import ConversationPanel  # noqa: E402
 from composer_picker import Picker  # noqa: E402
+from program_history import ProgramHistory  # noqa: E402
 from rail import Rail  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
 from proposal_card import ProposalCard  # noqa: E402
@@ -1759,15 +1760,16 @@ class Application(Adw.Application):
         if self.log is None:
             self.load_history()
             return
-        log, history, harness, home = self.log, self.programs(), self.harness, self.home
+        log, harness, home = self.log, self.harness, self.home
+        history = ProgramHistory(self.programs())
 
         def credit() -> None:
-            project = (project_program(harness.folder_of(session), home)
-                       if harness is not None else None)
             try:
-                credit_shell_commits(log, history, session, project)
-            except (CommandError, ProgramError):
-                pass  # A Program gone or never one has nothing to show.
+                folder = harness.folder_of(session) if harness is not None else None
+            except HttpError:
+                folder = None  # Deleted meanwhile: nothing of its own to credit.
+            project = project_program(folder, home) if folder is not None else None
+            credit_shell_commits(log, history, session, project)
 
         def credited(_result) -> None:
             if conversation is self.conversation:
