@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -196,6 +197,25 @@ class TestCommitting:
         )
         subject, _, _ = programs(made(), runner)
         assert subject.patch("pomodoro", "abc123") == patch
+
+    def test_commits_since_a_time_leave_out_osiriss_own(self) -> None:
+        """What a question committed with git in a shell, not through the
+        Osiris tools, which log their own commits (#219)."""
+        log = "\n".join(
+            [
+                f"aaa111\x1f{HARNESS[1]}\x1fStart Pomodoro",
+                "bbb222\x1fperson@example.org\x1fAdd a pause button",
+                "ccc333\x1fperson@example.org\x1fTrack streaks: daily",
+            ]
+        )
+        runner = FakeRunner(results={"git": answer(log)})
+        subject, _, _ = programs(made(), runner)
+        asked = datetime(2026, 11, 9, 10, 0, tzinfo=UTC)
+        assert subject.commits_since("pomodoro", asked) == [
+            ("bbb222", "Add a pause button"),
+            ("ccc333", "Track streaks: daily"),
+        ]
+        assert f"--since={asked.isoformat()}" in calls(runner)[-1]
 
 
 class TestChecking:
