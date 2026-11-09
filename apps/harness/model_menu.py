@@ -7,7 +7,8 @@ from collections.abc import Callable
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gdk, Graphene, Gtk, Pango  # noqa: E402
+from gi.repository import Gdk, Gtk, Pango  # noqa: E402
+from list_moves import move  # noqa: E402
 
 from osiris.harness.accounts import ModelInfo  # noqa: E402
 from osiris.harness.engine import ModelRef  # noqa: E402
@@ -105,7 +106,7 @@ class ModelMenu(Gtk.Box):
     def key(self, _controller, keyval, _code, _state) -> bool:
         row = self.list.get_selected_row()
         if keyval in MOVES and row is not None:
-            self._move(row, MOVES[keyval])
+            move(self.list, self.card, MOVES[keyval])
             return True
         if keyval in CHOOSES and row is not None:
             self._on_chosen(row.model.ref)
@@ -119,15 +120,3 @@ class ModelMenu(Gtk.Box):
         row = self.list.get_row_at_y(int(y))
         if row is not None and row is not self.list.get_selected_row():
             self.list.select_row(row)
-
-    def _move(self, row: Gtk.ListBoxRow, step: int) -> None:
-        last = len(list(self.list)) - 1
-        chosen = self.list.get_row_at_index(min(max(row.get_index() + step, 0), last))
-        self.list.select_row(chosen)
-        _found, at = chosen.compute_point(self.list, Graphene.Point())
-        shown = self.card.get_vadjustment()
-        top, page = shown.get_value(), shown.get_page_size()
-        if at.y < top:
-            shown.set_value(at.y)
-        elif at.y + chosen.get_height() > top + page:
-            shown.set_value(at.y + chosen.get_height() - page)
