@@ -7,14 +7,34 @@ from collections.abc import Callable
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk  # noqa: E402
+from gi.repository import Gtk, Pango  # noqa: E402
 
 from osiris.harness.accounts import ModelInfo  # noqa: E402
 from osiris.harness.engine import ModelRef  # noqa: E402
-from osiris.harness.model_menu import in_menu_order, narrowed  # noqa: E402
+from osiris.harness.model_menu import in_menu_order, maker_of, narrowed  # noqa: E402
 
 #: Rows shown before the list scrolls.
 ROWS = 8
+#: The makers' icons Osiris ships (apps/harness/logos, NOTICE there). Xiaomi's
+#: only mark in lobe-icons is a wordmark, unreadable at this size, so MiMo
+#: gets a monogram.
+ICONS = {
+    "openai": "osiris-provider-openai-symbolic",
+    "nvidia": "osiris-maker-nvidia-symbolic",
+    "deepseek": "osiris-maker-deepseek-symbolic",
+    "zhipu": "osiris-maker-zhipu-symbolic",
+}
+
+
+def _lead(info: ModelInfo) -> Gtk.Widget:
+    icon = ICONS.get(maker_of(info.family) or "")
+    if icon is not None:
+        logo = Gtk.Image(icon_name=icon, pixel_size=16)
+        logo.add_css_class("harness-logo")
+        return logo
+    monogram = Gtk.Label(label=info.name[:1].upper())
+    monogram.add_css_class("harness-monogram")
+    return monogram
 
 
 class ModelMenu(Gtk.Box):
@@ -50,7 +70,7 @@ class ModelMenu(Gtk.Box):
     def _narrow(self) -> None:
         self.list.remove_all()
         for info in narrowed(self._models, self.search.get_text(), self._providers):
-            row = Gtk.ListBoxRow(child=Gtk.Label(label=info.name, xalign=0))
+            row = Gtk.ListBoxRow(child=self._row(info))
             row.model = info
             self.list.append(row)
         first = self.list.get_row_at_index(0)
@@ -58,3 +78,14 @@ class ModelMenu(Gtk.Box):
             # As tall as the Skin draws a row, so it is rows that show.
             one = first.measure(Gtk.Orientation.VERTICAL, -1)[1]
             self.card.set_max_content_height(ROWS * one)
+
+    def _row(self, info: ModelInfo) -> Gtk.Widget:
+        box = Gtk.Box(spacing=8)
+        box.append(_lead(info))
+        box.append(Gtk.Label(label=info.name, xalign=0, hexpand=True,
+                             ellipsize=Pango.EllipsizeMode.END))
+        provider = Gtk.Label(
+            label=self._providers.get(info.ref.provider, info.ref.provider))
+        provider.add_css_class("dim-label")
+        box.append(provider)
+        return box
