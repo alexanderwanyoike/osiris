@@ -36,6 +36,7 @@ from osiris.harness.engine import (
     ToolFinished,
     ToolRequested,
 )
+from osiris.harness.markdown import next_step
 from osiris.harness.picker import Entry, Reference
 from osiris.harness.saved_rules import SavedRule
 from osiris.harness.skill_rules import SkillInfo
@@ -446,7 +447,7 @@ class OpencodeEngine:
                     last = turns[-1]
                     turns[-1] = PastTurn(
                         last.question,
-                        last.answer + said,
+                        next_step(last.answer) + said,
                         ModelRef(model["providerID"], model["id"]) if model else None,
                         last.message,
                     )

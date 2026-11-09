@@ -24,6 +24,7 @@ from osiris.harness.engine import (
 )
 from osiris.harness.harness import Allowed, Asking, Decision, Refused
 from osiris.harness.log import Change
+from osiris.harness.markdown import next_step
 from osiris.harness.proposals import Proposal
 from osiris.harness.status import Status
 from osiris.harness.tasks import TASK_TOOL, Task, tasks_of
@@ -355,8 +356,8 @@ class Conversation:
         turn = self.turns[-1]
         match event:
             case Text(_, delta):
-                if self._step_ended and turn.answer:
-                    turn.answer = turn.answer.rstrip("\n") + "\n\n"
+                if self._step_ended:
+                    turn.answer = next_step(turn.answer)
                 self._step_ended = False
                 turn.answer += delta
                 turn.state = State.ANSWERING

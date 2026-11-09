@@ -651,6 +651,41 @@ class TestHistory:
             PastTurn("thanks", "", None, "m6"),
         ]
 
+    def test_a_past_answer_keeps_each_steps_text_its_own_paragraph(self) -> None:
+        """Each step of an answer is a message of its own; read live, a new
+        step starts a new paragraph, and so it does when reopened (#225)."""
+        model = {"id": "gpt-6.1-sol", "providerID": "openai"}
+        http = FakeHttpClient(
+            replies={
+                (
+                    "GET",
+                    f"{URL}/api/session/{SESSION}/message?limit=200&order=asc",
+                ): {
+                    "data": [
+                        {"id": "m1", "type": "user", "text": "make a habit tracker"},
+                        {
+                            "id": "m2",
+                            "type": "assistant",
+                            "model": model,
+                            "content": [
+                                {"type": "text", "text": "so your progress persists."},
+                                {"type": "tool", "name": "bash"},
+                            ],
+                        },
+                        {
+                            "id": "m3",
+                            "type": "assistant",
+                            "model": model,
+                            "content": [{"type": "text", "text": "The tests pass."}],
+                        },
+                    ]
+                }
+            }
+        )
+        assert engine(http).history(SESSION)[0].answer == (
+            "so your progress persists.\n\nThe tests pass."
+        )
+
     def test_sessions_from_before_the_harness_marked_its_own_are_adopted(
         self,
     ) -> None:
