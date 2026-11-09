@@ -53,6 +53,7 @@ from canvas import Canvas, open_in_code  # noqa: E402
 from connectors_page import ConnectorsPage  # noqa: E402
 from conversation_panel import ConversationPanel  # noqa: E402
 from composer_picker import Picker  # noqa: E402
+from model_menu import ModelMenu  # noqa: E402
 from rail import Rail  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
 from proposal_card import ProposalCard  # noqa: E402
@@ -240,15 +241,15 @@ class Drawer(Gtk.ApplicationWindow):
 
         self.model_label = Gtk.Label(ellipsize=Pango.EllipsizeMode.START)
         self.model_label.add_css_class("harness-meta")
-        self.models = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
-        self.models.add_css_class("navigation-sidebar")
-        self.models.connect("row-activated", self._model_chosen)
+        self.model_list = ModelMenu(on_chosen=self._model_chosen,
+                                    on_providers=self._providers_chosen,
+                                    on_close=lambda: self.model_menu.popdown())
         model_face = Gtk.Box(spacing=4)
         model_face.append(Gtk.Image(icon_name="pan-down-symbolic"))
         model_face.append(self.model_label)
         self.model_menu = Gtk.MenuButton(
             child=model_face, tooltip_text="Model",
-            popover=Gtk.Popover(child=self.models))
+            popover=Gtk.Popover(child=self.model_list))
         self.model_menu.add_css_class("flat")
         self.model_menu.connect("notify::active", self._models_shown)
         self.send = Gtk.Button(icon_name="go-up-symbolic", tooltip_text="Ask",
@@ -476,31 +477,29 @@ class Drawer(Gtk.ApplicationWindow):
     def _models_shown(self, button, _spec) -> None:
         if not button.get_active():
             return
-        while (row := self.models.get_row_at_index(0)) is not None:
-            self.models.remove(row)
-        providers = Gtk.Label(label="Providers and accounts…", xalign=0)
-        providers.model = None
-        self.models.append(providers)
+        self.model_list.search.set_text("")
+        self.model_list.search.grab_focus()
         if self.app.accounts is None:
             return
         accounts = self.app.accounts
-        self.app.background(accounts.models, self._models_found)
+        in_use = self.app.conversation.model or self.app.models.default
 
-    def _models_found(self, found) -> None:
-        # Above "Providers and accounts…", in the Engine's order.
-        for position, info in enumerate(found):
-            label = Gtk.Label(label=info.name, xalign=0)
-            label.model = info.ref
-            self.models.insert(label, position)
+        def found(gathered) -> None:
+            models, providers = gathered
+            self.model_list.show_models(models, in_use, providers)
 
-    def _model_chosen(self, _list, row) -> None:
-        chosen = row.get_child().model
+        self.app.background(
+            lambda: (accounts.models(), {p.id: p.name for p in accounts.providers()}),
+            found)
+
+    def _model_chosen(self, chosen) -> None:
         self.model_menu.popdown()
-        if chosen is None:
-            self.show_providers()
-        else:
-            self.app.choose_model(chosen)
+        self.app.choose_model(chosen)
         self.refresh()
+
+    def _providers_chosen(self) -> None:
+        self.model_menu.popdown()
+        self.show_providers()
 
     def show_providers(self) -> None:
         if self.app.accounts is None:
