@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from osiris.harness.accounts import ModelInfo
 from osiris.harness.engine import ModelRef
-from osiris.harness.model_menu import in_menu_order, maker_of
+from osiris.harness.model_menu import in_menu_order, maker_of, narrowed
 
 
 def model(provider: str, name: str, family: str = "") -> ModelInfo:
@@ -46,3 +46,31 @@ def test_the_model_in_use_comes_first_then_the_featured_providers_then_the_rest(
 
 def test_with_no_model_in_use_the_featured_providers_come_first() -> None:
     assert in_menu_order([PICKLE, TERRA], None) == [TERRA, PICKLE]
+
+
+PROVIDERS = {
+    "openai": "OpenAI",
+    "opencode": "OpenCode Zen",
+    "opencode-go": "OpenCode Go",
+}
+
+
+def test_typing_narrows_the_models_by_name_family_or_provider() -> None:
+    models = [PICKLE, FLINT, TERRA, SOL]
+    assert narrowed(models, "sol", PROVIDERS) == [SOL]
+    assert narrowed(models, "GPT-6.1", PROVIDERS) == [TERRA]
+    assert narrowed(models, "openai", PROVIDERS) == [TERRA, SOL]
+    assert narrowed(models, "go", PROVIDERS) == [FLINT]
+
+
+def test_a_model_starting_with_what_was_typed_comes_before_one_containing_it() -> None:
+    assert narrowed([PICKLE, FLINT], "pick", PROVIDERS) == [PICKLE]
+    assert narrowed([SOL, PICKLE], "pi", {}) == [PICKLE]
+    assert narrowed([TERRA, model("x", "Terrapin")], "terr", {}) == [
+        model("x", "Terrapin"),
+        TERRA,
+    ]
+
+
+def test_with_nothing_typed_every_model_is_listed() -> None:
+    assert narrowed([PICKLE, SOL], "", PROVIDERS) == [PICKLE, SOL]
