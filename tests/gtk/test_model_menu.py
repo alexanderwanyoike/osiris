@@ -74,13 +74,12 @@ def test_each_model_leads_with_its_makers_icon_or_a_monogram() -> None:
     a Provider without a logo does on the Providers page."""
     nemotron = model("opencode", "Nemotron 3", "nemotron")
     widget, _ = menu([SOL, nemotron, FLINT])
-    leads = [row.get_child().get_first_child() for row in widget.list]
-    assert [lead.get_icon_name() for lead in leads[:2]] == [
-        "osiris-provider-openai-symbolic",
-        "osiris-maker-nvidia-symbolic",
-    ]
-    assert leads[2].get_label() == "F"
-    assert leads[2].has_css_class("harness-monogram")
+    # In the menu's order: Flint's OpenCode Go is a featured Provider.
+    gpt, flint, nvidia = [row.get_child().get_first_child() for row in widget.list]
+    assert gpt.get_icon_name() == "osiris-provider-openai-symbolic"
+    assert nvidia.get_icon_name() == "osiris-maker-nvidia-symbolic"
+    assert flint.get_label() == "F"
+    assert flint.has_css_class("harness-monogram")
 
 
 def test_each_model_names_its_provider_in_a_quieter_style() -> None:
