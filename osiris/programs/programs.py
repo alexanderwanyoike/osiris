@@ -262,6 +262,9 @@ class Programs:
         """What one commit changed, as git's patch for it."""
         return self._git(name, "show", "--format=", "--patch", commit)
 
+    def label(self, name: str) -> str:
+        return self.manifest(name).label
+
     def commits_since(self, name: str, since: datetime) -> list[tuple[str, str]]:
         """The commits made since ``since`` that Osiris's tools did not make,
         oldest first, as (commit, subject)."""
