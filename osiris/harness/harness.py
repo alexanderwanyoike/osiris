@@ -173,6 +173,10 @@ class Harness:
         """The folder the session runs in: its Project, or home for none."""
         return self._directory
 
+    def folder_of(self, session: str) -> Path:
+        """Where any session runs, as the Engine has it."""
+        return self._engine.where(session)
+
     def conversations(self) -> list[Past]:
         return self._engine.conversations()
 
