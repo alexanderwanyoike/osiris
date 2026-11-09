@@ -701,6 +701,7 @@ class OpencodeAccounts:
                 ModelRef(entry["providerID"], entry["id"]),
                 entry["name"],
                 (entry.get("limit") or {}).get("context", 0),
+                entry.get("family", ""),
             )
             for entry in reply["data"]
         ]

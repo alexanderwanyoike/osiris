@@ -12,10 +12,9 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk  # noqa: E402
 
+from badge import badge  # noqa: E402
 
-#: Offered first: the accounts Osiris is built around (ADR 0015). Every other
-#: Provider the Engine reaches is still listed after them.
-FEATURED = ("openai", "opencode-go")
+from osiris.harness.accounts import FEATURED  # noqa: E402
 
 
 #: Logos Osiris ships (apps/harness/logos), as icon names.
@@ -27,13 +26,7 @@ LOGOS = {
 
 
 def _badge(provider) -> Gtk.Widget:
-    if provider.id in LOGOS:
-        logo = Gtk.Image(icon_name=LOGOS[provider.id], pixel_size=20)
-        logo.add_css_class("harness-logo")
-        return logo
-    monogram = Gtk.Label(label=provider.name[:1].upper())
-    monogram.add_css_class("harness-monogram")
-    return monogram
+    return badge(LOGOS.get(provider.id), provider.name, 20)
 
 
 def _featured_first(providers):
