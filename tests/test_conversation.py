@@ -270,6 +270,16 @@ def test_a_held_actions_card_goes_when_the_answer_ends() -> None:
     assert (talk.turns[-1].asking, talk.turns[-1].held) == (None, None)
 
 
+def test_queued_cards_go_when_the_answer_ends() -> None:
+    talk = Conversation()
+    talk.asked("set up the tests")
+    talk.apply(Asking(S, "per_1", "shell", ("command -v xvfb-run",), "call_1"))
+    talk.apply(Asking(S, "per_2", "shell", ("git status --short",), "call_2"))
+    talk.apply(Stopped(S))
+    talk.apply(Allowed(S, "shell", ("command -v xvfb-run",), "call_1"))
+    assert talk.turns[-1].asking is None
+
+
 def test_an_allowed_action_is_not_shown_as_refused() -> None:
     talk = Conversation()
     talk.asked("make it calm")
