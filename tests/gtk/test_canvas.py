@@ -141,6 +141,17 @@ def test_showing_the_programs_again_keeps_the_changes_tab() -> None:
     assert titles(widget, Kind.CHANGES) == ["tidy main.py"]
 
 
+def test_each_conversation_keeps_its_own_changes_tabs() -> None:
+    """A Changes tab opened in one Conversation is not left on the Canvas
+    when another opens, and is there again when it comes back (#220)."""
+    widget, _ = changed()
+    pomodoro = [(program("pomodoro", "Pomodoro"), [Path("main.py")])]
+    widget.show(pomodoro, conversation="ses_2")
+    assert titles(widget, Kind.CHANGES) == []
+    widget.show(pomodoro, conversation=None)
+    assert titles(widget, Kind.CHANGES) == ["tidy main.py"]
+
+
 def test_a_comment_on_picked_lines_reaches_thoth_with_its_file_and_lines() -> None:
     widget, comments = changed()
     buffer = widget.current_view().get_buffer()
