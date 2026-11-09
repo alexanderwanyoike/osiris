@@ -623,6 +623,18 @@ def test_a_conversation_moved_into_a_project_keeps_osiris_tools() -> None:
     assert ("osiris", POMODORO) in engine.attached
 
 
+def test_the_tools_are_attached_in_a_folder_before_a_session_moves_there() -> None:
+    """A running answer moves between steps; the step after must find them."""
+    subject, engine, _ = harness()
+    subject.ask("build me a timer")
+    attached_then: list[bool] = []
+    engine.move = lambda _s, folder: attached_then.append(  # type: ignore[method-assign]
+        ("osiris", folder) in engine.attached
+    )
+    subject.move("ses_1", POMODORO)
+    assert attached_then == [True]
+
+
 def test_a_new_conversation_can_start_in_a_project() -> None:
     subject, engine, _ = harness()
     subject.new_conversation(POMODORO)
