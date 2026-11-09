@@ -10,6 +10,7 @@ directory of its own.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from xml.etree import ElementTree
@@ -47,6 +48,10 @@ _NOT_SOURCE = {
     "target",
     "build",
 }
+#: git's log, a commit to a line: its hash, its author's address and subject,
+#: apart by a character no subject holds.
+_FIELD = "\x1f"
+_LOG = "%H%x1f%ae%x1f%s"
 #: How much of a failed build's output is worth showing.
 _BUILD_TAIL = 30
 
@@ -256,6 +261,15 @@ class Programs:
     def patch(self, name: str, commit: str) -> str:
         """What one commit changed, as git's patch for it."""
         return self._git(name, "show", "--format=", "--patch", commit)
+
+    def commits_since(self, name: str, since: datetime) -> list[tuple[str, str]]:
+        """The commits made since ``since`` that Osiris's tools did not make,
+        oldest first, as (commit, subject)."""
+        log = self._git(
+            name, "log", "--reverse", f"--since={since.isoformat()}", f"--format={_LOG}"
+        )
+        found = (line.split(_FIELD, 2) for line in log.splitlines() if line)
+        return [(commit, subject) for commit, by, subject in found if by != HARNESS[1]]
 
     def check(self, name: str) -> list[str]:
         """Problems found without running anything: Python that does not compile."""
