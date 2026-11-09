@@ -100,3 +100,20 @@ def test_a_conversation_with_nothing_asked_clears_the_context_card() -> None:
     stand_in.accounts = SimpleNamespace(models=lambda: [])
     stand_in.update_panel()
     assert panel.context == ["nothing"]
+
+
+def test_the_panel_follows_the_conversation_on_screen_into_its_project() -> None:
+    """The history's pass moves a Conversation that made a Program while it
+    still answers; the Where card says so at once, not when the answer ends
+    (#221)."""
+    stand_in, _engine = app()
+    del stand_in.load_history
+    stand_in.harness.ask("build me a timer")
+    stand_in.log.write("changed", session="ses_1", program="pomodoro")
+    stand_in.files.directories.add(HOME / "Code" / "pomodoro")
+    stand_in.models = SimpleNamespace(default=GPT)
+    stand_in.contexts = stand_in.accounts = None
+    stand_in.drawer.show_history = lambda *_groups: None
+    stand_in.drawer.conversation_panel = panel = Panel()
+    stand_in.load_history()
+    assert panel.where[-1] == ("pomodoro", "")
