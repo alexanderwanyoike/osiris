@@ -167,6 +167,10 @@ class AdminPending:
     #: The helper's process, checked again before the password leaves.
     caller: int
 
+#: What Allow everything does, said where it is switched.
+ALLOW_EVERYTHING = ("Osiris goes ahead without asking, unless one of your rules "
+                    "denies it. A command with sudo still asks for your password.")
+
 
 class Drawer(Gtk.ApplicationWindow):
     def __init__(self, app: "Application"):
@@ -262,7 +266,17 @@ class Drawer(Gtk.ApplicationWindow):
             tooltip_text="Send now: stop what Osiris is doing and take this instead")
         self.send_now.add_css_class("flat")
         self.send_now.connect("clicked", self._cut_in)
+        self.allow_everything = Gtk.Switch(active=self.app.in_auto_mode,
+                                           valign=Gtk.Align.CENTER)
+        self.allow_everything.connect(
+            "notify::active", lambda s, _p: self.app.set_auto_mode(s.get_active()))
+        allowing = Gtk.Label(label="Allow everything")
+        allowing.add_css_class("harness-meta")
+        self.allow_line = Gtk.Box(spacing=6, tooltip_text=ALLOW_EVERYTHING)
+        self.allow_line.append(self.allow_everything)
+        self.allow_line.append(allowing)
         controls = Gtk.Box(spacing=6)
+        controls.append(self.allow_line)
         controls.append(Gtk.Box(hexpand=True))
         controls.append(self.model_menu)
         controls.append(self.send_now)
