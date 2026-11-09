@@ -431,3 +431,31 @@ def test_commits_made_in_a_shell_are_among_a_questions_changes_when_it_ends() ->
         {"action": "revert_commit", "name": "daily-habits", "commit": "abc123"},
         "daily-habits",
     )
+
+
+class Credits:
+    """Programs' commits since a question, as git would give them."""
+
+    def __init__(self, found: dict[str, list[tuple[str, str]]]) -> None:
+        self.found = found
+
+    def commits_since(self, name: str, _since: object) -> list[tuple[str, str]]:
+        if name not in self.found:
+            from osiris.platform.process import CommandError
+
+            raise CommandError(["git", "log"], 128, f"{name} is gone")
+        return self.found[name]
+
+    def label(self, name: str) -> str:
+        return name.title()
+
+
+def test_an_answer_ending_off_screen_credits_the_program_it_runs_in() -> None:
+    """Its Conversation was in the Program's Project all along (#219)."""
+    stand_in, _ = app()
+    stand_in.programs = lambda: Credits({"pomodoro": [("abc123", "Add a pause")]})
+    asked(stand_in, "add a pause button")
+    stand_in.new_conversation()
+    heard(stand_in, Finished("ses_1"))
+    summaries = [c.summary for c in stand_in.log.changes_by_question("ses_1")[-1]]
+    assert summaries == ["Pomodoro: Add a pause"]
