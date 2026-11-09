@@ -784,6 +784,26 @@ def test_once_auto_mode_is_on_nothing_waits() -> None:
     assert decision == Allowed("ses_1", "bash", ("ls /etc",))
 
 
+def test_turning_auto_mode_on_allows_what_already_waits_on_a_card() -> None:
+    """It is turned on when the cards pile up (review of #241)."""
+    allowed = [False]
+    subject, engine, _ = harness(allowed=allowed)
+    subject.ask("what is in /etc")
+    subject.handle(ToolRequested("ses_1", "per_1", "bash", ("ls /etc",), "c1"))
+    subject.handle(ToolRequested("ses_1", "per_2", "bash", ("ls /usr",), "c2"))
+    allowed[0] = True
+    decisions = subject.allow_waiting()
+    assert engine.replies == [
+        ("ses_1", "per_1", Reply.ONCE, ""),
+        ("ses_1", "per_2", Reply.ONCE, ""),
+    ]
+    assert decisions == [
+        Allowed("ses_1", "bash", ("ls /etc",), "c1"),
+        Allowed("ses_1", "bash", ("ls /usr",), "c2"),
+    ]
+    assert subject.allow_waiting() == []
+
+
 def test_what_auto_mode_allows_is_logged_as_auto_mode() -> None:
     """So the log shows the person did not answer it themselves."""
     subject, _, files = harness(allowed=[True])
