@@ -29,7 +29,7 @@ class ApprovalCard(Gtk.Box):
         self.append(exact)
         for name, value in shown.inputs:
             given = Gtk.Label(label=f"{name}: {value}", xalign=0, wrap=True,
-                              selectable=True)
+                              selectable=True, wrap_mode=Pango.WrapMode.WORD_CHAR)
             given.add_css_class("harness-step-input")
             self.append(given)
 
