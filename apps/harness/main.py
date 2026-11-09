@@ -574,16 +574,17 @@ class Drawer(Gtk.ApplicationWindow):
     def open_page(self, at: str) -> None:
         self.canvas.open_page(at)
 
-    def show_changes(self, question: str, files, on_comment) -> None:
-        self.canvas.show_changes(question, files, on_comment)
+    def show_changes(self, question: str, files, on_comment,
+                     conversation: str | None = None) -> None:
+        self.canvas.show_changes(question, files, on_comment, conversation)
         self.canvas_toggle.set_sensitive(True)
         self.canvas_toggle.set_active(True)
 
-    def show_canvas(self, programs) -> None:
+    def show_canvas(self, programs, conversation: str | None = None) -> None:
         """What the Conversation made; the Canvas opens the first time there is
         something to show."""
         had = self.canvas_toggle.get_sensitive()
-        self.canvas.show(programs)
+        self.canvas.show(programs, conversation)
         self.canvas_toggle.set_sensitive(bool(programs))
         if programs and not had:
             self.canvas_toggle.set_active(True)
@@ -1371,7 +1372,7 @@ class Application(Adw.Application):
 
         def show(found) -> None:
             if self.session == session:
-                self.drawer.show_canvas(found)
+                self.drawer.show_canvas(found, session)
 
         self.background(gather, show)
 
@@ -1484,13 +1485,16 @@ class Application(Adw.Application):
                     gone.append(name)
             return tuple(found), gone
 
+        # Read off the main loop: another Conversation may be on screen by then.
+        session = self.session
+
         def shown(results: list[tuple[tuple, list[str]]]) -> None:
             for turn, (files, gone) in zip(turns, results, strict=True):
                 if gone and not files:
                     turn.note = (f"{', '.join(dict.fromkeys(gone))} is gone, so what "
                                  "this question changed in it cannot be shown.")
                 else:
-                    self.drawer.show_changes(turn.question, files, commented)
+                    self.drawer.show_changes(turn.question, files, commented, session)
             self.drawer.refresh()
 
         self.background(lambda: [read(turn) for turn in turns], shown)

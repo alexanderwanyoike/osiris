@@ -21,6 +21,8 @@ from osiris.harness.review import file_lines  # noqa: E402
 from osiris.harness.titles import title_of  # noqa: E402
 from osiris.programs.programs import Program  # noqa: E402
 
+#: The Conversation the Canvas is showing, when no other is named.
+SHOWN = object()
 #: Narrower than this a Program's file tree slides over its code instead of
 #: sitting beside it.
 TREE_BESIDE = "max-width: 900sp"
@@ -62,6 +64,10 @@ class Canvas(Gtk.Box):
         self._contents: dict[Tab, Gtk.Widget] = {}
         #: Redraw each group's header, by kind.
         self._redraws: dict[Kind, Callable[[], None]] = {}
+        #: The Conversation shown, and each one's Changes tabs by question, to
+        #: open again when it comes back (#220).
+        self._conversation: str | None = None
+        self._changes: dict[str | None, dict[str, tuple[Any, Any]]] = {}
         self.tree = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
         self.tree.add_css_class("navigation-sidebar")
         self.tree.connect("row-activated", self._tree_activated)
@@ -90,9 +96,13 @@ class Canvas(Gtk.Box):
         self.append(self._tiles)
         self._tile()
 
-    def show(self, programs: list[tuple[Program, list[Path]]]) -> None:
+    def show(self, programs: list[tuple[Program, list[Path]]],
+             conversation: str | None = None) -> None:
         """The Programs whose files can be opened; tabs of any gone close, and
-        with no file open, what the first runs opens."""
+        with no file open, what the first runs opens. Another
+        ``conversation`` brings its own Changes tabs."""
+        if conversation != self._conversation:
+            self._switch(conversation)
         self._programs = {p.manifest.name: (p, files) for p, files in programs}
         self._fill_tree()
         for tab in list(self._open(Kind.CODE)):
@@ -100,6 +110,16 @@ class Canvas(Gtk.Box):
                 self.close(tab)
         if not self._open(Kind.CODE):
             self.show_files()
+
+    def _switch(self, conversation: str | None) -> None:
+        kept = self._changes.get(self._conversation, {}).copy()
+        for tab in list(self._open(Kind.CHANGES)):
+            self.close(tab)
+        self._changes[self._conversation] = kept
+        self._conversation = conversation
+        for question, (files, on_comment) in list(
+                self._changes.get(conversation, {}).items()):
+            self.show_changes(question, files, on_comment)
 
     def show_files(self) -> None:
         """Open the code group on what the first Program runs, or bring its
@@ -122,9 +142,16 @@ class Canvas(Gtk.Box):
         self._opened(tab)
 
     def show_changes(self, question: str, files: tuple[FileChange, ...],
-                     on_comment: Callable[[str, tuple[int, int], str], None]) -> None:
+                     on_comment: Callable[[str, tuple[int, int], str], None],
+                     conversation: Any = SHOWN) -> None:
         """A question's changes in a tab of their own: the files it changed,
-        each opening to its diff, and a comment on picked lines."""
+        each opening to its diff, and a comment on picked lines. Those of a
+        ``conversation`` not shown wait until it is."""
+        if conversation is SHOWN:
+            conversation = self._conversation
+        self._changes.setdefault(conversation, {})[question] = (files, on_comment)
+        if conversation != self._conversation:
+            return
         tab = Tab(Kind.CHANGES, question, title_of(question))
         if tab in self._pages:
             self.close(tab)
@@ -309,6 +336,8 @@ class Canvas(Gtk.Box):
     def _closing(self, view: Adw.TabView, page: Adw.TabPage) -> bool:
         tab = next(t for t, p in self._pages.items() if p is page)
         del self._pages[tab]
+        if tab.kind is Kind.CHANGES:
+            self._changes.get(self._conversation, {}).pop(tab.key, None)
         self._sources.pop(tab, None)
         ended = getattr(self._contents.pop(tab, None), "close", None)
         if callable(ended):

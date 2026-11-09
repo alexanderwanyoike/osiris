@@ -141,6 +141,39 @@ def test_showing_the_programs_again_keeps_the_changes_tab() -> None:
     assert titles(widget, Kind.CHANGES) == ["tidy main.py"]
 
 
+def test_each_conversation_keeps_its_own_changes_tabs() -> None:
+    """A Changes tab opened in one Conversation is not left on the Canvas
+    when another opens, and is there again when it comes back (#220)."""
+    widget, _ = changed()
+    pomodoro = [(program("pomodoro", "Pomodoro"), [Path("main.py")])]
+    widget.show(pomodoro, conversation="ses_2")
+    assert titles(widget, Kind.CHANGES) == []
+    widget.show(pomodoro, conversation=None)
+    assert titles(widget, Kind.CHANGES) == ["tidy main.py"]
+
+
+def test_a_changes_tab_closed_stays_closed_when_its_conversation_returns() -> None:
+    widget, _ = changed()
+    view = widget.views[Kind.CHANGES]
+    view.close_page(view.get_selected_page())
+    pomodoro = [(program("pomodoro", "Pomodoro"), [Path("main.py")])]
+    widget.show(pomodoro, conversation="ses_2")
+    widget.show(pomodoro, conversation=None)
+    assert Kind.CHANGES not in [group.kind for group in widget.panels.groups]
+
+
+def test_changes_read_for_a_conversation_left_meanwhile_wait_for_it() -> None:
+    """Reading a question's changes runs git off the main loop; the person
+    may have opened another Conversation by the time they come (#220)."""
+    widget, _ = canvas()
+    pomodoro = [(program("pomodoro", "Pomodoro"), [Path("main.py")])]
+    widget.show(pomodoro, conversation="ses_2")
+    widget.show_changes("tidy main.py", (), lambda *_: None, conversation="ses_1")
+    assert Kind.CHANGES not in [group.kind for group in widget.panels.groups]
+    widget.show(pomodoro, conversation="ses_1")
+    assert titles(widget, Kind.CHANGES) == ["tidy main.py"]
+
+
 def test_a_comment_on_picked_lines_reaches_thoth_with_its_file_and_lines() -> None:
     widget, comments = changed()
     buffer = widget.current_view().get_buffer()
