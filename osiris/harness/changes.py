@@ -5,10 +5,41 @@ Program from any Conversation, reopened or not."""
 from __future__ import annotations
 
 import re
+from datetime import datetime
+from typing import Protocol
 
 from osiris.harness.engine import FileChange
+from osiris.harness.log import HarnessLog
 
 _FILE = re.compile(r"^diff --git a/(.+) b/(.+)$", re.MULTILINE)
+
+
+class ProgramHistory(Protocol):
+    def commits_since(self, name: str, since: datetime) -> list[tuple[str, str]]: ...
+
+    def label(self, name: str) -> str: ...
+
+
+def credit_shell_commits(
+    log: HarnessLog, history: ProgramHistory, session: str
+) -> None:
+    """Log as the latest question's changes the commits made since it was
+    asked, to the Programs it worked on, that the Osiris tools did not log:
+    those made with git in a shell (#219)."""
+    asked = log.asked_at(session)
+    questions = log.changes_by_question(session)
+    if asked is None or not questions:
+        return
+    names = [change.program for change in questions[-1] if change.program]
+    for name in dict.fromkeys(names):
+        for commit, subject in history.commits_since(name, asked):
+            log.write(
+                "changed",
+                session=session,
+                summary=f"{history.label(name)}: {subject}",
+                undo={"action": "revert_commit", "name": name, "commit": commit},
+                program=name,
+            )
 
 
 def file_changes(program: str, patch: str) -> tuple[FileChange, ...]:

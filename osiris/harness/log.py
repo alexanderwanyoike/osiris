@@ -107,6 +107,15 @@ class HarnessLog:
             return []
         return [json.loads(line) for line in self._files.read(self._path).splitlines()]
 
+    def asked_at(self, session: str) -> datetime | None:
+        """When the session was last asked a question."""
+        sent = [
+            entry["time"]
+            for entry in self._entries()
+            if entry["kind"] == "sent" and entry.get("session") == session
+        ]
+        return datetime.fromisoformat(sent[-1]) if sent else None
+
     def changes_by_question(self, session: str) -> list[list[Change]]:
         """For each question the session was asked, in order, the changes it
         led to: those naming the session, logged after it."""
