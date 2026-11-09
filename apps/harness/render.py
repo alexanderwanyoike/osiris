@@ -266,14 +266,15 @@ def _step_detail(step: Step) -> Gtk.Widget:
     shown = detail(step)
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
     box.add_css_class("harness-step-detail")
-    asked = Gtk.Label(label=shown.asked, xalign=0, wrap=True, selectable=True)
+    asked = Gtk.Label(label=shown.asked, xalign=0, wrap=True, selectable=True,
+                      wrap_mode=Pango.WrapMode.WORD_CHAR)
     asked.add_css_class("harness-step-asked")
     if shown.kind is Kind.COMMAND:
         asked.add_css_class("monospace")
     box.append(asked)
     for name, value in shown.inputs:
         given = Gtk.Label(label=f"{name}: {value}", xalign=0, wrap=True,
-                          selectable=True)
+                          selectable=True, wrap_mode=Pango.WrapMode.WORD_CHAR)
         given.add_css_class("harness-step-input")
         box.append(given)
     if shown.note:
