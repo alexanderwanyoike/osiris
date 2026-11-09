@@ -458,3 +458,13 @@ def test_putting_the_drawer_away_puts_away_what_floats_beside_it() -> None:
     stand_in.get_dbus_connection = lambda: None
     stand_in.close_drawer()
     assert put_away == ["hidden", "minimized"]
+
+
+def test_turning_allow_everything_anywhere_draws_the_drawer_again() -> None:
+    """So the switch beside the message box shows a change made in Settings
+    (#228)."""
+    stand_in, _ = app()
+    drawn = stand_in.drawer.refreshes
+    stand_in.set_auto_mode(True)
+    assert stand_in.in_auto_mode
+    assert stand_in.drawer.refreshes > drawn
