@@ -67,7 +67,7 @@ from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.apps.tool_server import NAME as TOOLS, undo  # noqa: E402
 
 from osiris.harness import admin  # noqa: E402
-from osiris.harness.changes import file_changes  # noqa: E402
+from osiris.harness.changes import credit_shell_commits, file_changes  # noqa: E402
 from osiris.harness.connectors import (  # noqa: E402
     Connector,
     Servers,
@@ -1756,7 +1756,30 @@ class Application(Adw.Application):
         history to show; the changes and the Canvas are the screen's."""
         self.admin_answer(session, None)
         self.backgrounded.pop(session, None)
-        if conversation is self.conversation and self.log is not None:
+        if self.log is None:
+            self.load_history()
+            return
+        log, history = self.log, self.programs()
+        on_screen = conversation is self.conversation and self.harness is not None
+        project = (project_program(self.harness.directory, self.home)
+                   if on_screen else None)
+
+        def credit() -> None:
+            try:
+                credit_shell_commits(log, history, session, project)
+            except (CommandError, ProgramError):
+                pass  # A Program gone or never one has nothing to show.
+
+        def credited(_result) -> None:
+            if conversation is self.conversation:
+                self._changed(session, conversation)
+            self.load_history()
+
+        self.background(credit, credited)
+
+    def _changed(self, session: str, conversation: Conversation) -> None:
+        """Put what the answer on screen changed and proposed under it."""
+        if self.log is not None:
             asked = self.log.changes_by_question(session)
             changes = asked[-1] if asked else []
             conversation.changed(changes)
@@ -1768,7 +1791,6 @@ class Application(Adw.Application):
                 self.background(lambda: harness.worked_on(session, folder),
                                 lambda _r: self.load_history())
             self.update_canvas()
-        self.load_history()
 
     def _refresh(self) -> bool:
         self.drawer.refresh()
