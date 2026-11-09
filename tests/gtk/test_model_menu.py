@@ -4,6 +4,7 @@ What it lists and in what order is osiris/harness/model_menu.py's."""
 
 from __future__ import annotations
 
+from gi.repository import Gtk
 from model_menu import ModelMenu
 
 from osiris.harness.accounts import ModelInfo
@@ -47,3 +48,13 @@ def test_typing_in_the_search_narrows_the_models() -> None:
     assert listed(widget) == ["GPT-6.1 Terra"]
     widget.search.set_text("")
     assert listed(widget) == ["GPT-6 Sol", "GPT-6.1 Terra", "Flint", "Big Pickle"]
+
+
+def test_about_eight_rows_show_before_the_list_scrolls() -> None:
+    many = [model("openai", f"GPT-{n}", "gpt") for n in range(26)]
+    widget, _ = menu(many)
+    row = widget.list.get_row_at_index(0)
+    one = row.measure(Gtk.Orientation.VERTICAL, -1)[1]
+    shown = widget.card.measure(Gtk.Orientation.VERTICAL, -1)[1]
+    assert 7 * one <= shown <= 9 * one
+    assert widget.list.measure(Gtk.Orientation.VERTICAL, -1)[1] > shown
