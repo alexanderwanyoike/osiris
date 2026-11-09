@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import threading
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from enum import Enum
@@ -112,6 +113,8 @@ class Harness:
         #: The tool server, which the Engine keeps per folder.
         self._tools = tools
         self._tools_in: set[Path] = set()
+        #: Moves run off the main loop, two at once at an answer's end.
+        self._attaching = threading.Lock()
         self._session: str | None = None
         #: Sessions working on a question, served whichever one is on screen,
         #: and the folder each runs in.
@@ -174,9 +177,10 @@ class Harness:
         return self._engine.conversations()
 
     def _ready(self, directory: Path) -> None:
-        if self._tools is not None and directory not in self._tools_in:
-            self._engine.attach_tools(*self._tools, directory)
-            self._tools_in.add(directory)
+        with self._attaching:
+            if self._tools is not None and directory not in self._tools_in:
+                self._engine.attach_tools(*self._tools, directory)
+                self._tools_in.add(directory)
 
     def restart_tools(self) -> None:
         """Attach the tool server again where it runs now; other folders get a
