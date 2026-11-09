@@ -37,3 +37,22 @@ def in_menu_order(models: list[ModelInfo], in_use: ModelRef | None) -> list[Mode
         models,
         key=lambda m: (m.ref != in_use, rank.get(m.ref.provider, len(FEATURED))),
     )
+
+
+def narrowed(
+    models: list[ModelInfo], query: str, providers: dict[str, str]
+) -> list[ModelInfo]:
+    """Those whose name, family or Provider starts with ``query``, then those
+    containing it, as the composer picker narrows; ``providers`` names each
+    Provider by its id."""
+    wanted = query.lower()
+
+    def words(m: ModelInfo) -> list[str]:
+        provider = providers.get(m.ref.provider, m.ref.provider)
+        return [m.name.lower(), m.family.lower(), provider.lower()]
+
+    starts = [m for m in models if any(w.startswith(wanted) for w in words(m))]
+    contains = [
+        m for m in models if m not in starts and any(wanted in w for w in words(m))
+    ]
+    return starts + contains
