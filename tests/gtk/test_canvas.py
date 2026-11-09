@@ -162,6 +162,18 @@ def test_a_changes_tab_closed_stays_closed_when_its_conversation_returns() -> No
     assert Kind.CHANGES not in [group.kind for group in widget.panels.groups]
 
 
+def test_changes_read_for_a_conversation_left_meanwhile_wait_for_it() -> None:
+    """Reading a question's changes runs git off the main loop; the person
+    may have opened another Conversation by the time they come (#220)."""
+    widget, _ = canvas()
+    pomodoro = [(program("pomodoro", "Pomodoro"), [Path("main.py")])]
+    widget.show(pomodoro, conversation="ses_2")
+    widget.show_changes("tidy main.py", (), lambda *_: None, conversation="ses_1")
+    assert Kind.CHANGES not in [group.kind for group in widget.panels.groups]
+    widget.show(pomodoro, conversation="ses_1")
+    assert titles(widget, Kind.CHANGES) == ["tidy main.py"]
+
+
 def test_a_comment_on_picked_lines_reaches_thoth_with_its_file_and_lines() -> None:
     widget, comments = changed()
     buffer = widget.current_view().get_buffer()

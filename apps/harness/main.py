@@ -54,6 +54,7 @@ from connectors_page import ConnectorsPage  # noqa: E402
 from conversation_panel import ConversationPanel  # noqa: E402
 from composer_picker import Picker  # noqa: E402
 from model_menu import ModelMenu  # noqa: E402
+from program_history import ProgramHistory  # noqa: E402
 from rail import Rail  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
 from proposal_card import ProposalCard  # noqa: E402
@@ -591,8 +592,9 @@ class Drawer(Gtk.ApplicationWindow):
     def open_page(self, at: str) -> None:
         self.canvas.open_page(at)
 
-    def show_changes(self, question: str, files, on_comment) -> None:
-        self.canvas.show_changes(question, files, on_comment)
+    def show_changes(self, question: str, files, on_comment,
+                     conversation: str | None = None) -> None:
+        self.canvas.show_changes(question, files, on_comment, conversation)
         self.canvas_toggle.set_sensitive(True)
         self.canvas_toggle.set_active(True)
 
@@ -1335,7 +1337,7 @@ class Application(Adw.Application):
         turns = conversation.turns
         panel.show_where(project, "")
         panel.show_changes(
-            [(at, title_of(turn.question), len(turn.changes))
+            [(at, title_of(turn.question), len(turn.commits))
              for at, turn in enumerate(turns) if turn.commits],
             lambda at: self.show_changes(turns[at]))
         servers, contexts, accounts = self.servers, self.contexts, self.accounts
@@ -1505,13 +1507,16 @@ class Application(Adw.Application):
                     gone.append(name)
             return tuple(found), gone
 
+        # Read off the main loop: another Conversation may be on screen by then.
+        session = self.session
+
         def shown(results: list[tuple[tuple, list[str]]]) -> None:
             for turn, (files, gone) in zip(turns, results, strict=True):
                 if gone and not files:
                     turn.note = (f"{', '.join(dict.fromkeys(gone))} is gone, so what "
                                  "this question changed in it cannot be shown.")
                 else:
-                    self.drawer.show_changes(turn.question, files, commented)
+                    self.drawer.show_changes(turn.question, files, commented, session)
             self.drawer.refresh()
 
         self.background(lambda: [read(turn) for turn in turns], shown)
@@ -1783,19 +1788,24 @@ class Application(Adw.Application):
         if self.log is None:
             self.load_history()
             return
-        log, history = self.log, self.programs()
-        on_screen = conversation is self.conversation and self.harness is not None
-        project = (project_program(self.harness.directory, self.home)
-                   if on_screen else None)
+        log, harness, home = self.log, self.harness, self.home
+        history = ProgramHistory(self.programs())
 
         def credit() -> None:
             try:
-                credit_shell_commits(log, history, session, project)
-            except (CommandError, ProgramError):
-                pass  # A Program gone or never one has nothing to show.
+                folder = harness.folder_of(session) if harness is not None else None
+            except HttpError:
+                folder = None  # Deleted meanwhile: nothing of its own to credit.
+            project = project_program(folder, home) if folder is not None else None
+            credit_shell_commits(log, history, session, project)
+
+        ended = conversation.turns[-1] if conversation.turns else None
 
         def credited(_result) -> None:
-            if conversation is self.conversation:
+            # A question asked meanwhile is the latest now; the ended one's
+            # changes come back when the Conversation is opened again.
+            latest = conversation.turns[-1] if conversation.turns else None
+            if conversation is self.conversation and latest is ended:
                 self._changed(session, conversation)
             self.load_history()
 
