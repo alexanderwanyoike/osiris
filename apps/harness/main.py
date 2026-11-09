@@ -268,7 +268,7 @@ class Drawer(Gtk.ApplicationWindow):
         self.send_now.connect("clicked", self._cut_in)
         self.allow_everything = Gtk.Switch(active=self.app.in_auto_mode,
                                            valign=Gtk.Align.CENTER)
-        self.allow_everything.connect(
+        self._allowing = self.allow_everything.connect(
             "notify::active", lambda s, _p: self.app.set_auto_mode(s.get_active()))
         allowing = Gtk.Label(label="Allow everything")
         allowing.add_css_class("harness-meta")
@@ -641,6 +641,9 @@ class Drawer(Gtk.ApplicationWindow):
 
     def refresh(self, restyle: bool = False) -> None:
         conversation, look = self.app.conversation, self.app.look
+        # Settings may have turned it; following is not turning it again.
+        with self.allow_everything.handler_block(self._allowing):
+            self.allow_everything.set_active(self.app.in_auto_mode)
         if restyle:
             self._restyle_colours()
         fresh = len(self.views)
