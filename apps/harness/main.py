@@ -578,11 +578,11 @@ class Drawer(Gtk.ApplicationWindow):
         self.canvas_toggle.set_sensitive(True)
         self.canvas_toggle.set_active(True)
 
-    def show_canvas(self, programs) -> None:
+    def show_canvas(self, programs, conversation: str | None = None) -> None:
         """What the Conversation made; the Canvas opens the first time there is
         something to show."""
         had = self.canvas_toggle.get_sensitive()
-        self.canvas.show(programs)
+        self.canvas.show(programs, conversation)
         self.canvas_toggle.set_sensitive(bool(programs))
         if programs and not had:
             self.canvas_toggle.set_active(True)
@@ -1370,7 +1370,7 @@ class Application(Adw.Application):
 
         def show(found) -> None:
             if self.session == session:
-                self.drawer.show_canvas(found)
+                self.drawer.show_canvas(found, session)
 
         self.background(gather, show)
 
