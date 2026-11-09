@@ -1587,6 +1587,12 @@ class Application(Adw.Application):
             self.drawer.refresh()
         if self.harness is not None:
             self.background(self.harness.restart_tools, lambda _r: None)
+            if on:
+                self.background(self.harness.allow_waiting, self._allowed_waiting)
+
+    def _allowed_waiting(self, decisions) -> None:
+        for decision in decisions:
+            self._apply(decision)
 
     def _restored(self, session: str, past) -> Conversation:
         """A past Conversation with its tokens, Program cards and Undo, which
