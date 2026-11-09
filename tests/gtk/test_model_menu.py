@@ -4,7 +4,7 @@ What it lists and in what order is osiris/harness/model_menu.py's."""
 
 from __future__ import annotations
 
-from gi.repository import Gtk
+from gi.repository import Gdk, Gtk
 from model_menu import ModelMenu
 
 from osiris.harness.accounts import ModelInfo
@@ -88,3 +88,30 @@ def test_each_model_names_its_provider_in_a_quieter_style() -> None:
     shown = widget.list.get_row_at_index(0).get_child().get_last_child()
     assert shown.get_label() == "OpenAI"
     assert shown.has_css_class("dim-label")
+
+
+def press(widget: ModelMenu, key: int) -> bool:
+    return widget.key(None, key, 0, Gdk.ModifierType(0))
+
+
+def test_arrows_move_through_the_models_and_enter_chooses() -> None:
+    """Typing stays in the search the whole time."""
+    widget, chosen = menu()
+    assert press(widget, Gdk.KEY_Down)
+    assert press(widget, Gdk.KEY_Down)
+    assert press(widget, Gdk.KEY_Up)
+    assert press(widget, Gdk.KEY_Return)
+    assert chosen == [TERRA.ref]
+
+
+def test_enter_chooses_the_first_model_left_after_typing() -> None:
+    widget, chosen = menu()
+    widget.search.set_text("pickle")
+    press(widget, Gdk.KEY_Return)
+    assert chosen == [PICKLE.ref]
+
+
+def test_escape_closes_the_menu() -> None:
+    widget, chosen = menu()
+    assert press(widget, Gdk.KEY_Escape)
+    assert chosen == ["closed"]
