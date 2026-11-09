@@ -91,6 +91,7 @@ class Turn:
         """An answer that ends leaves no card waiting: the Engine has moved on."""
         self.state = state
         self.asking = self.held = None
+        self.queued = []
 
     @property
     def undoable(self) -> bool:
