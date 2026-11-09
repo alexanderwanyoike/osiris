@@ -40,12 +40,13 @@ The first slice of ROADMAP P3.5:
   not to try it another way unasked. A card waits without holding up any other
   Conversation, goes when its answer ends, and every answer is logged
   (`replied`).
-- **Unless the person turns on auto mode.** A switch on the Providers page
-  (`osiris.harness.trust`) has the Harness answer every request once without a
-  card, logged as `allowed` by `auto mode`, and restarts the tool server so the
-  model is told. A deny rule still refuses, since the Engine never asks about
-  it, and a command using sudo still asks for the password. It is off until
-  the person turns it on; a person who had allow everything on is in auto mode.
+- **Unless the person allows everything.** A switch beside the message box,
+  the same one as in Settings, turns on auto mode (`osiris.harness.trust`):
+  the Harness answers every request once without a card, logged as `allowed`
+  by `auto mode`, and restarts the tool server so the model is told. A deny
+  rule still refuses, since the Engine never asks about it, and a command
+  using sudo still asks for the password. It is off until the person turns it
+  on.
 - **It asks for the administrator password in the Conversation.** When a
   command it runs uses `sudo`, an admin password card appears under the
   answer: "Osiris needs your password to run:" and the exact command, a shell
