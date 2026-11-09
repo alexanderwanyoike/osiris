@@ -13,6 +13,9 @@ from osiris.harness.accounts import ModelInfo  # noqa: E402
 from osiris.harness.engine import ModelRef  # noqa: E402
 from osiris.harness.model_menu import in_menu_order, narrowed  # noqa: E402
 
+#: Rows shown before the list scrolls.
+ROWS = 8
+
 
 class ModelMenu(Gtk.Box):
     def __init__(self, *, on_chosen: Callable[[ModelRef], None],
@@ -28,7 +31,9 @@ class ModelMenu(Gtk.Box):
         self.append(self.search)
         self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.BROWSE)
         self.list.add_css_class("navigation-sidebar")
-        self.append(self.list)
+        self.card = Gtk.ScrolledWindow(child=self.list, propagate_natural_height=True,
+                                       hscrollbar_policy=Gtk.PolicyType.NEVER)
+        self.append(self.card)
 
     def show_models(self, models: list[ModelInfo], in_use: ModelRef | None,
                     providers: dict[str, str]) -> None:
@@ -43,3 +48,8 @@ class ModelMenu(Gtk.Box):
             row = Gtk.ListBoxRow(child=Gtk.Label(label=info.name, xalign=0))
             row.model = info
             self.list.append(row)
+        first = self.list.get_row_at_index(0)
+        if first is not None:
+            # As tall as the Skin draws a row, so it is rows that show.
+            one = first.measure(Gtk.Orientation.VERTICAL, -1)[1]
+            self.card.set_max_content_height(ROWS * one)
