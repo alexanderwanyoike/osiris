@@ -53,6 +53,8 @@ class ModelInfo:
     name: str
     #: Tokens its context window holds; 0 where the Engine does not say.
     context: int = 0
+    #: The line of models it belongs to, such as "gpt-6.1"; "" where unknown.
+    family: str = ""
 
 
 @runtime_checkable
