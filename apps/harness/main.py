@@ -1759,12 +1759,11 @@ class Application(Adw.Application):
         if self.log is None:
             self.load_history()
             return
-        log, history = self.log, self.programs()
-        on_screen = conversation is self.conversation and self.harness is not None
-        project = (project_program(self.harness.directory, self.home)
-                   if on_screen else None)
+        log, history, harness, home = self.log, self.programs(), self.harness, self.home
 
         def credit() -> None:
+            project = (project_program(harness.folder_of(session), home)
+                       if harness is not None else None)
             try:
                 credit_shell_commits(log, history, session, project)
             except (CommandError, ProgramError):
