@@ -58,3 +58,12 @@ def test_about_eight_rows_show_before_the_list_scrolls() -> None:
     shown = widget.card.measure(Gtk.Orientation.VERTICAL, -1)[1]
     assert 7 * one <= shown <= 9 * one
     assert widget.list.measure(Gtk.Orientation.VERTICAL, -1)[1] > shown
+
+
+def test_providers_and_accounts_is_pinned_below_the_list() -> None:
+    """Outside the scroll, so it is always there, however many models."""
+    widget, chosen = menu()
+    assert widget.providers.get_parent() is widget
+    assert widget.get_last_child() is widget.providers
+    widget.providers.emit("clicked")
+    assert chosen == ["providers"]
