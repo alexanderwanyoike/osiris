@@ -325,6 +325,9 @@ class Conversation:
                 turn.steps = [step for step in turn.steps if step.call != call]
                 turn.doing = Status.WAITING.value
                 held = Step(action, resources, call=call, input=self._inputs.get(call))
+                waiting = [turn.asking, *(asked for asked, _ in turn.queued)]
+                if any(w is not None and w.request == event.request for w in waiting):
+                    return
                 if turn.asking is None:
                     turn.asking, turn.held = event, held
                 else:

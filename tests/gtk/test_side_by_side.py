@@ -25,6 +25,7 @@ class FakeDrawer:
         self.entry = SimpleNamespace(grab_focus=lambda: None)
         self.drafts: list[str] = []
         self.changes: list[tuple[str, object, Any]] = []
+        self.changes_for: list[Any] = []
         self.pages: list[str] = []
         self.refreshes = 0
         self.picker_refreshes = 0
@@ -45,8 +46,11 @@ class FakeDrawer:
     def draft(self, text: str) -> None:
         self.drafts.append(text)
 
-    def show_changes(self, question: str, files: object, on_comment: Any) -> None:
+    def show_changes(
+        self, question: str, files: object, on_comment: Any, conversation: Any = None
+    ) -> None:
         self.changes.append((question, files, on_comment))
+        self.changes_for.append(conversation)
 
     def open_page(self, at: str) -> None:
         self.pages.append(at)
@@ -458,3 +462,81 @@ def test_putting_the_drawer_away_puts_away_what_floats_beside_it() -> None:
     stand_in.get_dbus_connection = lambda: None
     stand_in.close_drawer()
     assert put_away == ["hidden", "minimized"]
+
+
+class Credits:
+    """Programs' commits since a question, as git would give them."""
+
+    def __init__(self, found: dict[str, list[tuple[str, str]]]) -> None:
+        self.found = found
+
+    def commits_since(self, name: str, _since: object) -> list[tuple[str, str]]:
+        if name not in self.found:
+            from osiris.platform.process import CommandError
+
+            raise CommandError(["git", "log"], 128, f"{name} is gone")
+        return self.found[name]
+
+    def label(self, name: str) -> str:
+        return name.title()
+
+
+def test_an_answer_ending_off_screen_credits_the_program_it_runs_in() -> None:
+    """Its Conversation was in the Program's Project all along (#219)."""
+    stand_in, _ = app()
+    stand_in.programs = lambda: Credits({"pomodoro": [("abc123", "Add a pause")]})
+    asked(stand_in, "add a pause button")
+    stand_in.new_conversation()
+    heard(stand_in, Finished("ses_1"))
+    summaries = [c.summary for c in stand_in.log.changes_by_question("ses_1")[-1]]
+    assert summaries == ["Pomodoro: Add a pause"]
+
+
+def test_a_gone_program_does_not_keep_the_others_from_being_credited() -> None:
+    stand_in, _ = app()
+    stand_in.programs = lambda: Credits({"pomodoro": [("abc123", "Add a pause")]})
+    asked(stand_in, "tidy both")
+    stand_in.log.write(
+        "changed", session="ses_1", summary="Made Gone", undo=None, program="gone"
+    )
+    heard(stand_in, Finished("ses_1"))
+    summaries = [c.summary for c in stand_in.log.changes_by_question("ses_1")[-1]]
+    assert summaries == ["Made Gone", "Pomodoro: Add a pause"]
+
+
+def test_a_question_asked_while_an_ended_answer_is_credited_keeps_its_own() -> None:
+    """Crediting reads git off the main loop; the next question may be sent
+    meanwhile, and the ended answer's changes are not that question's."""
+    stand_in, _ = app()
+    stand_in.programs = lambda: Credits({"pomodoro": [("abc123", "Add a pause")]})
+    later: list[tuple[object, object]] = []
+    stand_in.background = lambda work, done: later.append((work, done))
+    asked(stand_in, "add a pause button")
+    heard(stand_in, Finished("ses_1"))
+    following = asked(stand_in, "and a reset button").turns[-1]
+    for work, done in later:
+        done(work())  # type: ignore[operator]
+    assert following.changes == []
+
+
+def test_changes_are_shown_for_the_conversation_they_were_asked_in() -> None:
+    """The person may open another Conversation while git is read (#220)."""
+    from osiris.harness.log import Change
+
+    stand_in, _ = app()
+    stand_in.programs = lambda: SimpleNamespace(patch=lambda _name, _commit: "")
+    later: list[tuple[Any, Any]] = []
+    stand_in.background = lambda work, done: later.append((work, done))
+    turn = asked(stand_in, "tidy main.py").turns[-1]
+    turn.changes.append(
+        Change(
+            "Coin Flip: Tidy",
+            {"action": "revert_commit", "name": "coin-flip", "commit": "abc"},
+            "coin-flip",
+        )
+    )
+    stand_in.show_changes(turn)
+    stand_in.harness.new_conversation()
+    for work, done in later:
+        done(work())
+    assert stand_in.drawer.changes_for == ["ses_1"]
