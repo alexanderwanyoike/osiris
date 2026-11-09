@@ -67,3 +67,25 @@ def test_providers_and_accounts_is_pinned_below_the_list() -> None:
     assert widget.get_last_child() is widget.providers
     widget.providers.emit("clicked")
     assert chosen == ["providers"]
+
+
+def test_each_model_leads_with_its_makers_icon_or_a_monogram() -> None:
+    """A maker with no icon Osiris ships, or none known, gets a monogram, as
+    a Provider without a logo does on the Providers page."""
+    nemotron = model("opencode", "Nemotron 3", "nemotron")
+    widget, _ = menu([SOL, nemotron, FLINT])
+    leads = [row.get_child().get_first_child() for row in widget.list]
+    assert [lead.get_icon_name() for lead in leads[:2]] == [
+        "osiris-provider-openai-symbolic",
+        "osiris-maker-nvidia-symbolic",
+    ]
+    assert leads[2].get_label() == "F"
+    assert leads[2].has_css_class("harness-monogram")
+
+
+def test_each_model_names_its_provider_in_a_quieter_style() -> None:
+    """One model can come through two Providers."""
+    widget, _ = menu([SOL])
+    shown = widget.list.get_row_at_index(0).get_child().get_last_child()
+    assert shown.get_label() == "OpenAI"
+    assert shown.has_css_class("dim-label")
