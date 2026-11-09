@@ -7,7 +7,7 @@ from collections.abc import Callable
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, Pango  # noqa: E402
+from gi.repository import Gdk, Graphene, Gtk, Pango  # noqa: E402
 
 from osiris.harness.accounts import ModelInfo  # noqa: E402
 from osiris.harness.engine import ModelRef  # noqa: E402
@@ -15,6 +15,8 @@ from osiris.harness.model_menu import in_menu_order, maker_of, narrowed  # noqa:
 
 #: Rows shown before the list scrolls.
 ROWS = 8
+MOVES = {Gdk.KEY_Down: 1, Gdk.KEY_Up: -1}
+CHOOSES = (Gdk.KEY_Return, Gdk.KEY_KP_Enter)
 #: The makers' icons Osiris ships (apps/harness/logos, NOTICE there). Xiaomi's
 #: only mark in lobe-icons is a wordmark, unreadable at this size, so MiMo
 #: gets a monogram.
@@ -48,9 +50,18 @@ class ModelMenu(Gtk.Box):
         self._providers: dict[str, str] = {}
         self.search = Gtk.SearchEntry(placeholder_text="Search models")
         self.search.connect("changed", lambda _e: self._narrow())
+        # Captured before the search's own Escape, which only clears it.
+        keys = Gtk.EventControllerKey(propagation_phase=Gtk.PropagationPhase.CAPTURE)
+        keys.connect("key-pressed", self.key)
+        self.search.add_controller(keys)
         self.append(self.search)
         self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.BROWSE)
         self.list.add_css_class("navigation-sidebar")
+        self.list.connect("row-activated", lambda _l, row: self._on_chosen(row.model.ref))
+        # The chosen row follows the pointer, so only one row is ever lit.
+        pointer = Gtk.EventControllerMotion()
+        pointer.connect("motion", self._pointed)
+        self.list.add_controller(pointer)
         self.card = Gtk.ScrolledWindow(child=self.list, propagate_natural_height=True,
                                        hscrollbar_policy=Gtk.PolicyType.NEVER)
         self.append(self.card)
@@ -74,6 +85,7 @@ class ModelMenu(Gtk.Box):
             row.model = info
             self.list.append(row)
         first = self.list.get_row_at_index(0)
+        self.list.select_row(first)
         if first is not None:
             # As tall as the Skin draws a row, so it is rows that show.
             one = first.measure(Gtk.Orientation.VERTICAL, -1)[1]
@@ -89,3 +101,33 @@ class ModelMenu(Gtk.Box):
         provider.add_css_class("dim-label")
         box.append(provider)
         return box
+
+    def key(self, _controller, keyval, _code, _state) -> bool:
+        row = self.list.get_selected_row()
+        if keyval in MOVES and row is not None:
+            self._move(row, MOVES[keyval])
+            return True
+        if keyval in CHOOSES and row is not None:
+            self._on_chosen(row.model.ref)
+            return True
+        if keyval == Gdk.KEY_Escape:
+            self._on_close()
+            return True
+        return False
+
+    def _pointed(self, _controller, _x: float, y: float) -> None:
+        row = self.list.get_row_at_y(int(y))
+        if row is not None and row is not self.list.get_selected_row():
+            self.list.select_row(row)
+
+    def _move(self, row: Gtk.ListBoxRow, step: int) -> None:
+        last = len(list(self.list)) - 1
+        chosen = self.list.get_row_at_index(min(max(row.get_index() + step, 0), last))
+        self.list.select_row(chosen)
+        _found, at = chosen.compute_point(self.list, Graphene.Point())
+        shown = self.card.get_vadjustment()
+        top, page = shown.get_value(), shown.get_page_size()
+        if at.y < top:
+            shown.set_value(at.y)
+        elif at.y + chosen.get_height() > top + page:
+            shown.set_value(at.y + chosen.get_height() - page)
