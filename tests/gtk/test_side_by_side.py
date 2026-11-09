@@ -550,3 +550,15 @@ def test_changes_are_shown_for_the_conversation_they_were_asked_in() -> None:
     for work, done in later:
         done(work())
     assert stand_in.drawer.changes_for == ["ses_1"]
+
+
+def test_turning_allow_everything_on_clears_the_cards_waiting() -> None:
+    """Review of #241."""
+    from osiris.harness.engine import ToolRequested
+
+    stand_in, _ = app()
+    on_screen = asked(stand_in, "what is in /etc")
+    heard(stand_in, ToolRequested("ses_1", "per_1", "bash", ("ls /etc",), "c1"))
+    assert on_screen.turns[-1].asking is not None
+    stand_in.set_auto_mode(True)
+    assert on_screen.turns[-1].asking is None
