@@ -1314,7 +1314,7 @@ class Application(Adw.Application):
         panel.show_where(project, "")
         panel.show_changes(
             [(at, title_of(turn.question), len(turn.changes))
-             for at, turn in enumerate(turns) if turn.changes],
+             for at, turn in enumerate(turns) if turn.commits],
             lambda at: self.show_changes(turns[at]))
         servers, contexts, accounts = self.servers, self.contexts, self.accounts
 
