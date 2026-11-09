@@ -57,6 +57,18 @@ def test_commits_made_in_a_shell_are_the_questions_changes() -> None:
     )
 
 
+def test_the_program_a_conversation_runs_in_is_credited_too() -> None:
+    """A question asked in a Program's Project may change it with nothing
+    but a shell."""
+    log = HarnessLog(FakeFileSystem(), Path("/home/tester/log.jsonl"), lambda: ASKED)
+    log.write("sent", session="ses_1", text="add a pause button")
+    history = History({"pomodoro": [("def456", "Add a pause button")]})
+    credit_shell_commits(log, history, "ses_1", project="pomodoro")
+    assert [c.summary for c in log.changes_by_question("ses_1")[-1]] == [
+        "Pomodoro: Add a pause button"
+    ]
+
+
 TIDIED = "\n".join(
     (
         "diff --git a/main.py b/main.py",
