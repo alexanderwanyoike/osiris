@@ -453,6 +453,17 @@ def test_the_canvas_is_told_which_conversation_it_shows() -> None:
     assert shown == [([], "ses_1")]
 
 
+def test_putting_the_drawer_away_puts_away_what_floats_beside_it() -> None:
+    """Super+A, Escape and the panel button all close the drawer (#227)."""
+    stand_in, _ = app()
+    put_away: list[str] = []
+    stand_in.drawer.hidden = lambda: put_away.append("hidden")
+    stand_in.drawer.minimize = lambda: put_away.append("minimized")
+    stand_in.get_dbus_connection = lambda: None
+    stand_in.close_drawer()
+    assert put_away == ["hidden", "minimized"]
+
+
 class Credits:
     """Programs' commits since a question, as git would give them."""
 

@@ -427,6 +427,12 @@ class Drawer(Gtk.ApplicationWindow):
         if isinstance(surface, GdkX11.X11Surface):
             surface.set_skip_taskbar_hint(True)
             surface.set_skip_pager_hint(True)
+        surface.connect("notify::state", self._surface_state)
+
+    def _surface_state(self, surface, _spec) -> None:
+        """Minimised by the desktop, as by show desktop, and not by Thoth."""
+        if surface.get_state() & Gdk.ToplevelState.MINIMIZED:
+            self.hidden()
 
     def _key(self, _controller, keyval, _code, _state) -> bool:
         if keyval == Gdk.KEY_Escape:
@@ -563,6 +569,11 @@ class Drawer(Gtk.ApplicationWindow):
     def summon(self) -> None:
         self.present()
         self.entry.grab_focus()
+
+    def hidden(self) -> None:
+        """Put away what floats beside the drawer, which would otherwise stay
+        on the desktop without it."""
+        self.model_menu.popdown()
 
     def _chosen(self, act, *args) -> None:
         """Act on a choice in the sidebar; narrow, the list then folds away."""
@@ -996,6 +1007,7 @@ class Application(Adw.Application):
     def close_drawer(self) -> None:
         """Ask the extension to slide the drawer away; minimise if it cannot."""
         self.open = False
+        self.drawer.hidden()
         connection = self.get_dbus_connection()
         if connection is None:
             self.drawer.minimize()
