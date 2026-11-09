@@ -62,6 +62,10 @@ class Canvas(Gtk.Box):
         self._contents: dict[Tab, Gtk.Widget] = {}
         #: Redraw each group's header, by kind.
         self._redraws: dict[Kind, Callable[[], None]] = {}
+        #: The Conversation shown, and each one's Changes tabs by question, to
+        #: open again when it comes back (#220).
+        self._conversation: str | None = None
+        self._changes: dict[str | None, dict[str, tuple[Any, Any]]] = {}
         self.tree = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
         self.tree.add_css_class("navigation-sidebar")
         self.tree.connect("row-activated", self._tree_activated)
@@ -90,9 +94,13 @@ class Canvas(Gtk.Box):
         self.append(self._tiles)
         self._tile()
 
-    def show(self, programs: list[tuple[Program, list[Path]]]) -> None:
+    def show(self, programs: list[tuple[Program, list[Path]]],
+             conversation: str | None = None) -> None:
         """The Programs whose files can be opened; tabs of any gone close, and
-        with no file open, what the first runs opens."""
+        with no file open, what the first runs opens. Another
+        ``conversation`` brings its own Changes tabs."""
+        if conversation != self._conversation:
+            self._switch(conversation)
         self._programs = {p.manifest.name: (p, files) for p, files in programs}
         self._fill_tree()
         for tab in list(self._open(Kind.CODE)):
@@ -100,6 +108,14 @@ class Canvas(Gtk.Box):
                 self.close(tab)
         if not self._open(Kind.CODE):
             self.show_files()
+
+    def _switch(self, conversation: str | None) -> None:
+        for tab in list(self._open(Kind.CHANGES)):
+            self.close(tab)
+        self._conversation = conversation
+        for question, (files, on_comment) in list(
+                self._changes.get(conversation, {}).items()):
+            self.show_changes(question, files, on_comment)
 
     def show_files(self) -> None:
         """Open the code group on what the first Program runs, or bring its
@@ -125,6 +141,8 @@ class Canvas(Gtk.Box):
                      on_comment: Callable[[str, tuple[int, int], str], None]) -> None:
         """A question's changes in a tab of their own: the files it changed,
         each opening to its diff, and a comment on picked lines."""
+        self._changes.setdefault(self._conversation, {})[question] = (
+            files, on_comment)
         tab = Tab(Kind.CHANGES, question, title_of(question))
         if tab in self._pages:
             self.close(tab)
