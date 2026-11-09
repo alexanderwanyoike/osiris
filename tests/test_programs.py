@@ -217,6 +217,10 @@ class TestCommitting:
         ]
         assert f"--since={asked.isoformat()}" in calls(runner)[-1]
 
+    def test_a_program_is_named_to_the_person_by_its_label(self) -> None:
+        subject, _, _ = programs(made())
+        assert subject.label("pomodoro") == "Pomodoro"
+
 
 class TestChecking:
     def test_python_that_does_not_compile_is_reported_with_its_line(self) -> None:
