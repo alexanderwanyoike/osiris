@@ -34,6 +34,11 @@ class ModelMenu(Gtk.Box):
         self.card = Gtk.ScrolledWindow(child=self.list, propagate_natural_height=True,
                                        hscrollbar_policy=Gtk.PolicyType.NEVER)
         self.append(self.card)
+        self.providers = Gtk.Button(
+            child=Gtk.Label(label="Providers and accounts…", xalign=0))
+        self.providers.add_css_class("flat")
+        self.providers.connect("clicked", lambda _b: self._on_providers())
+        self.append(self.providers)
 
     def show_models(self, models: list[ModelInfo], in_use: ModelRef | None,
                     providers: dict[str, str]) -> None:
