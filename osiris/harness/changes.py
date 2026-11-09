@@ -34,8 +34,11 @@ def credit_shell_commits(
     if asked is None or not questions:
         return
     names = [change.program for change in questions[-1] if change.program]
+    credited = {(change.undo or {}).get("commit") for change in questions[-1]}
     for name in dict.fromkeys(names + ([project] if project else [])):
         for commit, subject in history.commits_since(name, asked):
+            if commit in credited:
+                continue
             log.write(
                 "changed",
                 session=session,
