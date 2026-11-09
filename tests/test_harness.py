@@ -623,6 +623,21 @@ def test_a_conversation_moved_into_a_project_keeps_osiris_tools() -> None:
     assert ("osiris", POMODORO) in engine.attached
 
 
+def test_moving_the_conversation_on_screen_moves_where_it_runs() -> None:
+    """The history's pass may move it mid-answer (#221)."""
+    subject, _, _ = harness()
+    subject.ask("build me a timer")
+    subject.move("ses_1", POMODORO)
+    assert subject.directory == POMODORO
+
+
+def test_moving_another_conversation_leaves_the_one_on_screen_where_it_is() -> None:
+    subject, _, _ = harness()
+    subject.ask("build me a timer")
+    subject.move("ses_old", POMODORO)
+    assert subject.directory == HOME
+
+
 def test_the_tools_are_attached_in_a_folder_before_a_session_moves_there() -> None:
     """A running answer moves between steps; the step after must find them."""
     subject, engine, _ = harness()

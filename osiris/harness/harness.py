@@ -222,13 +222,14 @@ class Harness:
         if session != self._session or self._directory != self._home:
             return
         self.move(self._session, folder)
-        self._directory = folder
-        if self._session in self._running:
-            self._running[self._session] = folder
 
     def move(self, session: str, folder: Path) -> None:
         self._ready(folder)
         self._engine.move(session, folder)
+        if session == self._session:
+            self._directory = folder
+        if session in self._running:
+            self._running[session] = folder
 
     def go_back(self, session: str, message: str, questions: int = 1) -> Revert | None:
         """Go back to before ``message``: its files and the Conversation, which
