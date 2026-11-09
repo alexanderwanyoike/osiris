@@ -61,6 +61,9 @@ class Turn:
     #: and the step it would be, with the input the model gave it.
     asking: Asking | None = None
     held: Step | None = None
+    #: Actions asked about while a card was already open, each with its step,
+    #: shown in turn as the one before is answered.
+    queued: list[tuple[Asking, Step]] = field(default_factory=list)
     #: The Engine's plan for this answer, as it last reported it.
     tasks: list[Task] = field(default_factory=list)
     #: The question's message at the Engine, once it has been sent.
@@ -312,16 +315,19 @@ class Conversation:
         turn: Turn,
         event: Asking | ToolCalled | Allowed | Refused | ToolFinished,
     ) -> None:
-        if isinstance(event, Allowed | Refused):
-            turn.asking, turn.held = None, None
+        if isinstance(event, Allowed | Refused) and (
+            turn.asking is None or turn.asking.call == event.call
+        ):
+            turn.asking, turn.held = turn.queued.pop(0) if turn.queued else (None, None)
         match event:
             case Asking(_, _, action, resources, call):
                 turn.steps = [step for step in turn.steps if step.call != call]
                 turn.doing = Status.WAITING.value
-                turn.asking = event
-                turn.held = Step(
-                    action, resources, call=call, input=self._inputs.get(call)
-                )
+                held = Step(action, resources, call=call, input=self._inputs.get(call))
+                if turn.asking is None:
+                    turn.asking, turn.held = event, held
+                else:
+                    turn.queued.append((event, held))
             case ToolFinished(_, call, output, error, exit_status):
                 turn.steps = [
                     replace(step, output=output, error=error, exit=exit_status)
