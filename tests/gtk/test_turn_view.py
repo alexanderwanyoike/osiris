@@ -425,3 +425,31 @@ def test_a_skill_proposed_while_answering_has_its_card_under_the_answer() -> Non
     )
     view.update(turn, STYLE, None)
     assert "card for tidy-imports" in texts(view)
+
+
+def test_an_opened_step_with_a_long_unbroken_line_never_widens_the_answer() -> None:
+    """Like the approval card, a step's detail wraps a long line inside
+    itself (#226)."""
+    from render import ActivityRecord
+
+    unbroken = (
+        "tools.osiris.create_theme({label:'Midnight',seed:'#ffaa00',"
+        "harmony:'analogous',mood:'calm'})"
+    )
+
+    def narrowest(step: Step) -> int:
+        record = ActivityRecord()
+        record.show([step])
+        # A collapsed expander holds its child outside the widget tree.
+        record.set_expanded(True)
+        for expander in widgets(record):
+            if isinstance(expander, Gtk.Expander):
+                expander.set_expanded(True)
+        return record.measure(Gtk.Orientation.HORIZONTAL, -1)[0]
+
+    tool = Step("osiris_create_theme", ("x",), call="c", input={"code": "x"})
+    command = Step("shell", ("ls",), call="c", input={"command": "ls"})
+    assert narrowest(replace(tool, input={"code": unbroken})) == narrowest(tool)
+    assert narrowest(
+        replace(command, input={"command": unbroken}, resources=(unbroken,))
+    ) == narrowest(command)
