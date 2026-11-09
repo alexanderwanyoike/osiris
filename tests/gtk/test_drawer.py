@@ -6,7 +6,7 @@ from __future__ import annotations
 import gi
 
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gtk  # noqa: E402
+from gi.repository import Adw, GLib, Gtk  # noqa: E402
 
 from osiris.harness.conversation import Conversation  # noqa: E402
 from osiris.harness.settings import Models  # noqa: E402
@@ -899,4 +899,11 @@ def test_opening_the_model_menu_lists_the_models_the_accounts_reach() -> None:
     rows = [row.model.name for row in window.model_list.list]
     assert rows == ["GPT-6 Sol", "Big Pickle"]
     assert "OpenAI" in texts(window.model_list)
-    assert window.model_list.search.has_focus()
+    # The popover maps on the main loop; with no window manager under Xvfb
+    # no window is active, so ask the popover which widget it focuses.
+    context = GLib.MainContext.default()
+    while context.pending():
+        context.iteration(False)
+    search = window.model_list.search
+    focused = search.get_root().get_focus()
+    assert focused is not None and (focused is search or focused.is_ancestor(search))
