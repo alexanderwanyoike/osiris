@@ -1771,8 +1771,13 @@ class Application(Adw.Application):
             project = project_program(folder, home) if folder is not None else None
             credit_shell_commits(log, history, session, project)
 
+        ended = conversation.turns[-1] if conversation.turns else None
+
         def credited(_result) -> None:
-            if conversation is self.conversation:
+            # A question asked meanwhile is the latest now; the ended one's
+            # changes come back when the Conversation is opened again.
+            latest = conversation.turns[-1] if conversation.turns else None
+            if conversation is self.conversation and latest is ended:
                 self._changed(session, conversation)
             self.load_history()
 
