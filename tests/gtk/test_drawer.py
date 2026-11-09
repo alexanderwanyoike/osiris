@@ -916,3 +916,30 @@ def test_hiding_the_drawer_closes_the_model_menu() -> None:
     window.model_menu.set_active(True)
     window.hidden()
     assert not window.model_menu.get_active()
+
+
+def test_a_drawer_minimised_by_the_desktop_closes_the_model_menu() -> None:
+    """Show desktop and the like minimise it without Thoth's own close
+    (review of #227)."""
+    from types import SimpleNamespace
+
+    from gi.repository import Gdk
+
+    window, _ = drawer()
+    window.present()
+    window.model_menu.set_active(True)
+    minimised = SimpleNamespace(get_state=lambda: Gdk.ToplevelState.MINIMIZED)
+    window._surface_state(minimised, None)
+    assert not window.model_menu.get_active()
+
+
+def test_a_drawer_shown_again_leaves_the_model_menu_alone() -> None:
+    from types import SimpleNamespace
+
+    from gi.repository import Gdk
+
+    window, _ = drawer()
+    window.present()
+    window.model_menu.set_active(True)
+    window._surface_state(SimpleNamespace(get_state=lambda: Gdk.ToplevelState(0)), None)
+    assert window.model_menu.get_active()
