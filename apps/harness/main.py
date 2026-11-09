@@ -1187,13 +1187,13 @@ class Application(Adw.Application):
     def load_history(self) -> None:
         if self.harness is None:
             return
-        harness, log, home = self.harness, self.log, self.home
+        harness, log, home, files = self.harness, self.log, self.home, self.files
 
         def gather():
             pasts = harness.conversations()
             # Conversations from before the Harness moved them itself.
             moves = misplaced(pasts, log.programs_worked_on() if log else [], home,
-                              Path.exists)
+                              files.exists)
             for session, folder in moves:
                 harness.move(session, folder)
             return harness.conversations() if moves else pasts
