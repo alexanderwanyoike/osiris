@@ -10,6 +10,7 @@ Lays down:
     /usr/share/cinnamon/extensions/harness-drawer@osiris   placement and slide
     /usr/share/cinnamon/applets/harness@osiris             the panel button
     /usr/share/icons/hicolor/scalable/apps/osiris-provider-*  Provider logos
+    /usr/share/icons/hicolor/scalable/apps/osiris-maker-*     model makers' logos
     /usr/lib/osiris/askpass                 the askpass helper (ADR 0018)
     /usr/lib/osiris/agent-bin/sudo          the agent's sudo
 
