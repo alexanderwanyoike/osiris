@@ -21,17 +21,20 @@ class ProgramHistory(Protocol):
 
 
 def credit_shell_commits(
-    log: HarnessLog, history: ProgramHistory, session: str
+    log: HarnessLog,
+    history: ProgramHistory,
+    session: str,
+    project: str | None = None,
 ) -> None:
     """Log as the latest question's changes the commits made since it was
-    asked, to the Programs it worked on, that the Osiris tools did not log:
-    those made with git in a shell (#219)."""
+    asked, to the Programs it worked on or the ``project`` it runs in, that
+    the Osiris tools did not log: those made with git in a shell (#219)."""
     asked = log.asked_at(session)
     questions = log.changes_by_question(session)
     if asked is None or not questions:
         return
     names = [change.program for change in questions[-1] if change.program]
-    for name in dict.fromkeys(names):
+    for name in dict.fromkeys(names + ([project] if project else [])):
         for commit, subject in history.commits_since(name, asked):
             log.write(
                 "changed",
