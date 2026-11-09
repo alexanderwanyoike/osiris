@@ -238,6 +238,20 @@ def test_an_action_held_for_the_person_waits_on_its_turn_until_answered() -> Non
     assert talk.turns[-1].asking is None
 
 
+def test_two_actions_asked_at_once_each_get_their_card_in_turn() -> None:
+    """The model may call two commands in parallel; the second waits behind
+    the first and comes up when the first is answered (#229)."""
+    talk = Conversation()
+    talk.asked("set up the tests")
+    first = Asking(S, "per_1", "shell", ("command -v xvfb-run",), "call_1")
+    second = Asking(S, "per_2", "shell", ("git status --short",), "call_2")
+    talk.apply(first)
+    talk.apply(second)
+    assert talk.turns[-1].asking == first
+    talk.apply(Allowed(S, "shell", ("command -v xvfb-run",), "call_1"))
+    assert talk.turns[-1].asking == second
+
+
 def test_an_action_held_for_the_person_shows_as_the_step_it_would_be() -> None:
     talk = Conversation()
     talk.asked("list /etc")
