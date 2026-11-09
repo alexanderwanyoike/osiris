@@ -471,3 +471,18 @@ def test_a_gone_program_does_not_keep_the_others_from_being_credited() -> None:
     heard(stand_in, Finished("ses_1"))
     summaries = [c.summary for c in stand_in.log.changes_by_question("ses_1")[-1]]
     assert summaries == ["Made Gone", "Pomodoro: Add a pause"]
+
+
+def test_a_question_asked_while_an_ended_answer_is_credited_keeps_its_own() -> None:
+    """Crediting reads git off the main loop; the next question may be sent
+    meanwhile, and the ended answer's changes are not that question's."""
+    stand_in, _ = app()
+    stand_in.programs = lambda: Credits({"pomodoro": [("abc123", "Add a pause")]})
+    later: list[tuple[object, object]] = []
+    stand_in.background = lambda work, done: later.append((work, done))
+    asked(stand_in, "add a pause button")
+    heard(stand_in, Finished("ses_1"))
+    following = asked(stand_in, "and a reset button").turns[-1]
+    for work, done in later:
+        done(work())  # type: ignore[operator]
+    assert following.changes == []
