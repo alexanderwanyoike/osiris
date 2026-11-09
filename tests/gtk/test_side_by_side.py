@@ -25,6 +25,7 @@ class FakeDrawer:
         self.entry = SimpleNamespace(grab_focus=lambda: None)
         self.drafts: list[str] = []
         self.changes: list[tuple[str, object, Any]] = []
+        self.changes_for: list[Any] = []
         self.pages: list[str] = []
         self.refreshes = 0
         self.picker_refreshes = 0
@@ -45,8 +46,11 @@ class FakeDrawer:
     def draft(self, text: str) -> None:
         self.drafts.append(text)
 
-    def show_changes(self, question: str, files: object, on_comment: Any) -> None:
+    def show_changes(
+        self, question: str, files: object, on_comment: Any, conversation: Any = None
+    ) -> None:
         self.changes.append((question, files, on_comment))
+        self.changes_for.append(conversation)
 
     def open_page(self, at: str) -> None:
         self.pages.append(at)
@@ -502,3 +506,26 @@ def test_a_question_asked_while_an_ended_answer_is_credited_keeps_its_own() -> N
     for work, done in later:
         done(work())  # type: ignore[operator]
     assert following.changes == []
+
+
+def test_changes_are_shown_for_the_conversation_they_were_asked_in() -> None:
+    """The person may open another Conversation while git is read (#220)."""
+    from osiris.harness.log import Change
+
+    stand_in, _ = app()
+    stand_in.programs = lambda: SimpleNamespace(patch=lambda _name, _commit: "")
+    later: list[tuple[Any, Any]] = []
+    stand_in.background = lambda work, done: later.append((work, done))
+    turn = asked(stand_in, "tidy main.py").turns[-1]
+    turn.changes.append(
+        Change(
+            "Coin Flip: Tidy",
+            {"action": "revert_commit", "name": "coin-flip", "commit": "abc"},
+            "coin-flip",
+        )
+    )
+    stand_in.show_changes(turn)
+    stand_in.harness.new_conversation()
+    for work, done in later:
+        done(work())
+    assert stand_in.drawer.changes_for == ["ses_1"]
