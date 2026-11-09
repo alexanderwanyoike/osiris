@@ -69,6 +69,14 @@ def test_the_program_a_conversation_runs_in_is_credited_too() -> None:
     ]
 
 
+def test_a_commit_already_credited_is_not_credited_again() -> None:
+    log = asked_log()
+    history = History({"daily-habits": [("abc123", "Track habits")]})
+    credit_shell_commits(log, history, "ses_1")
+    credit_shell_commits(log, history, "ses_1")
+    assert len(log.changes_by_question("ses_1")[-1]) == 2
+
+
 TIDIED = "\n".join(
     (
         "diff --git a/main.py b/main.py",
