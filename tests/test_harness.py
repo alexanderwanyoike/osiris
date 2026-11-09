@@ -614,6 +614,53 @@ def test_a_past_conversation_can_be_moved_into_a_project() -> None:
     assert engine.moved == [("ses_old", POMODORO)]
 
 
+def test_a_conversation_moved_into_a_project_keeps_osiris_tools() -> None:
+    """The history's pass moves a Conversation while it may still be
+    answering; the Engine keeps the tool server per folder (#218)."""
+    subject, engine, _ = harness()
+    subject.ask("build me a timer")
+    subject.move("ses_1", POMODORO)
+    assert ("osiris", POMODORO) in engine.attached
+
+
+def test_the_tools_are_attached_in_a_folder_before_a_session_moves_there() -> None:
+    """A running answer moves between steps; the step after must find them."""
+    subject, engine, _ = harness()
+    subject.ask("build me a timer")
+    attached_then: list[bool] = []
+    engine.move = lambda _s, folder: attached_then.append(  # type: ignore[method-assign]
+        ("osiris", folder) in engine.attached
+    )
+    subject.move("ses_1", POMODORO)
+    assert attached_then == [True]
+
+
+def test_two_moves_into_one_folder_at_once_attach_the_tools_once() -> None:
+    """At an answer's end the Harness's own move and the history's pass run
+    on two threads; a second attach would stop the server mid-step."""
+    import threading
+    import time
+
+    subject, engine, _ = harness()
+    subject.ask("build me a timer")
+    record = engine.attach_tools
+
+    def slow(name: str, command: list[str], directory: Path) -> None:
+        time.sleep(0.05)
+        record(name, command, directory)
+
+    engine.attach_tools = slow  # type: ignore[method-assign]
+    moves = [
+        threading.Thread(target=subject.move, args=("ses_1", POMODORO))
+        for _ in range(2)
+    ]
+    for move in moves:
+        move.start()
+    for move in moves:
+        move.join()
+    assert engine.attached.count(("osiris", POMODORO)) == 1
+
+
 def test_a_new_conversation_can_start_in_a_project() -> None:
     subject, engine, _ = harness()
     subject.new_conversation(POMODORO)
