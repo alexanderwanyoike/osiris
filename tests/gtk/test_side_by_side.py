@@ -402,3 +402,32 @@ def test_a_message_sent_now_waits_shown_while_the_engine_cuts_in() -> None:
     stand_in.send_now("stop, count to ten")
     assert engine.cut == ["ses_1"]
     assert [w.text for w in stand_in.conversation.waiting] == ["stop, count to ten"]
+
+
+def test_commits_made_in_a_shell_are_among_a_questions_changes_when_it_ends() -> None:
+    """#219: the model committed with git, not commit_program."""
+    from osiris.harness.log import Change
+
+    class History:
+        def commits_since(self, name: str, _since: object) -> list[tuple[str, str]]:
+            return [("abc123", "Track habits")] if name == "daily-habits" else []
+
+        def label(self, _name: str) -> str:
+            return "Daily Habits"
+
+    stand_in, _ = app()
+    stand_in.programs = History
+    on_screen = asked(stand_in, "build me a habit tracker")
+    stand_in.log.write(
+        "changed",
+        session="ses_1",
+        summary="Made Daily Habits",
+        undo={"action": "trash_program", "name": "daily-habits"},
+        program="daily-habits",
+    )
+    heard(stand_in, Finished("ses_1"))
+    assert on_screen.turns[-1].changes[-1] == Change(
+        "Daily Habits: Track habits",
+        {"action": "revert_commit", "name": "daily-habits", "commit": "abc123"},
+        "daily-habits",
+    )
