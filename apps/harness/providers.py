@@ -12,10 +12,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk  # noqa: E402
 
-
-#: Offered first: the accounts Osiris is built around (ADR 0015). Every other
-#: Provider the Engine reaches is still listed after them.
-FEATURED = ("openai", "opencode-go")
+from osiris.harness.accounts import FEATURED  # noqa: E402
 
 
 #: Logos Osiris ships (apps/harness/logos), as icon names.
