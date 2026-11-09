@@ -224,6 +224,7 @@ class Harness:
         self._ready(folder)
 
     def move(self, session: str, folder: Path) -> None:
+        self._ready(folder)
         self._engine.move(session, folder)
 
     def go_back(self, session: str, message: str, questions: int = 1) -> Revert | None:
