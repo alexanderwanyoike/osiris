@@ -929,3 +929,14 @@ def test_allow_everything_sits_beside_the_message_box_and_turns_auto_mode() -> N
     assert "sudo" in window.allow_line.get_tooltip_text()
     switch.set_active(True)
     assert turned == [True]
+
+
+def test_allow_everything_follows_a_change_made_in_settings() -> None:
+    """Without turning it again, which would restart the tool server."""
+    window, _ = drawer()
+    turned: list[bool] = []
+    window.app.set_auto_mode = turned.append
+    window.app.in_auto_mode = True
+    window.refresh()
+    assert window.allow_everything.get_active()
+    assert turned == []
