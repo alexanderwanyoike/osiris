@@ -21,6 +21,8 @@ from osiris.harness.review import file_lines  # noqa: E402
 from osiris.harness.titles import title_of  # noqa: E402
 from osiris.programs.programs import Program  # noqa: E402
 
+#: The Conversation the Canvas is showing, when no other is named.
+SHOWN = object()
 #: Narrower than this a Program's file tree slides over its code instead of
 #: sitting beside it.
 TREE_BESIDE = "max-width: 900sp"
@@ -140,11 +142,16 @@ class Canvas(Gtk.Box):
         self._opened(tab)
 
     def show_changes(self, question: str, files: tuple[FileChange, ...],
-                     on_comment: Callable[[str, tuple[int, int], str], None]) -> None:
+                     on_comment: Callable[[str, tuple[int, int], str], None],
+                     conversation: Any = SHOWN) -> None:
         """A question's changes in a tab of their own: the files it changed,
-        each opening to its diff, and a comment on picked lines."""
-        self._changes.setdefault(self._conversation, {})[question] = (
-            files, on_comment)
+        each opening to its diff, and a comment on picked lines. Those of a
+        ``conversation`` not shown wait until it is."""
+        if conversation is SHOWN:
+            conversation = self._conversation
+        self._changes.setdefault(conversation, {})[question] = (files, on_comment)
+        if conversation != self._conversation:
+            return
         tab = Tab(Kind.CHANGES, question, title_of(question))
         if tab in self._pages:
             self.close(tab)

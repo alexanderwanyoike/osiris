@@ -142,3 +142,22 @@ def test_a_question_with_nothing_to_show_is_not_listed_on_the_changes_card() -> 
     )
     stand_in.update_panel()
     assert panel.changes == [[]]
+
+
+def test_the_changes_card_counts_what_the_changes_tab_shows() -> None:
+    """A theme applied beside a commit is no second change on the tab."""
+    stand_in, _engine = app()
+    stand_in.models = SimpleNamespace(default=GPT)
+    stand_in.contexts = stand_in.accounts = None
+    stand_in.drawer.conversation_panel = panel = Panel()
+    calm = stand_in.conversation.asked("make it calm")
+    calm.changes += [
+        Change("Applied Nord", None),
+        Change(
+            "Timer: Calmer colours",
+            {"action": "revert_commit", "name": "timer", "commit": "abc"},
+            "timer",
+        ),
+    ]
+    stand_in.update_panel()
+    assert panel.changes == [[(0, "make it calm", 1)]]
