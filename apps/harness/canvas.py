@@ -110,8 +110,10 @@ class Canvas(Gtk.Box):
             self.show_files()
 
     def _switch(self, conversation: str | None) -> None:
+        kept = self._changes.get(self._conversation, {}).copy()
         for tab in list(self._open(Kind.CHANGES)):
             self.close(tab)
+        self._changes[self._conversation] = kept
         self._conversation = conversation
         for question, (files, on_comment) in list(
                 self._changes.get(conversation, {}).items()):
@@ -327,6 +329,8 @@ class Canvas(Gtk.Box):
     def _closing(self, view: Adw.TabView, page: Adw.TabPage) -> bool:
         tab = next(t for t, p in self._pages.items() if p is page)
         del self._pages[tab]
+        if tab.kind is Kind.CHANGES:
+            self._changes.get(self._conversation, {}).pop(tab.key, None)
         self._sources.pop(tab, None)
         ended = getattr(self._contents.pop(tab, None), "close", None)
         if callable(ended):
