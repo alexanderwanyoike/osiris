@@ -217,11 +217,10 @@ class Harness:
         Conversations moves the rest."""
         if session != self._session or self._directory != self._home:
             return
-        self._engine.move(self._session, folder)
+        self.move(self._session, folder)
         self._directory = folder
         if self._session in self._running:
             self._running[self._session] = folder
-        self._ready(folder)
 
     def move(self, session: str, folder: Path) -> None:
         self._ready(folder)
