@@ -1572,6 +1572,8 @@ class Application(Adw.Application):
         """Keep the person's choice; the tool server tells the model when it
         starts, so it is restarted."""
         turn_auto_mode(self.files, self.home, on=on)
+        if self.drawer is not None:
+            self.drawer.refresh()
         if self.harness is not None:
             self.background(self.harness.restart_tools, lambda _r: None)
 
