@@ -65,7 +65,7 @@ class ProvidersPage(Gtk.Box):
         model_line.append(self._picker)
         allow_line = Gtk.Box(spacing=8)
         allow_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
-        allow_text.append(Gtk.Label(label="Auto mode", xalign=0))
+        allow_text.append(Gtk.Label(label="Allow everything", xalign=0))
         warning = Gtk.Label(label="Allow everything Osiris asks for without a card, "
                                   "unless one of your rules denies it.",
                             xalign=0, wrap=True)
