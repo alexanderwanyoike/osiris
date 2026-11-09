@@ -999,6 +999,7 @@ class Application(Adw.Application):
     def close_drawer(self) -> None:
         """Ask the extension to slide the drawer away; minimise if it cannot."""
         self.open = False
+        self.drawer.hidden()
         connection = self.get_dbus_connection()
         if connection is None:
             self.drawer.minimize()
