@@ -48,7 +48,7 @@ def test_commits_made_in_a_shell_are_the_questions_changes() -> None:
     (#219)."""
     log = asked_log()
     history = History({"daily-habits": [("abc123", "Track habits")]})
-    credit_shell_commits(log, history, "ses_1", project=None)
+    credit_shell_commits(log, history, "ses_1")
     assert history.since == [("daily-habits", ASKED)]
     assert log.changes_by_question("ses_1")[-1][-1] == Change(
         "Daily Habits: Track habits",
