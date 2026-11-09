@@ -310,6 +310,12 @@ class Harness:
                 "reply-failed", session=session, request=request, error=str(error)
             )
 
+    def allow_waiting(self) -> list[Decision]:
+        """Allow, once each, the actions waiting on a card: auto mode has just
+        been turned on."""
+        found = (self.answer(s, r, Answer.ONCE) for s, r in list(self._waiting))
+        return [decision for decision in found if decision is not None]
+
     def answer(
         self, session: str, request: str, answer: Answer, reply: str = ""
     ) -> Decision | None:
