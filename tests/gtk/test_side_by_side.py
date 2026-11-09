@@ -431,3 +431,19 @@ def test_commits_made_in_a_shell_are_among_a_questions_changes_when_it_ends() ->
         {"action": "revert_commit", "name": "daily-habits", "commit": "abc123"},
         "daily-habits",
     )
+
+
+def test_the_canvas_is_told_which_conversation_it_shows() -> None:
+    """So each Conversation's Changes tabs go and come with it (#220)."""
+    stand_in, _ = app()
+    del stand_in.update_canvas
+    shown: list[tuple[object, object]] = []
+    stand_in.drawer.show_canvas = lambda found, conversation: shown.append(
+        (found, conversation)
+    )
+    stand_in.drawer.conversation_panel = SimpleNamespace(get_mapped=lambda: False)
+    stand_in.refresh_offers = lambda: None
+    stand_in.programs = lambda: SimpleNamespace(programs=lambda: [])
+    asked(stand_in, "build me a timer")
+    stand_in.update_canvas()
+    assert shown == [([], "ses_1")]
