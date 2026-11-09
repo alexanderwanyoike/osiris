@@ -53,6 +53,7 @@ from canvas import Canvas, open_in_code  # noqa: E402
 from connectors_page import ConnectorsPage  # noqa: E402
 from conversation_panel import ConversationPanel  # noqa: E402
 from composer_picker import Picker  # noqa: E402
+from program_history import ProgramHistory  # noqa: E402
 from rail import Rail  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
 from proposal_card import ProposalCard  # noqa: E402
@@ -1313,7 +1314,7 @@ class Application(Adw.Application):
         turns = conversation.turns
         panel.show_where(project, "")
         panel.show_changes(
-            [(at, title_of(turn.question), len(turn.changes))
+            [(at, title_of(turn.question), len(turn.commits))
              for at, turn in enumerate(turns) if turn.commits],
             lambda at: self.show_changes(turns[at]))
         servers, contexts, accounts = self.servers, self.contexts, self.accounts
@@ -1759,19 +1760,24 @@ class Application(Adw.Application):
         if self.log is None:
             self.load_history()
             return
-        log, history = self.log, self.programs()
-        on_screen = conversation is self.conversation and self.harness is not None
-        project = (project_program(self.harness.directory, self.home)
-                   if on_screen else None)
+        log, harness, home = self.log, self.harness, self.home
+        history = ProgramHistory(self.programs())
 
         def credit() -> None:
             try:
-                credit_shell_commits(log, history, session, project)
-            except (CommandError, ProgramError):
-                pass  # A Program gone or never one has nothing to show.
+                folder = harness.folder_of(session) if harness is not None else None
+            except HttpError:
+                folder = None  # Deleted meanwhile: nothing of its own to credit.
+            project = project_program(folder, home) if folder is not None else None
+            credit_shell_commits(log, history, session, project)
+
+        ended = conversation.turns[-1] if conversation.turns else None
 
         def credited(_result) -> None:
-            if conversation is self.conversation:
+            # A question asked meanwhile is the latest now; the ended one's
+            # changes come back when the Conversation is opened again.
+            latest = conversation.turns[-1] if conversation.turns else None
+            if conversation is self.conversation and latest is ended:
                 self._changed(session, conversation)
             self.load_history()
 
