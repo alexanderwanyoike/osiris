@@ -1586,7 +1586,7 @@ class Application(Adw.Application):
         if self.drawer is not None:
             self.drawer.refresh()
         if self.harness is not None:
-            self.background(self.harness.restart_tools, lambda _r: None)
+            self.background(self.harness.restart_tools_once_idle, lambda _r: None)
             if on:
                 self.background(self.harness.allow_waiting, self._allowed_waiting)
 
