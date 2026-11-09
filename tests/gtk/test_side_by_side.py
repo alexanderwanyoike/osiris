@@ -402,3 +402,87 @@ def test_a_message_sent_now_waits_shown_while_the_engine_cuts_in() -> None:
     stand_in.send_now("stop, count to ten")
     assert engine.cut == ["ses_1"]
     assert [w.text for w in stand_in.conversation.waiting] == ["stop, count to ten"]
+
+
+def test_commits_made_in_a_shell_are_among_a_questions_changes_when_it_ends() -> None:
+    """#219: the model committed with git, not commit_program."""
+    from osiris.harness.log import Change
+
+    class History:
+        def commits_since(self, name: str, _since: object) -> list[tuple[str, str]]:
+            return [("abc123", "Track habits")] if name == "daily-habits" else []
+
+        def label(self, _name: str) -> str:
+            return "Daily Habits"
+
+    stand_in, _ = app()
+    stand_in.programs = History
+    on_screen = asked(stand_in, "build me a habit tracker")
+    stand_in.log.write(
+        "changed",
+        session="ses_1",
+        summary="Made Daily Habits",
+        undo={"action": "trash_program", "name": "daily-habits"},
+        program="daily-habits",
+    )
+    heard(stand_in, Finished("ses_1"))
+    assert on_screen.turns[-1].changes[-1] == Change(
+        "Daily Habits: Track habits",
+        {"action": "revert_commit", "name": "daily-habits", "commit": "abc123"},
+        "daily-habits",
+    )
+
+
+class Credits:
+    """Programs' commits since a question, as git would give them."""
+
+    def __init__(self, found: dict[str, list[tuple[str, str]]]) -> None:
+        self.found = found
+
+    def commits_since(self, name: str, _since: object) -> list[tuple[str, str]]:
+        if name not in self.found:
+            from osiris.platform.process import CommandError
+
+            raise CommandError(["git", "log"], 128, f"{name} is gone")
+        return self.found[name]
+
+    def label(self, name: str) -> str:
+        return name.title()
+
+
+def test_an_answer_ending_off_screen_credits_the_program_it_runs_in() -> None:
+    """Its Conversation was in the Program's Project all along (#219)."""
+    stand_in, _ = app()
+    stand_in.programs = lambda: Credits({"pomodoro": [("abc123", "Add a pause")]})
+    asked(stand_in, "add a pause button")
+    stand_in.new_conversation()
+    heard(stand_in, Finished("ses_1"))
+    summaries = [c.summary for c in stand_in.log.changes_by_question("ses_1")[-1]]
+    assert summaries == ["Pomodoro: Add a pause"]
+
+
+def test_a_gone_program_does_not_keep_the_others_from_being_credited() -> None:
+    stand_in, _ = app()
+    stand_in.programs = lambda: Credits({"pomodoro": [("abc123", "Add a pause")]})
+    asked(stand_in, "tidy both")
+    stand_in.log.write(
+        "changed", session="ses_1", summary="Made Gone", undo=None, program="gone"
+    )
+    heard(stand_in, Finished("ses_1"))
+    summaries = [c.summary for c in stand_in.log.changes_by_question("ses_1")[-1]]
+    assert summaries == ["Made Gone", "Pomodoro: Add a pause"]
+
+
+def test_a_question_asked_while_an_ended_answer_is_credited_keeps_its_own() -> None:
+    """Crediting reads git off the main loop; the next question may be sent
+    meanwhile, and the ended answer's changes are not that question's."""
+    stand_in, _ = app()
+    stand_in.programs = lambda: Credits({"pomodoro": [("abc123", "Add a pause")]})
+    later: list[tuple[object, object]] = []
+    stand_in.background = lambda work, done: later.append((work, done))
+    asked(stand_in, "add a pause button")
+    heard(stand_in, Finished("ses_1"))
+    following = asked(stand_in, "and a reset button").turns[-1]
+    for work, done in later:
+        done(work())  # type: ignore[operator]
+    assert following.changes == []

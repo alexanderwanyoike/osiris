@@ -676,6 +676,12 @@ def test_two_moves_into_one_folder_at_once_attach_the_tools_once() -> None:
     assert engine.attached.count(("osiris", POMODORO)) == 1
 
 
+def test_any_conversation_says_which_folder_it_runs_in() -> None:
+    """Asked of the Engine, so one answered off screen is found too (#219)."""
+    subject, _, _ = harness()
+    assert subject.folder_of("ses_9") == POMODORO
+
+
 def test_a_new_conversation_can_start_in_a_project() -> None:
     subject, engine, _ = harness()
     subject.new_conversation(POMODORO)
