@@ -444,9 +444,10 @@ class OpencodeEngine:
                 if said:
                     model = message.get("model") or {}
                     last = turns[-1]
+                    before = last.answer.rstrip("\n") + "\n\n" if last.answer else ""
                     turns[-1] = PastTurn(
                         last.question,
-                        last.answer + said,
+                        before + said,
                         ModelRef(model["providerID"], model["id"]) if model else None,
                         last.message,
                     )
