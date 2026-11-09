@@ -3,7 +3,59 @@ commit touched, with its lines added and removed and its own diff."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from pathlib import Path
+
+from osiris.harness.changes import credit_shell_commits
 from osiris.harness.engine import FileChange
+from osiris.harness.log import Change, HarnessLog
+from osiris.platform import FakeFileSystem
+
+ASKED = datetime(2026, 11, 9, 10, 0, tzinfo=UTC)
+
+
+class History:
+    """A Program's commits since a time, as Programs reads them from git."""
+
+    def __init__(self, found: dict[str, list[tuple[str, str]]]) -> None:
+        self.found = found
+        self.since: list[tuple[str, datetime]] = []
+
+    def commits_since(self, name: str, since: datetime) -> list[tuple[str, str]]:
+        self.since.append((name, since))
+        return self.found.get(name, [])
+
+    def label(self, name: str) -> str:
+        return name.replace("-", " ").title()
+
+
+def asked_log() -> HarnessLog:
+    log = HarnessLog(FakeFileSystem(), Path("/home/tester/log.jsonl"), lambda: ASKED)
+    log.write("sent", session="ses_1", text="build me a habit tracker")
+    log.write(
+        "changed",
+        session="ses_1",
+        summary="Made Daily Habits",
+        undo={"action": "trash_program", "name": "daily-habits"},
+        program="daily-habits",
+    )
+    return log
+
+
+def test_commits_made_in_a_shell_are_the_questions_changes() -> None:
+    """A Program's commits the Osiris tools did not log, made since the
+    question was asked, count as its changes, each undone by a revert
+    (#219)."""
+    log = asked_log()
+    history = History({"daily-habits": [("abc123", "Track habits")]})
+    credit_shell_commits(log, history, "ses_1", project=None)
+    assert history.since == [("daily-habits", ASKED)]
+    assert log.changes_by_question("ses_1")[-1][-1] == Change(
+        "Daily Habits: Track habits",
+        {"action": "revert_commit", "name": "daily-habits", "commit": "abc123"},
+        "daily-habits",
+    )
+
 
 TIDIED = "\n".join(
     (
