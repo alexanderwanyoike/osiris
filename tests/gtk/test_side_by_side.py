@@ -459,3 +459,15 @@ def test_an_answer_ending_off_screen_credits_the_program_it_runs_in() -> None:
     heard(stand_in, Finished("ses_1"))
     summaries = [c.summary for c in stand_in.log.changes_by_question("ses_1")[-1]]
     assert summaries == ["Pomodoro: Add a pause"]
+
+
+def test_a_gone_program_does_not_keep_the_others_from_being_credited() -> None:
+    stand_in, _ = app()
+    stand_in.programs = lambda: Credits({"pomodoro": [("abc123", "Add a pause")]})
+    asked(stand_in, "tidy both")
+    stand_in.log.write(
+        "changed", session="ses_1", summary="Made Gone", undo=None, program="gone"
+    )
+    heard(stand_in, Finished("ses_1"))
+    summaries = [c.summary for c in stand_in.log.changes_by_question("ses_1")[-1]]
+    assert summaries == ["Made Gone", "Pomodoro: Add a pause"]
