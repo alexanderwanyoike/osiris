@@ -614,6 +614,15 @@ def test_a_past_conversation_can_be_moved_into_a_project() -> None:
     assert engine.moved == [("ses_old", POMODORO)]
 
 
+def test_a_conversation_moved_into_a_project_keeps_osiris_tools() -> None:
+    """The history's pass moves a Conversation while it may still be
+    answering; the Engine keeps the tool server per folder (#218)."""
+    subject, engine, _ = harness()
+    subject.ask("build me a timer")
+    subject.move("ses_1", POMODORO)
+    assert ("osiris", POMODORO) in engine.attached
+
+
 def test_a_new_conversation_can_start_in_a_project() -> None:
     subject, engine, _ = harness()
     subject.new_conversation(POMODORO)
