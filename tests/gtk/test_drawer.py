@@ -967,3 +967,9 @@ def test_a_drawer_shown_again_leaves_the_model_menu_alone() -> None:
     window.model_menu.set_active(True)
     window._surface_state(SimpleNamespace(get_state=lambda: Gdk.ToplevelState(0)), None)
     assert window.model_menu.get_active()
+
+
+def test_allow_everything_sits_next_to_the_model_menu() -> None:
+    """As decided on #228: beside the model menu, under the message box."""
+    window, _ = drawer()
+    assert window.allow_line.get_next_sibling() is window.model_menu
