@@ -123,3 +123,22 @@ def test_the_panel_follows_the_conversation_on_screen_into_its_project() -> None
     stand_in.drawer.conversation_panel = panel = Panel()
     stand_in.load_history()
     assert panel.where[-1] == ("pomodoro", "")
+
+
+def test_a_question_with_nothing_to_show_is_not_listed_on_the_changes_card() -> None:
+    """Making a Program, or a Theme, has no commit of its own to open; the
+    card lists only what the Changes tab can show (#219)."""
+    stand_in, _engine = app()
+    stand_in.models = SimpleNamespace(default=GPT)
+    stand_in.contexts = stand_in.accounts = None
+    stand_in.drawer.conversation_panel = panel = Panel()
+    made = stand_in.conversation.asked("build me a habit tracker")
+    made.changes.append(
+        Change(
+            "Made Daily Habits",
+            {"action": "trash_program", "name": "daily-habits"},
+            "daily-habits",
+        )
+    )
+    stand_in.update_panel()
+    assert panel.changes == [[]]
