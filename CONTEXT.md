@@ -119,8 +119,10 @@ _Avoid_: permissions file, policy (for these)
 **Auto mode**:
 The person's choice to have the **Harness** allow whatever the
 **Permission rules** ask about, without a card. A deny rule still refuses, and
-sudo still asks for the password. Off until they turn it on.
-_Avoid_: allow everything, yolo
+sudo still asks for the password. Off until they turn it on. The person knows
+it as **Allow everything**: the switch beside the message box and in Settings
+says so, as everything they see calls the **Harness** Osiris.
+_Avoid_: yolo
 
 **Admin password card**:
 Where the **Harness** asks for the administrator password when a command it
