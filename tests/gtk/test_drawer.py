@@ -873,3 +873,30 @@ def test_settings_hold_the_skills_beside_the_connectors() -> None:
     shown = texts(window)
     assert "Skills" in shown
     assert "Review" in shown
+
+
+def test_opening_the_model_menu_lists_the_models_the_accounts_reach() -> None:
+    """With its search focused, the model in use first, and each model's
+    Provider named (#222)."""
+    from types import SimpleNamespace
+
+    from osiris.harness.accounts import ModelInfo, Provider
+    from osiris.harness.engine import ModelRef
+    from tests.gtk.conftest import now
+
+    sol = ModelInfo(ModelRef("openai", "gpt-6-sol"), "GPT-6 Sol", family="gpt-6")
+    pickle = ModelInfo(ModelRef("opencode", "big-pickle"), "Big Pickle")
+    window, _ = drawer()
+    app = window.app
+    app.background = now
+    app.models = Models(sol.ref, None)
+    app.accounts = SimpleNamespace(
+        models=lambda: [pickle, sol],
+        providers=lambda: [Provider("openai", "OpenAI", (), True)],
+    )
+    window.present()
+    window.model_menu.set_active(True)
+    rows = [row.model.name for row in window.model_list.list]
+    assert rows == ["GPT-6 Sol", "Big Pickle"]
+    assert "OpenAI" in texts(window.model_list)
+    assert window.model_list.search.has_focus()
