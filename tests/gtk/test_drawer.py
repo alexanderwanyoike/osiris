@@ -916,3 +916,16 @@ def test_hiding_the_drawer_closes_the_model_menu() -> None:
     window.model_menu.set_active(True)
     window.hidden()
     assert not window.model_menu.get_active()
+
+
+def test_allow_everything_sits_beside_the_message_box_and_turns_auto_mode() -> None:
+    """Where the person works, saying plainly what it does (#228)."""
+    window, _ = drawer()
+    turned: list[bool] = []
+    window.app.set_auto_mode = turned.append
+    switch = window.allow_everything
+    assert not switch.get_active()
+    assert "Allow everything" in texts(window.allow_line)
+    assert "sudo" in window.allow_line.get_tooltip_text()
+    switch.set_active(True)
+    assert turned == [True]
