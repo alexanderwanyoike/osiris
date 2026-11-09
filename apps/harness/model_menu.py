@@ -8,6 +8,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, Gtk, Pango  # noqa: E402
+from badge import badge  # noqa: E402
 from list_moves import move  # noqa: E402
 
 from osiris.harness.accounts import ModelInfo  # noqa: E402
@@ -30,14 +31,7 @@ ICONS = {
 
 
 def _lead(info: ModelInfo) -> Gtk.Widget:
-    icon = ICONS.get(maker_of(info.family) or "")
-    if icon is not None:
-        logo = Gtk.Image(icon_name=icon, pixel_size=16)
-        logo.add_css_class("harness-logo")
-        return logo
-    monogram = Gtk.Label(label=info.name[:1].upper())
-    monogram.add_css_class("harness-monogram")
-    return monogram
+    return badge(ICONS.get(maker_of(info.family) or ""), info.name, 16)
 
 
 class ModelMenu(Gtk.Box):
