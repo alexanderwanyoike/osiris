@@ -464,6 +464,16 @@ def test_putting_the_drawer_away_puts_away_what_floats_beside_it() -> None:
     assert put_away == ["hidden", "minimized"]
 
 
+def test_turning_allow_everything_anywhere_draws_the_drawer_again() -> None:
+    """So the switch beside the message box shows a change made in Settings
+    (#228)."""
+    stand_in, _ = app()
+    drawn = stand_in.drawer.refreshes
+    stand_in.set_auto_mode(True)
+    assert stand_in.in_auto_mode
+    assert stand_in.drawer.refreshes > drawn
+
+
 class Credits:
     """Programs' commits since a question, as git would give them."""
 
@@ -540,3 +550,30 @@ def test_changes_are_shown_for_the_conversation_they_were_asked_in() -> None:
     for work, done in later:
         done(work())
     assert stand_in.drawer.changes_for == ["ses_1"]
+
+
+def test_turning_allow_everything_on_clears_the_cards_waiting() -> None:
+    """Review of #241."""
+    from osiris.harness.engine import ToolRequested
+
+    stand_in, _ = app()
+    on_screen = asked(stand_in, "what is in /etc")
+    heard(stand_in, ToolRequested("ses_1", "per_1", "bash", ("ls /etc",), "c1"))
+    assert on_screen.turns[-1].asking is not None
+    stand_in.set_auto_mode(True)
+    assert on_screen.turns[-1].asking is None
+
+
+def test_allow_everything_restarts_the_tool_server_only_once_answers_end() -> None:
+    """Restarting it mid-answer would stop a tool call under way (review of
+    #241); the model is told when the server starts again."""
+    stand_in, engine = app()
+    stand_in.harness = Harness(
+        engine, stand_in.log, GPT, directory=HOME, tools=("osiris", ["serve"])
+    )
+    asked(stand_in, "build me a timer")
+    attached = len(engine.attached)
+    stand_in.set_auto_mode(True)
+    assert len(engine.attached) == attached
+    heard(stand_in, Finished("ses_1"))
+    assert len(engine.attached) == attached + 1

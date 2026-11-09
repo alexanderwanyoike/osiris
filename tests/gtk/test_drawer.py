@@ -918,6 +918,30 @@ def test_hiding_the_drawer_closes_the_model_menu() -> None:
     assert not window.model_menu.get_active()
 
 
+def test_allow_everything_sits_beside_the_message_box_and_turns_auto_mode() -> None:
+    """Where the person works, saying plainly what it does (#228)."""
+    window, _ = drawer()
+    turned: list[bool] = []
+    window.app.set_auto_mode = turned.append
+    switch = window.allow_everything
+    assert not switch.get_active()
+    assert "Allow everything" in texts(window.allow_line)
+    assert "sudo" in window.allow_line.get_tooltip_text()
+    switch.set_active(True)
+    assert turned == [True]
+
+
+def test_allow_everything_follows_a_change_made_in_settings() -> None:
+    """Without turning it again, which would restart the tool server."""
+    window, _ = drawer()
+    turned: list[bool] = []
+    window.app.set_auto_mode = turned.append
+    window.app.in_auto_mode = True
+    window.refresh()
+    assert window.allow_everything.get_active()
+    assert turned == []
+
+
 def test_a_drawer_minimised_by_the_desktop_closes_the_model_menu() -> None:
     """Show desktop and the like minimise it without Thoth's own close
     (review of #227)."""
@@ -943,3 +967,9 @@ def test_a_drawer_shown_again_leaves_the_model_menu_alone() -> None:
     window.model_menu.set_active(True)
     window._surface_state(SimpleNamespace(get_state=lambda: Gdk.ToplevelState(0)), None)
     assert window.model_menu.get_active()
+
+
+def test_allow_everything_sits_next_to_the_model_menu() -> None:
+    """As decided on #228: beside the model menu, under the message box."""
+    window, _ = drawer()
+    assert window.allow_line.get_next_sibling() is window.model_menu

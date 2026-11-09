@@ -115,6 +115,8 @@ class Harness:
         self._tools_in: set[Path] = set()
         #: Moves run off the main loop, two at once at an answer's end.
         self._attaching = threading.Lock()
+        #: A restart of the tool server held until no answer runs.
+        self._restart_when_idle = False
         self._session: str | None = None
         #: Sessions working on a question, served whichever one is on screen,
         #: and the folder each runs in.
@@ -191,6 +193,14 @@ class Harness:
         fresh one when next used."""
         self._tools_in.clear()
         self._ready(self._directory)
+
+    def restart_tools_once_idle(self) -> None:
+        """Restart the tool server now, or once no answer runs: a restart
+        stops any tool call under way."""
+        if self._running:
+            self._restart_when_idle = True
+        else:
+            self.restart_tools()
 
     def resume(self, session: str) -> list[PastTurn]:
         """Continue a past Conversation, in its folder; returns what was said."""
@@ -310,6 +320,12 @@ class Harness:
                 "reply-failed", session=session, request=request, error=str(error)
             )
 
+    def allow_waiting(self) -> list[Decision]:
+        """Allow, once each, the actions waiting on a card: auto mode has just
+        been turned on."""
+        found = (self.answer(s, r, Answer.ONCE) for s, r in list(self._waiting))
+        return [decision for decision in found if decision is not None]
+
     def answer(
         self, session: str, request: str, answer: Answer, reply: str = ""
     ) -> Decision | None:
@@ -361,6 +377,9 @@ class Harness:
         self._cutting_in.discard(event.session)
         if not (cut_in and isinstance(event, Stopped)):
             self._running.pop(event.session, None)
+        if self._restart_when_idle and not self._running:
+            self._restart_when_idle = False
+            self.restart_tools()
 
     def handle(self, event: Event) -> Event | Decision | None:
         """Log what the Engine reports and apply policy; the event is passed on.
