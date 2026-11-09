@@ -562,3 +562,18 @@ def test_turning_allow_everything_on_clears_the_cards_waiting() -> None:
     assert on_screen.turns[-1].asking is not None
     stand_in.set_auto_mode(True)
     assert on_screen.turns[-1].asking is None
+
+
+def test_allow_everything_restarts_the_tool_server_only_once_answers_end() -> None:
+    """Restarting it mid-answer would stop a tool call under way (review of
+    #241); the model is told when the server starts again."""
+    stand_in, engine = app()
+    stand_in.harness = Harness(
+        engine, stand_in.log, GPT, directory=HOME, tools=("osiris", ["serve"])
+    )
+    asked(stand_in, "build me a timer")
+    attached = len(engine.attached)
+    stand_in.set_auto_mode(True)
+    assert len(engine.attached) == attached
+    heard(stand_in, Finished("ses_1"))
+    assert len(engine.attached) == attached + 1
