@@ -270,6 +270,18 @@ def test_a_held_actions_card_goes_when_the_answer_ends() -> None:
     assert (talk.turns[-1].asking, talk.turns[-1].held) == (None, None)
 
 
+def test_a_card_asked_for_again_is_not_queued_behind_itself() -> None:
+    """Cards are brought back from what the Engine still waits on, as when
+    a Conversation is opened again; one already showing stays one card."""
+    talk = Conversation()
+    talk.asked("set up the tests")
+    asking = Asking(S, "per_1", "shell", ("command -v xvfb-run",), "call_1")
+    talk.apply(asking)
+    talk.apply(asking)
+    talk.apply(Allowed(S, "shell", ("command -v xvfb-run",), "call_1"))
+    assert talk.turns[-1].asking is None
+
+
 def test_queued_cards_go_when_the_answer_ends() -> None:
     talk = Conversation()
     talk.asked("set up the tests")
