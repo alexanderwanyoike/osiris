@@ -49,7 +49,13 @@ def test_the_panel_shows_where_it_runs_its_connectors_context_and_changes() -> N
     stand_in.models = SimpleNamespace(default=GPT)
     stand_in.drawer.conversation_panel = panel = Panel()
     calm = stand_in.conversation.asked("make it calm")
-    calm.changes.append(Change("Applied Nord", None))
+    calm.changes.append(
+        Change(
+            "Timer: Calmer colours",
+            {"action": "revert_commit", "name": "timer", "commit": "abc"},
+            "timer",
+        )
+    )
     stand_in.conversation.asked("what is a theme?")
     stand_in.servers = SimpleNamespace(
         connector_states=lambda _d: {
