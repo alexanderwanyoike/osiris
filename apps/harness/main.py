@@ -427,6 +427,12 @@ class Drawer(Gtk.ApplicationWindow):
         if isinstance(surface, GdkX11.X11Surface):
             surface.set_skip_taskbar_hint(True)
             surface.set_skip_pager_hint(True)
+        surface.connect("notify::state", self._surface_state)
+
+    def _surface_state(self, surface, _spec) -> None:
+        """Minimised by the desktop, as by show desktop, and not by Thoth."""
+        if surface.get_state() & Gdk.ToplevelState.MINIMIZED:
+            self.hidden()
 
     def _key(self, _controller, keyval, _code, _state) -> bool:
         if keyval == Gdk.KEY_Escape:
