@@ -563,6 +563,11 @@ class Drawer(Gtk.ApplicationWindow):
         self.present()
         self.entry.grab_focus()
 
+    def hidden(self) -> None:
+        """Put away what floats beside the drawer, which would otherwise stay
+        on the desktop without it."""
+        self.model_menu.popdown()
+
     def _chosen(self, act, *args) -> None:
         """Act on a choice in the sidebar; narrow, the list then folds away."""
         act(*args)
