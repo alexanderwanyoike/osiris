@@ -71,7 +71,8 @@ class Turn:
     message: str = ""
     #: A word from Thoth about this question, such as why it could not go back.
     note: str = ""
-    #: When the answer ended, in seconds since the epoch; None while it runs.
+    #: When the answer ended or, past and unanswered, when it was asked, in
+    #: seconds since the epoch; None while it runs.
     finished: float | None = None
 
     @property
