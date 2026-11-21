@@ -5,6 +5,7 @@ Program from any Conversation, reopened or not."""
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Protocol
 
@@ -16,8 +17,6 @@ _FILE = re.compile(r"^diff --git a/(.+) b/(.+)$", re.MULTILINE)
 
 class ProgramHistory(Protocol):
     def commits_since(self, name: str, since: datetime) -> list[tuple[str, str]]: ...
-
-    def rewritten(self, name: str, commits: list[str]) -> list[str]: ...
 
     def held(self, name: str, commits: list[str]) -> list[str]: ...
 
@@ -37,11 +36,9 @@ def credit_shell_commits(
     questions = log.changes_by_question(session)
     if asked is None or not questions:
         return
-    worked_on = log.programs_of(session) + ([project] if project else [])
-    replaced = _record_rewritten(log, history, session, list(dict.fromkeys(worked_on)))
     names = [change.program for change in questions[-1] if change.program]
-    for name in dict.fromkeys(names + ([project] if project else []) + replaced):
-        credited = set(log.commits_of(name))
+    credited = {(change.undo or {}).get("commit") for change in questions[-1]}
+    for name in dict.fromkeys(names + ([project] if project else [])):
         for commit, subject in history.commits_since(name, asked):
             if commit in credited:
                 continue
@@ -54,29 +51,28 @@ def credit_shell_commits(
             )
 
 
-def _record_rewritten(
-    log: HarnessLog,
-    history: ProgramHistory,
-    session: str,
-    programs: list[str],
-) -> list[str]:
-    """Log the commits of ``programs`` that a rebase has since replaced,
-    whichever Conversation made them, and return the Programs it replaced
-    them in."""
-    already = log.rewritten()
-    replaced = []
-    for name in programs:
-        logged = log.commits_of(name)
-        standing = [c for c in logged if c not in already]
-        away = [c for c in logged if c in already]
-        for commit in history.held(name, away) if away else []:
-            log.write("restored", session=session, commit=commit)
-        gone = history.rewritten(name, standing) if standing else []
-        for commit in gone:
-            log.write("rewritten", session=session, commit=commit)
-        if gone:
-            replaced.append(name)
-    return replaced
+def standing_steps(
+    history: ProgramHistory, steps: list[Mapping[str, str]]
+) -> list[Mapping[str, str]] | None:
+    """An answer's Undo steps, newest first, as git has them now; None if a
+    later answer replaced what it made. A commit a branch still holds after a
+    replaced one was made on top of that rewrite, so the answer did it itself."""
+    made: dict[str, list[str]] = {}
+    for step in steps:
+        if step["action"] == "revert_commit":
+            made.setdefault(step["name"], []).append(step["commit"])
+    held = {c for name, commits in made.items() for c in history.held(name, commits)}
+    kept: list[Mapping[str, str]] = []
+    settled: set[str] = set()
+    for step in steps:
+        if step["action"] != "revert_commit":
+            kept.append(step)
+        elif step["commit"] in held:
+            settled.add(step["name"])
+            kept.append(step)
+        elif step["name"] not in settled:
+            return None
+    return kept
 
 
 def file_changes(program: str, patch: str) -> tuple[FileChange, ...]:
