@@ -85,7 +85,7 @@ def find(store: ThemeStore, name: str) -> Mapping[str, Any]:
 
 
 def apply_theme(store: ThemeStore, name: str) -> str | None:
-    """Apply a Theme. Returns the one it replaced, for the log."""
+    """Apply a Theme. Returns the one it replaced."""
     find(store, name)
     previous = store.current()
     store.apply(name)
