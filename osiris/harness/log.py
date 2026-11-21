@@ -130,7 +130,13 @@ class HarnessLog:
             "changed",
             lambda e: Change(e["summary"], e["undo"], e.get("program")),
         )
-        return [_standing(changes, rewritten) for changes in questions]
+        undid = set(self.undone())
+        return [
+            changes
+            if tuple(c.summary for c in changes) in undid
+            else _standing(changes, rewritten)
+            for changes in questions
+        ]
 
     def commits_of(self, program: str) -> list[str]:
         """Every commit logged as a change to ``program``, by any session."""
