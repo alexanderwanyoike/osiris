@@ -140,6 +140,23 @@ def test_amending_an_earlier_questions_commit_credits_its_replacement() -> None:
     ]
 
 
+def test_a_rewrite_of_another_conversations_commit_is_noticed() -> None:
+    log = asked_log()
+    log.write(
+        "changed",
+        session="ses_1",
+        summary="Daily Habits: Track habits",
+        undo={"action": "revert_commit", "name": "daily-habits", "commit": "old111"},
+        program="daily-habits",
+    )
+    log.write("sent", session="ses_2", text="tidy the history")
+    history = History({}, gone=frozenset({"old111"}))
+    credit_shell_commits(log, history, "ses_2", project="daily-habits")
+    assert [c.summary for c in log.changes_by_question("ses_1")[-1]] == [
+        "Made Daily Habits"
+    ]
+
+
 TIDIED = "\n".join(
     (
         "diff --git a/main.py b/main.py",
