@@ -493,6 +493,13 @@ def test_a_restored_conversation_shows_the_tokens_it_had_spent() -> None:
     assert talk.tokens_spent == 2048
 
 
+def test_a_restored_answer_keeps_when_it_finished() -> None:
+    talk = Conversation.restored(
+        [PastTurn("make a timer", "Made it.", GPT, finished=1795284321.0)]
+    )
+    assert talk.turns[0].finished == 1795284321.0
+
+
 MADE = Change(
     "Made Pomodoro", {"action": "trash_program", "name": "pomodoro"}, "pomodoro"
 )
