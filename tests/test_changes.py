@@ -21,9 +21,11 @@ class History:
         self,
         found: dict[str, list[tuple[str, str]]],
         gone: frozenset[str] = frozenset(),
+        back: frozenset[str] = frozenset(),
     ) -> None:
         self.found = found
         self.gone = gone
+        self.back = back
         self.since: list[tuple[str, datetime]] = []
 
     def commits_since(self, name: str, since: datetime) -> list[tuple[str, str]]:
@@ -32,6 +34,9 @@ class History:
 
     def rewritten(self, _name: str, commits: list[str]) -> list[str]:
         return [commit for commit in commits if commit in self.gone]
+
+    def held(self, _name: str, commits: list[str]) -> list[str]:
+        return [commit for commit in commits if commit in self.back]
 
     def label(self, name: str) -> str:
         return name.replace("-", " ").title()
@@ -118,6 +123,78 @@ def test_a_rewritten_commit_is_not_offered_to_undo() -> None:
     )
     credit_shell_commits(log, History({}, gone=frozenset({"old111"})), "ses_1")
     assert [c.summary for c in log.last_changes()] == ["Made Daily Habits"]
+
+
+def test_amending_an_earlier_questions_commit_credits_its_replacement() -> None:
+    log = asked_log()
+    log.write(
+        "changed",
+        session="ses_1",
+        summary="Daily Habits: Track habits",
+        undo={"action": "revert_commit", "name": "daily-habits", "commit": "old111"},
+        program="daily-habits",
+    )
+    log.write("sent", session="ses_1", text="reword it")
+    history = History(
+        {"daily-habits": [("new222", "Track habits daily")]},
+        gone=frozenset({"old111"}),
+    )
+    credit_shell_commits(log, history, "ses_1")
+    assert [c.summary for c in log.changes_by_question("ses_1")[-1]] == [
+        "Daily Habits: Track habits daily"
+    ]
+
+
+def test_a_rewrite_of_another_conversations_commit_is_noticed() -> None:
+    log = asked_log()
+    log.write(
+        "changed",
+        session="ses_1",
+        summary="Daily Habits: Track habits",
+        undo={"action": "revert_commit", "name": "daily-habits", "commit": "old111"},
+        program="daily-habits",
+    )
+    log.write("sent", session="ses_2", text="tidy the history")
+    history = History({}, gone=frozenset({"old111"}))
+    credit_shell_commits(log, history, "ses_2", project="daily-habits")
+    assert [c.summary for c in log.changes_by_question("ses_1")[-1]] == [
+        "Made Daily Habits"
+    ]
+
+
+def test_a_commit_brought_back_is_a_change_again_and_only_once() -> None:
+    log = asked_log()
+    log.write(
+        "changed",
+        session="ses_1",
+        summary="Daily Habits: Track habits",
+        undo={"action": "revert_commit", "name": "daily-habits", "commit": "old111"},
+        program="daily-habits",
+    )
+    credit_shell_commits(log, History({}, gone=frozenset({"old111"})), "ses_1")
+    history = History(
+        {"daily-habits": [("old111", "Track habits")]},
+        back=frozenset({"old111"}),
+    )
+    credit_shell_commits(log, history, "ses_1")
+    assert [c.summary for c in log.changes_by_question("ses_1")[-1]] == [
+        "Made Daily Habits",
+        "Daily Habits: Track habits",
+    ]
+
+
+def test_an_undone_answer_keeps_its_record_after_a_rewrite() -> None:
+    log = asked_log()
+    log.write(
+        "changed",
+        session="ses_1",
+        summary="Daily Habits: Track habits",
+        undo={"action": "revert_commit", "name": "daily-habits", "commit": "old111"},
+        program="daily-habits",
+    )
+    log.write("undone", changes=["Made Daily Habits", "Daily Habits: Track habits"])
+    credit_shell_commits(log, History({}, gone=frozenset({"old111"})), "ses_1")
+    assert len(log.changes_by_question("ses_1")[-1]) == 2
 
 
 TIDIED = "\n".join(

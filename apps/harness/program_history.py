@@ -23,6 +23,12 @@ class ProgramHistory:
         except (CommandError, ProgramError):
             return []
 
+    def held(self, name: str, commits: list[str]) -> list[str]:
+        try:
+            return self._programs.held(name, commits)
+        except (CommandError, ProgramError):
+            return []
+
     def label(self, name: str) -> str:
         try:
             return self._programs.label(name)

@@ -486,6 +486,19 @@ def test_a_conversation_knows_every_program_it_has_touched() -> None:
     assert talk.programs == ["pomodoro", "notes"]
 
 
+def test_earlier_answers_follow_what_the_log_says_now() -> None:
+    """A rebase may replace what an earlier question changed."""
+    first, second = Change("First", None), Change("Second", None)
+    talk = Conversation()
+    talk.asked("one")
+    talk.changed([first, second])
+    talk.asked("two")
+    talk.changed([])
+    assert talk.earlier_changed([[first], []])
+    assert talk.turns[0].changes == [first]
+    assert not talk.earlier_changed([[first], []])
+
+
 def test_a_restored_conversation_shows_the_tokens_it_had_spent() -> None:
     talk = Conversation.restored(
         [PastTurn("make a timer", "Made it.", GPT)], tokens_spent=2048

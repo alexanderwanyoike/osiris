@@ -101,6 +101,14 @@ def test_a_long_provider_name_leaves_the_model_name_whole() -> None:
     assert name.measure(Gtk.Orientation.HORIZONTAL, -1)[0] >= whole
 
 
+def test_a_very_long_provider_name_is_shortened() -> None:
+    widget, _ = menu()
+    widget.show_models([PICKLE], PICKLE.ref, {"opencode": "O" * 40})
+    provider = widget.list.get_row_at_index(0).get_child().get_last_child()
+    full = Gtk.Label(label="O" * 40).measure(Gtk.Orientation.HORIZONTAL, -1)[1]
+    assert provider.measure(Gtk.Orientation.HORIZONTAL, -1)[0] < full
+
+
 def press(widget: ModelMenu, key: int) -> bool:
     return widget.key(None, key, 0, Gdk.ModifierType(0))
 
