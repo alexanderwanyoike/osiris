@@ -305,6 +305,18 @@ class TestCommitting:
         subject, _ = on_disk(tmp_path)
         assert subject.rewritten("pomodoro", ["f" * 40]) == []
 
+    def test_a_branch_holds_a_commit_again_once_it_is_brought_back(
+        self, tmp_path: Path
+    ) -> None:
+        subject, git = on_disk(tmp_path)
+        first = git("rev-parse", "HEAD")
+        git("commit", "--allow-empty", "-qm", "Second")
+        second = git("rev-parse", "HEAD")
+        git("reset", "-q", "--hard", first)
+        assert subject.held("pomodoro", [first, second]) == [first]
+        git("reset", "-q", "--hard", second)
+        assert subject.held("pomodoro", [first, second]) == [first, second]
+
     def test_a_program_is_named_to_the_person_by_its_label(self) -> None:
         subject, _, _ = programs(made())
         assert subject.label("pomodoro") == "Pomodoro"
