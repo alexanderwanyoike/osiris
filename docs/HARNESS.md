@@ -22,9 +22,7 @@ The first slice of ROADMAP P3.5:
   the model describes a **Theme intent** (a seed colour, a **Harmony**, a mood,
   light or dark) through the Osiris tools, Osiris's own rules derive the
   palette, and the theme is kept with the person's own and applied. The answer
-  ends with what changed and an **Undo**, which reverses it without the model:
-  the previous theme comes back and the new one is deleted. See
-  [The Osiris tools](#the-osiris-tools).
+  ends with what changed. See [The Osiris tools](#the-osiris-tools).
 - **The Engine's rules decide what asks** (ADR 0020). opencode's permission
   rules, in its own config where the person can read and change them, allow,
   ask about or deny each action; the last matching rule wins, and they hold for
@@ -184,7 +182,7 @@ The first slice of ROADMAP P3.5:
   plus-minus icon, Osiris's own) opens the Changes group with a tab for each
   question that made commits to Programs, in the order asked with the newest
   on screen (#195): the commits the Harness log
-  records with the question (the ones its Undo would revert), each read with
+  records with the question, each read with
   `git show` (`Programs.patch`) and split into files named under their Program
   (`osiris/harness/changes.py`), each with its lines added and removed, opening
   to its diff, coloured by the Theme's code scheme. Because the log outlives
@@ -197,7 +195,7 @@ The first slice of ROADMAP P3.5:
 - **The Harness log** keeps everything: each question before it is sent, each
   answer with the model that gave it and its tokens, every tool call whether or
   not it asked, every answer to a card, everything auto mode allowed, every change with
-  the step that undoes it, every Undo, every rejection and every failure. It is append-only JSON lines,
+  the step that would reverse it, every rejection and every failure. It is append-only JSON lines,
   readable with any tool:
 
   ```
@@ -255,7 +253,7 @@ osiris/platform/http          the HTTP port the adapter talks through
 osiris/apps/tool_server       the Osiris tools as an MCP server, each with its tier
 osiris/themes/actions         what the tools do with Themes, behind osiris/themes/store
 apps/harness/tool_server.py   runs the tool server on stdio over the theme engine
-apps/harness/theme_store.py   the theme engine as a ThemeStore, for acting and undoing
+apps/harness/theme_store.py   the theme engine as a ThemeStore, for acting
 provision/harness.py          installs the drawer, extension, applet, D-Bus activation, autostart,
                               the askpass helper and the agent's sudo
 ```
@@ -271,7 +269,7 @@ What the model may do on this machine is offered by Osiris as an MCP server
 it to the Engine when it connects, with opencode's runtime MCP API, so nothing
 is written into the person's own opencode configuration.
 
-| Tool | Action tier | What it does | Undo |
+| Tool | Action tier | What it does | Logged step to reverse it |
 |---|---|---|---|
 | `list_themes` | a look | the themes, light or dark, and which is applied | |
 | `create_theme` | an undoable change | a User theme from a Theme intent; never replaces one | deletes it |
@@ -279,15 +277,14 @@ is written into the person's own opencode configuration.
 
 opencode runs MCP tools from its code mode (`tools.osiris.apply_theme(...)`),
 and checks each call as the action `osiris_<tool>`. The starting rules allow
-`osiris_*`, since every tool only looks or has an Undo, so they run without a
+`osiris_*`, since every tool only looks or makes a reversible change, so they run without a
 card; the tier is a hint to the model, not a decision. The model never writes a
 colour: the seed is a hex colour whose hue alone counts, and harmony and mood
 are fixed choices.
 
 Each change the tool server makes is written to the Harness log with the step
-that reverses it. When an answer finishes, the drawer reads the changes logged
-since the question and shows them with one Undo, which runs those steps newest
-first; the theme that is applied is never deleted.
+that would reverse it. When an answer finishes, the drawer reads the changes
+logged since the question and shows them.
 
 ### Admin passwords
 
@@ -455,8 +452,8 @@ Conversation. Checked against opencode 2.2.4:
 - Snapshots live in opencode's own object store under its data folder; it
   documents no rule for pruning them (opencode.ai/v2/docs/snapshots), and
   `"snapshots": false` in its config stops new ones.
-- Osiris's own changes, a Theme or a Skin, are not in the snapshot; each keeps
-  its own Undo.
+- Osiris's own changes, a Theme or a Skin, are not in the snapshot, so going
+  back leaves them as they are.
 
 Each go back is logged as `went-back` with the message, the files put back and
 how many questions were dropped, so a reopened Conversation matches the log's

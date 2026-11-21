@@ -396,36 +396,6 @@ def test_a_turn_keeps_the_changes_it_led_to() -> None:
     talk.asked("make it calm")
     talk.changed([MADE, APPLIED])
     assert talk.turns[-1].changes == [MADE, APPLIED]
-    assert talk.turns[-1].undoable
-
-
-def test_undoing_a_turn_reverses_its_changes_newest_first() -> None:
-    talk = Conversation()
-    talk.asked("make it calm")
-    talk.changed([MADE, APPLIED])
-    assert talk.turns[-1].undo_steps() == [APPLIED.undo, MADE.undo]
-
-
-def test_a_change_with_nothing_to_return_to_is_skipped_by_undo() -> None:
-    talk = Conversation()
-    talk.asked("make it calm")
-    talk.changed([MADE, Change("Applied Harbour", None)])
-    assert talk.turns[-1].undo_steps() == [MADE.undo]
-
-
-def test_an_undone_turn_cannot_be_undone_again() -> None:
-    talk = Conversation()
-    talk.asked("make it calm")
-    talk.changed([MADE])
-    talk.turns[-1].undone = True
-    assert not talk.turns[-1].undoable
-
-
-def test_a_turn_that_changed_nothing_offers_no_undo() -> None:
-    talk = Conversation()
-    talk.asked("hello")
-    talk.changed([])
-    assert not talk.turns[-1].undoable
 
 
 def test_a_turn_knows_the_programs_it_changed_once_each_in_order() -> None:
@@ -513,14 +483,13 @@ THEME = Change("Made Harbour", {"action": "delete_theme", "name": "harbour"})
 
 
 def test_a_restored_conversation_keeps_what_each_answer_changed() -> None:
-    """Its Program cards and Undo come back with it."""
+    """Its Program cards come back with it."""
     talk = Conversation.restored(
         [PastTurn("make a timer", "Made it.", GPT), PastTurn("a theme", "Done.", GPT)],
         changes=[[MADE], [THEME]],
     )
     assert [turn.changes for turn in talk.turns] == [[MADE], [THEME]]
     assert talk.turns[0].programs == ["pomodoro"]
-    assert talk.turns[1].undoable
 
 
 def test_changes_are_matched_to_the_latest_answers_when_history_is_longer() -> None:
@@ -530,16 +499,6 @@ def test_changes_are_matched_to_the_latest_answers_when_history_is_longer() -> N
         changes=[[MADE]],
     )
     assert [turn.changes for turn in talk.turns] == [[], [MADE]]
-
-
-def test_an_answer_whose_changes_were_undone_stays_undone() -> None:
-    talk = Conversation.restored(
-        [PastTurn("a theme", "Done.", GPT)],
-        changes=[[THEME]],
-        undone=[("Made Harbour",)],
-    )
-    assert talk.turns[0].undone
-    assert not talk.turns[0].undoable
 
 
 PACMAN = Request(("pacman", "-S", "cowsay"))

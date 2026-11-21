@@ -16,7 +16,7 @@ def _rule(action: str, resource: str, effect: str) -> dict[str, str]:
 
 
 #: The Engine's base rules allow nearly everything; these ask first instead,
-#: then allow what only looks or has an Undo. The last match wins, so the
+#: then allow what only looks or can be reversed. The last match wins, so the
 #: `.env` asks follow the read allow they narrow.
 CAREFUL = [
     _rule("*", "*", "ask"),
@@ -45,7 +45,7 @@ CAREFUL = [
 
 #: Read by every Project below ~/Code, where Programs are made.
 CODE_CONFIG = "Code/.opencode/opencode.json"
-#: Edits inside a Project: a Program's changes are commits, so each has an Undo.
+#: Edits inside a Project: a Program's changes are commits, so each can be reversed.
 CODE = [_rule("edit", "*", "allow")]
 
 

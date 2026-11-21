@@ -33,7 +33,6 @@ def icons() -> dict[str, Gtk.Button]:
     )
     view = TurnView(
         turn,
-        on_undo=lambda _t: None,
         program_card=lambda _n: Gtk.Label(),
         edit=lambda _t: None,
         try_again=lambda _t: None,

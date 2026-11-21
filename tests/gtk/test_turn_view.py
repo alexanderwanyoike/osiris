@@ -1,4 +1,4 @@
-"""A turn in the drawer: what its answer changed, and the Undo for it."""
+"""A turn in the drawer: its answer and what it changed."""
 
 from __future__ import annotations
 
@@ -27,7 +27,6 @@ APPLIED = Change("Applied Harbour", {"action": "apply_theme", "name": "nord"})
 
 def drawn(
     turn: Turn,
-    undone: list[Turn] | None = None,
     cards: list[str] | None = None,
     clock: Callable[[], float] = lambda: 0.0,
 ) -> TurnView:
@@ -37,7 +36,6 @@ def drawn(
 
     view = TurnView(
         turn,
-        on_undo=(undone if undone is not None else []).append,
         program_card=card,
         clock=clock,
     )
@@ -49,20 +47,9 @@ def finished(*changes: Change) -> Turn:
     return Turn("make it calm", "Done.", State.DONE, changes=list(changes))
 
 
-def test_a_turn_that_changed_something_says_what_and_offers_undo() -> None:
-    undone: list[Turn] = []
-    turn = finished(MADE, APPLIED)
-    view = drawn(turn, undone)
+def test_a_turn_that_changed_something_says_what_with_no_undo() -> None:
+    view = drawn(finished(MADE, APPLIED))
     assert "Made Harbour  ·  Applied Harbour" in texts(view)
-    find(view, Gtk.Button, "Undo").emit("clicked")
-    assert undone == [turn]
-
-
-def test_an_undone_turn_says_so_and_offers_no_undo() -> None:
-    turn = finished(MADE)
-    turn.undone = True
-    view = drawn(turn)
-    assert "Undone" in texts(view)
     assert not any(
         isinstance(w, Gtk.Button) and w.get_label() == "Undo" for w in widgets(view)
     )
@@ -70,7 +57,7 @@ def test_an_undone_turn_says_so_and_offers_no_undo() -> None:
 
 def test_a_turn_that_changed_nothing_shows_no_changes() -> None:
     view = drawn(finished())
-    assert not any("Undo" in text for text in texts(view))
+    assert not any(w.has_css_class("harness-chip") for w in widgets(view))
 
 
 def test_a_turn_that_changed_programs_shows_a_card_for_each() -> None:
@@ -231,7 +218,6 @@ def test_an_action_held_for_the_person_shows_its_card_under_the_answer() -> None
 
     view = TurnView(
         turn,
-        on_undo=lambda _t: None,
         program_card=lambda _n: Gtk.Box(),
         approval_card=approval_card,
     )
@@ -255,9 +241,7 @@ def test_a_command_waiting_for_the_password_shows_its_card_under_the_answer() ->
 
     turn = Turn("install cowsay", "Installing.", State.ANSWERING)
     turn.admin = Request(("pacman", "-S", "cowsay"))
-    view = TurnView(
-        turn, on_undo=lambda _t: None, program_card=Gtk.Label, admin_card=admin_card
-    )
+    view = TurnView(turn, program_card=Gtk.Label, admin_card=admin_card)
     view.update(turn, STYLE, None)
     view.update(turn, STYLE, None)
     assert asked[-1] == turn.admin
@@ -332,7 +316,6 @@ def going_back(may: bool, state: State = State.DONE) -> tuple[TurnView, Turn, li
     turn = Turn("make y.txt", "Made it.", state, message="msg_2")
     view = TurnView(
         turn,
-        on_undo=lambda _t: None,
         program_card=lambda _n: Gtk.Label(),
         edit=lambda t: asked.append(("edit", t)),
         try_again=lambda t: asked.append(("again", t)),
@@ -365,7 +348,6 @@ def tried(may: bool) -> tuple[TurnView, Turn, list[Turn]]:
     turn = Turn("make y.txt", "Made it.", State.DONE, message="msg_2")
     view = TurnView(
         turn,
-        on_undo=lambda _t: None,
         program_card=lambda _n: Gtk.Label(),
         try_again=again.append,
         may_try_again=lambda _t: may,
@@ -424,7 +406,6 @@ def test_an_answer_has_no_row_of_text_buttons_for_going_back_or_changes() -> Non
     turn = edited(State.DONE)
     view = TurnView(
         turn,
-        on_undo=lambda _t: None,
         program_card=lambda _n: Gtk.Label(),
         edit=lambda _t: None,
         try_again=lambda _t: None,
@@ -443,7 +424,6 @@ def test_a_skill_proposed_while_answering_has_its_card_under_the_answer() -> Non
     turn = Turn("tidy my imports", "Done.", State.DONE, proposals=[tidy])
     view = TurnView(
         turn,
-        on_undo=lambda _t: None,
         program_card=lambda name: Gtk.Label(label=name),
         proposal_card=lambda p: Gtk.Label(label=f"card for {p.name}"),
     )

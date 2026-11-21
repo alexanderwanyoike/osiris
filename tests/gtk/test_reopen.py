@@ -1,5 +1,5 @@
 """A Conversation reopened from history gets back what the log kept: its
-tokens, its Program cards and its Undo."""
+tokens and its Program cards."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from osiris.platform import FakeFileSystem
 GPT = ModelRef("openai", "gpt-5.5")
 
 
-def test_a_reopened_conversation_offers_its_program_card_and_undo_again() -> None:
+def test_a_reopened_conversation_offers_its_program_card_again() -> None:
     log = HarnessLog(FakeFileSystem(), Path("/home/tester") / LOG_FILE)
     log.write("sent", session="ses_1", text="build me a timer")
     log.write(
@@ -29,4 +29,3 @@ def test_a_reopened_conversation_offers_its_program_card_and_undo_again() -> Non
         app, "ses_1", [PastTurn("build me a timer", "Made it.", GPT)]
     )
     assert talk.turns[0].programs == ["pomodoro"]
-    assert talk.turns[0].undoable

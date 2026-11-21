@@ -14,8 +14,7 @@ application: in Cinnamon's menu, in rofi, and keepable in Plank.
 1. **The Harness builds** in `~/Code/<Program>`, a git repository, one atomic
    commit per change. A Conversation with no Project moves into the new
    Program's Project.
-2. **The answer ends with a card**: Try and Install, later Update. Undo reverts
-   the answer's commits, newest first.
+2. **The answer ends with a card**: Try and Install, later Update.
 3. **Try** builds the source if it needs building and runs it. **Install**
    copies one commit into place, builds it, and writes the menu entry.
    **Update** shows the commits since the installed one, then moves the
