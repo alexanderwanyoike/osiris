@@ -69,7 +69,11 @@ from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.apps.tool_server import NAME as TOOLS, undo  # noqa: E402
 
 from osiris.harness import admin  # noqa: E402
-from osiris.harness.changes import credit_shell_commits, file_changes  # noqa: E402
+from osiris.harness.changes import (  # noqa: E402
+    credit_shell_commits,
+    file_changes,
+    standing_steps,
+)
 from osiris.harness.connectors import (  # noqa: E402
     Connector,
     Servers,
@@ -633,6 +637,13 @@ class Drawer(Gtk.ApplicationWindow):
             self.picker.restyle(token_colours(look.theme))
             self.conversation_panel.restyle(ring_colours(look.theme))
 
+    def redraw(self, turn: Turn) -> None:
+        """One answer on screen, which refresh skips once it is not the newest."""
+        look = self.app.look
+        for view, shown in zip(self.views, self.app.conversation.turns):
+            if shown is turn:
+                view.update(turn, look.style, look.scheme)
+
     def refresh(self, restyle: bool = False) -> None:
         conversation, look = self.app.conversation, self.app.look
         if restyle:
@@ -1157,17 +1168,27 @@ class Application(Adw.Application):
         """Reverse what a turn changed, newest first, without the model."""
         steps = turn.undo_steps()
 
-        def reverse() -> None:
-            store, programs = EngineStore(), self.programs()
+        def reverse() -> bool:
+            programs = self.programs()
+            standing = standing_steps(ProgramHistory(programs), steps)
+            if standing is None:
+                return False
+            store = EngineStore()
             wallpapers = user_wallpapers(
                 self.files, SubprocessRunner(sink=lambda _line: None), self.home)
-            for step in steps:
+            for step in standing:
                 undo(store, step, programs, wallpapers, skins=EngineSkinStore())
+            return True
 
-        def undone(_result) -> None:
-            turn.undone = True
-            if self.log is not None:
-                self.log.write("undone", changes=[c.summary for c in turn.changes])
+        def undone(done: bool) -> None:
+            if done:
+                turn.undone = True
+                if self.log is not None:
+                    self.log.write("undone", changes=[c.summary for c in turn.changes])
+            else:
+                turn.note = ("Part of this answer was rewritten later, so Undo could "
+                             "change newer work. Ask Osiris to undo it instead.")
+            self.drawer.redraw(turn)
             self.drawer.refresh()
 
         self.background(reverse, undone)
@@ -1487,23 +1508,31 @@ class Application(Adw.Application):
 
         programs = self.programs()
 
-        def read(turn: Turn) -> tuple[tuple, list[str]]:
-            found, gone = [], []
+        def read(turn: Turn) -> tuple[tuple, list[str], bool]:
+            found, gone, replaced = [], [], False
             for name, commit in turn.commits:
                 try:
-                    found += file_changes(name, programs.patch(name, commit))
+                    if programs.held(name, [commit]):
+                        found += file_changes(name, programs.patch(name, commit))
+                    else:
+                        replaced = True
                 except CommandError:
                     gone.append(name)
-            return tuple(found), gone
+            return tuple(found), gone, replaced
 
         # Read off the main loop: another Conversation may be on screen by then.
         session = self.session
 
-        def shown(results: list[tuple[tuple, list[str]]]) -> None:
-            for turn, (files, gone) in zip(turns, results, strict=True):
+        def shown(results: list[tuple[tuple, list[str], bool]]) -> None:
+            for turn, (files, gone, replaced) in zip(turns, results, strict=True):
                 if gone and not files:
                     turn.note = (f"{', '.join(dict.fromkeys(gone))} is gone, so what "
                                  "this question changed in it cannot be shown.")
+                    self.drawer.redraw(turn)
+                elif replaced and not files:
+                    turn.note = ("What this question changed was rewritten later, "
+                                 "so it cannot be shown.")
+                    self.drawer.redraw(turn)
                 else:
                     self.drawer.show_changes(turn.question, files, commented, session)
             self.drawer.refresh()
@@ -1804,8 +1833,6 @@ class Application(Adw.Application):
             asked = self.log.changes_by_question(session)
             changes = asked[-1] if asked else []
             conversation.changed(changes)
-            if conversation.earlier_changed(asked):
-                self.drawer.refresh(restyle=True)
             proposed = self.log.proposals_by_question(session)
             conversation.proposed(proposed[-1] if proposed else [])
             worked_on = [c.program for c in changes if c.program]

@@ -37,10 +37,6 @@ def _made_by(change: Mapping[str, Any], asking: str) -> str:
     return session if isinstance(session, str) else asking
 
 
-def _standing(changes: list[Change], rewritten: set[str]) -> list[Change]:
-    return [c for c in changes if (c.undo or {}).get("commit") not in rewritten]
-
-
 def _now() -> datetime:
     return datetime.now(UTC)
 
@@ -122,41 +118,12 @@ class HarnessLog:
 
     def changes_by_question(self, session: str) -> list[list[Change]]:
         """For each question the session was asked, in order, the changes it
-        led to: those naming the session, logged after it, less any whose
-        commit was since rewritten out of its Program."""
-        rewritten = self.rewritten()
-        questions = self._by_question(
+        led to: those naming the session, logged after it."""
+        return self._by_question(
             session,
             "changed",
             lambda e: Change(e["summary"], e["undo"], e.get("program")),
         )
-        undid = set(self.undone())
-        return [
-            changes
-            if tuple(c.summary for c in changes) in undid
-            else _standing(changes, rewritten)
-            for changes in questions
-        ]
-
-    def commits_of(self, program: str) -> list[str]:
-        """Every commit logged as a change to ``program``, by any session."""
-        return [
-            entry["undo"]["commit"]
-            for entry in self._entries()
-            if entry["kind"] == "changed"
-            and (entry.get("undo") or {}).get("action") == "revert_commit"
-            and entry["undo"]["name"] == program
-        ]
-
-    def rewritten(self) -> set[str]:
-        """Commits a rewrite replaced and nothing has brought back."""
-        gone: set[str] = set()
-        for entry in self._entries():
-            if entry["kind"] == "rewritten":
-                gone.add(entry["commit"])
-            elif entry["kind"] == "restored":
-                gone.discard(entry["commit"])
-        return gone
 
     def proposals_by_question(self, session: str) -> list[list[Proposal]]:
         """For each question the session was asked, in order, the skills
@@ -220,4 +187,4 @@ class HarnessLog:
                 changes.append(
                     Change(entry["summary"], entry["undo"], entry.get("program"))
                 )
-        return _standing(changes, self.rewritten())
+        return changes
