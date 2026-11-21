@@ -20,6 +20,7 @@ ROWS = 8
 #: The list takes its rows' minimum width, which an ellipsized label would
 #: otherwise leave at almost nothing.
 NAME_CHARS = 15
+PROVIDER_CHARS = 16
 MOVES = {Gdk.KEY_Down: 1, Gdk.KEY_Up: -1}
 CHOOSES = (Gdk.KEY_Return, Gdk.KEY_KP_Enter)
 #: The open menu grabs the keyboard. Letting go on Super, before the key it
@@ -55,6 +56,10 @@ class ModelMenu(Gtk.Box):
         keys = Gtk.EventControllerKey(propagation_phase=Gtk.PropagationPhase.CAPTURE)
         keys.connect("key-pressed", self.key)
         self.search.add_controller(keys)
+        anywhere = Gtk.EventControllerKey(
+            propagation_phase=Gtk.PropagationPhase.CAPTURE)
+        anywhere.connect("key-pressed", self._super)
+        self.add_controller(anywhere)
         self.append(self.search)
         self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.BROWSE)
         self.list.add_css_class("navigation-sidebar")
@@ -98,8 +103,12 @@ class ModelMenu(Gtk.Box):
         box.append(Gtk.Label(label=info.name, xalign=0, hexpand=True,
                              width_chars=NAME_CHARS,
                              ellipsize=Pango.EllipsizeMode.END))
-        provider = Gtk.Label(
-            label=self._providers.get(info.ref.provider, info.ref.provider))
+        named = self._providers.get(info.ref.provider, info.ref.provider)
+        provider = Gtk.Label(label=named)
+        if len(named) > PROVIDER_CHARS:
+            provider.set_width_chars(PROVIDER_CHARS)
+            provider.set_max_width_chars(PROVIDER_CHARS)
+            provider.set_ellipsize(Pango.EllipsizeMode.END)
         provider.add_css_class("dim-label")
         box.append(provider)
         return box
@@ -115,6 +124,9 @@ class ModelMenu(Gtk.Box):
         if keyval == Gdk.KEY_Escape:
             self._on_close()
             return True
+        return False
+
+    def _super(self, _controller, keyval, _code, _state) -> bool:
         if keyval in SUPER:
             self._on_close()
         return False
