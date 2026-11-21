@@ -120,6 +120,26 @@ def test_a_rewritten_commit_is_not_offered_to_undo() -> None:
     assert [c.summary for c in log.last_changes()] == ["Made Daily Habits"]
 
 
+def test_amending_an_earlier_questions_commit_credits_its_replacement() -> None:
+    log = asked_log()
+    log.write(
+        "changed",
+        session="ses_1",
+        summary="Daily Habits: Track habits",
+        undo={"action": "revert_commit", "name": "daily-habits", "commit": "old111"},
+        program="daily-habits",
+    )
+    log.write("sent", session="ses_1", text="reword it")
+    history = History(
+        {"daily-habits": [("new222", "Track habits daily")]},
+        gone=frozenset({"old111"}),
+    )
+    credit_shell_commits(log, history, "ses_1")
+    assert [c.summary for c in log.changes_by_question("ses_1")[-1]] == [
+        "Daily Habits: Track habits daily"
+    ]
+
+
 TIDIED = "\n".join(
     (
         "diff --git a/main.py b/main.py",
