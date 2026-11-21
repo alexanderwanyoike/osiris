@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -73,6 +74,22 @@ def calls(runner: FakeRunner) -> list[tuple[str, ...]]:
 
 def answer(stdout: str) -> Result:
     return Result((), 0, stdout)
+
+
+def on_disk(tmp_path: Path) -> tuple[Programs, Callable[..., str]]:
+    """A real Program, and git in it as a shell would run it."""
+    runner = SubprocessRunner()
+    subject = Programs(RealFileSystem(), runner, tmp_path)
+    subject.create(
+        "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+    )
+    source = str(subject.source("pomodoro"))
+
+    def git(*args: str) -> str:
+        identity = ("-c", f"user.name={OSIRIS[0]}", "-c", f"user.email={OSIRIS[1]}")
+        return runner.capture("git", "-C", source, *identity, *args)
+
+    return subject, git
 
 
 class TestCreating:
@@ -270,6 +287,16 @@ class TestCommitting:
         runner = FakeRunner(results={"git": answer("kept111\nkept222\n")})
         subject, _, _ = programs(made(), runner)
         assert subject.rewritten("pomodoro", ["kept111", "old333"]) == ["old333"]
+
+    def test_a_tagged_commit_replaced_by_an_amend_was_rewritten(
+        self, tmp_path: Path
+    ) -> None:
+        """A tag keeps the old commit alive, but the Program moved on from it."""
+        subject, git = on_disk(tmp_path)
+        old = git("rev-parse", "HEAD")
+        git("tag", "kept")
+        git("commit", "--amend", "-qm", "Start better")
+        assert subject.rewritten("pomodoro", [old]) == [old]
 
     def test_a_program_is_named_to_the_person_by_its_label(self) -> None:
         subject, _, _ = programs(made())
