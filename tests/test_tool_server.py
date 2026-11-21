@@ -13,7 +13,7 @@ from mcp.server.context import ServerRequestContext
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
-from osiris.apps.tool_server import TIERS, server
+from osiris.apps.tool_server import TIERS, instructions, server
 from osiris.harness.log import LOG_FILE, Change, HarnessLog
 from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem, FakeRunner
@@ -321,6 +321,10 @@ def test_the_model_is_told_windows_are_gtk_and_libadwaita_and_nothing_else() -> 
 
     assert "tkinter" in INSTRUCTIONS
     assert "GTK 4 and libadwaita" in INSTRUCTIONS
+
+
+def test_the_model_does_not_promise_an_undo() -> None:
+    assert "can undo" not in instructions(auto_mode=False)
 
 
 def test_the_model_is_told_the_person_knows_it_as_osiris() -> None:
