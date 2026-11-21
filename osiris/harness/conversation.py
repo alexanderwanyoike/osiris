@@ -55,7 +55,6 @@ class Turn:
     served: int = 0
     #: Skills proposed while answering, for the person to keep or not.
     proposals: list[Proposal] = field(default_factory=list)
-    undone: bool = False
     #: A command of this answer's waiting for the administrator password.
     admin: Request | None = None
     #: An action of this answer's waiting for the person to answer its card,
@@ -77,8 +76,7 @@ class Turn:
 
     @property
     def commits(self) -> list[tuple[str, str]]:
-        """Each Program commit the question made, as (Program, commit): the
-        commit its Undo would revert."""
+        """Each Program commit the question made, as (Program, commit)."""
         return [
             (change.undo["name"], change.undo["commit"])
             for change in self.changes
@@ -97,14 +95,6 @@ class Turn:
         self.finished = clock()
         self.asking = self.held = None
         self.queued = []
-
-    @property
-    def undoable(self) -> bool:
-        return not self.undone and bool(self.undo_steps())
-
-    def undo_steps(self) -> list[Mapping[str, str]]:
-        """What reverses this turn's changes, the newest first."""
-        return [change.undo for change in reversed(self.changes) if change.undo]
 
 
 @dataclass(frozen=True)
@@ -218,7 +208,6 @@ class Conversation:
         past: list[PastTurn],
         tokens_spent: int = 0,
         changes: list[list[Change]] | None = None,
-        undone: list[tuple[str, ...]] | None = None,
         proposals: list[list[Proposal]] | None = None,
     ) -> Conversation:
         """A past Conversation as it ended, with what each answer changed.
@@ -240,12 +229,10 @@ class Conversation:
                 )
             )
             talk.model = turn.model or talk.model
-        undid = set(undone or [])
         for answer, made in zip(
             reversed(talk.turns), reversed(changes or []), strict=False
         ):
             answer.changes = made
-            answer.undone = bool(made) and tuple(c.summary for c in made) in undid
         for answer, proposed in zip(
             reversed(talk.turns), reversed(proposals or []), strict=False
         ):

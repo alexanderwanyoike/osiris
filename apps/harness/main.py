@@ -1588,14 +1588,13 @@ class Application(Adw.Application):
             self._apply(decision)
 
     def _restored(self, session: str, past) -> Conversation:
-        """A past Conversation with its tokens, Program cards and Undo, which
+        """A past Conversation with its tokens and Program cards, which
         the Engine's history does not carry and the log does."""
         if self.log is None:
             return Conversation.restored(past)
         return Conversation.restored(past,
                                      tokens_spent=self.log.tokens_spent(session),
                                      changes=self.log.changes_by_question(session),
-                                     undone=self.log.undone(),
                                      proposals=self.log.proposals_by_question(session))
 
     def new_conversation(self, folder: Path | None = None) -> bool:
