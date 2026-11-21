@@ -15,7 +15,7 @@ from enum import Enum
 from pathlib import Path
 from xml.etree import ElementTree
 
-from osiris.model.author import OSIRIS, as_osiris
+from osiris.model.author import as_osiris
 from osiris.model.names import slug
 from osiris.platform import CommandRunner, FileSystem
 from osiris.platform.process import CommandError
@@ -35,8 +35,6 @@ INSTALL_DIR = ".local/share/osiris/programs"
 APPLICATIONS_DIR = ".local/share/applications"
 #: Inside an installed copy: the commit it was made from.
 COMMIT_FILE = ".osiris-commit"
-#: Who the Harness's commits are by, so its changes are told from the person's.
-HARNESS = OSIRIS
 #: The committer on what Osiris's tools commit. A model with no git identity
 #: copies the author it sees in the log, which a plain log never shows this.
 TOOL_ADDRESS = "tools@osiris.invalid"

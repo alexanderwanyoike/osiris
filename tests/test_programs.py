@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from osiris.model.author import OSIRIS
 from osiris.platform import (
     FakeFileSystem,
     FakeRunner,
@@ -18,7 +19,6 @@ from osiris.platform import (
 from osiris.platform.process import CommandError, Result
 from osiris.programs.manifest import MANIFEST_FILE, Manifest, parse
 from osiris.programs.programs import (
-    HARNESS,
     TOOL_ADDRESS,
     Program,
     ProgramError,
@@ -126,7 +126,7 @@ class TestCreating:
             "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
         )
         assert "Harness" not in files.read(SOURCE / "AGENTS.md")
-        assert "Harness" not in HARNESS[0]
+        assert "Harness" not in OSIRIS[0]
 
     def test_every_program_starts_with_the_icon_drawn_for_it(self) -> None:
         subject, files, _ = programs()
@@ -255,9 +255,9 @@ class TestCommitting:
             "-C",
             str(source),
             "-c",
-            f"user.name={HARNESS[0]}",
+            f"user.name={OSIRIS[0]}",
             "-c",
-            f"user.email={HARNESS[1]}",
+            f"user.email={OSIRIS[1]}",
             "commit",
             "-qam",
             "In a shell",
