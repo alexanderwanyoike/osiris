@@ -17,6 +17,9 @@ from osiris.harness.model_menu import in_menu_order, maker_of, narrowed  # noqa:
 
 #: Rows shown before the list scrolls.
 ROWS = 8
+#: The list takes its rows' minimum width, which an ellipsized label would
+#: otherwise leave at almost nothing.
+NAME_CHARS = 18
 MOVES = {Gdk.KEY_Down: 1, Gdk.KEY_Up: -1}
 CHOOSES = (Gdk.KEY_Return, Gdk.KEY_KP_Enter)
 #: The makers' icons Osiris ships (apps/harness/logos, NOTICE there). Xiaomi's
@@ -90,6 +93,7 @@ class ModelMenu(Gtk.Box):
         box = Gtk.Box(spacing=8)
         box.append(_lead(info))
         box.append(Gtk.Label(label=info.name, xalign=0, hexpand=True,
+                             width_chars=NAME_CHARS,
                              ellipsize=Pango.EllipsizeMode.END))
         provider = Gtk.Label(
             label=self._providers.get(info.ref.provider, info.ref.provider))
