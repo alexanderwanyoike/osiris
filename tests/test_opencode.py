@@ -703,6 +703,26 @@ class TestHistory:
         )
         assert engine(http).history(SESSION)[0].finished == 3.0
 
+    def test_a_question_with_no_answer_keeps_when_it_was_asked(self) -> None:
+        http = FakeHttpClient(
+            replies={
+                (
+                    "GET",
+                    f"{URL}/api/session/{SESSION}/message?limit=200&order=asc",
+                ): {
+                    "data": [
+                        {
+                            "id": "m1",
+                            "type": "user",
+                            "text": "make a timer",
+                            "time": {"created": 4000},
+                        },
+                    ]
+                }
+            }
+        )
+        assert engine(http).history(SESSION)[0].finished == 4.0
+
     def test_a_past_answer_keeps_each_steps_text_its_own_paragraph(self) -> None:
         """Each step of an answer is a message of its own; read live, a new
         step starts a new paragraph, and so it does when reopened (#225)."""
