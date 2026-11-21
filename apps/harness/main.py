@@ -1818,8 +1818,6 @@ class Application(Adw.Application):
             asked = self.log.changes_by_question(session)
             changes = asked[-1] if asked else []
             conversation.changed(changes)
-            if conversation.earlier_changed(asked):
-                self.drawer.refresh(restyle=True)
             proposed = self.log.proposals_by_question(session)
             conversation.proposed(proposed[-1] if proposed else [])
             worked_on = [c.program for c in changes if c.program]

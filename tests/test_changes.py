@@ -20,20 +20,15 @@ class History:
     def __init__(
         self,
         found: dict[str, list[tuple[str, str]]],
-        gone: frozenset[str] = frozenset(),
         back: frozenset[str] = frozenset(),
     ) -> None:
         self.found = found
-        self.gone = gone
         self.back = back
         self.since: list[tuple[str, datetime]] = []
 
     def commits_since(self, name: str, since: datetime) -> list[tuple[str, str]]:
         self.since.append((name, since))
         return self.found.get(name, [])
-
-    def rewritten(self, _name: str, commits: list[str]) -> list[str]:
-        return [commit for commit in commits if commit in self.gone]
 
     def held(self, _name: str, commits: list[str]) -> list[str]:
         return [commit for commit in commits if commit in self.back]

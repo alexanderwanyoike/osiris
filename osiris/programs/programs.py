@@ -282,11 +282,6 @@ class Programs:
             if by != TOOL_ADDRESS and int(authored) >= earliest
         ]
 
-    def rewritten(self, name: str, commits: list[str]) -> list[str]:
-        """Those of ``commits`` no branch holds any more, as after a rebase."""
-        held = self._on_branches(name)
-        return [c for c in commits if c not in held and self._has(name, c)]
-
     def held(self, name: str, commits: list[str]) -> list[str]:
         """Those of ``commits`` a branch holds."""
         on_branches = self._on_branches(name)

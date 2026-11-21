@@ -18,8 +18,6 @@ _FILE = re.compile(r"^diff --git a/(.+) b/(.+)$", re.MULTILINE)
 class ProgramHistory(Protocol):
     def commits_since(self, name: str, since: datetime) -> list[tuple[str, str]]: ...
 
-    def rewritten(self, name: str, commits: list[str]) -> list[str]: ...
-
     def held(self, name: str, commits: list[str]) -> list[str]: ...
 
     def label(self, name: str) -> str: ...
@@ -38,11 +36,9 @@ def credit_shell_commits(
     questions = log.changes_by_question(session)
     if asked is None or not questions:
         return
-    worked_on = log.programs_of(session) + ([project] if project else [])
-    replaced = _record_rewritten(log, history, session, list(dict.fromkeys(worked_on)))
     names = [change.program for change in questions[-1] if change.program]
-    for name in dict.fromkeys(names + ([project] if project else []) + replaced):
-        credited = set(log.commits_of(name))
+    credited = {(change.undo or {}).get("commit") for change in questions[-1]}
+    for name in dict.fromkeys(names + ([project] if project else [])):
         for commit, subject in history.commits_since(name, asked):
             if commit in credited:
                 continue
@@ -53,31 +49,6 @@ def credit_shell_commits(
                 undo={"action": "revert_commit", "name": name, "commit": commit},
                 program=name,
             )
-
-
-def _record_rewritten(
-    log: HarnessLog,
-    history: ProgramHistory,
-    session: str,
-    programs: list[str],
-) -> list[str]:
-    """Log the commits of ``programs`` that a rebase has since replaced,
-    whichever Conversation made them, and return the Programs it replaced
-    them in."""
-    already = log.rewritten()
-    replaced = []
-    for name in programs:
-        logged = log.commits_of(name)
-        standing = [c for c in logged if c not in already]
-        away = [c for c in logged if c in already]
-        for commit in history.held(name, away) if away else []:
-            log.write("restored", session=session, commit=commit)
-        gone = history.rewritten(name, standing) if standing else []
-        for commit in gone:
-            log.write("rewritten", session=session, commit=commit)
-        if gone:
-            replaced.append(name)
-    return replaced
 
 
 def standing_steps(
