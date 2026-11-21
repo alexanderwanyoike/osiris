@@ -6,11 +6,10 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from itertools import chain
 from typing import Protocol
 
 from osiris.harness.engine import FileChange
-from osiris.harness.log import Change, HarnessLog
+from osiris.harness.log import HarnessLog
 
 _FILE = re.compile(r"^diff --git a/(.+) b/(.+)$", re.MULTILINE)
 
@@ -36,7 +35,8 @@ def credit_shell_commits(
     questions = log.changes_by_question(session)
     if asked is None or not questions:
         return
-    replaced = _record_rewritten(log, history, session, questions)
+    worked_on = log.programs_of(session) + ([project] if project else [])
+    replaced = _record_rewritten(log, history, session, list(dict.fromkeys(worked_on)))
     names = [change.program for change in questions[-1] if change.program]
     credited = {(change.undo or {}).get("commit") for change in questions[-1]}
     for name in dict.fromkeys(names + ([project] if project else []) + replaced):
@@ -56,18 +56,16 @@ def _record_rewritten(
     log: HarnessLog,
     history: ProgramHistory,
     session: str,
-    questions: list[list[Change]],
+    programs: list[str],
 ) -> list[str]:
-    """Log the session's commits that a rebase has since replaced, and
-    return the Programs it replaced them in."""
-    made: dict[str, list[str]] = {}
-    for change in chain.from_iterable(questions):
-        undo = change.undo or {}
-        if undo.get("action") == "revert_commit":
-            made.setdefault(undo["name"], []).append(undo["commit"])
+    """Log the commits of ``programs`` that a rebase has since replaced,
+    whichever Conversation made them, and return the Programs it replaced
+    them in."""
+    already = log.rewritten()
     replaced = []
-    for name, commits in made.items():
-        gone = history.rewritten(name, commits)
+    for name in programs:
+        standing = [c for c in log.commits_of(name) if c not in already]
+        gone = history.rewritten(name, standing) if standing else []
         for commit in gone:
             log.write("rewritten", session=session, commit=commit)
         if gone:
