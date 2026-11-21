@@ -474,9 +474,10 @@ class OpencodeEngine:
 
 
 def _step_ended(message: dict[str, Any], turn: PastTurn) -> float | None:
-    """When this step ended, or the turn's last known end if it never did."""
-    completed = (message.get("time") or {}).get("completed")
-    return completed / 1000 if completed is not None else turn.finished
+    """When this step ended or, if it never finished, began."""
+    times = message.get("time") or {}
+    ended = times.get("completed", times.get("created"))
+    return ended / 1000 if ended is not None else turn.finished
 
 
 def _uri(entry: Entry) -> str:
