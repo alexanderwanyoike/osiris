@@ -1,4 +1,4 @@
-"""A turn in the drawer: what its answer changed, and the Undo for it."""
+"""A turn in the drawer: its answer and what it changed."""
 
 from __future__ import annotations
 
@@ -49,20 +49,9 @@ def finished(*changes: Change) -> Turn:
     return Turn("make it calm", "Done.", State.DONE, changes=list(changes))
 
 
-def test_a_turn_that_changed_something_says_what_and_offers_undo() -> None:
-    undone: list[Turn] = []
-    turn = finished(MADE, APPLIED)
-    view = drawn(turn, undone)
+def test_a_turn_that_changed_something_says_what_with_no_undo() -> None:
+    view = drawn(finished(MADE, APPLIED))
     assert "Made Harbour  ·  Applied Harbour" in texts(view)
-    find(view, Gtk.Button, "Undo").emit("clicked")
-    assert undone == [turn]
-
-
-def test_an_undone_turn_says_so_and_offers_no_undo() -> None:
-    turn = finished(MADE)
-    turn.undone = True
-    view = drawn(turn)
-    assert "Undone" in texts(view)
     assert not any(
         isinstance(w, Gtk.Button) and w.get_label() == "Undo" for w in widgets(view)
     )
@@ -70,7 +59,7 @@ def test_an_undone_turn_says_so_and_offers_no_undo() -> None:
 
 def test_a_turn_that_changed_nothing_shows_no_changes() -> None:
     view = drawn(finished())
-    assert not any("Undo" in text for text in texts(view))
+    assert not any(w.has_css_class("harness-chip") for w in widgets(view))
 
 
 def test_a_turn_that_changed_programs_shows_a_card_for_each() -> None:
