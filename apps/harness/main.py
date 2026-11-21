@@ -68,7 +68,11 @@ from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.apps.tool_server import NAME as TOOLS, undo  # noqa: E402
 
 from osiris.harness import admin  # noqa: E402
-from osiris.harness.changes import credit_shell_commits, file_changes  # noqa: E402
+from osiris.harness.changes import (  # noqa: E402
+    credit_shell_commits,
+    file_changes,
+    standing_steps,
+)
 from osiris.harness.connectors import (  # noqa: E402
     Connector,
     Servers,
@@ -1152,17 +1156,27 @@ class Application(Adw.Application):
         """Reverse what a turn changed, newest first, without the model."""
         steps = turn.undo_steps()
 
-        def reverse() -> None:
-            store, programs = EngineStore(), self.programs()
+        def reverse() -> bool:
+            programs = self.programs()
+            standing = standing_steps(ProgramHistory(programs), steps)
+            if standing is None:
+                return False
+            store = EngineStore()
             wallpapers = user_wallpapers(
                 self.files, SubprocessRunner(sink=lambda _line: None), self.home)
-            for step in steps:
+            for step in standing:
                 undo(store, step, programs, wallpapers, skins=EngineSkinStore())
+            return True
 
-        def undone(_result) -> None:
-            turn.undone = True
-            if self.log is not None:
-                self.log.write("undone", changes=[c.summary for c in turn.changes])
+        def undone(done: bool) -> None:
+            if done:
+                turn.undone = True
+                if self.log is not None:
+                    self.log.write("undone", changes=[c.summary for c in turn.changes])
+            else:
+                turn.note = ("Part of this answer was rewritten later, so Undo could "
+                             "change newer work. Ask Osiris to undo it instead.")
+            self.drawer.redraw(turn)
             self.drawer.refresh()
 
         self.background(reverse, undone)
