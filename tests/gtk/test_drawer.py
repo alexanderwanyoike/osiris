@@ -907,3 +907,25 @@ def test_opening_the_model_menu_lists_the_models_the_accounts_reach() -> None:
     search = window.model_list.search
     focused = search.get_root().get_focus()
     assert focused is not None and (focused is search or focused.is_ancestor(search))
+
+
+def test_the_model_menu_stays_inside_the_drawer_with_a_long_provider() -> None:
+    """Centred on its button and as wide as a long Provider makes it, the menu
+    ran past the drawer's edge."""
+    from osiris.harness.accounts import ModelInfo
+    from osiris.harness.engine import ModelRef
+
+    pickle = ModelInfo(ModelRef("opencode", "big-pickle"), "Big Pickle")
+    window, _ = drawer()
+    window.present()
+    window.model_list.show_models(
+        [pickle], pickle.ref, {"opencode": "OpenCode Console"}
+    )
+    context = GLib.MainContext.default()
+    while context.pending():
+        context.iteration(False)
+    popover = window.model_menu.get_popover()
+    composer = window.model_menu.get_parent().get_parent()
+    assert popover.get_halign() == Gtk.Align.END
+    width = window.model_list.measure(Gtk.Orientation.HORIZONTAL, -1)[0]
+    assert 0 < width <= composer.get_width()
