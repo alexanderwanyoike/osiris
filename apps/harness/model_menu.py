@@ -8,6 +8,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, Gtk, Pango  # noqa: E402
+from badge import badge  # noqa: E402
 from list_moves import move  # noqa: E402
 
 from osiris.harness.accounts import ModelInfo  # noqa: E402
@@ -16,6 +17,9 @@ from osiris.harness.model_menu import in_menu_order, maker_of, narrowed  # noqa:
 
 #: Rows shown before the list scrolls.
 ROWS = 8
+#: The list takes its rows' minimum width, which an ellipsized label would
+#: otherwise leave at almost nothing.
+NAME_CHARS = 18
 MOVES = {Gdk.KEY_Down: 1, Gdk.KEY_Up: -1}
 CHOOSES = (Gdk.KEY_Return, Gdk.KEY_KP_Enter)
 #: The makers' icons Osiris ships (apps/harness/logos, NOTICE there). Xiaomi's
@@ -30,14 +34,7 @@ ICONS = {
 
 
 def _lead(info: ModelInfo) -> Gtk.Widget:
-    icon = ICONS.get(maker_of(info.family) or "")
-    if icon is not None:
-        logo = Gtk.Image(icon_name=icon, pixel_size=16)
-        logo.add_css_class("harness-logo")
-        return logo
-    monogram = Gtk.Label(label=info.name[:1].upper())
-    monogram.add_css_class("harness-monogram")
-    return monogram
+    return badge(ICONS.get(maker_of(info.family) or ""), info.name, 16)
 
 
 class ModelMenu(Gtk.Box):
@@ -96,6 +93,7 @@ class ModelMenu(Gtk.Box):
         box = Gtk.Box(spacing=8)
         box.append(_lead(info))
         box.append(Gtk.Label(label=info.name, xalign=0, hexpand=True,
+                             width_chars=NAME_CHARS,
                              ellipsize=Pango.EllipsizeMode.END))
         provider = Gtk.Label(
             label=self._providers.get(info.ref.provider, info.ref.provider))
