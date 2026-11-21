@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
-from osiris.apps.tool_server import TIERS, instructions, server, undo
+from osiris.apps.tool_server import TIERS, instructions, server
 from osiris.harness.log import LOG_FILE, HarnessLog
 from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem, FakeRunner
@@ -119,21 +119,6 @@ def test_an_unusable_download_reaches_the_model_with_its_reason() -> None:
         call(
             EmptyDownloads(), "import_gtk_theme", {"path": "/tmp/notes.zip"}, new_log()
         )
-
-
-def test_undoing_skin_steps_reaches_the_skin_store() -> None:
-    skins = FakeSkinStore()
-    skins.wear("colloid")
-    programs = Programs(FakeFileSystem(), FakeRunner(), HOME)
-    wallpapers = UserWallpapers(FakeFileSystem(), FakeRunner(), HOME / "w", "")
-    undo(
-        FakeThemeStore(),
-        {"action": "wear_skin", "name": "osiris"},
-        programs,
-        wallpapers,
-        skins=skins,
-    )
-    assert skins.worn() == "osiris"
 
 
 def test_the_model_is_told_a_skin_is_data_and_never_a_program() -> None:

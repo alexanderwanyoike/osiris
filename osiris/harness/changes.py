@@ -5,7 +5,6 @@ Program from any Conversation, reopened or not."""
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
 from datetime import datetime
 from typing import Protocol
 
@@ -17,8 +16,6 @@ _FILE = re.compile(r"^diff --git a/(.+) b/(.+)$", re.MULTILINE)
 
 class ProgramHistory(Protocol):
     def commits_since(self, name: str, since: datetime) -> list[tuple[str, str]]: ...
-
-    def held(self, name: str, commits: list[str]) -> list[str]: ...
 
     def label(self, name: str) -> str: ...
 
@@ -49,30 +46,6 @@ def credit_shell_commits(
                 undo={"action": "revert_commit", "name": name, "commit": commit},
                 program=name,
             )
-
-
-def standing_steps(
-    history: ProgramHistory, steps: list[Mapping[str, str]]
-) -> list[Mapping[str, str]] | None:
-    """An answer's Undo steps, newest first, as git has them now; None if a
-    later answer replaced what it made. A commit a branch still holds after a
-    replaced one was made on top of that rewrite, so the answer did it itself."""
-    made: dict[str, list[str]] = {}
-    for step in steps:
-        if step["action"] == "revert_commit":
-            made.setdefault(step["name"], []).append(step["commit"])
-    held = {c for name, commits in made.items() for c in history.held(name, commits)}
-    kept: list[Mapping[str, str]] = []
-    settled: set[str] = set()
-    for step in steps:
-        if step["action"] != "revert_commit":
-            kept.append(step)
-        elif step["commit"] in held:
-            settled.add(step["name"])
-            kept.append(step)
-        elif step["name"] not in settled:
-            return None
-    return kept
 
 
 def file_changes(program: str, patch: str) -> tuple[FileChange, ...]:
