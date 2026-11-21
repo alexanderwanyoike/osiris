@@ -9,7 +9,12 @@ from pathlib import Path
 
 import pytest
 
-from osiris.platform import FakeFileSystem, FakeRunner
+from osiris.platform import (
+    FakeFileSystem,
+    FakeRunner,
+    RealFileSystem,
+    SubprocessRunner,
+)
 from osiris.platform.process import CommandError, Result
 from osiris.programs.manifest import MANIFEST_FILE, Manifest, parse
 from osiris.programs.programs import (
@@ -224,6 +229,36 @@ class TestCommitting:
             ("ccc333", "Track streaks: daily"),
         ]
         assert f"--since={asked.isoformat()}" in calls(runner)[-1]
+
+    def test_a_shell_commit_borrowing_osiriss_name_is_not_a_tools(
+        self, tmp_path: Path
+    ) -> None:
+        """A Program has no git identity of its own, so a model committing in
+        a shell often copies the author it sees in the log."""
+        runner = SubprocessRunner()
+        subject = Programs(RealFileSystem(), runner, tmp_path)
+        subject.create(
+            "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+        )
+        source = subject.source("pomodoro")
+        (source / "timer.py").write_text("print(1)\n")
+        subject.commit("pomodoro", "By the tools")
+        (source / "timer.py").write_text("print(2)\n")
+        runner.capture(
+            "git",
+            "-C",
+            str(source),
+            "-c",
+            f"user.name={HARNESS[0]}",
+            "-c",
+            f"user.email={HARNESS[1]}",
+            "commit",
+            "-qam",
+            "In a shell",
+        )
+        asked = datetime(2000, 1, 1, tzinfo=UTC)
+        made_in_a_shell = subject.commits_since("pomodoro", asked)
+        assert [message for _, message in made_in_a_shell] == ["In a shell"]
 
     def test_a_program_is_named_to_the_person_by_its_label(self) -> None:
         subject, _, _ = programs(made())
