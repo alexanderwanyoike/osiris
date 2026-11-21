@@ -298,6 +298,13 @@ class TestCommitting:
         git("commit", "--amend", "-qm", "Start better")
         assert subject.rewritten("pomodoro", [old]) == [old]
 
+    def test_a_commit_this_repository_never_had_was_not_rewritten(
+        self, tmp_path: Path
+    ) -> None:
+        """A new Program under a gone one's name is no rewrite of it."""
+        subject, _ = on_disk(tmp_path)
+        assert subject.rewritten("pomodoro", ["f" * 40]) == []
+
     def test_a_program_is_named_to_the_person_by_its_label(self) -> None:
         subject, _, _ = programs(made())
         assert subject.label("pomodoro") == "Pomodoro"
