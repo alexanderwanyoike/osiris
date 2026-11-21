@@ -10,7 +10,7 @@ import base64
 import json
 import re
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -437,6 +437,8 @@ class OpencodeEngine:
                     PastTurn(message.get("text", ""), "", None, message.get("id", ""))
                 )
             elif message.get("type") == "assistant" and turns:
+                last = replace(turns[-1], finished=_step_ended(message, turns[-1]))
+                turns[-1] = last
                 said = "".join(
                     part.get("text", "")
                     for part in message.get("content", [])
@@ -444,12 +446,14 @@ class OpencodeEngine:
                 )
                 if said:
                     model = message.get("model") or {}
-                    last = turns[-1]
-                    turns[-1] = PastTurn(
-                        last.question,
-                        next_step(last.answer) + said,
-                        ModelRef(model["providerID"], model["id"]) if model else None,
-                        last.message,
+                    turns[-1] = replace(
+                        last,
+                        answer=next_step(last.answer) + said,
+                        model=(
+                            ModelRef(model["providerID"], model["id"])
+                            if model
+                            else None
+                        ),
                     )
         return turns
 
@@ -467,6 +471,12 @@ class OpencodeEngine:
             event = reader.read(json.loads(line.removeprefix("data:")))
             if event is not None:
                 yield event
+
+
+def _step_ended(message: dict[str, Any], turn: PastTurn) -> float | None:
+    """When this step ended, or the turn's last known end if it never did."""
+    completed = (message.get("time") or {}).get("completed")
+    return completed / 1000 if completed is not None else turn.finished
 
 
 def _uri(entry: Entry) -> str:
