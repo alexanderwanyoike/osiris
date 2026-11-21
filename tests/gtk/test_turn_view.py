@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 from dataclasses import replace
+from datetime import datetime
 
 from gi.repository import GLib, Gtk
 from render import TurnView
@@ -392,6 +393,14 @@ def test_an_answer_that_may_not_be_tried_again_has_no_arrow() -> None:
     assert not any(
         isinstance(w, Gtk.Button) and w.get_icon_name() == "view-refresh-symbolic"
         for w in widgets(view)
+    )
+
+
+def test_a_reopened_answer_shows_when_it_finished_not_when_it_was_opened() -> None:
+    finished = datetime(2026, 11, 21, 3, 7).timestamp()
+    view = drawn(Turn("make a theme", "Done.", State.DONE, finished=finished))
+    assert any(
+        isinstance(w, Gtk.Label) and "03:07" in w.get_text() for w in widgets(view)
     )
 
 
