@@ -14,10 +14,17 @@ from osiris.programs.programs import Programs
 HOME = Path("/home/tester")
 
 
-def test_a_program_whose_history_cannot_be_read_has_nothing_rewritten() -> None:
-    """Unreadable is not rewritten: a Program that is gone keeps its record."""
+def unreadable() -> ProgramHistory:
     files = FakeFileSystem()
     files.write(HOME / "Code" / "pomodoro" / MANIFEST_FILE, "{}")
     runner = FakeRunner(results={"git": Result((), 128, "")})
-    history = ProgramHistory(Programs(files, runner, HOME))
-    assert history.rewritten("pomodoro", ["abc123"]) == []
+    return ProgramHistory(Programs(files, runner, HOME))
+
+
+def test_a_program_whose_history_cannot_be_read_has_nothing_rewritten() -> None:
+    """Unreadable is not rewritten: a Program that is gone keeps its record."""
+    assert unreadable().rewritten("pomodoro", ["abc123"]) == []
+
+
+def test_a_program_whose_history_cannot_be_read_holds_nothing() -> None:
+    assert unreadable().held("pomodoro", ["abc123"]) == []

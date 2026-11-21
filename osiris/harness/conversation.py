@@ -280,6 +280,18 @@ class Conversation:
         if self.turns:
             self.turns[-1].changes = changes
 
+    def earlier_changed(self, asked: list[list[Change]]) -> bool:
+        """Earlier answers as the log has them now, which a rebase may have
+        altered; whether any of them moved."""
+        moved = False
+        for turn, made in zip(
+            reversed(self.turns[:-1]), reversed(asked[:-1]), strict=False
+        ):
+            if turn.changes != made:
+                turn.changes = made
+                moved = True
+        return moved
+
     def ran(self, tools: list[str]) -> None:
         """The tool server's tools run so far for the latest question, as it
         logged them; each becomes a step once."""
