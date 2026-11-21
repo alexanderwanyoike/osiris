@@ -17,6 +17,12 @@ class ProgramHistory:
         except (CommandError, ProgramError):
             return []
 
+    def rewritten(self, name: str, commits: list[str]) -> list[str]:
+        try:
+            return self._programs.rewritten(name, commits)
+        except (CommandError, ProgramError):
+            return []
+
     def label(self, name: str) -> str:
         try:
             return self._programs.label(name)
