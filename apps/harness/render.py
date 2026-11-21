@@ -481,7 +481,8 @@ class TurnView(Gtk.Box):
             self.extras.append(error)
         if turn.state in (State.DONE, State.STOPPED):
             if self._finished_at is None:
-                self._finished_at = datetime.now()
+                self._finished_at = (datetime.fromtimestamp(turn.finished)
+                                     if turn.finished is not None else datetime.now())
             parts = [turn.model.model] if turn.model else []
             if turn.state is State.STOPPED:
                 parts.append("stopped")
