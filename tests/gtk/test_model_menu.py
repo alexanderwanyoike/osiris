@@ -126,3 +126,11 @@ def test_escape_closes_the_menu() -> None:
     widget, chosen = menu()
     assert press(widget, Gdk.KEY_Escape)
     assert chosen == ["closed"]
+
+
+def test_the_super_key_closes_the_menu_for_the_desktops_shortcuts() -> None:
+    """The open menu holds the keyboard, so Super+A never reached Cinnamon."""
+    for key in (Gdk.KEY_Super_L, Gdk.KEY_Super_R):
+        widget, chosen = menu()
+        assert not press(widget, key)
+        assert chosen == ["closed"]
