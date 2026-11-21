@@ -404,6 +404,21 @@ def test_a_reopened_answer_shows_when_it_finished_not_when_it_was_opened() -> No
     )
 
 
+def test_an_answer_draws_the_time_its_turn_holds_now() -> None:
+    turn = Turn(
+        "make a theme",
+        "Done.",
+        State.DONE,
+        finished=datetime(2026, 11, 21, 3, 7).timestamp(),
+    )
+    view = drawn(turn)
+    turn.finished = datetime(2026, 11, 21, 4, 9).timestamp()
+    view.update(turn, STYLE, None)
+    assert any(
+        isinstance(w, Gtk.Label) and "04:09" in w.get_text() for w in widgets(view)
+    )
+
+
 def test_an_answer_has_no_row_of_text_buttons_for_going_back_or_changes() -> None:
     """Only quiet icons: the words made every answer look busy."""
     turn = edited(State.DONE)
