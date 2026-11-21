@@ -70,6 +70,8 @@ class Turn:
     message: str = ""
     #: A word from Thoth about this question, such as why it could not go back.
     note: str = ""
+    #: When a past answer ended, in seconds since the epoch; None while live.
+    finished: float | None = None
 
     @property
     def commits(self) -> list[tuple[str, str]]:
@@ -231,6 +233,7 @@ class Conversation:
                     State.DONE,
                     turn.model,
                     message=turn.message,
+                    finished=turn.finished,
                 )
             )
             talk.model = turn.model or talk.model
