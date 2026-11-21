@@ -36,7 +36,7 @@ def credit_shell_commits(
     questions = log.changes_by_question(session)
     if asked is None or not questions:
         return
-    _forget_rewritten(log, history, session, questions)
+    _record_rewritten(log, history, session, questions)
     names = [change.program for change in questions[-1] if change.program]
     credited = {(change.undo or {}).get("commit") for change in questions[-1]}
     for name in dict.fromkeys(names + ([project] if project else [])):
@@ -52,7 +52,7 @@ def credit_shell_commits(
             )
 
 
-def _forget_rewritten(
+def _record_rewritten(
     log: HarnessLog,
     history: ProgramHistory,
     session: str,
