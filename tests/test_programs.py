@@ -260,6 +260,12 @@ class TestCommitting:
         made_in_a_shell = subject.commits_since("pomodoro", asked)
         assert [message for _, message in made_in_a_shell] == ["In a shell"]
 
+    def test_a_commit_no_branch_holds_any_more_was_rewritten(self) -> None:
+        runner = FakeRunner(results={"git": answer("kept111\nkept222\n")})
+        subject, _, _ = programs(made(), runner)
+        assert subject.rewritten("pomodoro", ["kept111", "old333"]) == ["old333"]
+        assert calls(runner)[-1] == (*GIT, "rev-list", "--all")
+
     def test_a_program_is_named_to_the_person_by_its_label(self) -> None:
         subject, _, _ = programs(made())
         assert subject.label("pomodoro") == "Pomodoro"
