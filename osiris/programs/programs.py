@@ -37,8 +37,10 @@ APPLICATIONS_DIR = ".local/share/applications"
 COMMIT_FILE = ".osiris-commit"
 #: Who the Harness's commits are by, so its changes are told from the person's.
 HARNESS = OSIRIS
-TOOL_ADDRESS = HARNESS[1]
-TOOL_IDENTITY = as_osiris()
+#: The committer on what Osiris's tools commit. A model with no git identity
+#: copies the author it sees in the log, which a plain log never shows this.
+TOOL_ADDRESS = "tools@osiris.invalid"
+TOOL_IDENTITY = (*as_osiris(), "-c", f"committer.email={TOOL_ADDRESS}")
 
 #: Folders that hold what git, builds and package managers keep, not source.
 _NOT_SOURCE = {
@@ -50,10 +52,10 @@ _NOT_SOURCE = {
     "target",
     "build",
 }
-#: git's log, a commit to a line: its hash, its author's address and subject,
-#: apart by a character no subject holds.
+#: git's log, a commit to a line: its hash, its committer's address and
+#: subject, apart by a character no subject holds.
 _FIELD = "\x1f"
-_LOG = "%H%x1f%ae%x1f%s"
+_LOG = "%H%x1f%ce%x1f%s"
 #: How much of a failed build's output is worth showing.
 _BUILD_TAIL = 30
 
