@@ -20,7 +20,6 @@ from osiris.programs.manifest import MANIFEST_FILE, Manifest, parse
 from osiris.programs.programs import (
     HARNESS,
     TOOL_ADDRESS,
-    TOOL_IDENTITY,
     Program,
     ProgramError,
     Programs,
@@ -37,7 +36,14 @@ SOURCE = HOME / "Code" / "pomodoro"
 INSTALLED = HOME / ".local/share/osiris/programs/pomodoro"
 ENTRY = HOME / ".local/share/applications/dev.osiris.programs.pomodoro.desktop"
 GIT = ("git", "-C", str(SOURCE))
-AS_HARNESS = TOOL_IDENTITY
+AS_HARNESS = (
+    "-c",
+    "user.name=Osiris",
+    "-c",
+    "user.email=osiris@osiris.invalid",
+    "-c",
+    "committer.email=tools@osiris.invalid",
+)
 
 
 def programs(
