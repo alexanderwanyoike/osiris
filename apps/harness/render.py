@@ -344,7 +344,7 @@ def task_list(tasks: list[Task]) -> Gtk.Widget:
 class TurnView(Gtk.Box):
     """One question and its answer, redrawn only where the answer changed."""
 
-    def __init__(self, turn: Turn, on_undo: Callable[[Turn], None],
+    def __init__(self, turn: Turn,
                  program_card: Callable[[str], Gtk.Widget],
                  clock: Callable[[], float] = time.monotonic,
                  admin_card: Callable[[Request], Gtk.Widget] | None = None,
@@ -357,7 +357,6 @@ class TurnView(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-turn")
         self._proposal_card = proposal_card
-        self._on_undo = on_undo
         self._program_card = program_card
         self._admin_card = admin_card
         self._approval_card = approval_card
