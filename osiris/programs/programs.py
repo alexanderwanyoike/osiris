@@ -280,6 +280,11 @@ class Programs:
             (commit, subject) for commit, by, subject in found if by != TOOL_ADDRESS
         ]
 
+    def rewritten(self, name: str, commits: list[str]) -> list[str]:
+        """Those of ``commits`` no branch holds any more, as after a rebase."""
+        held = set(self._git(name, "rev-list", "--all").splitlines())
+        return [commit for commit in commits if commit not in held]
+
     def check(self, name: str) -> list[str]:
         """Problems found without running anything: Python that does not compile."""
         self.manifest(name)
