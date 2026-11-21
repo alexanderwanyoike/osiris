@@ -17,12 +17,6 @@ class ProgramHistory:
         except (CommandError, ProgramError):
             return []
 
-    def rewritten(self, name: str, commits: list[str]) -> list[str]:
-        try:
-            return self._programs.rewritten(name, commits)
-        except (CommandError, ProgramError):
-            return []
-
     def held(self, name: str, commits: list[str]) -> list[str]:
         try:
             return self._programs.held(name, commits)
