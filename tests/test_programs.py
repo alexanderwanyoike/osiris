@@ -237,11 +237,12 @@ class TestCommitting:
     def test_commits_since_a_time_leave_out_osiriss_own(self) -> None:
         """What a question committed with git in a shell, not through the
         Osiris tools, which log their own commits (#219)."""
+        at = int(datetime(2026, 11, 9, 10, 0, tzinfo=UTC).timestamp())
         log = "\n".join(
             [
-                f"aaa111\x1f{TOOL_ADDRESS}\x1fStart Pomodoro",
-                "bbb222\x1fperson@example.org\x1fAdd a pause button",
-                "ccc333\x1fperson@example.org\x1fTrack streaks: daily",
+                f"aaa111\x1f{TOOL_ADDRESS}\x1f{at}\x1fStart Pomodoro",
+                f"bbb222\x1fperson@example.org\x1f{at}\x1fAdd a pause button",
+                f"ccc333\x1fperson@example.org\x1f{at}\x1fTrack streaks: daily",
             ]
         )
         runner = FakeRunner(results={"git": answer(log)})
@@ -252,6 +253,22 @@ class TestCommitting:
             ("ccc333", "Track streaks: daily"),
         ]
         assert f"--since={asked.isoformat()}" in calls(runner)[-1]
+
+    def test_a_commit_only_replayed_since_a_question_is_not_new_work(
+        self, tmp_path: Path
+    ) -> None:
+        """A rebase refreshes the committer's date and keeps the author's."""
+        subject, git = on_disk(tmp_path)
+        git(
+            "commit",
+            "--allow-empty",
+            "-qm",
+            "Old work",
+            "--date=2020-01-01T00:00:00+00:00",
+        )
+        git("commit", "--amend", "--allow-empty", "-qm", "Old work reworded")
+        asked = datetime(2021, 1, 1, tzinfo=UTC)
+        assert subject.commits_since("pomodoro", asked) == []
 
     def test_a_shell_commit_borrowing_osiriss_name_is_not_a_tools(
         self, tmp_path: Path
@@ -283,12 +300,7 @@ class TestCommitting:
         made_in_a_shell = subject.commits_since("pomodoro", asked)
         assert [message for _, message in made_in_a_shell] == ["In a shell"]
 
-    def test_a_commit_no_branch_holds_any_more_was_rewritten(self) -> None:
-        runner = FakeRunner(results={"git": answer("kept111\nkept222\n")})
-        subject, _, _ = programs(made(), runner)
-        assert subject.rewritten("pomodoro", ["kept111", "old333"]) == ["old333"]
-
-    def test_a_tagged_commit_replaced_by_an_amend_was_rewritten(
+    def test_a_tag_does_not_hold_a_commit_an_amend_replaced(
         self, tmp_path: Path
     ) -> None:
         """A tag keeps the old commit alive, but the Program moved on from it."""
@@ -296,14 +308,7 @@ class TestCommitting:
         old = git("rev-parse", "HEAD")
         git("tag", "kept")
         git("commit", "--amend", "-qm", "Start better")
-        assert subject.rewritten("pomodoro", [old]) == [old]
-
-    def test_a_commit_this_repository_never_had_was_not_rewritten(
-        self, tmp_path: Path
-    ) -> None:
-        """A new Program under a gone one's name is no rewrite of it."""
-        subject, _ = on_disk(tmp_path)
-        assert subject.rewritten("pomodoro", ["f" * 40]) == []
+        assert subject.held("pomodoro", [old]) == []
 
     def test_a_branch_holds_a_commit_again_once_it_is_brought_back(
         self, tmp_path: Path
