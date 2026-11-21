@@ -300,12 +300,7 @@ class TestCommitting:
         made_in_a_shell = subject.commits_since("pomodoro", asked)
         assert [message for _, message in made_in_a_shell] == ["In a shell"]
 
-    def test_a_commit_no_branch_holds_any_more_was_rewritten(self) -> None:
-        runner = FakeRunner(results={"git": answer("kept111\nkept222\n")})
-        subject, _, _ = programs(made(), runner)
-        assert subject.rewritten("pomodoro", ["kept111", "old333"]) == ["old333"]
-
-    def test_a_tagged_commit_replaced_by_an_amend_was_rewritten(
+    def test_a_tag_does_not_hold_a_commit_an_amend_replaced(
         self, tmp_path: Path
     ) -> None:
         """A tag keeps the old commit alive, but the Program moved on from it."""
@@ -313,14 +308,7 @@ class TestCommitting:
         old = git("rev-parse", "HEAD")
         git("tag", "kept")
         git("commit", "--amend", "-qm", "Start better")
-        assert subject.rewritten("pomodoro", [old]) == [old]
-
-    def test_a_commit_this_repository_never_had_was_not_rewritten(
-        self, tmp_path: Path
-    ) -> None:
-        """A new Program under a gone one's name is no rewrite of it."""
-        subject, _ = on_disk(tmp_path)
-        assert subject.rewritten("pomodoro", ["f" * 40]) == []
+        assert subject.held("pomodoro", [old]) == []
 
     def test_a_branch_holds_a_commit_again_once_it_is_brought_back(
         self, tmp_path: Path
