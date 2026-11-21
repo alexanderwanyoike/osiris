@@ -373,7 +373,7 @@ def test_changes_from_the_toolbar_open_each_questions_in_order_newest_last() -> 
 
 
 def test_changes_whose_program_is_gone_say_so_on_their_question() -> None:
-    """As after an Undo trashed the Program the question made."""
+    """As after the Program the question made was deleted."""
     from osiris.harness.log import Change
     from osiris.platform import CommandError, FakeRunner
     from osiris.programs.programs import Programs

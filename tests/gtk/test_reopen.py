@@ -1,5 +1,5 @@
 """A Conversation reopened from history gets back what the log kept: its
-tokens, its Program cards and its Undo."""
+tokens and its Program cards."""
 
 from __future__ import annotations
 
