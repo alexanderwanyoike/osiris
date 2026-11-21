@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import time
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from enum import Enum
 
@@ -70,7 +71,7 @@ class Turn:
     message: str = ""
     #: A word from Thoth about this question, such as why it could not go back.
     note: str = ""
-    #: When a past answer ended, in seconds since the epoch; None while live.
+    #: When the answer ended, in seconds since the epoch; None while it runs.
     finished: float | None = None
 
     @property
@@ -89,9 +90,10 @@ class Turn:
         named = (change.program for change in self.changes if change.program)
         return list(dict.fromkeys(named))
 
-    def end(self, state: State) -> None:
+    def end(self, state: State, clock: Callable[[], float] = time.time) -> None:
         """An answer that ends leaves no card waiting: the Engine has moved on."""
         self.state = state
+        self.finished = clock()
         self.asking = self.held = None
         self.queued = []
 
