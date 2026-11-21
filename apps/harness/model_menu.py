@@ -56,6 +56,10 @@ class ModelMenu(Gtk.Box):
         keys = Gtk.EventControllerKey(propagation_phase=Gtk.PropagationPhase.CAPTURE)
         keys.connect("key-pressed", self.key)
         self.search.add_controller(keys)
+        anywhere = Gtk.EventControllerKey(
+            propagation_phase=Gtk.PropagationPhase.CAPTURE)
+        anywhere.connect("key-pressed", self._super)
+        self.add_controller(anywhere)
         self.append(self.search)
         self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.BROWSE)
         self.list.add_css_class("navigation-sidebar")
@@ -120,6 +124,9 @@ class ModelMenu(Gtk.Box):
         if keyval == Gdk.KEY_Escape:
             self._on_close()
             return True
+        return False
+
+    def _super(self, _controller, keyval, _code, _state) -> bool:
         if keyval in SUPER:
             self._on_close()
         return False
