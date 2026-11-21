@@ -280,7 +280,7 @@ class Programs:
 
     def rewritten(self, name: str, commits: list[str]) -> list[str]:
         """Those of ``commits`` no branch holds any more, as after a rebase."""
-        held = set(self._git(name, "rev-list", "--all").splitlines())
+        held = set(self._git(name, "rev-list", "--branches", "HEAD").splitlines())
         return [commit for commit in commits if commit not in held]
 
     def check(self, name: str) -> list[str]:
