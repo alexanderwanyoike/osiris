@@ -290,13 +290,6 @@ class Programs:
     def _on_branches(self, name: str) -> set[str]:
         return set(self._git(name, "rev-list", "--branches", "HEAD").splitlines())
 
-    def _has(self, name: str, commit: str) -> bool:
-        try:
-            self._git(name, "cat-file", "-e", f"{commit}^{{commit}}")
-        except CommandError:
-            return False
-        return True
-
     def check(self, name: str) -> list[str]:
         """Problems found without running anything: Python that does not compile."""
         self.manifest(name)
