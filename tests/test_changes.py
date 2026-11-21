@@ -183,6 +183,20 @@ def test_a_commit_brought_back_is_a_change_again_and_only_once() -> None:
     ]
 
 
+def test_an_undone_answer_keeps_its_record_after_a_rewrite() -> None:
+    log = asked_log()
+    log.write(
+        "changed",
+        session="ses_1",
+        summary="Daily Habits: Track habits",
+        undo={"action": "revert_commit", "name": "daily-habits", "commit": "old111"},
+        program="daily-habits",
+    )
+    log.write("undone", changes=["Made Daily Habits", "Daily Habits: Track habits"])
+    credit_shell_commits(log, History({}, gone=frozenset({"old111"})), "ses_1")
+    assert len(log.changes_by_question("ses_1")[-1]) == 2
+
+
 TIDIED = "\n".join(
     (
         "diff --git a/main.py b/main.py",
