@@ -17,13 +17,21 @@ ASKED = datetime(2026, 11, 9, 10, 0, tzinfo=UTC)
 class History:
     """A Program's commits since a time, as Programs reads them from git."""
 
-    def __init__(self, found: dict[str, list[tuple[str, str]]]) -> None:
+    def __init__(
+        self,
+        found: dict[str, list[tuple[str, str]]],
+        gone: frozenset[str] = frozenset(),
+    ) -> None:
         self.found = found
+        self.gone = gone
         self.since: list[tuple[str, datetime]] = []
 
     def commits_since(self, name: str, since: datetime) -> list[tuple[str, str]]:
         self.since.append((name, since))
         return self.found.get(name, [])
+
+    def rewritten(self, _name: str, commits: list[str]) -> list[str]:
+        return [commit for commit in commits if commit in self.gone]
 
     def label(self, name: str) -> str:
         return name.replace("-", " ").title()
@@ -75,6 +83,41 @@ def test_a_commit_already_credited_is_not_credited_again() -> None:
     credit_shell_commits(log, history, "ses_1")
     credit_shell_commits(log, history, "ses_1")
     assert len(log.changes_by_question("ses_1")[-1]) == 2
+
+
+def test_a_commit_rewritten_out_of_history_stops_being_a_change() -> None:
+    """Its diff and its Undo no longer describe the Program; what replaced it
+    is the question's change instead."""
+    log = asked_log()
+    log.write(
+        "changed",
+        session="ses_1",
+        summary="Daily Habits: Track habits",
+        undo={"action": "revert_commit", "name": "daily-habits", "commit": "old111"},
+        program="daily-habits",
+    )
+    history = History(
+        {"daily-habits": [("new222", "Track habits daily")]},
+        gone=frozenset({"old111"}),
+    )
+    credit_shell_commits(log, history, "ses_1")
+    assert [c.summary for c in log.changes_by_question("ses_1")[-1]] == [
+        "Made Daily Habits",
+        "Daily Habits: Track habits daily",
+    ]
+
+
+def test_a_rewritten_commit_is_not_offered_to_undo() -> None:
+    log = asked_log()
+    log.write(
+        "changed",
+        session="ses_1",
+        summary="Daily Habits: Track habits",
+        undo={"action": "revert_commit", "name": "daily-habits", "commit": "old111"},
+        program="daily-habits",
+    )
+    credit_shell_commits(log, History({}, gone=frozenset({"old111"})), "ses_1")
+    assert [c.summary for c in log.last_changes()] == ["Made Daily Habits"]
 
 
 TIDIED = "\n".join(

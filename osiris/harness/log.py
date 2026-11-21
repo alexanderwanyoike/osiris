@@ -37,6 +37,10 @@ def _made_by(change: Mapping[str, Any], asking: str) -> str:
     return session if isinstance(session, str) else asking
 
 
+def _standing(changes: list[Change], rewritten: set[str]) -> list[Change]:
+    return [c for c in changes if (c.undo or {}).get("commit") not in rewritten]
+
+
 def _now() -> datetime:
     return datetime.now(UTC)
 
@@ -118,12 +122,20 @@ class HarnessLog:
 
     def changes_by_question(self, session: str) -> list[list[Change]]:
         """For each question the session was asked, in order, the changes it
-        led to: those naming the session, logged after it."""
-        return self._by_question(
+        led to: those naming the session, logged after it, less any whose
+        commit was since rewritten out of its Program."""
+        rewritten = self._rewritten()
+        questions = self._by_question(
             session,
             "changed",
             lambda e: Change(e["summary"], e["undo"], e.get("program")),
         )
+        return [_standing(changes, rewritten) for changes in questions]
+
+    def _rewritten(self) -> set[str]:
+        return {
+            entry["commit"] for entry in self._entries() if entry["kind"] == "rewritten"
+        }
 
     def proposals_by_question(self, session: str) -> list[list[Proposal]]:
         """For each question the session was asked, in order, the skills
@@ -187,4 +199,4 @@ class HarnessLog:
                 changes.append(
                     Change(entry["summary"], entry["undo"], entry.get("program"))
                 )
-        return changes
+        return _standing(changes, self._rewritten())
