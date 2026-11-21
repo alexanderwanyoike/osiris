@@ -9,10 +9,23 @@ from pathlib import Path
 
 import pytest
 
-from osiris.platform import FakeFileSystem, FakeRunner
+from osiris.platform import (
+    FakeFileSystem,
+    FakeRunner,
+    RealFileSystem,
+    SubprocessRunner,
+)
 from osiris.platform.process import CommandError, Result
 from osiris.programs.manifest import MANIFEST_FILE, Manifest, parse
-from osiris.programs.programs import HARNESS, Program, ProgramError, Programs, State
+from osiris.programs.programs import (
+    HARNESS,
+    TOOL_ADDRESS,
+    TOOL_IDENTITY,
+    Program,
+    ProgramError,
+    Programs,
+    State,
+)
 
 HOME = Path("/home/tester")
 ICON = (
@@ -24,7 +37,7 @@ SOURCE = HOME / "Code" / "pomodoro"
 INSTALLED = HOME / ".local/share/osiris/programs/pomodoro"
 ENTRY = HOME / ".local/share/applications/dev.osiris.programs.pomodoro.desktop"
 GIT = ("git", "-C", str(SOURCE))
-AS_HARNESS = ("-c", f"user.name={HARNESS[0]}", "-c", f"user.email={HARNESS[1]}")
+AS_HARNESS = TOOL_IDENTITY
 
 
 def programs(
@@ -203,7 +216,7 @@ class TestCommitting:
         Osiris tools, which log their own commits (#219)."""
         log = "\n".join(
             [
-                f"aaa111\x1f{HARNESS[1]}\x1fStart Pomodoro",
+                f"aaa111\x1f{TOOL_ADDRESS}\x1fStart Pomodoro",
                 "bbb222\x1fperson@example.org\x1fAdd a pause button",
                 "ccc333\x1fperson@example.org\x1fTrack streaks: daily",
             ]
@@ -216,6 +229,42 @@ class TestCommitting:
             ("ccc333", "Track streaks: daily"),
         ]
         assert f"--since={asked.isoformat()}" in calls(runner)[-1]
+
+    def test_a_shell_commit_borrowing_osiriss_name_is_not_a_tools(
+        self, tmp_path: Path
+    ) -> None:
+        """A Program has no git identity of its own, so a model committing in
+        a shell often copies the author it sees in the log."""
+        runner = SubprocessRunner()
+        subject = Programs(RealFileSystem(), runner, tmp_path)
+        subject.create(
+            "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+        )
+        source = subject.source("pomodoro")
+        (source / "timer.py").write_text("print(1)\n")
+        subject.commit("pomodoro", "By the tools")
+        (source / "timer.py").write_text("print(2)\n")
+        runner.capture(
+            "git",
+            "-C",
+            str(source),
+            "-c",
+            f"user.name={HARNESS[0]}",
+            "-c",
+            f"user.email={HARNESS[1]}",
+            "commit",
+            "-qam",
+            "In a shell",
+        )
+        asked = datetime(2000, 1, 1, tzinfo=UTC)
+        made_in_a_shell = subject.commits_since("pomodoro", asked)
+        assert [message for _, message in made_in_a_shell] == ["In a shell"]
+
+    def test_a_commit_no_branch_holds_any_more_was_rewritten(self) -> None:
+        runner = FakeRunner(results={"git": answer("kept111\nkept222\n")})
+        subject, _, _ = programs(made(), runner)
+        assert subject.rewritten("pomodoro", ["kept111", "old333"]) == ["old333"]
+        assert calls(runner)[-1] == (*GIT, "rev-list", "--all")
 
     def test_a_program_is_named_to_the_person_by_its_label(self) -> None:
         subject, _, _ = programs(made())

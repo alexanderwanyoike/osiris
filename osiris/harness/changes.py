@@ -6,16 +6,19 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
+from itertools import chain
 from typing import Protocol
 
 from osiris.harness.engine import FileChange
-from osiris.harness.log import HarnessLog
+from osiris.harness.log import Change, HarnessLog
 
 _FILE = re.compile(r"^diff --git a/(.+) b/(.+)$", re.MULTILINE)
 
 
 class ProgramHistory(Protocol):
     def commits_since(self, name: str, since: datetime) -> list[tuple[str, str]]: ...
+
+    def rewritten(self, name: str, commits: list[str]) -> list[str]: ...
 
     def label(self, name: str) -> str: ...
 
@@ -33,6 +36,7 @@ def credit_shell_commits(
     questions = log.changes_by_question(session)
     if asked is None or not questions:
         return
+    _forget_rewritten(log, history, session, questions)
     names = [change.program for change in questions[-1] if change.program]
     credited = {(change.undo or {}).get("commit") for change in questions[-1]}
     for name in dict.fromkeys(names + ([project] if project else [])):
@@ -46,6 +50,23 @@ def credit_shell_commits(
                 undo={"action": "revert_commit", "name": name, "commit": commit},
                 program=name,
             )
+
+
+def _forget_rewritten(
+    log: HarnessLog,
+    history: ProgramHistory,
+    session: str,
+    questions: list[list[Change]],
+) -> None:
+    """Log the session's commits that a rebase has since replaced."""
+    made: dict[str, list[str]] = {}
+    for change in chain.from_iterable(questions):
+        undo = change.undo or {}
+        if undo.get("action") == "revert_commit":
+            made.setdefault(undo["name"], []).append(undo["commit"])
+    for name, commits in made.items():
+        for commit in history.rewritten(name, commits):
+            log.write("rewritten", session=session, commit=commit)
 
 
 def file_changes(program: str, patch: str) -> tuple[FileChange, ...]:
