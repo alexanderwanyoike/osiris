@@ -12,7 +12,15 @@ import pytest
 from osiris.platform import FakeFileSystem, FakeRunner
 from osiris.platform.process import CommandError, Result
 from osiris.programs.manifest import MANIFEST_FILE, Manifest, parse
-from osiris.programs.programs import HARNESS, Program, ProgramError, Programs, State
+from osiris.programs.programs import (
+    HARNESS,
+    TOOL_ADDRESS,
+    TOOL_IDENTITY,
+    Program,
+    ProgramError,
+    Programs,
+    State,
+)
 
 HOME = Path("/home/tester")
 ICON = (
@@ -24,7 +32,7 @@ SOURCE = HOME / "Code" / "pomodoro"
 INSTALLED = HOME / ".local/share/osiris/programs/pomodoro"
 ENTRY = HOME / ".local/share/applications/dev.osiris.programs.pomodoro.desktop"
 GIT = ("git", "-C", str(SOURCE))
-AS_HARNESS = ("-c", f"user.name={HARNESS[0]}", "-c", f"user.email={HARNESS[1]}")
+AS_HARNESS = TOOL_IDENTITY
 
 
 def programs(
@@ -203,7 +211,7 @@ class TestCommitting:
         Osiris tools, which log their own commits (#219)."""
         log = "\n".join(
             [
-                f"aaa111\x1f{HARNESS[1]}\x1fStart Pomodoro",
+                f"aaa111\x1f{TOOL_ADDRESS}\x1fStart Pomodoro",
                 "bbb222\x1fperson@example.org\x1fAdd a pause button",
                 "ccc333\x1fperson@example.org\x1fTrack streaks: daily",
             ]

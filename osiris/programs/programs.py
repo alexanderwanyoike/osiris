@@ -37,6 +37,8 @@ APPLICATIONS_DIR = ".local/share/applications"
 COMMIT_FILE = ".osiris-commit"
 #: Who the Harness's commits are by, so its changes are told from the person's.
 HARNESS = OSIRIS
+TOOL_ADDRESS = HARNESS[1]
+TOOL_IDENTITY = as_osiris()
 
 #: Folders that hold what git, builds and package managers keep, not source.
 _NOT_SOURCE = {
@@ -174,7 +176,7 @@ class Programs:
             raise ProgramError(f"{name}'s manifest: {error}") from error
 
     def _git(self, name: str, *args: str, harness: bool = False) -> str:
-        identity = as_osiris() if harness else ()
+        identity = TOOL_IDENTITY if harness else ()
         return self._runner.capture(
             "git", "-C", str(self.source(name)), *identity, *args
         )
@@ -272,7 +274,9 @@ class Programs:
             name, "log", "--reverse", f"--since={since.isoformat()}", f"--format={_LOG}"
         )
         found = (line.split(_FIELD, 2) for line in log.splitlines() if line)
-        return [(commit, subject) for commit, by, subject in found if by != HARNESS[1]]
+        return [
+            (commit, subject) for commit, by, subject in found if by != TOOL_ADDRESS
+        ]
 
     def check(self, name: str) -> list[str]:
         """Problems found without running anything: Python that does not compile."""
