@@ -437,7 +437,9 @@ class OpencodeEngine:
                     PastTurn(message.get("text", ""), "", None, message.get("id", ""))
                 )
             elif message.get("type") == "assistant" and turns:
-                last = replace(turns[-1], finished=_step_ended(message, turns[-1]))
+                last = replace(
+                    turns[-1], finished=_step_time(message, turns[-1].finished)
+                )
                 turns[-1] = last
                 said = "".join(
                     part.get("text", "")
@@ -473,11 +475,11 @@ class OpencodeEngine:
                 yield event
 
 
-def _step_ended(message: dict[str, Any], turn: PastTurn) -> float | None:
+def _step_time(message: dict[str, Any], before: float | None) -> float | None:
     """When this step ended or, if it never finished, began."""
     times = message.get("time") or {}
     ended = times.get("completed", times.get("created"))
-    return ended / 1000 if ended is not None else turn.finished
+    return ended / 1000 if ended is not None else before
 
 
 def _uri(entry: Entry) -> str:
