@@ -281,7 +281,14 @@ class Programs:
     def rewritten(self, name: str, commits: list[str]) -> list[str]:
         """Those of ``commits`` no branch holds any more, as after a rebase."""
         held = set(self._git(name, "rev-list", "--branches", "HEAD").splitlines())
-        return [commit for commit in commits if commit not in held]
+        return [c for c in commits if c not in held and self._has(name, c)]
+
+    def _has(self, name: str, commit: str) -> bool:
+        try:
+            self._git(name, "cat-file", "-e", f"{commit}^{{commit}}")
+        except CommandError:
+            return False
+        return True
 
     def check(self, name: str) -> list[str]:
         """Problems found without running anything: Python that does not compile."""
