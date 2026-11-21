@@ -250,7 +250,7 @@ class Drawer(Gtk.ApplicationWindow):
         model_face.append(self.model_label)
         self.model_menu = Gtk.MenuButton(
             child=model_face, tooltip_text="Model",
-            popover=Gtk.Popover(child=self.model_list))
+            popover=Gtk.Popover(child=self.model_list, halign=Gtk.Align.END))
         self.model_menu.add_css_class("flat")
         self.model_menu.connect("notify::active", self._models_shown)
         self.send = Gtk.Button(icon_name="go-up-symbolic", tooltip_text="Ask",
