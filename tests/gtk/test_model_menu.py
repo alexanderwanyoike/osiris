@@ -90,6 +90,17 @@ def test_each_model_names_its_provider_in_a_quieter_style() -> None:
     assert shown.has_css_class("dim-label")
 
 
+def test_a_long_provider_name_leaves_the_model_name_whole() -> None:
+    """The menu is as wide as its rows need at least, and a name that may be
+    shortened needs almost nothing, so a long Provider cut it to a letter."""
+    widget, _ = menu()
+    widget.show_models([PICKLE], PICKLE.ref, {"opencode": "OpenCode Console"})
+    row = widget.list.get_row_at_index(0).get_child()
+    name = row.get_first_child().get_next_sibling()
+    whole = Gtk.Label(label="Big Pickle").measure(Gtk.Orientation.HORIZONTAL, -1)[1]
+    assert name.measure(Gtk.Orientation.HORIZONTAL, -1)[0] >= whole
+
+
 def press(widget: ModelMenu, key: int) -> bool:
     return widget.key(None, key, 0, Gdk.ModifierType(0))
 
