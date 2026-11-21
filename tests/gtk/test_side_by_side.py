@@ -300,7 +300,10 @@ def test_a_questions_changes_come_from_its_commits_and_a_comment_reaches_thoth()
         results={
             f"git -C {HOME}/Code/coin-flip show --format= --patch abc": Result(
                 (), 0, patch
-            )
+            ),
+            f"git -C {HOME}/Code/coin-flip rev-list --branches HEAD": Result(
+                (), 0, "abc\n"
+            ),
         }
     )
     stand_in, engine = app()
@@ -338,7 +341,11 @@ def test_changes_from_the_toolbar_open_each_questions_in_order_newest_last() -> 
         return f"git -C {HOME}/Code/coin-flip show --format= --patch {commit}"
 
     patch = "diff --git a/main.py b/main.py\n@@ -1 +1 @@\n-a\n+b"
-    runner = FakeRunner(results={show(c): Result((), 0, patch) for c in ("aaa", "bbb")})
+    answers = {show(c): Result((), 0, patch) for c in ("aaa", "bbb")}
+    answers[f"git -C {HOME}/Code/coin-flip rev-list --branches HEAD"] = Result(
+        (), 0, "aaa\nbbb\n"
+    )
+    runner = FakeRunner(results=answers)
     stand_in, engine = app()
     stand_in.programs = lambda: Programs(FakeFileSystem(), runner, HOME)
     engine.past = [
@@ -370,8 +377,12 @@ def test_changes_whose_program_is_gone_say_so_on_their_question() -> None:
     from osiris.programs.programs import Programs
 
     show = f"git -C {HOME}/Code/coin-flip show --format= --patch abc"
+    gone = CommandError(tuple(show.split()), 128, "not a git repository")
     runner = FakeRunner(
-        results={show: CommandError(tuple(show.split()), 128, "not a git repository")}
+        results={
+            show: gone,
+            f"git -C {HOME}/Code/coin-flip rev-list --branches HEAD": gone,
+        }
     )
     stand_in, engine = app()
     stand_in.programs = lambda: Programs(FakeFileSystem(), runner, HOME)
@@ -409,6 +420,57 @@ def test_undo_is_refused_for_a_commit_a_later_answer_rewrote() -> None:
     ]
     stand_in.undo(turn)
     assert not turn.undone
+    assert "rewritten" in turn.note
+    assert stand_in.drawer.redrawn == [turn]
+
+
+def replaced_turn(held: str) -> tuple[App, Any]:
+    """An answer with a replaced commit and its replacement, as git shows them."""
+    from osiris.harness.log import Change
+    from osiris.platform import FakeRunner
+    from osiris.platform.process import Result
+    from osiris.programs.programs import Programs
+
+    def patch(path: str) -> Result:
+        return Result((), 0, f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-a\n+b")
+
+    show = f"git -C {HOME}/Code/coin-flip show --format= --patch"
+    runner = FakeRunner(
+        results={
+            f"{show} old": patch("old.py"),
+            f"{show} new": patch("new.py"),
+            f"git -C {HOME}/Code/coin-flip rev-list --branches HEAD": Result(
+                (), 0, held
+            ),
+        }
+    )
+    stand_in, engine = app()
+    stand_in.programs = lambda: Programs(FakeFileSystem(), runner, HOME)
+    engine.past = [PastTurn("tidy", "Tidied.", GPT, "msg_1")]
+    stand_in.open_past("ses_9")
+    turn = stand_in.conversation.turns[0]
+    turn.changes.extend(
+        Change(
+            f"coin-flip: {commit}",
+            {"action": "revert_commit", "name": "coin-flip", "commit": commit},
+            "coin-flip",
+        )
+        for commit in ("old", "new")
+    )
+    return stand_in, turn
+
+
+def test_changes_leave_out_a_commit_since_replaced() -> None:
+    stand_in, turn = replaced_turn("new\n")
+    stand_in.show_changes(turn)
+    _, files, _ = stand_in.drawer.changes[-1]
+    assert [file.path for file in files] == ["coin-flip/new.py"]
+
+
+def test_changes_all_replaced_say_so_on_their_question() -> None:
+    stand_in, turn = replaced_turn("other\n")
+    stand_in.show_changes(turn)
+    assert stand_in.drawer.changes == []
     assert "rewritten" in turn.note
     assert stand_in.drawer.redrawn == [turn]
 
