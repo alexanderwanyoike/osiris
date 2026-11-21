@@ -27,6 +27,7 @@ class FakeDrawer:
         self.changes: list[tuple[str, object, Any]] = []
         self.pages: list[str] = []
         self.refreshes = 0
+        self.redrawn: list[object] = []
         self.redraws = 0
         self.picker_refreshes = 0
         self.picker = SimpleNamespace(refresh=self._picker_refreshed)
@@ -40,6 +41,9 @@ class FakeDrawer:
     def refresh(self, restyle: bool = False) -> None:
         self.refreshes += 1
         self.redraws += restyle
+
+    def redraw(self, turn: object) -> None:
+        self.redrawn.append(turn)
 
     def summon(self) -> None:
         pass
@@ -384,6 +388,29 @@ def test_changes_whose_program_is_gone_say_so_on_their_question() -> None:
     stand_in.show_changes(turn)
     assert stand_in.drawer.changes == []
     assert "coin-flip" in turn.note
+
+
+def test_undo_is_refused_for_a_commit_a_later_answer_rewrote() -> None:
+    from osiris.harness.log import Change
+
+    class Moved(Credits):
+        def held(self, _name: str, _commits: list[str]) -> list[str]:
+            return []
+
+    stand_in, _ = app()
+    stand_in.programs = lambda: Moved({})
+    turn = asked(stand_in, "track habits").turns[-1]
+    turn.changes = [
+        Change(
+            "Pomodoro: Track habits",
+            {"action": "revert_commit", "name": "pomodoro", "commit": "old111"},
+            "pomodoro",
+        )
+    ]
+    stand_in.undo(turn)
+    assert not turn.undone
+    assert "rewritten" in turn.note
+    assert stand_in.drawer.redrawn == [turn]
 
 
 def test_a_page_thoth_reads_opens_in_the_browser_group() -> None:
