@@ -36,10 +36,10 @@ def credit_shell_commits(
     questions = log.changes_by_question(session)
     if asked is None or not questions:
         return
-    _record_rewritten(log, history, session, questions)
+    replaced = _record_rewritten(log, history, session, questions)
     names = [change.program for change in questions[-1] if change.program]
     credited = {(change.undo or {}).get("commit") for change in questions[-1]}
-    for name in dict.fromkeys(names + ([project] if project else [])):
+    for name in dict.fromkeys(names + ([project] if project else []) + replaced):
         for commit, subject in history.commits_since(name, asked):
             if commit in credited:
                 continue
@@ -57,16 +57,22 @@ def _record_rewritten(
     history: ProgramHistory,
     session: str,
     questions: list[list[Change]],
-) -> None:
-    """Log the session's commits that a rebase has since replaced."""
+) -> list[str]:
+    """Log the session's commits that a rebase has since replaced, and
+    return the Programs it replaced them in."""
     made: dict[str, list[str]] = {}
     for change in chain.from_iterable(questions):
         undo = change.undo or {}
         if undo.get("action") == "revert_commit":
             made.setdefault(undo["name"], []).append(undo["commit"])
+    replaced = []
     for name, commits in made.items():
-        for commit in history.rewritten(name, commits):
+        gone = history.rewritten(name, commits)
+        for commit in gone:
             log.write("rewritten", session=session, commit=commit)
+        if gone:
+            replaced.append(name)
+    return replaced
 
 
 def file_changes(program: str, patch: str) -> tuple[FileChange, ...]:
