@@ -50,10 +50,10 @@ _NOT_SOURCE = {
     "target",
     "build",
 }
-#: git's log, a commit to a line: its hash, its committer's address and
-#: subject, apart by a character no subject holds.
+#: git's log, a commit to a line: its hash, committer's address, author
+#: time and subject, apart by a character no subject holds.
 _FIELD = "\x1f"
-_LOG = "%H%x1f%ce%x1f%s"
+_LOG = "%H%x1f%ce%x1f%at%x1f%s"
 #: How much of a failed build's output is worth showing.
 _BUILD_TAIL = 30
 
@@ -268,20 +268,19 @@ class Programs:
         return self.manifest(name).label
 
     def commits_since(self, name: str, since: datetime) -> list[tuple[str, str]]:
-        """The commits made since ``since`` that Osiris's tools did not make,
-        oldest first, as (commit, subject)."""
+        """The commits authored since ``since`` that Osiris's tools did not
+        make, oldest first, as (commit, subject). git filters on the
+        committer's date, which a rebase refreshes, so the author's decides."""
         log = self._git(
             name, "log", "--reverse", f"--since={since.isoformat()}", f"--format={_LOG}"
         )
-        found = (line.split(_FIELD, 2) for line in log.splitlines() if line)
+        found = (line.split(_FIELD, 3) for line in log.splitlines() if line)
+        earliest = int(since.timestamp())
         return [
-            (commit, subject) for commit, by, subject in found if by != TOOL_ADDRESS
+            (commit, subject)
+            for commit, by, authored, subject in found
+            if by != TOOL_ADDRESS and int(authored) >= earliest
         ]
-
-    def rewritten(self, name: str, commits: list[str]) -> list[str]:
-        """Those of ``commits`` no branch holds any more, as after a rebase."""
-        held = self._on_branches(name)
-        return [c for c in commits if c not in held and self._has(name, c)]
 
     def held(self, name: str, commits: list[str]) -> list[str]:
         """Those of ``commits`` a branch holds."""
