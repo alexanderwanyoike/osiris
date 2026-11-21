@@ -22,6 +22,9 @@ ROWS = 8
 NAME_CHARS = 18
 MOVES = {Gdk.KEY_Down: 1, Gdk.KEY_Up: -1}
 CHOOSES = (Gdk.KEY_Return, Gdk.KEY_KP_Enter)
+#: The open menu grabs the keyboard. Letting go on Super, before the key it
+#: leads, hands every desktop shortcut back without knowing which they are.
+SUPER = (Gdk.KEY_Super_L, Gdk.KEY_Super_R)
 #: The makers' icons Osiris ships (apps/harness/logos, NOTICE there). Xiaomi's
 #: only mark in lobe-icons is a wordmark, unreadable at this size, so MiMo
 #: gets a monogram.
@@ -112,6 +115,8 @@ class ModelMenu(Gtk.Box):
         if keyval == Gdk.KEY_Escape:
             self._on_close()
             return True
+        if keyval in SUPER:
+            self._on_close()
         return False
 
     def _pointed(self, _controller, _x: float, y: float) -> None:
