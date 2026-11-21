@@ -93,9 +93,6 @@ class FakeApp(Adw.Application):
     def update_panel(self) -> None:
         self.panel_updates += 1
 
-    def undo(self, _turn: object) -> None:
-        pass
-
     def ask_to_go_back(self, turn: object, _again: bool = False) -> None:
         self.gone_back.append(turn)
 

@@ -62,18 +62,12 @@ from render import TurnView  # noqa: E402
 from sidebar import Sidebar  # noqa: E402
 from skills_tab import SkillsTab  # noqa: E402
 from terminal import Terminal  # noqa: E402
-from skin_store import EngineSkinStore  # noqa: E402
-from theme_store import EngineStore, user_wallpapers  # noqa: E402
 
 from osiris.apps.user_css import UserCss  # noqa: E402
-from osiris.apps.tool_server import NAME as TOOLS, undo  # noqa: E402
+from osiris.apps.tool_server import NAME as TOOLS  # noqa: E402
 
 from osiris.harness import admin  # noqa: E402
-from osiris.harness.changes import (  # noqa: E402
-    credit_shell_commits,
-    file_changes,
-    standing_steps,
-)
+from osiris.harness.changes import credit_shell_commits, file_changes  # noqa: E402
 from osiris.harness.connectors import (  # noqa: E402
     Connector,
     Servers,
@@ -668,7 +662,6 @@ class Drawer(Gtk.ApplicationWindow):
         fresh = len(self.views)
         while len(self.views) < len(conversation.turns):
             view = TurnView(conversation.turns[len(self.views)],
-                            on_undo=self.app.undo,
                             program_card=self.app.program_card,
                             admin_card=self.app.admin_card,
                             approval_card=self.app.approval_card,
@@ -1181,35 +1174,6 @@ class Application(Adw.Application):
         self.ask(f"{label} failed to build or start:\n\n```\n{problem}\n```\n\n"
                  "Please fix it.")
 
-    def undo(self, turn: Turn) -> None:
-        """Reverse what a turn changed, newest first, without the model."""
-        steps = turn.undo_steps()
-
-        def reverse() -> bool:
-            programs = self.programs()
-            standing = standing_steps(ProgramHistory(programs), steps)
-            if standing is None:
-                return False
-            store = EngineStore()
-            wallpapers = user_wallpapers(
-                self.files, SubprocessRunner(sink=lambda _line: None), self.home)
-            for step in standing:
-                undo(store, step, programs, wallpapers, skins=EngineSkinStore())
-            return True
-
-        def undone(done: bool) -> None:
-            if done:
-                turn.undone = True
-                if self.log is not None:
-                    self.log.write("undone", changes=[c.summary for c in turn.changes])
-            else:
-                turn.note = ("Part of this answer was rewritten later, so Undo could "
-                             "change newer work. Ask Osiris to undo it instead.")
-            self.drawer.redraw(turn)
-            self.drawer.refresh()
-
-        self.background(reverse, undone)
-
     @property
     def session(self) -> str | None:
         return self.harness.session if self.harness is not None else None
@@ -1624,14 +1588,13 @@ class Application(Adw.Application):
             self._apply(decision)
 
     def _restored(self, session: str, past) -> Conversation:
-        """A past Conversation with its tokens, Program cards and Undo, which
+        """A past Conversation with its tokens and Program cards, which
         the Engine's history does not carry and the log does."""
         if self.log is None:
             return Conversation.restored(past)
         return Conversation.restored(past,
                                      tokens_spent=self.log.tokens_spent(session),
                                      changes=self.log.changes_by_question(session),
-                                     undone=self.log.undone(),
                                      proposals=self.log.proposals_by_question(session))
 
     def new_conversation(self, folder: Path | None = None) -> bool:

@@ -9,7 +9,7 @@ tools are looks.
 from __future__ import annotations
 
 import functools
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from contextvars import ContextVar
 from pathlib import Path
 from typing import Annotated, Any
@@ -40,7 +40,7 @@ the person knows you by that name. You can list its themes, make a new
 one and apply it. You never choose a theme's colours: describe what the person
 asked for as a seed colour, a harmony, a mood and light or dark, and Osiris
 derives a harmonious, legible palette from that. Applying a theme repaints the
-whole desktop at once, and the person can undo it.
+whole desktop at once, and the person can ask you to change it back.
 
 You can also build Programs: anything the person wants to keep and use. Start
 one with create_program, which makes its folder as a git repository and tells
@@ -154,44 +154,6 @@ def explained[**P, R](tool: Callable[P, R]) -> Callable[P, R]:
             raise ToolError(str(error)) from error
 
     return call
-
-
-def undo(
-    store: ThemeStore,
-    step: Mapping[str, str],
-    programs: Programs,
-    wallpapers: UserWallpapers,
-    *,
-    skins: SkinStore | None = None,
-) -> None:
-    """Run the step a logged change recorded to reverse itself."""
-    if skins is not None and step["action"] in SKIN_UNDO:
-        SKIN_UNDO[step["action"]](skins, step)
-        return
-    match step["action"]:
-        case "apply_theme":
-            actions.apply_theme(store, step["name"])
-        case "delete_theme":
-            actions.delete_theme(store, step["name"])
-        case "revert_commit":
-            programs.revert(step["name"], step["commit"])
-        case "trash_program":
-            programs.trash(step["name"])
-        case "delete_wallpaper":
-            wallpapers.delete(step["name"])
-        case other:
-            raise actions.ThemeActionError(f"Osiris cannot undo {other}")
-
-
-#: How each Skin change is reversed; names travel one to a line.
-SKIN_UNDO: dict[str, Callable[[SkinStore, Mapping[str, str]], None]] = {
-    "delete_skin": lambda skins, step: skins.delete(step["name"]),
-    "wear_skin": lambda skins, step: skins.wear(step["name"]),
-    "remove_icon_sets": lambda skins, step: skins.remove_icon_sets(
-        step["names"].splitlines()
-    ),
-    "remove_fonts": lambda skins, step: skins.remove_fonts(step["names"].splitlines()),
-}
 
 
 #: Where the Engine names, on each tool call, the session it makes it for.

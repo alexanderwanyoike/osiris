@@ -66,4 +66,4 @@ person what it said.
       python3 /usr/share/osiris/themes/engine.py --skin SKIN_NAME
 
 - Commit each change in this folder with a message saying what changed and
-  why, so the person can undo it with `git revert`.
+  why, so the person can read the Skin's history.

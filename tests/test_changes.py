@@ -20,18 +20,13 @@ class History:
     def __init__(
         self,
         found: dict[str, list[tuple[str, str]]],
-        back: frozenset[str] = frozenset(),
     ) -> None:
         self.found = found
-        self.back = back
         self.since: list[tuple[str, datetime]] = []
 
     def commits_since(self, name: str, since: datetime) -> list[tuple[str, str]]:
         self.since.append((name, since))
         return self.found.get(name, [])
-
-    def held(self, _name: str, commits: list[str]) -> list[str]:
-        return [commit for commit in commits if commit in self.back]
 
     def label(self, name: str) -> str:
         return name.replace("-", " ").title()
@@ -83,34 +78,6 @@ def test_a_commit_already_credited_is_not_credited_again() -> None:
     credit_shell_commits(log, history, "ses_1")
     credit_shell_commits(log, history, "ses_1")
     assert len(log.changes_by_question("ses_1")[-1]) == 2
-
-
-def undoing(commit: str) -> dict[str, str]:
-    return {"action": "revert_commit", "name": "pomodoro", "commit": commit}
-
-
-def standing(history: History, steps: list[dict[str, str]]) -> object:
-    from osiris.harness.changes import standing_steps
-
-    return standing_steps(history, list(steps))
-
-
-def test_undo_skips_a_commit_the_answer_itself_replaced() -> None:
-    """The newer commit stands on the rewrite, so this answer made it."""
-    steps = [undoing("new"), undoing("old")]
-    history = History({}, back=frozenset({"new"}))
-    assert standing(history, steps) == [undoing("new")]
-
-
-def test_undo_stands_down_when_a_later_answer_replaced_its_newest_commit() -> None:
-    steps = [undoing("new"), undoing("old")]
-    assert standing(History({}, back=frozenset({"old"})), steps) is None
-
-
-def test_undo_keeps_what_is_not_a_commit() -> None:
-    made = {"action": "trash_program", "name": "pomodoro"}
-    steps = [undoing("new"), made]
-    assert standing(History({}, back=frozenset({"new"})), steps) == steps
 
 
 TIDIED = "\n".join(

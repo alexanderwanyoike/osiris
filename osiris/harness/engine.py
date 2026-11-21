@@ -151,6 +151,9 @@ class PastTurn:
     model: ModelRef | None
     #: The question's message at the Engine.
     message: str = ""
+    #: When the answer's last step ended or, with no answer, when it was
+    #: asked, in seconds since the epoch.
+    finished: float | None = None
 
 
 @dataclass(frozen=True)

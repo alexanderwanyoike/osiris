@@ -26,7 +26,7 @@ The agent can change how your desktop looks and write small apps for you. It
 runs on your computer, and the AI model behind it comes from a provider you
 connect, such as OpenAI. The apps it writes show up in your menu and match your
 theme. Everything it makes is saved as normal code on your computer, and you
-can undo any change it makes.
+can ask it to change anything back.
 
 Osiris is in early development (alpha).
 
@@ -44,11 +44,8 @@ Rust, Go or JavaScript.
 Ask for a new look, say "a calm theme for working late", and it makes a theme
 and applies it. It can also write you a moving wallpaper.
 
-Every change comes with an Undo button, which works without going back to the
-AI.
-
 The agent can only do what Osiris allows. It can look around, make changes
-that can be undone, and edit the code of the apps it wrote. Anything else is
+that can be reversed, and edit the code of the apps it wrote. Anything else is
 refused, and you see what it tried. If you want it to do more, turn on Allow
 everything on its Providers page: it can then run commands and change any
 file.

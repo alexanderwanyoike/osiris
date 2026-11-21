@@ -344,7 +344,7 @@ def task_list(tasks: list[Task]) -> Gtk.Widget:
 class TurnView(Gtk.Box):
     """One question and its answer, redrawn only where the answer changed."""
 
-    def __init__(self, turn: Turn, on_undo: Callable[[Turn], None],
+    def __init__(self, turn: Turn,
                  program_card: Callable[[str], Gtk.Widget],
                  clock: Callable[[], float] = time.monotonic,
                  admin_card: Callable[[Request], Gtk.Widget] | None = None,
@@ -357,7 +357,6 @@ class TurnView(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-turn")
         self._proposal_card = proposal_card
-        self._on_undo = on_undo
         self._program_card = program_card
         self._admin_card = admin_card
         self._approval_card = approval_card
@@ -394,7 +393,6 @@ class TurnView(Gtk.Box):
         self.append(self.extras)
         self._blocks: list = []
         self._widgets: list[Gtk.Widget] = []
-        self._finished_at: datetime | None = None
 
     def update(self, turn: Turn, style: InlineStyle,
                scheme: GtkSource.StyleScheme | None) -> None:
@@ -423,13 +421,6 @@ class TurnView(Gtk.Box):
         chip.append(Gtk.Label(label="  ·  ".join(c.summary for c in turn.changes),
                               ellipsize=Pango.EllipsizeMode.END,
                               max_width_chars=48))
-        if turn.undone:
-            chip.append(Gtk.Label(label="Undone"))
-        elif turn.undoable:
-            undo = Gtk.Button(label="Undo")
-            undo.add_css_class("flat")
-            undo.connect("clicked", lambda _b: self._on_undo(turn))
-            chip.append(undo)
         return chip
 
     def _meta_line(self, turn: Turn, said: str) -> Gtk.Widget:
@@ -480,12 +471,11 @@ class TurnView(Gtk.Box):
             error.add_css_class("harness-error")
             self.extras.append(error)
         if turn.state in (State.DONE, State.STOPPED):
-            if self._finished_at is None:
-                self._finished_at = datetime.now()
             parts = [turn.model.model] if turn.model else []
             if turn.state is State.STOPPED:
                 parts.append("stopped")
-            parts.append(self._finished_at.strftime("%H:%M"))
+            if turn.finished is not None:
+                parts.append(datetime.fromtimestamp(turn.finished).strftime("%H:%M"))
             self.extras.append(self._meta_line(turn, "  ·  ".join(parts)))
         if turn.note:
             note = Gtk.Label(label=turn.note, xalign=0, wrap=True)
