@@ -197,6 +197,34 @@ def test_an_undone_answer_keeps_its_record_after_a_rewrite() -> None:
     assert len(log.changes_by_question("ses_1")[-1]) == 2
 
 
+def undoing(commit: str) -> dict[str, str]:
+    return {"action": "revert_commit", "name": "pomodoro", "commit": commit}
+
+
+def standing(history: History, steps: list[dict[str, str]]) -> object:
+    from osiris.harness.changes import standing_steps
+
+    return standing_steps(history, list(steps))
+
+
+def test_undo_skips_a_commit_the_answer_itself_replaced() -> None:
+    """The newer commit stands on the rewrite, so this answer made it."""
+    steps = [undoing("new"), undoing("old")]
+    history = History({}, back=frozenset({"new"}))
+    assert standing(history, steps) == [undoing("new")]
+
+
+def test_undo_stands_down_when_a_later_answer_replaced_its_newest_commit() -> None:
+    steps = [undoing("new"), undoing("old")]
+    assert standing(History({}, back=frozenset({"old"})), steps) is None
+
+
+def test_undo_keeps_what_is_not_a_commit() -> None:
+    made = {"action": "trash_program", "name": "pomodoro"}
+    steps = [undoing("new"), made]
+    assert standing(History({}, back=frozenset({"new"})), steps) == steps
+
+
 TIDIED = "\n".join(
     (
         "diff --git a/main.py b/main.py",
