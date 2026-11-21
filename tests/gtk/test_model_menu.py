@@ -140,5 +140,10 @@ def test_the_super_key_closes_the_menu_for_the_desktops_shortcuts() -> None:
     """The open menu holds the keyboard, so Super+A never reached Cinnamon."""
     for key in (Gdk.KEY_Super_L, Gdk.KEY_Super_R):
         widget, chosen = menu()
-        assert not press(widget, key)
+        keys = next(
+            controller
+            for controller in widget.observe_controllers()
+            if isinstance(controller, Gtk.EventControllerKey)
+        )
+        assert not keys.emit("key-pressed", key, 0, Gdk.ModifierType(0))
         assert chosen == ["closed"]
