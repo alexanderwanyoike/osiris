@@ -622,6 +622,13 @@ class Drawer(Gtk.ApplicationWindow):
             self.picker.restyle(token_colours(look.theme))
             self.conversation_panel.restyle(ring_colours(look.theme))
 
+    def redraw(self, turn: Turn) -> None:
+        """One answer on screen, which refresh skips once it is not the newest."""
+        look = self.app.look
+        for view, shown in zip(self.views, self.app.conversation.turns):
+            if shown is turn:
+                view.update(turn, look.style, look.scheme)
+
     def refresh(self, restyle: bool = False) -> None:
         conversation, look = self.app.conversation, self.app.look
         if restyle:
