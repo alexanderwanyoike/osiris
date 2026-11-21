@@ -280,8 +280,16 @@ class Programs:
 
     def rewritten(self, name: str, commits: list[str]) -> list[str]:
         """Those of ``commits`` no branch holds any more, as after a rebase."""
-        held = set(self._git(name, "rev-list", "--branches", "HEAD").splitlines())
+        held = self._on_branches(name)
         return [c for c in commits if c not in held and self._has(name, c)]
+
+    def held(self, name: str, commits: list[str]) -> list[str]:
+        """Those of ``commits`` a branch holds."""
+        on_branches = self._on_branches(name)
+        return [commit for commit in commits if commit in on_branches]
+
+    def _on_branches(self, name: str) -> set[str]:
+        return set(self._git(name, "rev-list", "--branches", "HEAD").splitlines())
 
     def _has(self, name: str, commit: str) -> bool:
         try:
