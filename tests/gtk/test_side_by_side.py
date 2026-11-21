@@ -28,6 +28,7 @@ class FakeDrawer:
         self.changes_for: list[Any] = []
         self.pages: list[str] = []
         self.refreshes = 0
+        self.redraws = 0
         self.picker_refreshes = 0
         self.picker = SimpleNamespace(refresh=self._picker_refreshed)
 
@@ -39,6 +40,7 @@ class FakeDrawer:
 
     def refresh(self, restyle: bool = False) -> None:
         self.refreshes += 1
+        self.redraws += restyle
 
     def summon(self) -> None:
         pass
@@ -489,6 +491,30 @@ class Credits:
 
     def label(self, name: str) -> str:
         return name.title()
+
+
+def test_an_earlier_answer_on_screen_loses_a_commit_since_rewritten() -> None:
+    class Rewrites(Credits):
+        gone: tuple[str, ...] = ()
+
+        def rewritten(self, _name: str, commits: list[str]) -> list[str]:
+            return [commit for commit in commits if commit in self.gone]
+
+        def held(self, _name: str, _commits: list[str]) -> list[str]:
+            return []
+
+    history = Rewrites({"pomodoro": [("old111", "Track habits")]})
+    stand_in, _ = app()
+    stand_in.programs = lambda: history
+    first = asked(stand_in, "track habits").turns[-1]
+    heard(stand_in, Finished("ses_1"))
+    assert [c.summary for c in first.changes] == ["Pomodoro: Track habits"]
+    asked(stand_in, "reword it")
+    history.gone = ("old111",)
+    history.found["pomodoro"] = [("new222", "Track them well")]
+    heard(stand_in, Finished("ses_1"))
+    assert first.changes == []
+    assert stand_in.drawer.redraws == 1
 
 
 def test_an_answer_ending_off_screen_credits_the_program_it_runs_in() -> None:
