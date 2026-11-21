@@ -434,7 +434,13 @@ class OpencodeEngine:
         for message in self._messages(session):
             if message.get("type") == "user":
                 turns.append(
-                    PastTurn(message.get("text", ""), "", None, message.get("id", ""))
+                    PastTurn(
+                        message.get("text", ""),
+                        "",
+                        None,
+                        message.get("id", ""),
+                        _step_time(message, None),
+                    )
                 )
             elif message.get("type") == "assistant" and turns:
                 last = replace(
