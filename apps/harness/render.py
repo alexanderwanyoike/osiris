@@ -394,7 +394,6 @@ class TurnView(Gtk.Box):
         self.append(self.extras)
         self._blocks: list = []
         self._widgets: list[Gtk.Widget] = []
-        self._finished_at: datetime | None = None
 
     def update(self, turn: Turn, style: InlineStyle,
                scheme: GtkSource.StyleScheme | None) -> None:
@@ -480,13 +479,11 @@ class TurnView(Gtk.Box):
             error.add_css_class("harness-error")
             self.extras.append(error)
         if turn.state in (State.DONE, State.STOPPED):
-            if self._finished_at is None:
-                self._finished_at = (datetime.fromtimestamp(turn.finished)
-                                     if turn.finished is not None else datetime.now())
             parts = [turn.model.model] if turn.model else []
             if turn.state is State.STOPPED:
                 parts.append("stopped")
-            parts.append(self._finished_at.strftime("%H:%M"))
+            if turn.finished is not None:
+                parts.append(datetime.fromtimestamp(turn.finished).strftime("%H:%M"))
             self.extras.append(self._meta_line(turn, "  ·  ".join(parts)))
         if turn.note:
             note = Gtk.Label(label=turn.note, xalign=0, wrap=True)
