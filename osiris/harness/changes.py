@@ -38,8 +38,8 @@ def credit_shell_commits(
     worked_on = log.programs_of(session) + ([project] if project else [])
     replaced = _record_rewritten(log, history, session, list(dict.fromkeys(worked_on)))
     names = [change.program for change in questions[-1] if change.program]
-    credited = {(change.undo or {}).get("commit") for change in questions[-1]}
     for name in dict.fromkeys(names + ([project] if project else []) + replaced):
+        credited = set(log.commits_of(name))
         for commit, subject in history.commits_since(name, asked):
             if commit in credited:
                 continue
@@ -64,7 +64,11 @@ def _record_rewritten(
     already = log.rewritten()
     replaced = []
     for name in programs:
-        standing = [c for c in log.commits_of(name) if c not in already]
+        logged = log.commits_of(name)
+        standing = [c for c in logged if c not in already]
+        away = [c for c in logged if c in already]
+        for commit in history.held(name, away) if away else []:
+            log.write("restored", session=session, commit=commit)
         gone = history.rewritten(name, standing) if standing else []
         for commit in gone:
             log.write("rewritten", session=session, commit=commit)

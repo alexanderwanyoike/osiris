@@ -143,9 +143,14 @@ class HarnessLog:
         ]
 
     def rewritten(self) -> set[str]:
-        return {
-            entry["commit"] for entry in self._entries() if entry["kind"] == "rewritten"
-        }
+        """Commits a rewrite replaced and nothing has brought back."""
+        gone: set[str] = set()
+        for entry in self._entries():
+            if entry["kind"] == "rewritten":
+                gone.add(entry["commit"])
+            elif entry["kind"] == "restored":
+                gone.discard(entry["commit"])
+        return gone
 
     def proposals_by_question(self, session: str) -> list[list[Proposal]]:
         """For each question the session was asked, in order, the skills
