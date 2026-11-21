@@ -146,6 +146,16 @@ def drawer():
     return window, calls
 
 
+def test_an_earlier_answer_can_be_redrawn_on_its_own() -> None:
+    window, _ = drawer()
+    first = window.app.conversation.asked("one")
+    window.app.conversation.asked("two")
+    window.refresh()
+    first.note = "This answer cannot be undone."
+    window.redraw(first)
+    assert "This answer cannot be undone." in texts(window)
+
+
 def test_the_expand_button_asks_to_fill_the_screen_and_to_come_back() -> None:
     """Expanding goes through the extension, which keeps the drawer at the
     right edge and maximises it; without the extension the app maximises."""
