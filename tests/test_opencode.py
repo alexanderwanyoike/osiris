@@ -651,6 +651,37 @@ class TestHistory:
             PastTurn("thanks", "", None, "m6"),
         ]
 
+    def test_a_past_answer_finished_when_its_last_step_did(self) -> None:
+        """The last step may be a tool call with nothing to say."""
+        model = {"id": "gpt-6.1-sol", "providerID": "openai"}
+        http = FakeHttpClient(
+            replies={
+                (
+                    "GET",
+                    f"{URL}/api/session/{SESSION}/message?limit=200&order=asc",
+                ): {
+                    "data": [
+                        {"id": "m1", "type": "user", "text": "make a timer"},
+                        {
+                            "id": "m2",
+                            "type": "assistant",
+                            "model": model,
+                            "time": {"created": 1000, "completed": 2000},
+                            "content": [{"type": "text", "text": "Made it."}],
+                        },
+                        {
+                            "id": "m3",
+                            "type": "assistant",
+                            "model": model,
+                            "time": {"created": 3000, "completed": 5000},
+                            "content": [{"type": "tool", "name": "read"}],
+                        },
+                    ]
+                }
+            }
+        )
+        assert engine(http).history(SESSION)[0].finished == 5.0
+
     def test_a_past_answer_keeps_each_steps_text_its_own_paragraph(self) -> None:
         """Each step of an answer is a message of its own; read live, a new
         step starts a new paragraph, and so it does when reopened (#225)."""
