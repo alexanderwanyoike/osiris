@@ -513,6 +513,12 @@ def test_a_restored_answer_keeps_when_it_finished() -> None:
     assert talk.turns[0].finished == 1795284321.0
 
 
+def test_an_answer_that_ends_keeps_when_it_ended() -> None:
+    turn = Turn("make a timer")
+    turn.end(State.DONE, clock=lambda: 42.0)
+    assert turn.finished == 42.0
+
+
 MADE = Change(
     "Made Pomodoro", {"action": "trash_program", "name": "pomodoro"}, "pomodoro"
 )
