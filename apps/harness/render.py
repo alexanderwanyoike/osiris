@@ -422,13 +422,6 @@ class TurnView(Gtk.Box):
         chip.append(Gtk.Label(label="  ·  ".join(c.summary for c in turn.changes),
                               ellipsize=Pango.EllipsizeMode.END,
                               max_width_chars=48))
-        if turn.undone:
-            chip.append(Gtk.Label(label="Undone"))
-        elif turn.undoable:
-            undo = Gtk.Button(label="Undo")
-            undo.add_css_class("flat")
-            undo.connect("clicked", lambda _b: self._on_undo(turn))
-            chip.append(undo)
         return chip
 
     def _meta_line(self, turn: Turn, said: str) -> Gtk.Widget:
