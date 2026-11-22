@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import threading
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from enum import Enum
@@ -112,6 +113,10 @@ class Harness:
         #: The tool server, which the Engine keeps per folder.
         self._tools = tools
         self._tools_in: set[Path] = set()
+        #: Moves run off the main loop, two at once at an answer's end.
+        self._attaching = threading.Lock()
+        #: A restart of the tool server held until no answer runs.
+        self._restart_when_idle = False
         self._session: str | None = None
         #: Sessions working on a question, served whichever one is on screen,
         #: and the folder each runs in.
@@ -170,19 +175,32 @@ class Harness:
         """The folder the session runs in: its Project, or home for none."""
         return self._directory
 
+    def folder_of(self, session: str) -> Path:
+        """Where any session runs, as the Engine has it."""
+        return self._engine.where(session)
+
     def conversations(self) -> list[Past]:
         return self._engine.conversations()
 
     def _ready(self, directory: Path) -> None:
-        if self._tools is not None and directory not in self._tools_in:
-            self._engine.attach_tools(*self._tools, directory)
-            self._tools_in.add(directory)
+        with self._attaching:
+            if self._tools is not None and directory not in self._tools_in:
+                self._engine.attach_tools(*self._tools, directory)
+                self._tools_in.add(directory)
 
     def restart_tools(self) -> None:
         """Attach the tool server again where it runs now; other folders get a
         fresh one when next used."""
         self._tools_in.clear()
         self._ready(self._directory)
+
+    def restart_tools_once_idle(self) -> None:
+        """Restart the tool server now, or once no answer runs: a restart
+        stops any tool call under way."""
+        if self._running:
+            self._restart_when_idle = True
+        else:
+            self.restart_tools()
 
     def resume(self, session: str) -> list[PastTurn]:
         """Continue a past Conversation, in its folder; returns what was said."""
@@ -217,14 +235,15 @@ class Harness:
         Conversations moves the rest."""
         if session != self._session or self._directory != self._home:
             return
-        self._engine.move(self._session, folder)
-        self._directory = folder
-        if self._session in self._running:
-            self._running[self._session] = folder
-        self._ready(folder)
+        self.move(self._session, folder)
 
     def move(self, session: str, folder: Path) -> None:
+        self._ready(folder)
         self._engine.move(session, folder)
+        if session == self._session:
+            self._directory = folder
+        if session in self._running:
+            self._running[session] = folder
 
     def go_back(self, session: str, message: str, questions: int = 1) -> Revert | None:
         """Go back to before ``message``: its files and the Conversation, which
@@ -301,6 +320,12 @@ class Harness:
                 "reply-failed", session=session, request=request, error=str(error)
             )
 
+    def allow_waiting(self) -> list[Decision]:
+        """Allow, once each, the actions waiting on a card: auto mode has just
+        been turned on."""
+        found = (self.answer(s, r, Answer.ONCE) for s, r in list(self._waiting))
+        return [decision for decision in found if decision is not None]
+
     def answer(
         self, session: str, request: str, answer: Answer, reply: str = ""
     ) -> Decision | None:
@@ -352,6 +377,9 @@ class Harness:
         self._cutting_in.discard(event.session)
         if not (cut_in and isinstance(event, Stopped)):
             self._running.pop(event.session, None)
+        if self._restart_when_idle and not self._running:
+            self._restart_when_idle = False
+            self.restart_tools()
 
     def handle(self, event: Event) -> Event | Decision | None:
         """Log what the Engine reports and apply policy; the event is passed on.

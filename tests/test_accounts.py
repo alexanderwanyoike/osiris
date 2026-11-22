@@ -239,3 +239,18 @@ def test_a_model_says_how_large_its_context_window_is() -> None:
     }
     http = FakeHttpClient(replies={("GET", f"{URL}/api/model"): {"data": [terra]}})
     assert accounts(http).models()[0].context == 628000
+
+
+def test_a_model_names_its_family_where_the_engine_knows_it() -> None:
+    """The model menu shows the maker of the family (#222)."""
+    terra = {
+        "id": "gpt-6.1-terra",
+        "providerID": "openai",
+        "name": "GPT-6.1 Terra",
+        "family": "gpt-6.1",
+    }
+    pickle = {"id": "big-pickle", "providerID": "opencode", "name": "Big Pickle"}
+    http = FakeHttpClient(
+        replies={("GET", f"{URL}/api/model"): {"data": [terra, pickle]}}
+    )
+    assert [m.family for m in accounts(http).models()] == ["gpt-6.1", ""]

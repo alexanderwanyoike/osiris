@@ -85,7 +85,7 @@ def find(store: ThemeStore, name: str) -> Mapping[str, Any]:
 
 
 def apply_theme(store: ThemeStore, name: str) -> str | None:
-    """Apply a Theme. Returns the one it replaced, which is what Undo applies."""
+    """Apply a Theme. Returns the one it replaced."""
     find(store, name)
     previous = store.current()
     store.apply(name)
@@ -105,8 +105,7 @@ def delete_theme(store: ThemeStore, name: str) -> None:
 def use_wallpaper(store: ThemeStore, wallpaper: str, label: str) -> tuple[str, str]:
     """Apply a copy of the Theme in use that wears ``wallpaper``.
 
-    Returns the copy's name and the Theme it replaced, which is what Undo
-    applies before deleting the copy.
+    Returns the copy's name and the Theme it replaced, for the log.
     """
     previous = store.current()
     if previous is None:

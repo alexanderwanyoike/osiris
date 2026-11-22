@@ -186,13 +186,6 @@ def test_questions_gone_back_from_lead_to_no_changes_any_more() -> None:
     ]
 
 
-def test_the_log_says_which_answers_changes_were_undone() -> None:
-    subject = log()
-    subject.write("changed", summary="Made Harbour", undo=None)
-    subject.write("undone", changes=["Made Harbour", "Applied Harbour"])
-    assert subject.undone() == [("Made Harbour", "Applied Harbour")]
-
-
 def test_a_change_goes_to_the_question_of_the_session_that_made_it() -> None:
     subject = log()
     subject.write("sent", session="ses_A", text="build a timer")

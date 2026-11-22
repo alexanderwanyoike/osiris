@@ -4,14 +4,28 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
-from osiris.platform import FakeFileSystem, FakeRunner
+from osiris.model.author import OSIRIS
+from osiris.platform import (
+    FakeFileSystem,
+    FakeRunner,
+    RealFileSystem,
+    SubprocessRunner,
+)
 from osiris.platform.process import CommandError, Result
 from osiris.programs.manifest import MANIFEST_FILE, Manifest, parse
-from osiris.programs.programs import HARNESS, Program, ProgramError, Programs, State
+from osiris.programs.programs import (
+    TOOL_ADDRESS,
+    Program,
+    ProgramError,
+    Programs,
+    State,
+)
 
 HOME = Path("/home/tester")
 ICON = (
@@ -23,7 +37,14 @@ SOURCE = HOME / "Code" / "pomodoro"
 INSTALLED = HOME / ".local/share/osiris/programs/pomodoro"
 ENTRY = HOME / ".local/share/applications/dev.osiris.programs.pomodoro.desktop"
 GIT = ("git", "-C", str(SOURCE))
-AS_HARNESS = ("-c", f"user.name={HARNESS[0]}", "-c", f"user.email={HARNESS[1]}")
+AS_HARNESS = (
+    "-c",
+    "user.name=Osiris",
+    "-c",
+    "user.email=osiris@osiris.invalid",
+    "-c",
+    "committer.email=tools@osiris.invalid",
+)
 
 
 def programs(
@@ -53,6 +74,22 @@ def calls(runner: FakeRunner) -> list[tuple[str, ...]]:
 
 def answer(stdout: str) -> Result:
     return Result((), 0, stdout)
+
+
+def on_disk(tmp_path: Path) -> tuple[Programs, Callable[..., str]]:
+    """A real Program, and git in it as a shell would run it."""
+    runner = SubprocessRunner()
+    subject = Programs(RealFileSystem(), runner, tmp_path)
+    subject.create(
+        "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+    )
+    source = str(subject.source("pomodoro"))
+
+    def git(*args: str) -> str:
+        identity = ("-c", f"user.name={OSIRIS[0]}", "-c", f"user.email={OSIRIS[1]}")
+        return runner.capture("git", "-C", source, *identity, *args)
+
+    return subject, git
 
 
 class TestCreating:
@@ -106,7 +143,7 @@ class TestCreating:
             "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
         )
         assert "Harness" not in files.read(SOURCE / "AGENTS.md")
-        assert "Harness" not in HARNESS[0]
+        assert "Harness" not in OSIRIS[0]
 
     def test_every_program_starts_with_the_icon_drawn_for_it(self) -> None:
         subject, files, _ = programs()
@@ -196,6 +233,98 @@ class TestCommitting:
         )
         subject, _, _ = programs(made(), runner)
         assert subject.patch("pomodoro", "abc123") == patch
+
+    def test_commits_since_a_time_leave_out_osiriss_own(self) -> None:
+        """What a question committed with git in a shell, not through the
+        Osiris tools, which log their own commits (#219)."""
+        at = int(datetime(2026, 11, 9, 10, 0, tzinfo=UTC).timestamp())
+        log = "\n".join(
+            [
+                f"aaa111\x1f{TOOL_ADDRESS}\x1f{at}\x1fStart Pomodoro",
+                f"bbb222\x1fperson@example.org\x1f{at}\x1fAdd a pause button",
+                f"ccc333\x1fperson@example.org\x1f{at}\x1fTrack streaks: daily",
+            ]
+        )
+        runner = FakeRunner(results={"git": answer(log)})
+        subject, _, _ = programs(made(), runner)
+        asked = datetime(2026, 11, 9, 10, 0, tzinfo=UTC)
+        assert subject.commits_since("pomodoro", asked) == [
+            ("bbb222", "Add a pause button"),
+            ("ccc333", "Track streaks: daily"),
+        ]
+        assert f"--since={asked.isoformat()}" in calls(runner)[-1]
+
+    def test_a_commit_only_replayed_since_a_question_is_not_new_work(
+        self, tmp_path: Path
+    ) -> None:
+        """A rebase refreshes the committer's date and keeps the author's."""
+        subject, git = on_disk(tmp_path)
+        git(
+            "commit",
+            "--allow-empty",
+            "-qm",
+            "Old work",
+            "--date=2020-01-01T00:00:00+00:00",
+        )
+        git("commit", "--amend", "--allow-empty", "-qm", "Old work reworded")
+        asked = datetime(2021, 1, 1, tzinfo=UTC)
+        assert subject.commits_since("pomodoro", asked) == []
+
+    def test_a_shell_commit_borrowing_osiriss_name_is_not_a_tools(
+        self, tmp_path: Path
+    ) -> None:
+        """A Program has no git identity of its own, so a model committing in
+        a shell often copies the author it sees in the log."""
+        runner = SubprocessRunner()
+        subject = Programs(RealFileSystem(), runner, tmp_path)
+        subject.create(
+            "Pomodoro", "A focus timer.", run=["python3", "main.py"], icon_svg=ICON
+        )
+        source = subject.source("pomodoro")
+        (source / "timer.py").write_text("print(1)\n")
+        subject.commit("pomodoro", "By the tools")
+        (source / "timer.py").write_text("print(2)\n")
+        runner.capture(
+            "git",
+            "-C",
+            str(source),
+            "-c",
+            f"user.name={OSIRIS[0]}",
+            "-c",
+            f"user.email={OSIRIS[1]}",
+            "commit",
+            "-qam",
+            "In a shell",
+        )
+        asked = datetime(2000, 1, 1, tzinfo=UTC)
+        made_in_a_shell = subject.commits_since("pomodoro", asked)
+        assert [message for _, message in made_in_a_shell] == ["In a shell"]
+
+    def test_a_tag_does_not_hold_a_commit_an_amend_replaced(
+        self, tmp_path: Path
+    ) -> None:
+        """A tag keeps the old commit alive, but the Program moved on from it."""
+        subject, git = on_disk(tmp_path)
+        old = git("rev-parse", "HEAD")
+        git("tag", "kept")
+        git("commit", "--amend", "-qm", "Start better")
+        assert subject.held("pomodoro", [old]) == []
+
+    def test_a_branch_holds_a_commit_again_once_it_is_brought_back(
+        self, tmp_path: Path
+    ) -> None:
+        subject, git = on_disk(tmp_path)
+        first = git("rev-parse", "HEAD")
+        git("commit", "--allow-empty", "-qm", "Second")
+        second = git("rev-parse", "HEAD")
+        git("reset", "-q", "--hard", first)
+        assert subject.held("pomodoro", [first, second]) == [first]
+        git("reset", "-q", "--hard", second)
+        assert subject.held("pomodoro", [first, second]) == [first, second]
+
+    def test_a_program_is_named_to_the_person_by_its_label(self) -> None:
+        subject, _, _ = programs(made())
+        assert subject.label("pomodoro") == "Pomodoro"
 
 
 class TestChecking:

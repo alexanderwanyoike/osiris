@@ -222,10 +222,11 @@ def test_a_connected_provider_wears_a_connected_chip_with_a_check() -> None:
 
 
 def test_the_page_offers_auto_mode_and_shows_the_choice() -> None:
-    """It answers every request the rules ask about; a deny still holds."""
+    """It answers every request the rules ask about; a deny still holds. It
+    is called Allow everything here as beside the message box (#228)."""
     page = ProvidersPage(FakeAccounts(), background=now, auto_mode_on=True)
     shown = texts(page)
-    assert "Auto mode" in shown
+    assert "Allow everything" in shown
     assert any("denies" in text for text in shown)
     assert find(page, Gtk.Switch).get_active()
 

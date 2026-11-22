@@ -119,8 +119,10 @@ _Avoid_: permissions file, policy (for these)
 **Auto mode**:
 The person's choice to have the **Harness** allow whatever the
 **Permission rules** ask about, without a card. A deny rule still refuses, and
-sudo still asks for the password. Off until they turn it on.
-_Avoid_: allow everything, yolo
+sudo still asks for the password. Off until they turn it on. The person knows
+it as **Allow everything**: the switch beside the message box and in Settings
+says so, as everything they see calls the **Harness** Osiris.
+_Avoid_: yolo
 
 **Admin password card**:
 Where the **Harness** asks for the administrator password when a command it
@@ -238,16 +240,15 @@ _Avoid_: metadata
 - The password typed in an **admin password card** goes to sudo and nowhere
   else: not to a model, the **Harness log** or any file. Nothing is
   remembered; every command that needs it asks again.
-- A look just happens; an undoable change happens with an Undo; a change that
-  cannot be undone, or is not the person's own, always asks first. Moving files
+- A look just happens; a change that can be reversed happens without asking; a
+  change that cannot be, or is not the person's own, always asks first. Moving files
   to the Trash is undoable; the **Harness** never empties or bypasses the Trash.
 - Every **Program** carries a **Program manifest**; installing one is a change
   that asks first, showing what the manifest allows.
 - A **Program** with a face is built from Osiris's own parts, so it follows the
   **Theme** and **Skin** like everything else.
 - A **Program**'s source is a **Project** of its own, in `~/Code`, kept in git.
-  Every change to it, by the **Harness** or the person, is one atomic commit;
-  undoing what an answer changed reverts its commits.
+  Every change to it, by the **Harness** or the person, is one atomic commit.
 - **Programs** are written in Python, C or C++, Rust, Go or JavaScript, whose
   toolchains Osiris ships, unless the person asks for another language. They look like the
   rest of Osiris unless the person asks otherwise.

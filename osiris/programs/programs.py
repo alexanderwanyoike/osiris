@@ -10,11 +10,12 @@ directory of its own.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from xml.etree import ElementTree
 
-from osiris.model.author import OSIRIS, as_osiris
+from osiris.model.author import as_osiris
 from osiris.model.names import slug
 from osiris.platform import CommandRunner, FileSystem
 from osiris.platform.process import CommandError
@@ -34,8 +35,10 @@ INSTALL_DIR = ".local/share/osiris/programs"
 APPLICATIONS_DIR = ".local/share/applications"
 #: Inside an installed copy: the commit it was made from.
 COMMIT_FILE = ".osiris-commit"
-#: Who the Harness's commits are by, so its changes are told from the person's.
-HARNESS = OSIRIS
+#: The committer on what Osiris's tools commit. A model with no git identity
+#: copies the author it sees in the log, which a plain log never shows this.
+TOOL_ADDRESS = "tools@osiris.invalid"
+TOOL_IDENTITY = (*as_osiris(), "-c", f"committer.email={TOOL_ADDRESS}")
 
 #: Folders that hold what git, builds and package managers keep, not source.
 _NOT_SOURCE = {
@@ -47,6 +50,10 @@ _NOT_SOURCE = {
     "target",
     "build",
 }
+#: git's log, a commit to a line: its hash, committer's address, author
+#: time and subject, apart by a character no subject holds.
+_FIELD = "\x1f"
+_LOG = "%H%x1f%ce%x1f%at%x1f%s"
 #: How much of a failed build's output is worth showing.
 _BUILD_TAIL = 30
 
@@ -169,7 +176,7 @@ class Programs:
             raise ProgramError(f"{name}'s manifest: {error}") from error
 
     def _git(self, name: str, *args: str, harness: bool = False) -> str:
-        identity = as_osiris() if harness else ()
+        identity = TOOL_IDENTITY if harness else ()
         return self._runner.capture(
             "git", "-C", str(self.source(name)), *identity, *args
         )
@@ -256,6 +263,32 @@ class Programs:
     def patch(self, name: str, commit: str) -> str:
         """What one commit changed, as git's patch for it."""
         return self._git(name, "show", "--format=", "--patch", commit)
+
+    def label(self, name: str) -> str:
+        return self.manifest(name).label
+
+    def commits_since(self, name: str, since: datetime) -> list[tuple[str, str]]:
+        """The commits authored since ``since`` that Osiris's tools did not
+        make, oldest first, as (commit, subject). git filters on the
+        committer's date, which a rebase refreshes, so the author's decides."""
+        log = self._git(
+            name, "log", "--reverse", f"--since={since.isoformat()}", f"--format={_LOG}"
+        )
+        found = (line.split(_FIELD, 3) for line in log.splitlines() if line)
+        earliest = int(since.timestamp())
+        return [
+            (commit, subject)
+            for commit, by, authored, subject in found
+            if by != TOOL_ADDRESS and int(authored) >= earliest
+        ]
+
+    def held(self, name: str, commits: list[str]) -> list[str]:
+        """Those of ``commits`` a branch holds."""
+        on_branches = self._on_branches(name)
+        return [commit for commit in commits if commit in on_branches]
+
+    def _on_branches(self, name: str) -> set[str]:
+        return set(self._git(name, "rev-list", "--branches", "HEAD").splitlines())
 
     def check(self, name: str) -> list[str]:
         """Problems found without running anything: Python that does not compile."""

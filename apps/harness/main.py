@@ -53,6 +53,8 @@ from canvas import Canvas, open_in_code  # noqa: E402
 from connectors_page import ConnectorsPage  # noqa: E402
 from conversation_panel import ConversationPanel  # noqa: E402
 from composer_picker import Picker  # noqa: E402
+from model_menu import ModelMenu  # noqa: E402
+from program_history import ProgramHistory  # noqa: E402
 from rail import Rail  # noqa: E402
 from program_card import ProgramCard  # noqa: E402
 from proposal_card import ProposalCard  # noqa: E402
@@ -60,14 +62,12 @@ from render import TurnView  # noqa: E402
 from sidebar import Sidebar  # noqa: E402
 from skills_tab import SkillsTab  # noqa: E402
 from terminal import Terminal  # noqa: E402
-from skin_store import EngineSkinStore  # noqa: E402
-from theme_store import EngineStore, user_wallpapers  # noqa: E402
 
 from osiris.apps.user_css import UserCss  # noqa: E402
-from osiris.apps.tool_server import NAME as TOOLS, undo  # noqa: E402
+from osiris.apps.tool_server import NAME as TOOLS  # noqa: E402
 
 from osiris.harness import admin  # noqa: E402
-from osiris.harness.changes import file_changes  # noqa: E402
+from osiris.harness.changes import credit_shell_commits, file_changes  # noqa: E402
 from osiris.harness.connectors import (  # noqa: E402
     Connector,
     Servers,
@@ -166,6 +166,10 @@ class AdminPending:
     #: The helper's process, checked again before the password leaves.
     caller: int
 
+#: What Allow everything does, said where it is switched.
+ALLOW_EVERYTHING = ("Osiris goes ahead without asking, unless one of your rules "
+                    "denies it. A command with sudo still asks for your password.")
+
 
 class Drawer(Gtk.ApplicationWindow):
     def __init__(self, app: "Application"):
@@ -240,15 +244,15 @@ class Drawer(Gtk.ApplicationWindow):
 
         self.model_label = Gtk.Label(ellipsize=Pango.EllipsizeMode.START)
         self.model_label.add_css_class("harness-meta")
-        self.models = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
-        self.models.add_css_class("navigation-sidebar")
-        self.models.connect("row-activated", self._model_chosen)
+        self.model_list = ModelMenu(on_chosen=self._model_chosen,
+                                    on_providers=self._providers_chosen,
+                                    on_close=lambda: self.model_menu.popdown())
         model_face = Gtk.Box(spacing=4)
         model_face.append(Gtk.Image(icon_name="pan-down-symbolic"))
         model_face.append(self.model_label)
         self.model_menu = Gtk.MenuButton(
             child=model_face, tooltip_text="Model",
-            popover=Gtk.Popover(child=self.models))
+            popover=Gtk.Popover(child=self.model_list, halign=Gtk.Align.END))
         self.model_menu.add_css_class("flat")
         self.model_menu.connect("notify::active", self._models_shown)
         self.send = Gtk.Button(icon_name="go-up-symbolic", tooltip_text="Ask",
@@ -261,8 +265,18 @@ class Drawer(Gtk.ApplicationWindow):
             tooltip_text="Send now: stop what Osiris is doing and take this instead")
         self.send_now.add_css_class("flat")
         self.send_now.connect("clicked", self._cut_in)
+        self.allow_everything = Gtk.Switch(active=self.app.in_auto_mode,
+                                           valign=Gtk.Align.CENTER)
+        self._allowing = self.allow_everything.connect(
+            "notify::active", lambda s, _p: self.app.set_auto_mode(s.get_active()))
+        allowing = Gtk.Label(label="Allow everything")
+        allowing.add_css_class("harness-meta")
+        self.allow_line = Gtk.Box(spacing=6, tooltip_text=ALLOW_EVERYTHING)
+        self.allow_line.append(self.allow_everything)
+        self.allow_line.append(allowing)
         controls = Gtk.Box(spacing=6)
         controls.append(Gtk.Box(hexpand=True))
+        controls.append(self.allow_line)
         controls.append(self.model_menu)
         controls.append(self.send_now)
         controls.append(self.send)
@@ -425,6 +439,12 @@ class Drawer(Gtk.ApplicationWindow):
         if isinstance(surface, GdkX11.X11Surface):
             surface.set_skip_taskbar_hint(True)
             surface.set_skip_pager_hint(True)
+        surface.connect("notify::state", self._surface_state)
+
+    def _surface_state(self, surface, _spec) -> None:
+        """Minimised by the desktop, as by show desktop, and not by Thoth."""
+        if surface.get_state() & Gdk.ToplevelState.MINIMIZED:
+            self.hidden()
 
     def _key(self, _controller, keyval, _code, _state) -> bool:
         if keyval == Gdk.KEY_Escape:
@@ -476,31 +496,29 @@ class Drawer(Gtk.ApplicationWindow):
     def _models_shown(self, button, _spec) -> None:
         if not button.get_active():
             return
-        while (row := self.models.get_row_at_index(0)) is not None:
-            self.models.remove(row)
-        providers = Gtk.Label(label="Providers and accounts…", xalign=0)
-        providers.model = None
-        self.models.append(providers)
+        self.model_list.search.set_text("")
+        self.model_list.search.grab_focus()
         if self.app.accounts is None:
             return
         accounts = self.app.accounts
-        self.app.background(accounts.models, self._models_found)
+        in_use = self.app.conversation.model or self.app.models.default
 
-    def _models_found(self, found) -> None:
-        # Above "Providers and accounts…", in the Engine's order.
-        for position, info in enumerate(found):
-            label = Gtk.Label(label=info.name, xalign=0)
-            label.model = info.ref
-            self.models.insert(label, position)
+        def found(gathered) -> None:
+            models, providers = gathered
+            self.model_list.show_models(models, in_use, providers)
 
-    def _model_chosen(self, _list, row) -> None:
-        chosen = row.get_child().model
+        self.app.background(
+            lambda: (accounts.models(), {p.id: p.name for p in accounts.providers()}),
+            found)
+
+    def _model_chosen(self, chosen) -> None:
         self.model_menu.popdown()
-        if chosen is None:
-            self.show_providers()
-        else:
-            self.app.choose_model(chosen)
+        self.app.choose_model(chosen)
         self.refresh()
+
+    def _providers_chosen(self) -> None:
+        self.model_menu.popdown()
+        self.show_providers()
 
     def show_providers(self) -> None:
         if self.app.accounts is None:
@@ -564,6 +582,11 @@ class Drawer(Gtk.ApplicationWindow):
         self.present()
         self.entry.grab_focus()
 
+    def hidden(self) -> None:
+        """Put away what floats beside the drawer, which would otherwise stay
+        on the desktop without it."""
+        self.model_menu.popdown()
+
     def _chosen(self, act, *args) -> None:
         """Act on a choice in the sidebar; narrow, the list then folds away."""
         act(*args)
@@ -573,16 +596,17 @@ class Drawer(Gtk.ApplicationWindow):
     def open_page(self, at: str) -> None:
         self.canvas.open_page(at)
 
-    def show_changes(self, question: str, files, on_comment) -> None:
-        self.canvas.show_changes(question, files, on_comment)
+    def show_changes(self, question: str, files, on_comment,
+                     conversation: str | None = None) -> None:
+        self.canvas.show_changes(question, files, on_comment, conversation)
         self.canvas_toggle.set_sensitive(True)
         self.canvas_toggle.set_active(True)
 
-    def show_canvas(self, programs) -> None:
+    def show_canvas(self, programs, conversation: str | None = None) -> None:
         """What the Conversation made; the Canvas opens the first time there is
         something to show."""
         had = self.canvas_toggle.get_sensitive()
-        self.canvas.show(programs)
+        self.canvas.show(programs, conversation)
         self.canvas_toggle.set_sensitive(bool(programs))
         if programs and not had:
             self.canvas_toggle.set_active(True)
@@ -621,14 +645,23 @@ class Drawer(Gtk.ApplicationWindow):
             self.picker.restyle(token_colours(look.theme))
             self.conversation_panel.restyle(ring_colours(look.theme))
 
+    def redraw(self, turn: Turn) -> None:
+        """One answer on screen, which refresh skips once it is not the newest."""
+        look = self.app.look
+        for view, shown in zip(self.views, self.app.conversation.turns):
+            if shown is turn:
+                view.update(turn, look.style, look.scheme)
+
     def refresh(self, restyle: bool = False) -> None:
         conversation, look = self.app.conversation, self.app.look
+        # Settings may have turned it; following is not turning it again.
+        with self.allow_everything.handler_block(self._allowing):
+            self.allow_everything.set_active(self.app.in_auto_mode)
         if restyle:
             self._restyle_colours()
         fresh = len(self.views)
         while len(self.views) < len(conversation.turns):
             view = TurnView(conversation.turns[len(self.views)],
-                            on_undo=self.app.undo,
                             program_card=self.app.program_card,
                             admin_card=self.app.admin_card,
                             approval_card=self.app.approval_card,
@@ -995,6 +1028,7 @@ class Application(Adw.Application):
     def close_drawer(self) -> None:
         """Ask the extension to slide the drawer away; minimise if it cannot."""
         self.open = False
+        self.drawer.hidden()
         connection = self.get_dbus_connection()
         if connection is None:
             self.drawer.minimize()
@@ -1140,25 +1174,6 @@ class Application(Adw.Application):
         self.ask(f"{label} failed to build or start:\n\n```\n{problem}\n```\n\n"
                  "Please fix it.")
 
-    def undo(self, turn: Turn) -> None:
-        """Reverse what a turn changed, newest first, without the model."""
-        steps = turn.undo_steps()
-
-        def reverse() -> None:
-            store, programs = EngineStore(), self.programs()
-            wallpapers = user_wallpapers(
-                self.files, SubprocessRunner(sink=lambda _line: None), self.home)
-            for step in steps:
-                undo(store, step, programs, wallpapers, skins=EngineSkinStore())
-
-        def undone(_result) -> None:
-            turn.undone = True
-            if self.log is not None:
-                self.log.write("undone", changes=[c.summary for c in turn.changes])
-            self.drawer.refresh()
-
-        self.background(reverse, undone)
-
     @property
     def session(self) -> str | None:
         return self.harness.session if self.harness is not None else None
@@ -1187,20 +1202,24 @@ class Application(Adw.Application):
     def load_history(self) -> None:
         if self.harness is None:
             return
-        harness, log, home = self.harness, self.log, self.home
+        harness, log, home, files = self.harness, self.log, self.home, self.files
 
         def gather():
             pasts = harness.conversations()
             # Conversations from before the Harness moved them itself.
             moves = misplaced(pasts, log.programs_worked_on() if log else [], home,
-                              Path.exists)
+                              files.exists)
             for session, folder in moves:
                 harness.move(session, folder)
-            return harness.conversations() if moves else pasts
+            moved = {session for session, _folder in moves}
+            return (harness.conversations() if moves else pasts), moved
 
-        def show(pasts) -> None:
+        def show(found) -> None:
+            pasts, moved = found
             self.pasts = pasts
             self.drawer.show_history(*group(pasts, home))
+            if self.session in moved:
+                self.update_panel()
 
         self.background(gather, show)
 
@@ -1309,8 +1328,8 @@ class Application(Adw.Application):
         turns = conversation.turns
         panel.show_where(project, "")
         panel.show_changes(
-            [(at, title_of(turn.question), len(turn.changes))
-             for at, turn in enumerate(turns) if turn.changes],
+            [(at, title_of(turn.question), len(turn.commits))
+             for at, turn in enumerate(turns) if turn.commits],
             lambda at: self.show_changes(turns[at]))
         servers, contexts, accounts = self.servers, self.contexts, self.accounts
 
@@ -1366,7 +1385,7 @@ class Application(Adw.Application):
 
         def show(found) -> None:
             if self.session == session:
-                self.drawer.show_canvas(found)
+                self.drawer.show_canvas(found, session)
 
         self.background(gather, show)
 
@@ -1470,22 +1489,33 @@ class Application(Adw.Application):
 
         programs = self.programs()
 
-        def read(turn: Turn) -> tuple[tuple, list[str]]:
-            found, gone = [], []
+        def read(turn: Turn) -> tuple[tuple, list[str], bool]:
+            found, gone, replaced = [], [], False
             for name, commit in turn.commits:
                 try:
-                    found += file_changes(name, programs.patch(name, commit))
+                    if programs.held(name, [commit]):
+                        found += file_changes(name, programs.patch(name, commit))
+                    else:
+                        replaced = True
                 except CommandError:
                     gone.append(name)
-            return tuple(found), gone
+            return tuple(found), gone, replaced
 
-        def shown(results: list[tuple[tuple, list[str]]]) -> None:
-            for turn, (files, gone) in zip(turns, results, strict=True):
+        # Read off the main loop: another Conversation may be on screen by then.
+        session = self.session
+
+        def shown(results: list[tuple[tuple, list[str], bool]]) -> None:
+            for turn, (files, gone, replaced) in zip(turns, results, strict=True):
                 if gone and not files:
                     turn.note = (f"{', '.join(dict.fromkeys(gone))} is gone, so what "
                                  "this question changed in it cannot be shown.")
+                    self.drawer.redraw(turn)
+                elif replaced and not files:
+                    turn.note = ("What this question changed was rewritten later, "
+                                 "so it cannot be shown.")
+                    self.drawer.redraw(turn)
                 else:
-                    self.drawer.show_changes(turn.question, files, commented)
+                    self.drawer.show_changes(turn.question, files, commented, session)
             self.drawer.refresh()
 
         self.background(lambda: [read(turn) for turn in turns], shown)
@@ -1546,18 +1576,25 @@ class Application(Adw.Application):
         """Keep the person's choice; the tool server tells the model when it
         starts, so it is restarted."""
         turn_auto_mode(self.files, self.home, on=on)
+        if self.drawer is not None:
+            self.drawer.refresh()
         if self.harness is not None:
-            self.background(self.harness.restart_tools, lambda _r: None)
+            self.background(self.harness.restart_tools_once_idle, lambda _r: None)
+            if on:
+                self.background(self.harness.allow_waiting, self._allowed_waiting)
+
+    def _allowed_waiting(self, decisions) -> None:
+        for decision in decisions:
+            self._apply(decision)
 
     def _restored(self, session: str, past) -> Conversation:
-        """A past Conversation with its tokens, Program cards and Undo, which
+        """A past Conversation with its tokens and Program cards, which
         the Engine's history does not carry and the log does."""
         if self.log is None:
             return Conversation.restored(past)
         return Conversation.restored(past,
                                      tokens_spent=self.log.tokens_spent(session),
                                      changes=self.log.changes_by_question(session),
-                                     undone=self.log.undone(),
                                      proposals=self.log.proposals_by_question(session))
 
     def new_conversation(self, folder: Path | None = None) -> bool:
@@ -1752,7 +1789,35 @@ class Application(Adw.Application):
         history to show; the changes and the Canvas are the screen's."""
         self.admin_answer(session, None)
         self.backgrounded.pop(session, None)
-        if conversation is self.conversation and self.log is not None:
+        if self.log is None:
+            self.load_history()
+            return
+        log, harness, home = self.log, self.harness, self.home
+        history = ProgramHistory(self.programs())
+
+        def credit() -> None:
+            try:
+                folder = harness.folder_of(session) if harness is not None else None
+            except HttpError:
+                folder = None  # Deleted meanwhile: nothing of its own to credit.
+            project = project_program(folder, home) if folder is not None else None
+            credit_shell_commits(log, history, session, project)
+
+        ended = conversation.turns[-1] if conversation.turns else None
+
+        def credited(_result) -> None:
+            # A question asked meanwhile is the latest now; the ended one's
+            # changes come back when the Conversation is opened again.
+            latest = conversation.turns[-1] if conversation.turns else None
+            if conversation is self.conversation and latest is ended:
+                self._changed(session, conversation)
+            self.load_history()
+
+        self.background(credit, credited)
+
+    def _changed(self, session: str, conversation: Conversation) -> None:
+        """Put what the answer on screen changed and proposed under it."""
+        if self.log is not None:
             asked = self.log.changes_by_question(session)
             changes = asked[-1] if asked else []
             conversation.changed(changes)
@@ -1764,7 +1829,6 @@ class Application(Adw.Application):
                 self.background(lambda: harness.worked_on(session, folder),
                                 lambda _r: self.load_history())
             self.update_canvas()
-        self.load_history()
 
     def _refresh(self) -> bool:
         self.drawer.refresh()

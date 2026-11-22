@@ -10,7 +10,7 @@ import base64
 import json
 import re
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +36,7 @@ from osiris.harness.engine import (
     ToolFinished,
     ToolRequested,
 )
+from osiris.harness.markdown import next_step
 from osiris.harness.picker import Entry, Reference
 from osiris.harness.saved_rules import SavedRule
 from osiris.harness.skill_rules import SkillInfo
@@ -433,9 +434,19 @@ class OpencodeEngine:
         for message in self._messages(session):
             if message.get("type") == "user":
                 turns.append(
-                    PastTurn(message.get("text", ""), "", None, message.get("id", ""))
+                    PastTurn(
+                        message.get("text", ""),
+                        "",
+                        None,
+                        message.get("id", ""),
+                        _step_time(message, None),
+                    )
                 )
             elif message.get("type") == "assistant" and turns:
+                last = replace(
+                    turns[-1], finished=_step_time(message, turns[-1].finished)
+                )
+                turns[-1] = last
                 said = "".join(
                     part.get("text", "")
                     for part in message.get("content", [])
@@ -443,12 +454,14 @@ class OpencodeEngine:
                 )
                 if said:
                     model = message.get("model") or {}
-                    last = turns[-1]
-                    turns[-1] = PastTurn(
-                        last.question,
-                        last.answer + said,
-                        ModelRef(model["providerID"], model["id"]) if model else None,
-                        last.message,
+                    turns[-1] = replace(
+                        last,
+                        answer=next_step(last.answer) + said,
+                        model=(
+                            ModelRef(model["providerID"], model["id"])
+                            if model
+                            else None
+                        ),
                     )
         return turns
 
@@ -466,6 +479,13 @@ class OpencodeEngine:
             event = reader.read(json.loads(line.removeprefix("data:")))
             if event is not None:
                 yield event
+
+
+def _step_time(message: dict[str, Any], before: float | None) -> float | None:
+    """When this step ended or, if it never finished, began."""
+    times = message.get("time") or {}
+    ended = times.get("completed", times.get("created"))
+    return ended / 1000 if ended is not None else before
 
 
 def _uri(entry: Entry) -> str:
@@ -700,6 +720,7 @@ class OpencodeAccounts:
                 ModelRef(entry["providerID"], entry["id"]),
                 entry["name"],
                 (entry.get("limit") or {}).get("context", 0),
+                entry.get("family", ""),
             )
             for entry in reply["data"]
         ]

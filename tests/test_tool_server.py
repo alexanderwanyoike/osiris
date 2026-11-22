@@ -13,14 +13,13 @@ from mcp.server.context import ServerRequestContext
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
-from osiris.apps.tool_server import TIERS, server, undo
+from osiris.apps.tool_server import TIERS, instructions, server
 from osiris.harness.log import LOG_FILE, Change, HarnessLog
 from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem, FakeRunner
 from osiris.platform.process import Result
 from osiris.programs.manifest import MANIFEST_FILE
 from osiris.programs.programs import Programs
-from osiris.themes.actions import ThemeActionError
 from osiris.themes.store import FakeThemeStore
 from osiris.themes.wallpapers import UserWallpapers
 
@@ -224,40 +223,6 @@ def test_a_refused_action_changes_nothing_and_logs_no_change() -> None:
     assert log.last_changes() == []
 
 
-def test_undo_runs_the_step_a_change_recorded() -> None:
-    store = FakeThemeStore(
-        themes=[
-            {"name": "nord", "label": "Nord", "dark": True},
-            {"name": "harbour", "label": "Harbour", "dark": True},
-        ],
-        current="harbour",
-    )
-    undo(
-        store,
-        {"action": "apply_theme", "name": "nord"},
-        new_programs(),
-        new_wallpapers(),
-    )
-    undo(
-        store,
-        {"action": "delete_theme", "name": "harbour"},
-        new_programs(),
-        new_wallpapers(),
-    )
-    assert store.applied == ["nord"]
-    assert store.deleted == ["harbour"]
-
-
-def test_an_unknown_undo_step_is_refused() -> None:
-    with pytest.raises(ThemeActionError, match="cannot undo"):
-        undo(
-            FakeThemeStore(),
-            {"action": "format_disk", "name": "sda"},
-            new_programs(),
-            new_wallpapers(),
-        )
-
-
 def test_a_model_is_told_a_seed_is_a_hex_colour_before_it_tries() -> None:
     seed = tools(FakeThemeStore())["create_theme"].input_schema["properties"]["seed"]
     assert seed["pattern"] == "^#[0-9a-fA-F]{6}$"
@@ -316,32 +281,6 @@ def test_a_commit_is_logged_as_a_change_undone_by_reverting_it() -> None:
     ]
 
 
-def test_undo_trashes_a_program_or_reverts_a_commit() -> None:
-    files = FakeFileSystem()
-    files.write(
-        POMODORO / MANIFEST_FILE,
-        '{"name": "pomodoro", "label": "Pomodoro", "description": "A timer.",'
-        ' "run": ["python3", "main.py"]}',
-    )
-    runner = FakeRunner()
-    subject = new_programs(files, runner)
-    undo(
-        FakeThemeStore(),
-        {"action": "revert_commit", "name": "pomodoro", "commit": "abc123"},
-        subject,
-        new_wallpapers(),
-    )
-    undo(
-        FakeThemeStore(),
-        {"action": "trash_program", "name": "pomodoro"},
-        subject,
-        new_wallpapers(),
-    )
-    argvs = [call.argv for call in runner.calls]
-    assert argvs[0][-3:] == ("revert", "--no-edit", "abc123")
-    assert argvs[1] == ("gio", "trash", str(POMODORO))
-
-
 def test_a_program_cannot_be_made_without_an_icon() -> None:
     schema = tools(FakeThemeStore())["create_program"].input_schema
     assert "icon_svg" in schema["required"]
@@ -382,6 +321,10 @@ def test_the_model_is_told_windows_are_gtk_and_libadwaita_and_nothing_else() -> 
 
     assert "tkinter" in INSTRUCTIONS
     assert "GTK 4 and libadwaita" in INSTRUCTIONS
+
+
+def test_the_model_does_not_promise_an_undo() -> None:
+    assert "can undo" not in instructions(auto_mode=False)
 
 
 def test_the_model_is_told_the_person_knows_it_as_osiris() -> None:
@@ -440,19 +383,6 @@ def test_a_shader_that_does_not_compile_reaches_the_model_to_fix() -> None:
             wallpapers=new_wallpapers(runner=runner),
         )
     assert store.current() == "nord"
-
-
-def test_undo_deletes_a_wallpaper_it_made() -> None:
-    files = FakeFileSystem()
-    wallpapers = new_wallpapers(files)
-    wallpapers.write("Rain", RAIN)
-    undo(
-        FakeThemeStore(),
-        {"action": "delete_wallpaper", "name": "rain"},
-        new_programs(),
-        wallpapers,
-    )
-    assert not files.exists(WALLPAPERS / "rain" / "shader.glsl")
 
 
 def test_the_model_is_told_how_a_wallpaper_shader_is_written() -> None:
