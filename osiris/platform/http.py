@@ -49,6 +49,10 @@ class HttpClient(Protocol):
         """Each line of a long-lived response, as it arrives."""
         ...
 
+    def download(self, url: str, *, limit: int) -> bytes:
+        """The file at ``url``, refused if larger than ``limit`` bytes."""
+        ...
+
 
 class UrllibClient:
     def __init__(self, timeout: float = 30.0) -> None:
@@ -99,6 +103,20 @@ class UrllibClient:
         except urllib.error.URLError as error:
             raise HttpError(0, str(error.reason)) from error
 
+    def download(self, url: str, *, limit: int) -> bytes:
+        try:
+            with _OPENER.open(url, timeout=self._timeout) as response:
+                data: bytes = response.read(limit + 1)
+        except urllib.error.HTTPError as error:
+            raise HttpError(error.code, _error_body(error)) from error
+        except urllib.error.URLError as error:
+            raise HttpError(0, str(error.reason)) from error
+        except (OSError, HTTPException) as error:
+            raise HttpError(0, str(error)) from error
+        if len(data) > limit:
+            raise HttpError(0, f"larger than {limit} bytes")
+        return data
+
 
 def _error_body(error: urllib.error.HTTPError) -> str:
     try:
@@ -112,6 +130,15 @@ class FakeHttpClient:
     replies: dict[tuple[str, str], Body] = field(default_factory=dict)
     streams: dict[str, list[str]] = field(default_factory=dict)
     requests: list[tuple[str, str, Body]] = field(default_factory=list)
+    downloads: dict[str, bytes] = field(default_factory=dict)
+
+    def download(self, url: str, *, limit: int) -> bytes:
+        data = self.downloads.get(url)
+        if data is None:
+            raise HttpError(404, f"no canned download for {url}")
+        if len(data) > limit:
+            raise HttpError(0, f"larger than {limit} bytes")
+        return data
 
     def request(
         self,
