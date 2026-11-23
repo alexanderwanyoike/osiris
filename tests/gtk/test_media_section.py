@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from gi.repository import Gtk
 from media_section import MediaSection
 
+from osiris.harness.media.limit import DAILY_IMAGES
 from tests.gtk.conftest import find, shown, widgets
 
 
@@ -59,3 +60,21 @@ def test_removing_the_key_disconnects_fal_and_offers_to_add_one_again() -> None:
     assert keys.key is None
     assert "Connected" not in shown(page)
     assert find(page, Gtk.Button, "Add key").get_visible()
+
+
+def test_an_empty_key_is_not_saved() -> None:
+    keys = Keys()
+    page = section(keys)
+
+    find(page, Gtk.PasswordEntry).set_text("   ")
+    find(page, Gtk.Button, "Save").emit("clicked")
+
+    assert keys.key is None
+    assert "Connected" not in shown(page)
+
+
+def test_the_section_says_what_fal_is_for_and_the_daily_limit() -> None:
+    assert any(
+        "Themes" in text and f"{DAILY_IMAGES} a day" in text
+        for text in shown(section(Keys()))
+    )
