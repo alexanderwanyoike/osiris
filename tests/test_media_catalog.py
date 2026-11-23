@@ -2,19 +2,22 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 import pytest
 
 from osiris.harness.media.catalog import CATALOG, FalCatalog
 from osiris.harness.media.error import MediaError
 from osiris.harness.media.image_model import ImageModel
 from osiris.platform import FakeHttpClient, HttpError
+from osiris.platform.http import Body
 
 SEARCH = f"{CATALOG}?category=text-to-image&status=active&limit=12&q=flat+anime"
 DETAILS = f"{CATALOG}?endpoint_id=fal-ai%2Fone&expand=openapi-3.0"
 
 
 def catalog(http: FakeHttpClient) -> FalCatalog:
-    return FalCatalog(http)
+    return FalCatalog(http, lambda: None)
 
 
 def listed(endpoint: str, name: str, about: str) -> dict[str, object]:
@@ -133,3 +136,30 @@ def test_a_model_that_needs_more_than_a_description_is_refused() -> None:
 
     with pytest.raises(MediaError, match="needs more than a description"):
         catalog(http).inputs("fal-ai/one")
+
+
+@pytest.mark.parametrize(
+    ("key", "sent"), [("a-key", {"Authorization": "Key a-key"}), (None, {})]
+)
+def test_the_persons_key_raises_the_catalogs_rate_limit(
+    key: str | None, sent: dict[str, str]
+) -> None:
+    seen: list[Mapping[str, str] | None] = []
+
+    class Recording(FakeHttpClient):
+        def request(
+            self,
+            method: str,
+            url: str,
+            *,
+            body: Body = None,
+            headers: Mapping[str, str] | None = None,
+        ) -> Body:
+            seen.append(headers)
+            return super().request(method, url, body=body, headers=headers)
+
+    http = Recording(replies={("GET", SEARCH): {"models": []}})
+
+    FalCatalog(http, lambda: key).search("flat anime")
+
+    assert seen == [sent]
