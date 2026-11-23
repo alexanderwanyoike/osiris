@@ -39,6 +39,8 @@ class MediaSection(Gtk.Box):
         self._amount = Gtk.SpinButton.new_with_range(1, 1000, 1)
         self._amount.set_value(SUGGESTED_LIMIT if chosen is None else chosen)
         self._amount.set_visible(chosen is not None)
+        self._amount.connect(
+            "value-changed", lambda amount: self._set_limit(amount.get_value_as_int()))
         switch = Gtk.Switch(active=chosen is not None, valign=Gtk.Align.CENTER)
         switch.connect("notify::active", self._limit_switched)
         line = Gtk.Box(spacing=8)
