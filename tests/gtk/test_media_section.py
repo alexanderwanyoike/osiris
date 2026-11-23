@@ -126,3 +126,12 @@ def test_a_saved_limit_is_shown_and_opening_settings_does_not_change_it() -> Non
     assert find(page, Gtk.Switch).get_active()
     assert find(page, Gtk.SpinButton).get_value_as_int() == 30
     assert keys.images == 30
+
+
+def test_changing_the_number_saves_it() -> None:
+    keys = Keys(images=30)
+    page = section(keys)
+
+    find(page, Gtk.SpinButton).set_value(50)
+
+    assert keys.images == 50
