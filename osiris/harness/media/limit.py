@@ -35,11 +35,18 @@ class DailyLimit:
     def make(self, description: str) -> bytes:
         day = self._today().isoformat()
         if self._used(day) >= self._images:
-            raise MediaError(
-                f"Osiris has reached today's limit of {self._images} pictures."
-            )
+            raise self._reached()
         self._files.append(self._usage, f"{day}\n")
+        # Counted again after writing: two servers racing for the last picture
+        # may both stop, but can never both spend it.
+        if self._used(day) > self._images:
+            raise self._reached()
         return self._maker.make(description)
+
+    def _reached(self) -> MediaError:
+        return MediaError(
+            f"Osiris has reached today's limit of {self._images} pictures."
+        )
 
     def _used(self, day: str) -> int:
         if not self._files.exists(self._usage):
