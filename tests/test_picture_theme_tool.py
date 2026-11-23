@@ -12,7 +12,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from PIL import Image
 
-from osiris.apps.tool_server import TIERS, server
+from osiris.apps.tool_server import TIERS, instructions, server
 from osiris.harness.log import LOG_FILE, Change, HarnessLog
 from osiris.harness.media.error import MediaError
 from osiris.harness.media.pictures import Pictures
@@ -120,3 +120,10 @@ def test_a_failed_picture_reaches_the_model_with_its_reason() -> None:
 
     assert store.saved == []
     assert store.current() == "nord"
+
+
+def test_the_model_is_told_when_to_generate_a_picture_and_that_it_costs() -> None:
+    told = " ".join(instructions(auto_mode=False).split())
+
+    assert "make_picture_theme" in told
+    assert "costs the person money" in told
