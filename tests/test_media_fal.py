@@ -17,6 +17,10 @@ PICTURE = b"a picture"
 KEY = "a-secret-key"
 
 
+def fal(http: FakeHttpClient) -> FalImages:
+    return FalImages(http, KEY)
+
+
 def answer(picture: bytes = PICTURE) -> dict[str, object]:
     encoded = base64.b64encode(picture).decode()
     return {
@@ -28,7 +32,7 @@ def answer(picture: bytes = PICTURE) -> dict[str, object]:
 def test_a_description_comes_back_as_the_picture_fal_made() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): answer()})
 
-    picture = FalImages(http, "a-key").make("A misty forest at dawn")
+    picture = fal(http).make("A misty forest at dawn")
 
     assert picture == PICTURE
     assert http.requests == [
@@ -62,7 +66,7 @@ def test_a_failure_is_given_a_plain_reason_without_the_key(
     http = FakeHttpClient(replies={("POST", ENDPOINT): refusal})
 
     with pytest.raises(MediaError, match=reason) as caught:
-        FalImages(http, KEY).make("A misty forest")
+        fal(http).make("A misty forest")
 
     assert KEY not in str(caught.value)
     assert caught.value.__suppress_context__
@@ -72,7 +76,7 @@ def test_no_answer_warns_the_picture_may_still_have_been_charged() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): HttpError(0, "timed out")})
 
     with pytest.raises(MediaError, match="ask the person before trying again"):
-        FalImages(http, KEY).make("A misty forest")
+        fal(http).make("A misty forest")
 
 
 @pytest.mark.parametrize(
@@ -97,7 +101,7 @@ def test_a_request_that_breaks_is_given_a_plain_reason(
             raise failure
 
     with pytest.raises(MediaError, match=reason) as caught:
-        FalImages(Broken(), KEY).make("A misty forest")
+        fal(Broken()).make("A misty forest")
 
     assert caught.value.__suppress_context__
 
@@ -107,7 +111,7 @@ def test_a_picture_the_safety_filter_blocked_is_refused() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): blocked})
 
     with pytest.raises(MediaError, match="blocked"):
-        FalImages(http, KEY).make("A misty forest")
+        fal(http).make("A misty forest")
 
 
 @pytest.mark.parametrize(
@@ -124,4 +128,4 @@ def test_an_answer_without_a_picture_is_refused(reply: object) -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): reply})
 
     with pytest.raises(MediaError, match="did not return a picture"):
-        FalImages(http, KEY).make("A misty forest")
+        fal(http).make("A misty forest")
