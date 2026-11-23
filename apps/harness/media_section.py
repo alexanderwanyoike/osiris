@@ -36,7 +36,7 @@ class MediaSection(Gtk.Box):
 
     def _limit_row(self) -> Gtk.Widget:
         chosen = self._limit()
-        self._amount = Gtk.SpinButton.new_with_range(1, 1000, 1)
+        self._amount = Gtk.SpinButton.new_with_range(0, 99_999, 1)
         self._amount.set_value(SUGGESTED_LIMIT if chosen is None else chosen)
         self._amount.set_visible(chosen is not None)
         self._amount.connect(
