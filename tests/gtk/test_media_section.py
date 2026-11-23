@@ -7,12 +7,20 @@ from dataclasses import dataclass
 from gi.repository import Gtk
 from media_section import MediaSection
 
+from osiris.harness.media.limit_setting import SUGGESTED_LIMIT
 from tests.gtk.conftest import find, shown, widgets
 
 
 @dataclass
 class Keys:
     key: str | None = None
+    images: int | None = None
+
+    def limit(self) -> int | None:
+        return self.images
+
+    def set_limit(self, images: int | None) -> None:
+        self.images = images
 
     def connected(self) -> bool:
         return self.key is not None
@@ -25,7 +33,9 @@ class Keys:
 
 
 def section(keys: Keys) -> MediaSection:
-    return MediaSection(keys.connected, keys.save, keys.remove)
+    return MediaSection(
+        keys.connected, keys.save, keys.remove, keys.limit, keys.set_limit
+    )
 
 
 def test_without_a_key_fal_offers_to_add_one() -> None:
@@ -77,3 +87,23 @@ def test_the_section_says_what_fal_is_for_without_promising_a_limit() -> None:
 
     assert any("Themes" in text and "FAL account" in text for text in said)
     assert not any("a day" in text for text in said)
+
+
+def test_there_is_no_limit_until_the_person_turns_one_on() -> None:
+    keys = Keys()
+    page = section(keys)
+
+    assert "Daily picture limit" in shown(page)
+    assert not find(page, Gtk.Switch).get_active()
+    assert not find(page, Gtk.SpinButton).get_visible()
+    assert keys.images is None
+
+
+def test_turning_the_limit_on_suggests_a_number_and_saves_it() -> None:
+    keys = Keys()
+    page = section(keys)
+
+    find(page, Gtk.Switch).set_active(True)
+
+    assert find(page, Gtk.SpinButton).get_visible()
+    assert keys.images == SUGGESTED_LIMIT

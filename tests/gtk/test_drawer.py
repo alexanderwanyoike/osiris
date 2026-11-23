@@ -141,6 +141,12 @@ class FakeApp(Adw.Application):
     def remove_fal_key(self) -> None:
         pass
 
+    def picture_limit(self) -> int | None:
+        return None
+
+    def set_picture_limit(self, _images: int | None) -> None:
+        pass
+
 
 def drawer():
     import main
