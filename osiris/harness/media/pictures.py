@@ -30,8 +30,8 @@ class Pictures:
     files: FileSystem
     home: Path
 
-    def make(self, description: str) -> bytes:
-        return self.maker.make(description)
+    def make(self, description: str, model: str | None = None) -> bytes:
+        return self.maker.make(description, model)
 
     def keep(self, name: str, data: bytes) -> Path:
         return keep_picture(self.files, self.home, name, data)

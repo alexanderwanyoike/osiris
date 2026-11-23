@@ -30,7 +30,7 @@ class ConnectedFal:
         self._maker_for = maker_for
         self._today = today
 
-    def make(self, description: str) -> bytes:
+    def make(self, description: str, model: str | None = None) -> bytes:
         key = fal_key(self._files, self._home)
         if key is None:
             raise MediaError(
@@ -40,8 +40,8 @@ class ConnectedFal:
         fal = self._maker_for(key)
         images = daily_limit(self._files, self._home)
         if images is None:
-            return fal.make(description)
+            return fal.make(description, model)
         limited = DailyLimit(
             fal, self._files, self._home / USAGE_FILE, self._today, images=images
         )
-        return limited.make(description)
+        return limited.make(description, model)

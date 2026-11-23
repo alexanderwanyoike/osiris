@@ -30,7 +30,7 @@ class DailyLimit:
         self._today = today
         self._images = images
 
-    def make(self, description: str) -> bytes:
+    def make(self, description: str, model: str | None = None) -> bytes:
         day = self._today().isoformat()
         if self._used(day) >= self._images:
             raise self._reached()
@@ -39,7 +39,7 @@ class DailyLimit:
         # may both stop, but can never both spend it.
         if self._used(day) > self._images:
             raise self._reached()
-        return self._maker.make(description)
+        return self._maker.make(description, model)
 
     def _reached(self) -> MediaError:
         pictures = "picture" if self._images == 1 else "pictures"
