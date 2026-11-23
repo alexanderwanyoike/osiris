@@ -34,8 +34,8 @@ def test_an_older_picture_of_that_name_is_never_overwritten() -> None:
 
 def test_pictures_are_made_by_the_maker_and_kept_in_the_persons_folder() -> None:
     class Maker:
-        def make(self, description: str) -> bytes:
-            return description.encode()
+        def make(self, description: str, model: str | None = None) -> bytes:
+            return f"{description}{model or ''}".encode()
 
     files = FakeFileSystem()
     pictures = Pictures(Maker(), files, HOME)
@@ -45,3 +45,4 @@ def test_pictures_are_made_by_the_maker_and_kept_in_the_persons_folder() -> None
 
     assert path == FOLDER / "misty-forest.png"
     assert files.blobs[path] == b"forest"
+    assert pictures.make("forest by ", "vendor/model") == b"forest by vendor/model"

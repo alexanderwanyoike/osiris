@@ -53,6 +53,17 @@ def test_with_a_key_and_no_limit_a_picture_is_made_and_nothing_is_counted() -> N
     assert not files.exists(HOME / USAGE_FILE)
 
 
+def test_a_named_model_is_the_one_asked() -> None:
+    files = FakeFileSystem()
+    named = f"{RUN}/vendor/named"
+    http = FakeHttpClient(replies={("POST", named): ANSWER})
+    save_fal_key(files, HOME, "a-key")
+
+    assert connected(files, http).make("A forest", "vendor/named") == b"p"
+
+    assert http.requests[0][1] == named
+
+
 def test_a_limit_the_person_set_is_counted_and_holds() -> None:
     files = FakeFileSystem()
     http = FakeHttpClient(replies={("POST", ENDPOINT): ANSWER})

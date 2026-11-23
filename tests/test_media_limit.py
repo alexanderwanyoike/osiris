@@ -21,9 +21,11 @@ TUESDAY = date(2026, 11, 24)
 class Maker:
     failure: Exception | None = None
     asked: list[str] = field(default_factory=list)
+    models: list[str | None] = field(default_factory=list)
 
-    def make(self, description: str) -> bytes:
+    def make(self, description: str, model: str | None = None) -> bytes:
         self.asked.append(description)
+        self.models.append(model)
         if self.failure is not None:
             raise self.failure
         return b"a picture"
@@ -66,6 +68,14 @@ def test_a_limit_of_one_is_worded_as_one_picture() -> None:
 
     with pytest.raises(MediaError, match=r"limit of 1 picture\."):
         limited(Maker(), files, images=1).make("two")
+
+
+def test_the_model_asked_for_reaches_the_maker() -> None:
+    maker = Maker()
+
+    limited(maker, FakeFileSystem()).make("one", "vendor/model")
+
+    assert maker.models == ["vendor/model"]
 
 
 def test_the_limit_starts_again_the_next_day() -> None:

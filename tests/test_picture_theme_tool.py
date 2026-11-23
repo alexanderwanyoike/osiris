@@ -36,9 +36,11 @@ def png() -> bytes:
 class Maker:
     failure: Exception | None = None
     asked: list[str] = field(default_factory=list)
+    models: list[str | None] = field(default_factory=list)
 
-    def make(self, description: str) -> bytes:
+    def make(self, description: str, model: str | None = None) -> bytes:
         self.asked.append(description)
+        self.models.append(model)
         if self.failure is not None:
             raise self.failure
         return png()
