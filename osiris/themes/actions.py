@@ -23,6 +23,9 @@ from osiris.themes.from_wallpaper import intent_from
 from osiris.themes.intent import Harmony, Mood, ThemeIntent, seeds
 from osiris.themes.store import ThemeStore
 
+# A Theme's name becomes file and folder names, with prefixes and suffixes.
+_LONGEST_NAME = 64
+
 
 class ThemeActionError(ValueError):
     pass
@@ -81,6 +84,10 @@ def create_theme(
 def unused_name(store: ThemeStore, label: str) -> str:
     """The name ``label`` gives a new Theme; a label in use is refused."""
     name = slug(label)
+    if len(name) > _LONGEST_NAME:
+        raise ThemeActionError(
+            f"That label is too long; keep it to {_LONGEST_NAME} characters or fewer"
+        )
     if any(theme["name"] == name for theme in store.themes()):
         raise ThemeActionError(
             f"There is already a theme called {label}; choose another label"
