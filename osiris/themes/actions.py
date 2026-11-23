@@ -73,11 +73,7 @@ def create_theme(
         mood=_choice(Mood, mood, "mood"),
         dark=dark,
     )
-    name = slug(label)
-    if any(theme["name"] == name for theme in store.themes()):
-        raise ThemeActionError(
-            f"There is already a theme called {label}; choose another label"
-        )
+    name = unused_name(store, label)
     store.save(build(name, label, seeds(intent)))
     return name
 
