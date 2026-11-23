@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from gi.repository import Gtk
 from media_section import MediaSection
 
-from osiris.harness.media.limit import DAILY_IMAGES
 from tests.gtk.conftest import find, shown, widgets
 
 
@@ -73,8 +72,8 @@ def test_an_empty_key_is_not_saved() -> None:
     assert "Connected" not in shown(page)
 
 
-def test_the_section_says_what_fal_is_for_and_the_daily_limit() -> None:
-    assert any(
-        "Themes" in text and f"{DAILY_IMAGES} a day" in text
-        for text in shown(section(Keys()))
-    )
+def test_the_section_says_what_fal_is_for_without_promising_a_limit() -> None:
+    said = shown(section(Keys()))
+
+    assert any("Themes" in text and "FAL account" in text for text in said)
+    assert not any("a day" in text for text in said)
