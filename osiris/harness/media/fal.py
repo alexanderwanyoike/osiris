@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 from collections.abc import Callable
+from urllib.parse import urlsplit
 
 from osiris.harness.media.error import MediaError
 from osiris.platform import HttpClient, HttpError
@@ -11,6 +12,7 @@ from osiris.platform import HttpClient, HttpError
 RUN = "https://fal.run"
 DEFAULT_MODEL = "fal-ai/flux/schnell"
 _NO_PICTURE = "FAL did not return a picture."
+_LARGEST_PICTURE = 64 * 1024 * 1024
 
 _REASONS = {
     0: (
@@ -53,7 +55,7 @@ class FalImages:
             raise MediaError(_REASONS[401]) from None
         except ValueError:
             raise MediaError(_NO_PICTURE) from None
-        return _picture(answer)
+        return _picture(answer, self._http)
 
 
 def _request(description: str, accepted: frozenset[str]) -> dict[str, object]:
@@ -69,7 +71,7 @@ def _request(description: str, accepted: frozenset[str]) -> dict[str, object]:
     return {name: value for name, value in wanted.items() if name in accepted}
 
 
-def _picture(answer: object) -> bytes:
+def _picture(answer: object, http: HttpClient) -> bytes:
     missing = MediaError(_NO_PICTURE)
     if not isinstance(answer, dict):
         raise missing
@@ -80,9 +82,32 @@ def _picture(answer: object) -> bytes:
     images = answer.get("images")
     first = images[0] if isinstance(images, list) and images else None
     url = first.get("url") if isinstance(first, dict) else None
-    if not isinstance(url, str) or not url.startswith("data:image/"):
+    if not isinstance(url, str):
+        raise missing
+    if _in_fal_storage(url):
+        return _fetched(url, http)
+    if not url.startswith("data:image/"):
         raise missing
     try:
         return base64.b64decode(url.partition(",")[2], validate=True)
     except ValueError:
         raise missing from None
+
+
+def _in_fal_storage(url: str) -> bool:
+    parts = urlsplit(url)
+    host = parts.hostname or ""
+    if parts.scheme != "https":
+        return False
+    if host == "fal.media" or host.endswith(".fal.media"):
+        return True
+    return host == "storage.googleapis.com" and parts.path.startswith("/falserverless/")
+
+
+def _fetched(url: str, http: HttpClient) -> bytes:
+    try:
+        return http.download(url, limit=_LARGEST_PICTURE)
+    except HttpError:
+        raise MediaError(
+            "FAL made the picture, but Osiris could not download it."
+        ) from None
