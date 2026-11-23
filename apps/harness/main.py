@@ -88,6 +88,7 @@ from osiris.harness.history import (  # noqa: E402
 )
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.media.key import fal_key, remove_fal_key, save_fal_key  # noqa: E402
+from osiris.harness.media.limit_setting import daily_limit, set_daily_limit  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
 from osiris.harness.proposals import Proposal, skill_file, skill_path  # noqa: E402
 from osiris.harness.rail import ticks  # noqa: E402
@@ -546,7 +547,8 @@ class Drawer(Gtk.ApplicationWindow):
             on_auto_mode=self.app.set_auto_mode,
         )
         page.append(MediaSection(self.app.fal_connected, self.app.save_fal_key,
-                                 self.app.remove_fal_key))
+                                 self.app.remove_fal_key, self.app.picture_limit,
+                                 self.app.set_picture_limit))
         connectors = ConnectorsPage(
             read=self.app.read_connectors, save=self.app.save_connector,
             remove=self.app.remove_connector, states=self.app.connector_states,
@@ -1584,6 +1586,12 @@ class Application(Adw.Application):
 
     def remove_fal_key(self) -> None:
         remove_fal_key(self.files, self.home)
+
+    def picture_limit(self) -> int | None:
+        return daily_limit(self.files, self.home)
+
+    def set_picture_limit(self, images: int | None) -> None:
+        set_daily_limit(self.files, self.home, images)
 
     def set_auto_mode(self, on: bool) -> None:
         """Keep the person's choice; the tool server tells the model when it

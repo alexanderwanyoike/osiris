@@ -7,6 +7,8 @@ from pathlib import Path
 from osiris.platform import FileSystem
 
 LIMIT_FILE = ".config/osiris/media/daily-limit"
+#: Offered when the person turns a limit on; they can change it.
+SUGGESTED_LIMIT = 20
 
 
 def daily_limit(files: FileSystem, home: Path) -> int | None:
