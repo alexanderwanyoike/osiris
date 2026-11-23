@@ -43,7 +43,8 @@ class DailyLimit:
 
     def _reached(self) -> MediaError:
         return MediaError(
-            f"Osiris has reached today's limit of {self._images} pictures."
+            f"Osiris has reached today's limit of {self._images} pictures. The "
+            "person can change it in Settings, in the Media section of Models."
         )
 
     def _used(self, day: str) -> int:
