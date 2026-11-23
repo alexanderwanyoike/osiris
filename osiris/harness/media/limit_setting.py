@@ -11,7 +11,11 @@ LIMIT_FILE = ".config/osiris/media/daily-limit"
 
 def daily_limit(files: FileSystem, home: Path) -> int | None:
     path = home / LIMIT_FILE
-    return int(files.read(path).strip()) if files.exists(path) else None
+    if not files.exists(path):
+        return None
+    text = files.read(path).strip()
+    # Someone who wrote a limit meant to have one, so a typo must not lift it.
+    return int(text) if text.isascii() and text.isdigit() else 0
 
 
 def set_daily_limit(files: FileSystem, home: Path, images: int | None) -> None:
