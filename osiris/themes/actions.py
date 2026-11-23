@@ -8,13 +8,18 @@ Appearance. Errors are worded for the model to read and correct itself.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import io
+from collections.abc import Callable, Mapping
 from enum import Enum
+from pathlib import Path
 from typing import Any
+
+from PIL import Image
 
 from osiris.model.colour import Colour, InvalidColour
 from osiris.model.names import slug
 from osiris.themes.derive import build
+from osiris.themes.from_wallpaper import intent_from
 from osiris.themes.intent import Harmony, Mood, ThemeIntent, seeds
 from osiris.themes.store import ThemeStore
 
@@ -74,6 +79,43 @@ def create_theme(
             f"There is already a theme called {label}; choose another label"
         )
     store.save(build(name, label, seeds(intent)))
+    return name
+
+
+def unused_name(store: ThemeStore, label: str) -> str:
+    """The name ``label`` gives a new Theme; a label in use is refused."""
+    name = slug(label)
+    if any(theme["name"] == name for theme in store.themes()):
+        raise ThemeActionError(
+            f"There is already a theme called {label}; choose another label"
+        )
+    return name
+
+
+def create_picture_theme(
+    store: ThemeStore,
+    *,
+    label: str,
+    picture: bytes,
+    keep: Callable[[str], Path],
+) -> str:
+    """Make a User theme wearing ``picture``, its colours proposed by it.
+
+    ``keep`` stores the picture under the Theme's name and says where.
+    """
+    name = unused_name(store, label)
+    intent = intent_from(Image.open(io.BytesIO(picture)))
+    store.save(
+        {
+            **build(name, label, seeds(intent)),
+            "intent": {
+                "seed": intent.seed.hex,
+                "harmony": intent.harmony.value,
+                "mood": intent.mood.value,
+            },
+            "wallpaper": str(keep(name)),
+        }
+    )
     return name
 
 
