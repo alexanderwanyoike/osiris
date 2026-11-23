@@ -45,6 +45,6 @@ if __name__ == "__main__":
         files, home, lambda key: FalImages(http, key, catalog.inputs), date.today)
     server(EngineStore(), programs, HarnessLog(files, home / LOG_FILE), wallpapers,
            skins=EngineSkinStore(),
-           pictures=Pictures(fal, files, home),
+           pictures=Pictures(fal, files, home, catalog),
            auto_mode=auto_mode_on(files, home),
            skill_taken=lambda name: files.exists(home / SKILLS / name)).run()

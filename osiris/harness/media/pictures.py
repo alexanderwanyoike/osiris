@@ -5,7 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from osiris.harness.media.image_model import ImageModel
 from osiris.harness.media.maker import ImageMaker
+from osiris.harness.media.model_catalog import ModelCatalog
+from osiris.harness.media.model_setting import DEFAULT_MODEL, saved_model
 from osiris.platform import FileSystem
 
 PICTURES = "Pictures/Osiris"
@@ -29,6 +32,13 @@ class Pictures:
     maker: ImageMaker
     files: FileSystem
     home: Path
+    catalog: ModelCatalog
+
+    def find(self, words: str) -> list[ImageModel]:
+        return self.catalog.search(words)
+
+    def default_model(self) -> str:
+        return saved_model(self.files, self.home) or DEFAULT_MODEL
 
     def make(self, description: str, model: str | None = None) -> bytes:
         return self.maker.make(description, model)

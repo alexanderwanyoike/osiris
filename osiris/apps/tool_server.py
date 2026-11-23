@@ -11,6 +11,7 @@ from __future__ import annotations
 import functools
 from collections.abc import Callable
 from contextvars import ContextVar
+from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -117,6 +118,7 @@ TIERS = {
     "check_program": Tier.LOOK,
     "make_wallpaper": Tier.UNDOABLE,
     "make_picture_theme": Tier.UNDOABLE,
+    "find_image_models": Tier.LOOK,
     "list_skins": Tier.LOOK,
     "create_skin": Tier.UNDOABLE,
     "check_skin": Tier.LOOK,
@@ -460,6 +462,17 @@ def _picture_tool(
 ) -> None:
     if pictures is None:
         return
+
+    @tools.tool(annotations=ANNOTATIONS[TIERS["find_image_models"]])
+    @explained
+    def find_image_models(search: str = "") -> dict[str, object]:
+        """FAL's image models and the person's default one. The search matches
+        model names better than styles; leave it empty to see a selection.
+        """
+        return {
+            "default": pictures.default_model(),
+            "models": [asdict(model) for model in pictures.find(search)],
+        }
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["make_picture_theme"]])
     @explained
