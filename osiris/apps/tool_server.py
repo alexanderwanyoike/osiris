@@ -463,16 +463,18 @@ def _picture_tool(
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["make_picture_theme"]])
     @explained
-    def make_picture_theme(label: str, picture: str) -> str:
+    def make_picture_theme(label: str, picture: str, image_model: str = "") -> str:
         """Generate a picture, make a theme from it and apply it to the desktop.
         The picture is the wallpaper and Osiris takes the colours from it. Each
         call can cost the person money, so make one unless they ask for more.
 
         label: what the person will see it called, such as "Misty Forest".
         picture: what the picture shows, in a sentence or two.
+        image_model: a model's exact id from find_image_models, only when the
+            person asked for that model; leave it out to use their default.
         """
         actions.unused_name(store, label)
-        data = pictures.make(f"{picture}. {PICTURE_STYLE}")
+        data = pictures.make(f"{picture}. {PICTURE_STYLE}", image_model or None)
         name = actions.create_picture_theme(
             store, label=label, picture=data, keep=pictures.keep
         )
