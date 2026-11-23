@@ -35,18 +35,12 @@ class FalImages:
 
     def make(self, description: str, model: str | None = None) -> bytes:
         chosen = model or DEFAULT_MODEL
-        self._inputs(chosen)
+        body = _request(description, self._inputs(chosen))
         try:
             answer = self._http.request(
                 "POST",
                 f"{RUN}/{chosen}",
-                body={
-                    "prompt": description,
-                    "image_size": {"width": 1920, "height": 1080},
-                    "num_images": 1,
-                    "output_format": "png",
-                    "sync_mode": True,
-                },
+                body=body,
                 headers={"Authorization": f"Key {self._key}"},
             )
         except HttpError as error:
@@ -60,6 +54,19 @@ class FalImages:
         except ValueError:
             raise MediaError(_NO_PICTURE) from None
         return _picture(answer)
+
+
+def _request(description: str, accepted: frozenset[str]) -> dict[str, object]:
+    wanted: dict[str, object] = {
+        "prompt": description,
+        "image_size": {"width": 1920, "height": 1080},
+        "num_images": 1,
+        "output_format": "png",
+        "sync_mode": True,
+    }
+    if "image_size" not in accepted:
+        wanted["aspect_ratio"] = "16:9"
+    return {name: value for name, value in wanted.items() if name in accepted}
 
 
 def _picture(answer: object) -> bytes:
