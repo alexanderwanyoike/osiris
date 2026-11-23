@@ -1,6 +1,6 @@
 """The person's FAL key, in a file only they can read.
 
-A file rather than the Engine's accounts, because FAL is a media Provider the
+A file rather than the Engine's accounts, because FAL is a Media provider the
 Engine does not know, and the tool server is a separate process that needs it.
 """
 
