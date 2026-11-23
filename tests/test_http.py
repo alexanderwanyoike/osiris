@@ -58,6 +58,13 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/slow":
             time.sleep(0.6)
             return
+        if self.path == "/cut-off-error":
+            self.send_response(500)
+            self.send_header("Content-Length", "10")
+            self.end_headers()
+            self.wfile.write(b"{}")
+            self.close_connection = True
+            return
         self._reply(200, {"auth": self.headers.get("Authorization")})
 
     def do_POST(self) -> None:
@@ -108,6 +115,11 @@ class TestUrllibClient:
         with pytest.raises(HttpError) as raised:
             UrllibClient(timeout=0.2).request("GET", f"{server}{path}")
         assert raised.value.status == 0
+
+    def test_an_error_whose_body_is_cut_off_keeps_its_status(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().request("GET", f"{server}/cut-off-error")
+        assert raised.value.status == 500
 
     def test_a_redirect_to_another_host_does_not_carry_the_credentials(
         self, server: str
