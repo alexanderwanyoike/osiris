@@ -121,6 +121,24 @@ class TestOwnership:
         assert filesystem.owners[plank / "dock1" / "item"] == 1000
 
 
+def test_bytes_are_written_with_the_parent_directories(tmp_path: Path) -> None:
+    path = tmp_path / "deep" / "picture.png"
+
+    RealFileSystem().write_bytes(path, b"\x89PNG")
+
+    assert path.read_bytes() == b"\x89PNG"
+
+
+def test_the_fake_keeps_bytes_and_says_they_exist() -> None:
+    files = FakeFileSystem()
+    path = Path("/home/tester/deep/picture.png")
+
+    files.write_bytes(path, b"\x89PNG")
+
+    assert files.blobs[path] == b"\x89PNG"
+    assert files.exists(path)
+
+
 @pytest.mark.parametrize("existing", [False, True])
 def test_a_private_file_is_never_open_to_others_even_when_writing_fails(
     tmp_path: Path, existing: bool
