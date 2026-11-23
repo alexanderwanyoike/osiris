@@ -12,6 +12,7 @@ import urllib.error
 import urllib.request
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
+from http.client import HTTPException
 from typing import Protocol, runtime_checkable
 
 Body = object | None
@@ -78,6 +79,8 @@ class UrllibClient:
             ) from error
         except urllib.error.URLError as error:
             raise HttpError(0, str(error.reason)) from error
+        except (OSError, HTTPException) as error:
+            raise HttpError(0, str(error)) from error
         return json.loads(text) if text.strip() else None
 
     def lines(
