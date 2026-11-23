@@ -70,6 +70,22 @@ class TestFileSystem:
         filesystem.remove_tree(root / "gone")
         assert not filesystem.exists(root / "gone" / "child")
 
+    def test_bytes_are_listed_copied_and_removed_like_any_file(
+        self, filesystem: FileSystem, root: Path
+    ) -> None:
+        picture = root / "pictures" / "a.png"
+        copied = root / "pictures" / "b.png"
+        filesystem.write_bytes(picture, b"picture")
+
+        filesystem.copy(picture, copied)
+        assert filesystem.list_directory(root / "pictures") == [picture, copied]
+
+        filesystem.remove(picture)
+        assert not filesystem.exists(picture)
+
+        filesystem.remove_tree(root / "pictures")
+        assert not filesystem.exists(copied)
+
 
 class TestOwnership:
     """The bug this port was built to make impossible.
