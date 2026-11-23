@@ -13,6 +13,7 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk  # noqa: E402
 
 from badge import badge  # noqa: E402
+from provider_parts import add_key, connected_chip  # noqa: E402
 
 from osiris.harness.accounts import FEATURED  # noqa: E402
 
@@ -126,23 +127,15 @@ class ProvidersPage(Gtk.Box):
         row.append(Gtk.Label(label=provider.name, xalign=0, hexpand=True))
         section.append(row)
         if provider.connected:
-            chip = Gtk.Box(spacing=4, valign=Gtk.Align.CENTER)
-            chip.add_css_class("harness-connected")
-            chip.append(Gtk.Image(icon_name="object-select-symbolic"))
-            chip.append(Gtk.Label(label="Connected"))
-            row.append(chip)
+            row.append(connected_chip())
             return section
         for method in provider.methods:
             if method.kind == "oauth":
                 section.append(self._sign_in_button(provider.id, method))
         if any(m.kind == "key" for m in provider.methods):
-            form = self._key_form(provider.id)
-            form.set_visible(False)
-            add = Gtk.Button(label="Add key", halign=Gtk.Align.START)
-            add.add_css_class("flat")
-            add.connect("clicked", lambda _b: (form.set_visible(True), add.set_visible(False)))
-            section.append(add)
-            section.append(form)
+            add_key(section, lambda key: self._background(
+                lambda: self._accounts.connect_key(provider.id, key),
+                lambda _result: self.reload()))
         return section
 
     def _filter(self, *_args) -> None:
@@ -197,16 +190,3 @@ class ProvidersPage(Gtk.Box):
         self._problem.set_text(problems.get(state.status, ""))
         self._problem.set_visible(state.status in problems)
         self.reload()
-
-    def _key_form(self, provider: str) -> Gtk.Widget:
-        entry = Gtk.PasswordEntry(placeholder_text="API key", hexpand=True,
-                                  show_peek_icon=True)
-        save = Gtk.Button(label="Save")
-        save.connect("clicked", lambda _b: self._background(
-            lambda: self._accounts.connect_key(provider, entry.get_text().strip()),
-            lambda _result: self.reload()))
-        form = Gtk.Box(spacing=6)
-        form.add_css_class("harness-key-form")
-        form.append(entry)
-        form.append(save)
-        return form
