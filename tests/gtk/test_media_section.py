@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import pytest
 from gi.repository import Gtk
 from media_section import MediaSection
 
@@ -126,6 +127,15 @@ def test_a_saved_limit_is_shown_and_opening_settings_does_not_change_it() -> Non
     assert find(page, Gtk.Switch).get_active()
     assert find(page, Gtk.SpinButton).get_value_as_int() == 30
     assert keys.images == 30
+
+
+@pytest.mark.parametrize("saved", [0, 5000])
+def test_the_number_shown_is_the_limit_in_force(saved: int) -> None:
+    keys = Keys(images=saved)
+    page = section(keys)
+
+    assert find(page, Gtk.SpinButton).get_value_as_int() == saved
+    assert keys.images == saved
 
 
 def test_changing_the_number_saves_it() -> None:
