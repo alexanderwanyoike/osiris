@@ -39,7 +39,7 @@ def test_removing_the_limit_leaves_none() -> None:
     assert not files.exists(HOME / LIMIT_FILE)
 
 
-@pytest.mark.parametrize("written", ["", "twenty", "-5", "2.5"])
+@pytest.mark.parametrize("written", ["", "twenty", "-5", "2.5", "9" * 5000])
 def test_a_limit_mistyped_by_hand_stops_spending_rather_than_lifting_it(
     written: str,
 ) -> None:
