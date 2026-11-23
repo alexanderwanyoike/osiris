@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from urllib.parse import urlencode
 
 from osiris.harness.media.error import MediaError
@@ -22,6 +23,11 @@ class FalCatalog:
         )
         return [_model(entry) for entry in self._entries(f"{CATALOG}?{query}")]
 
+    def inputs(self, model: str) -> frozenset[str]:
+        query = urlencode({"endpoint_id": model, "expand": "openapi-3.0"})
+        entries = self._entries(f"{CATALOG}?{query}")
+        return _fields(entries[0], model) if entries else frozenset()
+
     def _entries(self, url: str) -> list[dict[str, object]]:
         try:
             answer = self._http.request("GET", url)
@@ -31,6 +37,17 @@ class FalCatalog:
         if not isinstance(models, list):
             raise MediaError(_UNREADABLE)
         return [entry for entry in models if isinstance(entry, dict)]
+
+
+def _fields(entry: dict[str, object], model: str) -> frozenset[str]:
+    spec: Any = entry.get("openapi")
+    try:
+        body = spec["paths"][f"/{model}"]["post"]["requestBody"]
+        schema = body["content"]["application/json"]["schema"]["$ref"]
+        name = schema.rsplit("/", 1)[1]
+        return frozenset(spec["components"]["schemas"][name]["properties"])
+    except KeyError, TypeError, AttributeError, IndexError:
+        raise MediaError(_UNREADABLE) from None
 
 
 def _model(entry: dict[str, object]) -> ImageModel:
