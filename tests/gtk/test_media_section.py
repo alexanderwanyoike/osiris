@@ -48,3 +48,14 @@ def test_a_saved_key_connects_fal_and_is_no_longer_on_screen() -> None:
     assert keys.key == "a-secret-key"
     assert "Connected" in shown(page)
     assert not any(isinstance(widget, Gtk.PasswordEntry) for widget in widgets(page))
+
+
+def test_removing_the_key_disconnects_fal_and_offers_to_add_one_again() -> None:
+    keys = Keys("a-secret-key")
+    page = section(keys)
+
+    find(page, Gtk.Button, "Remove key").emit("clicked")
+
+    assert keys.key is None
+    assert "Connected" not in shown(page)
+    assert find(page, Gtk.Button, "Add key").get_visible()
