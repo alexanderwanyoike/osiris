@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import base64
 
+import pytest
+
+from osiris.harness.media.error import MediaError
 from osiris.harness.media.fal import ENDPOINT, FalImages
-from osiris.platform import FakeHttpClient
+from osiris.platform import FakeHttpClient, HttpError
 
 PICTURE = b"a picture"
+KEY = "a-secret-key"
 
 
 def answer(picture: bytes = PICTURE) -> dict[str, object]:
@@ -37,3 +41,25 @@ def test_a_description_comes_back_as_the_picture_fal_made() -> None:
             },
         )
     ]
+
+
+@pytest.mark.parametrize(
+    ("status", "reason"),
+    [
+        (401, "did not accept the key"),
+        (403, "out of credit"),
+        (0, "could not reach FAL"),
+        (500, "FAL could not make the picture"),
+    ],
+)
+def test_a_failure_is_given_a_plain_reason_without_the_key(
+    status: int, reason: str
+) -> None:
+    refusal = HttpError(status, f"rejected {KEY}")
+    http = FakeHttpClient(replies={("POST", ENDPOINT): refusal})
+
+    with pytest.raises(MediaError, match=reason) as caught:
+        FalImages(http, KEY).make("A misty forest")
+
+    assert KEY not in str(caught.value)
+    assert caught.value.__suppress_context__
