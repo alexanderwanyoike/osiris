@@ -274,11 +274,14 @@ is written into the person's own opencode configuration.
 | `list_themes` | a look | the themes, light or dark, and which is applied | |
 | `create_theme` | an undoable change | a User theme from a Theme intent; never replaces one | deletes it |
 | `apply_theme` | an undoable change | applies a theme to the whole desktop | applies the one it replaced |
+| `make_picture_theme` | an undoable change that costs money | generates a picture through FAL, makes a theme from it and applies it | deletes the theme and applies the one it replaced; the picture stays in `~/Pictures/Osiris` and its cost is spent |
 
 opencode runs MCP tools from its code mode (`tools.osiris.apply_theme(...)`),
 and checks each call as the action `osiris_<tool>`. The starting rules allow
 `osiris_*`, since every tool only looks or makes a reversible change, so they run without a
-card; the tier is a hint to the model, not a decision. The model never writes a
+card; the tier is a hint to the model, not a decision. `make_picture_theme` also
+spends from the person's FAL account, with no limit unless they set a daily one
+in Settings. The model never writes a
 colour: the seed is a hex colour whose hue alone counts, and harmony and mood
 are fixed choices.
 
