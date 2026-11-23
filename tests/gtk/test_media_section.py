@@ -167,6 +167,29 @@ def test_a_number_typed_just_before_closing_is_saved() -> None:
     assert keys.images == 5
 
 
+@pytest.mark.parametrize("typed", ["", "abc", "-5"])
+def test_a_field_left_blank_or_unreadable_keeps_the_saved_limit(typed: str) -> None:
+    keys = Keys(images=20)
+    page = section(keys)
+    window = Gtk.Window(child=page)
+    window.present()
+    settle()
+    amount = find(page, Gtk.SpinButton)
+
+    amount.set_text(typed)
+    amount.update()
+    settle()
+
+    assert keys.images == 20
+    assert amount.get_value_as_int() == 20
+
+    amount.set_value(21)
+
+    assert keys.images == 21
+    window.close()
+    settle()
+
+
 def test_a_number_typed_before_turning_the_limit_off_does_not_bring_it_back() -> None:
     keys = Keys(images=20)
     page = section(keys)
