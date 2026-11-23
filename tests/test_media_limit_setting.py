@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from osiris.harness.media.limit_setting import (
     LIMIT_FILE,
     daily_limit,
@@ -35,3 +37,13 @@ def test_removing_the_limit_leaves_none() -> None:
 
     assert daily_limit(files, HOME) is None
     assert not files.exists(HOME / LIMIT_FILE)
+
+
+@pytest.mark.parametrize("written", ["", "twenty", "-5", "2.5"])
+def test_a_limit_mistyped_by_hand_stops_spending_rather_than_lifting_it(
+    written: str,
+) -> None:
+    files = FakeFileSystem()
+    files.write(HOME / LIMIT_FILE, written)
+
+    assert daily_limit(files, HOME) == 0
