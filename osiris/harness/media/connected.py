@@ -8,11 +8,11 @@ from datetime import date
 from pathlib import Path
 
 from osiris.harness.media.error import MediaError
-from osiris.harness.media.fal import FalImages
 from osiris.harness.media.key import fal_key
 from osiris.harness.media.limit import DailyLimit
 from osiris.harness.media.limit_setting import daily_limit
-from osiris.platform import FileSystem, HttpClient
+from osiris.harness.media.maker import ImageMaker
+from osiris.platform import FileSystem
 
 USAGE_FILE = ".config/osiris/media/images"
 
@@ -22,12 +22,12 @@ class ConnectedFal:
         self,
         files: FileSystem,
         home: Path,
-        http: HttpClient,
+        maker_for: Callable[[str], ImageMaker],
         today: Callable[[], date],
     ) -> None:
         self._files = files
         self._home = home
-        self._http = http
+        self._maker_for = maker_for
         self._today = today
 
     def make(self, description: str) -> bytes:
@@ -37,7 +37,7 @@ class ConnectedFal:
                 "FAL is not connected. The person can add a key in Settings, "
                 "in the Media section of Models."
             )
-        fal = FalImages(self._http, key)
+        fal = self._maker_for(key)
         images = daily_limit(self._files, self._home)
         if images is None:
             return fal.make(description)

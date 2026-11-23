@@ -20,6 +20,7 @@ from theme_store import EngineStore, user_wallpapers  # noqa: E402
 from osiris.apps.tool_server import server  # noqa: E402
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
 from osiris.harness.media.connected import ConnectedFal  # noqa: E402
+from osiris.harness.media.fal import FalImages  # noqa: E402
 from osiris.harness.media.pictures import Pictures  # noqa: E402
 from osiris.harness.proposals import SKILLS  # noqa: E402
 from osiris.harness.trust import auto_mode_on  # noqa: E402
@@ -37,7 +38,8 @@ if __name__ == "__main__":
     programs = Programs(files, runner, home)
     wallpapers = user_wallpapers(files, runner, home)
     # A picture takes seconds, and longer when FAL is busy.
-    fal = ConnectedFal(files, home, UrllibClient(timeout=120), date.today)
+    http = UrllibClient(timeout=120)
+    fal = ConnectedFal(files, home, lambda key: FalImages(http, key), date.today)
     server(EngineStore(), programs, HarnessLog(files, home / LOG_FILE), wallpapers,
            skins=EngineSkinStore(),
            pictures=Pictures(fal, files, home),

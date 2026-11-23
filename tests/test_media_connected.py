@@ -10,7 +10,7 @@ import pytest
 
 from osiris.harness.media.connected import USAGE_FILE, ConnectedFal
 from osiris.harness.media.error import MediaError
-from osiris.harness.media.fal import ENDPOINT
+from osiris.harness.media.fal import ENDPOINT, FalImages
 from osiris.harness.media.key import save_fal_key
 from osiris.harness.media.limit_setting import set_daily_limit
 from osiris.platform import FakeFileSystem, FakeHttpClient
@@ -24,7 +24,7 @@ ANSWER = {
 
 
 def connected(files: FakeFileSystem, http: FakeHttpClient) -> ConnectedFal:
-    return ConnectedFal(files, HOME, http, lambda: MONDAY)
+    return ConnectedFal(files, HOME, lambda key: FalImages(http, key), lambda: MONDAY)
 
 
 def test_without_a_key_nothing_is_sent_or_counted() -> None:
