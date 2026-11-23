@@ -38,7 +38,9 @@ def test_an_empty_search_lists_what_fal_offers() -> None:
 
 
 def described(
-    category: str = "text-to-image", status: str = "active"
+    category: str = "text-to-image",
+    status: str = "active",
+    required: tuple[str, ...] = ("prompt",),
 ) -> dict[str, object]:
     return {
         "models": [
@@ -63,7 +65,10 @@ def described(
                     },
                     "components": {
                         "schemas": {
-                            "OneInput": {"properties": {"prompt": {}, "image_size": {}}}
+                            "OneInput": {
+                                "required": list(required),
+                                "properties": {"prompt": {}, "image_size": {}},
+                            }
                         }
                     },
                 },
@@ -118,3 +123,11 @@ def test_vector_models_are_not_offered_because_they_cannot_be_a_wallpaper() -> N
     ]
     with pytest.raises(MediaError, match="not an image model"):
         FalCatalog(http).inputs(vector)
+
+
+def test_a_model_that_needs_more_than_a_description_is_refused() -> None:
+    answer = described(required=("prompt", "image_url"))
+    http = FakeHttpClient(replies={("GET", DETAILS): answer})
+
+    with pytest.raises(MediaError, match="needs more than a description"):
+        FalCatalog(http).inputs("fal-ai/one")
