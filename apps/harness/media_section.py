@@ -41,6 +41,8 @@ class MediaSection(Gtk.Box):
             add_key(self._card, self._saved)
 
     def _saved(self, key: str) -> None:
+        if not key:
+            return
         self._save(key)
         self._draw()
 
