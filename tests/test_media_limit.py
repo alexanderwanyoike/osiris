@@ -65,3 +65,18 @@ def test_the_limit_starts_again_the_next_day() -> None:
     limited(Maker(), files, images=1).make("monday")
 
     assert limited(Maker(), files, TUESDAY, images=1).make("tuesday") == b"a picture"
+
+
+def test_two_tool_servers_at_the_last_picture_cannot_both_spend_it() -> None:
+    class Racing(FakeFileSystem):
+        def append(self, path: Path, text: str) -> None:
+            # The other tool server takes the last picture just before this one.
+            super().append(path, text)
+            super().append(path, text)
+
+    maker, files = Maker(), Racing()
+
+    with pytest.raises(MediaError, match="limit of 1 picture"):
+        limited(maker, files, images=1).make("one")
+
+    assert maker.asked == []
