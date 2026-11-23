@@ -77,9 +77,7 @@ class UrllibClient:
             with _OPENER.open(request, timeout=self._timeout) as response:
                 text = response.read().decode()
         except urllib.error.HTTPError as error:
-            raise HttpError(
-                error.code, error.read().decode(errors="replace")
-            ) from error
+            raise HttpError(error.code, _error_body(error)) from error
         except urllib.error.URLError as error:
             raise HttpError(0, str(error.reason)) from error
         except (OSError, HTTPException) as error:
@@ -93,15 +91,20 @@ class UrllibClient:
         try:
             # No read timeout: an event stream is quiet for as long as nothing
             # happens, and its heartbeats are the server's business.
-            with urllib.request.urlopen(request) as response:
+            with _OPENER.open(request) as response:
                 for raw in response:
                     yield raw.decode().rstrip("\r\n")
         except urllib.error.HTTPError as error:
-            raise HttpError(
-                error.code, error.read().decode(errors="replace")
-            ) from error
+            raise HttpError(error.code, _error_body(error)) from error
         except urllib.error.URLError as error:
             raise HttpError(0, str(error.reason)) from error
+
+
+def _error_body(error: urllib.error.HTTPError) -> str:
+    try:
+        return error.read().decode(errors="replace")
+    except OSError, HTTPException:
+        return ""
 
 
 @dataclass
