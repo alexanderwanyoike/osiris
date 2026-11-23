@@ -107,3 +107,22 @@ def test_turning_the_limit_on_suggests_a_number_and_saves_it() -> None:
 
     assert find(page, Gtk.SpinButton).get_visible()
     assert keys.images == SUGGESTED_LIMIT
+
+
+def test_turning_the_limit_off_removes_it() -> None:
+    keys = Keys(images=30)
+    page = section(keys)
+
+    find(page, Gtk.Switch).set_active(False)
+
+    assert keys.images is None
+    assert not find(page, Gtk.SpinButton).get_visible()
+
+
+def test_a_saved_limit_is_shown_and_opening_settings_does_not_change_it() -> None:
+    keys = Keys(images=30)
+    page = section(keys)
+
+    assert find(page, Gtk.Switch).get_active()
+    assert find(page, Gtk.SpinButton).get_value_as_int() == 30
+    assert keys.images == 30
