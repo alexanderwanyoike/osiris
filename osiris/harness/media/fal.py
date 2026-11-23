@@ -11,7 +11,10 @@ ENDPOINT = "https://fal.run/fal-ai/flux/schnell"
 _NO_PICTURE = "FAL did not return a picture."
 
 _REASONS = {
-    0: "Osiris could not reach FAL; check the connection.",
+    0: (
+        "Osiris could not reach FAL; check the connection. The picture may still "
+        "have been charged, so ask the person before trying again."
+    ),
     401: "FAL did not accept the key; check it in Settings.",
     403: "FAL refused the request; the account may be out of credit.",
 }
