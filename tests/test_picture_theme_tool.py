@@ -15,6 +15,8 @@ from PIL import Image
 from osiris.apps.tool_server import TIERS, instructions, server
 from osiris.harness.log import LOG_FILE, Change, HarnessLog
 from osiris.harness.media.error import MediaError
+from osiris.harness.media.image_model import ImageModel
+from osiris.harness.media.model_setting import DEFAULT_MODEL
 from osiris.harness.media.pictures import Pictures
 from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem, FakeRunner
@@ -46,6 +48,16 @@ class Maker:
         return png()
 
 
+class Catalog:
+    def search(self, _words: str) -> list[ImageModel]:
+        return [ImageModel("vendor/flat", "Flat", "Draws flat pictures")]
+
+    def inputs(self, model: str) -> frozenset[str]:
+        if model != "vendor/flat":
+            raise MediaError(f"{model} is not an image model FAL offers")
+        return frozenset({"prompt"})
+
+
 def tool_server(
     store: FakeThemeStore, maker: Maker, log: HarnessLog, files: FakeFileSystem
 ) -> MCPServer:
@@ -55,7 +67,7 @@ def tool_server(
         Programs(files, runner, HOME),
         log,
         UserWallpapers(files, runner, HOME / "wallpapers", ""),
-        pictures=Pictures(maker, files, HOME),
+        pictures=Pictures(maker, files, HOME, Catalog()),
     )
 
 
@@ -143,6 +155,22 @@ def test_with_no_model_named_the_default_is_left_to_decide() -> None:
     )
 
     assert maker.models == [None]
+
+
+def test_the_model_can_see_fals_image_models_and_the_default() -> None:
+    files = FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+
+    reply = asyncio.run(
+        tool_server(nord(), Maker(), log, files).call_tool(
+            "find_image_models", {"search": "flat"}
+        )
+    )
+
+    text = reply.content[0].text
+    assert "vendor/flat" in text
+    assert DEFAULT_MODEL in text
+    assert TIERS["find_image_models"] is Tier.LOOK
 
 
 def test_a_label_in_use_is_refused_before_anything_is_spent() -> None:

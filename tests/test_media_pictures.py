@@ -6,6 +6,7 @@ from pathlib import Path
 
 from osiris.harness.media.pictures import Pictures, keep_picture
 from osiris.platform import FakeFileSystem
+from tests.test_picture_theme_tool import Catalog
 
 HOME = Path("/home/tester")
 FOLDER = HOME / "Pictures/Osiris"
@@ -38,7 +39,7 @@ def test_pictures_are_made_by_the_maker_and_kept_in_the_persons_folder() -> None
             return f"{description}{model or ''}".encode()
 
     files = FakeFileSystem()
-    pictures = Pictures(Maker(), files, HOME)
+    pictures = Pictures(Maker(), files, HOME, Catalog())
 
     data = pictures.make("forest")
     path = pictures.keep("misty-forest", data)
