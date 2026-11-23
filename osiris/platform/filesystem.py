@@ -197,19 +197,28 @@ class FakeFileSystem:
     def copy(
         self, source: Path, destination: Path, *, owner: Identity | None = None
     ) -> None:
+        if source in self.blobs:
+            self.make_directory(destination.parent, owner=owner)
+            self.blobs[destination] = self.blobs[source]
+            if owner is not None:
+                self.owners[destination] = owner.uid
+            return
         self.write(destination, self.files.get(source, ""), owner=owner)
 
     def remove(self, path: Path) -> None:
         self.files.pop(path, None)
+        self.blobs.pop(path, None)
 
     def remove_tree(self, path: Path) -> None:
         self.files = {p: t for p, t in self.files.items() if path not in p.parents}
+        self.blobs = {p: b for p, b in self.blobs.items() if path not in p.parents}
         self.directories = {d for d in self.directories if path not in d.parents}
         self.directories.discard(path)
 
     def list_directory(self, path: Path) -> list[Path]:
         return sorted(
             {p for p in self.files if p.parent == path}
+            | {p for p in self.blobs if p.parent == path}
             | {d for d in self.directories if d.parent == path}
         )
 
