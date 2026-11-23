@@ -63,3 +63,28 @@ def test_a_failure_is_given_a_plain_reason_without_the_key(
 
     assert KEY not in str(caught.value)
     assert caught.value.__suppress_context__
+
+
+def test_a_picture_the_safety_filter_blocked_is_refused() -> None:
+    blocked = {**answer(), "has_nsfw_concepts": [True]}
+    http = FakeHttpClient(replies={("POST", ENDPOINT): blocked})
+
+    with pytest.raises(MediaError, match="blocked"):
+        FalImages(http, KEY).make("A misty forest")
+
+
+@pytest.mark.parametrize(
+    "reply",
+    [
+        None,
+        {},
+        {"images": []},
+        {"images": [{"url": "https://elsewhere.example/picture.png"}]},
+        {"images": [{"url": "data:image/png;base64,not base64!"}]},
+    ],
+)
+def test_an_answer_without_a_picture_is_refused(reply: object) -> None:
+    http = FakeHttpClient(replies={("POST", ENDPOINT): reply})
+
+    with pytest.raises(MediaError, match="did not return a picture"):
+        FalImages(http, KEY).make("A misty forest")
