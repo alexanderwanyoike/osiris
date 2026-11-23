@@ -129,7 +129,7 @@ TIERS = {
 }
 
 #: Added to each description, so the picture works behind a desktop.
-PICTURE_STYLE = "wide desktop wallpaper, cinematic, calm composition, no text"
+PICTURE_STYLE = "wide desktop wallpaper, no text"
 
 #: A seed as the model must give it; words like "dusk blue" are refused.
 Seed = Annotated[str, Field(pattern="^#[0-9a-fA-F]{6}$")]
