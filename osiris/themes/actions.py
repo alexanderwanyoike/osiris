@@ -100,7 +100,10 @@ def create_picture_theme(
     ``keep`` stores the picture under the Theme's name and says where.
     """
     name = unused_name(store, label)
-    intent = intent_from(Image.open(io.BytesIO(picture)))
+    try:
+        intent = intent_from(Image.open(io.BytesIO(picture)))
+    except (OSError, ValueError) as error:
+        raise ThemeActionError("The picture could not be read") from error
     store.save(
         {
             **build(name, label, seeds(intent)),
