@@ -13,6 +13,7 @@ from osiris.harness.media.error import MediaError
 from osiris.harness.media.fal import DEFAULT_MODEL, RUN, FalImages
 from osiris.harness.media.key import save_fal_key
 from osiris.harness.media.limit_setting import set_daily_limit
+from osiris.harness.media.model_setting import save_model
 from osiris.platform import FakeFileSystem, FakeHttpClient
 
 HOME = Path("/home/tester")
@@ -60,6 +61,30 @@ def test_a_named_model_is_the_one_asked() -> None:
     save_fal_key(files, HOME, "a-key")
 
     assert connected(files, http).make("A forest", "vendor/named") == b"p"
+
+    assert http.requests[0][1] == named
+
+
+def test_the_persons_default_model_is_used_when_none_is_named() -> None:
+    files = FakeFileSystem()
+    saved = f"{RUN}/vendor/saved"
+    http = FakeHttpClient(replies={("POST", saved): ANSWER})
+    save_fal_key(files, HOME, "a-key")
+    save_model(files, HOME, "vendor/saved")
+
+    connected(files, http).make("A forest")
+
+    assert http.requests[0][1] == saved
+
+
+def test_a_model_named_for_one_picture_beats_the_default() -> None:
+    files = FakeFileSystem()
+    named = f"{RUN}/vendor/named"
+    http = FakeHttpClient(replies={("POST", named): ANSWER})
+    save_fal_key(files, HOME, "a-key")
+    save_model(files, HOME, "vendor/saved")
+
+    connected(files, http).make("A forest", "vendor/named")
 
     assert http.requests[0][1] == named
 
