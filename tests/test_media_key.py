@@ -37,3 +37,13 @@ def test_a_key_edited_by_hand_with_stray_characters_still_reads_clean() -> None:
     files.write(KEY_PATH, "\b\ba-key\n", mode=0o600)
 
     assert media_key.fal_key(files, HOME) == "a-key"
+
+
+def test_removing_the_key_disconnects_fal() -> None:
+    files = FakeFileSystem()
+    media_key.save_fal_key(files, HOME, "a-key")
+
+    media_key.remove_fal_key(files, HOME)
+
+    assert media_key.fal_key(files, HOME) is None
+    assert not files.exists(KEY_PATH)
