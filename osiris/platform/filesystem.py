@@ -36,6 +36,8 @@ class FileSystem(Protocol):
         mode: int | None = None,
     ) -> None: ...
 
+    def write_bytes(self, path: Path, data: bytes) -> None: ...
+
     def append(self, path: Path, text: str) -> None: ...
 
     def make_directory(self, path: Path, *, owner: Identity | None = None) -> None: ...
@@ -78,6 +80,10 @@ class RealFileSystem:
                 os.fchmod(descriptor, mode)
                 handle.write(text)
         self._give(path, owner)
+
+    def write_bytes(self, path: Path, data: bytes) -> None:
+        self.make_directory(path.parent)
+        path.write_bytes(data)
 
     def append(self, path: Path, text: str) -> None:
         self.make_directory(path.parent)
@@ -147,6 +153,7 @@ class FakeFileSystem:
     directories: set[Path] = field(default_factory=set)
     owners: dict[Path, int] = field(default_factory=dict)
     modes: dict[Path, int] = field(default_factory=dict)
+    blobs: dict[Path, bytes] = field(default_factory=dict)
 
     def read(self, path: Path) -> str:
         if path not in self.files:
@@ -154,7 +161,7 @@ class FakeFileSystem:
         return self.files[path]
 
     def exists(self, path: Path) -> bool:
-        return path in self.files or path in self.directories
+        return path in self.files or path in self.blobs or path in self.directories
 
     def write(
         self,
@@ -170,6 +177,10 @@ class FakeFileSystem:
             self.modes[path] = mode
         if owner is not None:
             self.owners[path] = owner.uid
+
+    def write_bytes(self, path: Path, data: bytes) -> None:
+        self.make_directory(path.parent)
+        self.blobs[path] = data
 
     def append(self, path: Path, text: str) -> None:
         self.make_directory(path.parent)
