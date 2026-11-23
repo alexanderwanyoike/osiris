@@ -63,6 +63,27 @@ def test_a_named_model_is_the_one_asked() -> None:
     assert http.requests[0][1] == named
 
 
+def test_only_the_inputs_a_model_accepts_are_sent() -> None:
+    http = FakeHttpClient(replies={("POST", ENDPOINT): answer()})
+    accepted = frozenset({"prompt", "image_size"})
+
+    FalImages(http, KEY, lambda _model: accepted).make("A forest")
+
+    assert http.requests[0][2] == {
+        "prompt": "A forest",
+        "image_size": {"width": 1920, "height": 1080},
+    }
+
+
+def test_a_model_without_a_size_input_is_asked_for_a_wide_picture() -> None:
+    http = FakeHttpClient(replies={("POST", ENDPOINT): answer()})
+    accepted = frozenset({"prompt", "aspect_ratio"})
+
+    FalImages(http, KEY, lambda _model: accepted).make("A forest")
+
+    assert http.requests[0][2] == {"prompt": "A forest", "aspect_ratio": "16:9"}
+
+
 def test_a_model_the_catalog_refuses_spends_nothing() -> None:
     def refuse(model: str) -> frozenset[str]:
         raise MediaError(f"{model} is not an image model FAL offers")
