@@ -5,6 +5,7 @@ osiris/apps/tool_server.py and osiris/themes/actions.py, where it is tested.
 """
 import os
 import sys
+from datetime import date
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
@@ -18,9 +19,16 @@ from theme_store import EngineStore, user_wallpapers  # noqa: E402
 
 from osiris.apps.tool_server import server  # noqa: E402
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
+from osiris.harness.media.connected import ConnectedFal  # noqa: E402
+from osiris.harness.media.pictures import Pictures  # noqa: E402
 from osiris.harness.proposals import SKILLS  # noqa: E402
 from osiris.harness.trust import auto_mode_on  # noqa: E402
-from osiris.platform import RealFileSystem, SubprocessRunner, SystemIdentity  # noqa: E402
+from osiris.platform import (  # noqa: E402
+    RealFileSystem,
+    SubprocessRunner,
+    SystemIdentity,
+    UrllibClient,
+)
 from osiris.programs.programs import Programs  # noqa: E402
 
 if __name__ == "__main__":
@@ -28,7 +36,10 @@ if __name__ == "__main__":
     runner = SubprocessRunner(sink=lambda _line: None)
     programs = Programs(files, runner, home)
     wallpapers = user_wallpapers(files, runner, home)
+    # A picture takes seconds, and longer when FAL is busy.
+    fal = ConnectedFal(files, home, UrllibClient(timeout=120), date.today)
     server(EngineStore(), programs, HarnessLog(files, home / LOG_FILE), wallpapers,
            skins=EngineSkinStore(),
+           pictures=Pictures(fal, files, home),
            auto_mode=auto_mode_on(files, home),
            skill_taken=lambda name: files.exists(home / SKILLS / name)).run()
