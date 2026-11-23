@@ -7,7 +7,7 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk  # noqa: E402
 
 from badge import badge  # noqa: E402
-from provider_parts import add_key  # noqa: E402
+from provider_parts import add_key, connected_chip  # noqa: E402
 
 
 class MediaSection(Gtk.Box):
@@ -18,12 +18,24 @@ class MediaSection(Gtk.Box):
         self._save = save
         self._remove = remove
         self.append(Gtk.Label(label="Media", xalign=0))
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        card.add_css_class("harness-provider-card")
+        self._card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self._card.add_css_class("harness-provider-card")
+        self.append(self._card)
+        self._draw()
+
+    def _draw(self) -> None:
+        while (child := self._card.get_first_child()) is not None:
+            self._card.remove(child)
         row = Gtk.Box(spacing=10)
         row.add_css_class("harness-provider")
         row.append(badge(None, "FAL", 20))
         row.append(Gtk.Label(label="FAL", xalign=0, hexpand=True))
-        card.append(row)
-        add_key(card, save)
-        self.append(card)
+        self._card.append(row)
+        if self._connected():
+            row.append(connected_chip())
+        else:
+            add_key(self._card, self._saved)
+
+    def _saved(self, key: str) -> None:
+        self._save(key)
+        self._draw()
