@@ -12,6 +12,8 @@ import pytest
 
 from osiris.platform import FakeHttpClient, HttpError, UrllibClient
 
+PICTURE = b"\x89PNG a picture"
+
 
 class Handler(BaseHTTPRequestHandler):
     """Echoes what it was sent, and serves the fixed routes the tests use."""
@@ -64,6 +66,12 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"{}")
             self.close_connection = True
+            return
+        if self.path == "/picture":
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(PICTURE)))
+            self.end_headers()
+            self.wfile.write(PICTURE)
             return
         self._reply(200, {"auth": self.headers.get("Authorization")})
 
@@ -156,6 +164,14 @@ class TestUrllibClient:
 
         assert "secret" not in "".join(lines)
 
+    def test_a_download_comes_back_as_bytes(self, server: str) -> None:
+        assert UrllibClient().download(f"{server}/picture", limit=100) == PICTURE
+
+    def test_a_download_over_its_limit_is_refused(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().download(f"{server}/picture", limit=4)
+        assert raised.value.status == 0
+
     def test_a_stream_arrives_line_by_line(self, server: str) -> None:
         lines = list(UrllibClient().lines(f"{server}/events"))
         assert [line for line in lines if line] == [
@@ -166,6 +182,10 @@ class TestUrllibClient:
 
 
 class TestFakeHttpClient:
+    def test_downloads_are_served_from_what_it_was_given(self) -> None:
+        client = FakeHttpClient(downloads={"http://x/p": PICTURE})
+        assert client.download("http://x/p", limit=100) == PICTURE
+
     def test_replies_are_served_and_requests_recorded(self) -> None:
         client = FakeHttpClient(replies={("POST", "http://x/a"): {"ok": True}})
         assert client.request("POST", "http://x/a", body={"n": 1}) == {"ok": True}
