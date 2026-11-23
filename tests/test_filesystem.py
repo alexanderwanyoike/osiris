@@ -155,6 +155,16 @@ def test_the_fake_keeps_bytes_and_says_they_exist() -> None:
     assert files.exists(path)
 
 
+def test_the_fake_hands_bytes_over_with_the_rest_of_a_tree() -> None:
+    files = FakeFileSystem()
+    folder = Path("/home/tester/pictures")
+    files.write_bytes(folder / "picture.png", b"\x89PNG")
+
+    files.give_tree(folder, FakeIdentity(uid=1000))
+
+    assert files.owners[folder / "picture.png"] == 1000
+
+
 @pytest.mark.parametrize("existing", [False, True])
 def test_a_private_file_is_never_open_to_others_even_when_writing_fails(
     tmp_path: Path, existing: bool
