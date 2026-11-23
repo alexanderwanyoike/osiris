@@ -49,6 +49,11 @@ class FalCatalog:
         except HttpError as error:
             if error.status == 404:
                 return []
+            if error.status == 429:
+                raise MediaError(
+                    "FAL is limiting requests for its model list; try again in a "
+                    "minute."
+                ) from None
             raise MediaError(_UNREADABLE) from None
         except ValueError:
             raise MediaError(_UNREADABLE) from None
