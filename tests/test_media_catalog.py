@@ -29,6 +29,14 @@ def test_a_search_finds_active_text_to_image_models() -> None:
     ]
 
 
+def test_an_empty_search_lists_what_fal_offers() -> None:
+    every = f"{CATALOG}?category=text-to-image&status=active&limit=12"
+    reply = {"models": [listed("fal-ai/one", "One", "Draws")]}
+    http = FakeHttpClient(replies={("GET", every): reply})
+
+    assert [model.id for model in FalCatalog(http).search("")] == ["fal-ai/one"]
+
+
 def described(
     category: str = "text-to-image", status: str = "active"
 ) -> dict[str, object]:
