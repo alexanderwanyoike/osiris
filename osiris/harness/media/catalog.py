@@ -75,7 +75,10 @@ def _fields(entry: dict[str, object], model: str) -> frozenset[str]:
         body = spec["paths"][f"/{model}"]["post"]["requestBody"]
         schema = body["content"]["application/json"]["schema"]["$ref"]
         name = schema.rsplit("/", 1)[1]
-        return frozenset(spec["components"]["schemas"][name]["properties"])
+        described = spec["components"]["schemas"][name]
+        if set(described.get("required", ())) - {"prompt"}:
+            raise MediaError(f"{model} needs more than a description; choose another.")
+        return frozenset(described["properties"])
     except KeyError, TypeError, AttributeError, IndexError:
         raise MediaError(_UNREADABLE) from None
 
