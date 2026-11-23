@@ -84,6 +84,11 @@ _Avoid_: subscription (for the company), backend
 A service that makes pictures on the person's own account and key, apart from
 the **Engine**. FAL is the first, connected in the Media section of Settings.
 
+**Image model**:
+A model a **Media provider** offers for making pictures, read from its live
+catalog rather than listed in Osiris. One is the person's default; they can name
+another for a single picture or make it their default.
+
 **Default model** / **Fallback model**:
 The **Provider** and model the **Harness** uses unless told otherwise, and the
 one it moves to when the default cannot answer.
@@ -200,6 +205,8 @@ _Avoid_: metadata
   `~/Pictures/Osiris`, which outlives the **Theme** made from it.
 - Pictures from a **Media provider** have no limit unless the person sets a daily
   one in Settings.
+- The **Harness** uses another **Image model** only when the person asks for it,
+  because prices differ, and only one its **Media provider** still offers.
 - When a **Theme** is created from a **Wallpaper**, its colours are derived from
   that **Wallpaper**; changing the **Wallpaper** of an existing **Theme** does not
   recolour it.
