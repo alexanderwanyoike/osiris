@@ -468,6 +468,7 @@ def _picture_tool(
         label: what the person will see it called, such as "Misty Forest".
         picture: what the picture shows, in a sentence or two.
         """
+        actions.unused_name(store, label)
         data = pictures.make(f"{picture}. {PICTURE_STYLE}")
         name = actions.create_picture_theme(
             store, label=label, picture=data, keep=lambda at: pictures.keep(at, data)
