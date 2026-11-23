@@ -16,7 +16,7 @@ from osiris.apps.tool_server import TIERS, instructions, server
 from osiris.harness.log import LOG_FILE, Change, HarnessLog
 from osiris.harness.media.error import MediaError
 from osiris.harness.media.image_model import ImageModel
-from osiris.harness.media.model_setting import DEFAULT_MODEL
+from osiris.harness.media.model_setting import DEFAULT_MODEL, saved_model
 from osiris.harness.media.pictures import Pictures
 from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem, FakeRunner
@@ -171,6 +171,34 @@ def test_the_model_can_see_fals_image_models_and_the_default() -> None:
     assert "vendor/flat" in text
     assert DEFAULT_MODEL in text
     assert TIERS["find_image_models"] is Tier.LOOK
+
+
+def test_a_person_can_make_a_model_their_default() -> None:
+    files = FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+
+    asyncio.run(
+        tool_server(nord(), Maker(), log, files).call_tool(
+            "set_default_image_model", {"model": "vendor/flat"}
+        )
+    )
+
+    assert saved_model(files, HOME) == "vendor/flat"
+    assert TIERS["set_default_image_model"] is Tier.UNDOABLE
+
+
+def test_a_model_fal_does_not_offer_cannot_become_the_default() -> None:
+    files = FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+
+    with pytest.raises(ToolError, match="not an image model"):
+        asyncio.run(
+            tool_server(nord(), Maker(), log, files).call_tool(
+                "set_default_image_model", {"model": "vendor/video"}
+            )
+        )
+
+    assert saved_model(files, HOME) is None
 
 
 def test_a_label_in_use_is_refused_before_anything_is_spent() -> None:
