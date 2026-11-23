@@ -12,9 +12,13 @@ import urllib.error
 import urllib.request
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
+from http.client import HTTPException
 from typing import Protocol, runtime_checkable
 
+from osiris.platform.redirects import SameOriginCredentials
+
 Body = object | None
+_OPENER = urllib.request.build_opener(SameOriginCredentials)
 
 
 class HttpError(RuntimeError):
@@ -70,7 +74,7 @@ class UrllibClient:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=self._timeout) as response:
+            with _OPENER.open(request, timeout=self._timeout) as response:
                 text = response.read().decode()
         except urllib.error.HTTPError as error:
             raise HttpError(
@@ -78,6 +82,8 @@ class UrllibClient:
             ) from error
         except urllib.error.URLError as error:
             raise HttpError(0, str(error.reason)) from error
+        except (OSError, HTTPException) as error:
+            raise HttpError(0, str(error)) from error
         return json.loads(text) if text.strip() else None
 
     def lines(

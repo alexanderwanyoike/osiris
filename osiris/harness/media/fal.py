@@ -8,9 +8,13 @@ from osiris.harness.media.error import MediaError
 from osiris.platform import HttpClient, HttpError
 
 ENDPOINT = "https://fal.run/fal-ai/flux/schnell"
+_NO_PICTURE = "FAL did not return a picture."
 
 _REASONS = {
-    0: "Osiris could not reach FAL; check the connection.",
+    0: (
+        "Osiris could not reach FAL; check the connection. The picture may still "
+        "have been charged, so ask the person before trying again."
+    ),
     401: "FAL did not accept the key; check it in Settings.",
     403: "FAL refused the request; the account may be out of credit.",
 }
@@ -41,11 +45,15 @@ class FalImages:
                 error.status, f"FAL could not make the picture ({error.status})."
             )
             raise MediaError(reason) from None
+        except UnicodeEncodeError:
+            raise MediaError(_REASONS[401]) from None
+        except ValueError:
+            raise MediaError(_NO_PICTURE) from None
         return _picture(answer)
 
 
 def _picture(answer: object) -> bytes:
-    missing = MediaError("FAL did not return a picture.")
+    missing = MediaError(_NO_PICTURE)
     if not isinstance(answer, dict):
         raise missing
     if any(answer.get("has_nsfw_concepts") or ()):

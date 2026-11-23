@@ -15,8 +15,11 @@ def daily_limit(files: FileSystem, home: Path) -> int | None:
     path = home / LIMIT_FILE
     if not files.exists(path):
         return None
-    text = files.read(path).strip()
     # Someone who wrote a limit meant to have one, so a typo must not lift it.
+    try:
+        text = files.read(path).strip()
+    except OSError, UnicodeDecodeError:
+        return 0
     return int(text) if text.isascii() and text.isdigit() else 0
 
 

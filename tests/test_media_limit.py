@@ -60,6 +60,14 @@ def test_a_failed_request_still_counts_because_it_may_have_been_billed() -> None
     assert maker.asked == []
 
 
+def test_a_limit_of_one_is_worded_as_one_picture() -> None:
+    files = FakeFileSystem()
+    limited(Maker(), files, images=1).make("one")
+
+    with pytest.raises(MediaError, match=r"limit of 1 picture\."):
+        limited(Maker(), files, images=1).make("two")
+
+
 def test_the_limit_starts_again_the_next_day() -> None:
     files = FakeFileSystem()
     limited(Maker(), files, images=1).make("monday")

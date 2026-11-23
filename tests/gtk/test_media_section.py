@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from gi.repository import Gtk
+import pytest
+from gi.repository import GLib, Gtk
 from media_section import MediaSection
 
 from osiris.harness.media.limit_setting import SUGGESTED_LIMIT
@@ -128,6 +129,15 @@ def test_a_saved_limit_is_shown_and_opening_settings_does_not_change_it() -> Non
     assert keys.images == 30
 
 
+@pytest.mark.parametrize("saved", [0, 5000])
+def test_the_number_shown_is_the_limit_in_force(saved: int) -> None:
+    keys = Keys(images=saved)
+    page = section(keys)
+
+    assert find(page, Gtk.SpinButton).get_value_as_int() == saved
+    assert keys.images == saved
+
+
 def test_changing_the_number_saves_it() -> None:
     keys = Keys(images=30)
     page = section(keys)
@@ -135,3 +145,38 @@ def test_changing_the_number_saves_it() -> None:
     find(page, Gtk.SpinButton).set_value(50)
 
     assert keys.images == 50
+
+
+def settle() -> None:
+    context = GLib.MainContext.default()
+    for _ in range(50):
+        context.iteration(False)
+
+
+def test_a_number_typed_just_before_closing_is_saved() -> None:
+    keys = Keys(images=20)
+    page = section(keys)
+    window = Gtk.Window(child=page)
+    window.present()
+    settle()
+
+    find(page, Gtk.SpinButton).set_text("5")
+    window.close()
+    settle()
+
+    assert keys.images == 5
+
+
+def test_a_number_typed_before_turning_the_limit_off_does_not_bring_it_back() -> None:
+    keys = Keys(images=20)
+    page = section(keys)
+    window = Gtk.Window(child=page)
+    window.present()
+    settle()
+
+    find(page, Gtk.SpinButton).set_text("5")
+    find(page, Gtk.Switch).set_active(False)
+    window.close()
+    settle()
+
+    assert keys.images is None

@@ -32,11 +32,12 @@ class MediaSection(Gtk.Box):
         self._card.add_css_class("harness-provider-card")
         self.append(self._card)
         self.append(self._limit_row())
+        self.connect("unmap", self._commit_typed)
         self._draw()
 
     def _limit_row(self) -> Gtk.Widget:
         chosen = self._limit()
-        self._amount = Gtk.SpinButton.new_with_range(1, 1000, 1)
+        self._amount = Gtk.SpinButton.new_with_range(0, 99_999, 1)
         self._amount.set_value(SUGGESTED_LIMIT if chosen is None else chosen)
         self._amount.set_visible(chosen is not None)
         self._amount.connect(
@@ -48,6 +49,11 @@ class MediaSection(Gtk.Box):
         line.append(self._amount)
         line.append(switch)
         return line
+
+    def _commit_typed(self, _section: Gtk.Widget) -> None:
+        # GTK takes a typed number only once focus leaves the field.
+        if self._amount.get_visible():
+            self._amount.update()
 
     def _limit_switched(self, switch: Gtk.Switch, _spec: object) -> None:
         on = switch.get_active()
