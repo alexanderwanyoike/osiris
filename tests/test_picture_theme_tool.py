@@ -105,6 +105,20 @@ def test_the_style_leaves_room_for_a_picture_with_people_in_it() -> None:
     assert "no people" not in maker.asked[0]
 
 
+def test_the_style_leaves_the_look_of_the_picture_to_the_person() -> None:
+    store, maker, files = nord(), Maker(), FakeFileSystem()
+    duel = {"label": "Duel", "picture": "A flat anime duel"}
+
+    asyncio.run(
+        tool_server(store, maker, HarnessLog(files, HOME / LOG_FILE), files).call_tool(
+            "make_picture_theme", duel
+        )
+    )
+
+    assert "cinematic" not in maker.asked[0]
+    assert "calm" not in maker.asked[0]
+
+
 def test_a_label_in_use_is_refused_before_anything_is_spent() -> None:
     store, maker, files = nord(), Maker(), FakeFileSystem()
     log = HarnessLog(files, HOME / LOG_FILE)
