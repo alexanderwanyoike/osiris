@@ -32,6 +32,14 @@ def test_characters_a_terminal_or_paste_added_are_dropped() -> None:
     assert media_key.fal_key(files, HOME) == "a-key"
 
 
+def test_a_paste_of_nothing_but_stray_characters_saves_no_key() -> None:
+    files = FakeFileSystem()
+
+    media_key.save_fal_key(files, HOME, "\b\b \x1b\n")
+
+    assert not files.exists(KEY_PATH)
+
+
 def test_a_key_edited_by_hand_with_stray_characters_still_reads_clean() -> None:
     files = FakeFileSystem()
     files.write(KEY_PATH, "\b\ba-key\n", mode=0o600)
