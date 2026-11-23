@@ -119,6 +119,7 @@ TIERS = {
     "make_wallpaper": Tier.UNDOABLE,
     "make_picture_theme": Tier.UNDOABLE,
     "find_image_models": Tier.LOOK,
+    "set_default_image_model": Tier.UNDOABLE,
     "list_skins": Tier.LOOK,
     "create_skin": Tier.UNDOABLE,
     "check_skin": Tier.LOOK,
@@ -473,6 +474,18 @@ def _picture_tool(
             "default": pictures.default_model(),
             "models": [asdict(model) for model in pictures.find(search)],
         }
+
+    @tools.tool(annotations=ANNOTATIONS[TIERS["set_default_image_model"]])
+    @explained
+    def set_default_image_model(model: str) -> str:
+        """Make a model the person's default for pictures, when they ask to keep
+        using it.
+
+        model: its exact id from find_image_models.
+        """
+        pictures.choose(model)
+        logged.write("changed", summary=f"Made {model} the default image model")
+        return f"{model} now makes the person's pictures unless they name another."
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["make_picture_theme"]])
     @explained
