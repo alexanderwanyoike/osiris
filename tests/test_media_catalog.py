@@ -70,6 +70,22 @@ def test_a_models_inputs_come_from_its_published_schema() -> None:
     assert FalCatalog(http).inputs("fal-ai/one") == {"prompt", "image_size"}
 
 
+@pytest.mark.parametrize(
+    "answer",
+    [
+        described(category="text-to-video"),
+        described(status="deprecated"),
+        {"models": []},
+        HttpError(404, "Endpoint(s) not found"),
+    ],
+)
+def test_anything_but_an_active_image_model_is_refused(answer: object) -> None:
+    http = FakeHttpClient(replies={("GET", DETAILS): answer})
+
+    with pytest.raises(MediaError, match="not an image model FAL offers"):
+        FalCatalog(http).inputs("fal-ai/one")
+
+
 def test_a_catalog_that_cannot_be_read_is_given_a_plain_reason() -> None:
     http = FakeHttpClient(replies={("GET", SEARCH): HttpError(0, "no route")})
 
