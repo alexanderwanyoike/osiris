@@ -9,16 +9,20 @@ from collections.abc import Mapping
 import pytest
 
 from osiris.harness.media.error import MediaError
-from osiris.harness.media.fal import ENDPOINT, FalImages
+from osiris.harness.media.fal import DEFAULT_MODEL, RUN, FalImages
 from osiris.platform import FakeHttpClient, HttpError
 from osiris.platform.http import Body
 
 PICTURE = b"a picture"
 KEY = "a-secret-key"
+ENDPOINT = f"{RUN}/{DEFAULT_MODEL}"
+EVERY_INPUT = frozenset(
+    {"prompt", "image_size", "num_images", "output_format", "sync_mode"}
+)
 
 
 def fal(http: FakeHttpClient) -> FalImages:
-    return FalImages(http, KEY)
+    return FalImages(http, KEY, lambda _model: EVERY_INPUT)
 
 
 def answer(picture: bytes = PICTURE) -> dict[str, object]:
@@ -48,6 +52,27 @@ def test_a_description_comes_back_as_the_picture_fal_made() -> None:
             },
         )
     ]
+
+
+def test_a_named_model_is_the_one_asked() -> None:
+    named = f"{RUN}/vendor/another-model"
+    http = FakeHttpClient(replies={("POST", named): answer()})
+
+    assert fal(http).make("A forest", "vendor/another-model") == PICTURE
+
+    assert http.requests[0][1] == named
+
+
+def test_a_model_the_catalog_refuses_spends_nothing() -> None:
+    def refuse(model: str) -> frozenset[str]:
+        raise MediaError(f"{model} is not an image model FAL offers")
+
+    http = FakeHttpClient()
+
+    with pytest.raises(MediaError, match="not an image model"):
+        FalImages(http, KEY, refuse).make("A forest", "vendor/video")
+
+    assert http.requests == []
 
 
 @pytest.mark.parametrize(
