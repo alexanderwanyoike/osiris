@@ -223,6 +223,6 @@ class FakeFileSystem:
         )
 
     def give_tree(self, path: Path, owner: Identity) -> None:
-        for known in (*self.files, *self.directories):
+        for known in (*self.files, *self.blobs, *self.directories):
             if known == path or path in known.parents:
                 self.owners[known] = owner.uid
