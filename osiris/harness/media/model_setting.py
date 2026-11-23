@@ -7,6 +7,8 @@ from pathlib import Path
 from osiris.platform import FileSystem
 
 MODEL_FILE = ".config/osiris/media/image-model"
+#: Used until the person chooses another; the catalog still has to offer it.
+DEFAULT_MODEL = "fal-ai/flux/schnell"
 
 
 def saved_model(files: FileSystem, home: Path) -> str | None:

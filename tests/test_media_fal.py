@@ -9,7 +9,8 @@ from collections.abc import Mapping
 import pytest
 
 from osiris.harness.media.error import MediaError
-from osiris.harness.media.fal import DEFAULT_MODEL, RUN, FalImages
+from osiris.harness.media.fal import RUN, FalImages
+from osiris.harness.media.model_setting import DEFAULT_MODEL
 from osiris.platform import FakeHttpClient, HttpError
 from osiris.platform.http import Body
 

@@ -7,10 +7,10 @@ from collections.abc import Callable
 from urllib.parse import urlsplit
 
 from osiris.harness.media.error import MediaError
+from osiris.harness.media.model_setting import DEFAULT_MODEL
 from osiris.platform import HttpClient, HttpError
 
 RUN = "https://fal.run"
-DEFAULT_MODEL = "fal-ai/flux/schnell"
 _NO_PICTURE = "FAL did not return a picture."
 _LARGEST_PICTURE = 64 * 1024 * 1024
 

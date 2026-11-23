@@ -10,10 +10,10 @@ import pytest
 
 from osiris.harness.media.connected import USAGE_FILE, ConnectedFal
 from osiris.harness.media.error import MediaError
-from osiris.harness.media.fal import DEFAULT_MODEL, RUN, FalImages
+from osiris.harness.media.fal import RUN, FalImages
 from osiris.harness.media.key import save_fal_key
 from osiris.harness.media.limit_setting import set_daily_limit
-from osiris.harness.media.model_setting import save_model
+from osiris.harness.media.model_setting import DEFAULT_MODEL, save_model
 from osiris.platform import FakeFileSystem, FakeHttpClient
 
 HOME = Path("/home/tester")
