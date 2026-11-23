@@ -14,6 +14,7 @@ from PIL import Image
 
 from osiris.apps.tool_server import TIERS, server
 from osiris.harness.log import LOG_FILE, Change, HarnessLog
+from osiris.harness.media.error import MediaError
 from osiris.harness.media.pictures import Pictures
 from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem, FakeRunner
@@ -103,3 +104,19 @@ def test_a_label_in_use_is_refused_before_anything_is_spent() -> None:
         )
 
     assert maker.asked == []
+
+
+def test_a_failed_picture_reaches_the_model_with_its_reason() -> None:
+    store, files = nord(), FakeFileSystem()
+    maker = Maker(failure=MediaError("FAL is not connected; add a key in Settings."))
+    log = HarnessLog(files, HOME / LOG_FILE)
+
+    with pytest.raises(ToolError, match="add a key in Settings"):
+        asyncio.run(
+            tool_server(store, maker, log, files).call_tool(
+                "make_picture_theme", FOREST
+            )
+        )
+
+    assert store.saved == []
+    assert store.current() == "nord"
