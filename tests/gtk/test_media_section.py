@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from gi.repository import Gtk
 from media_section import MediaSection
 
-from tests.gtk.conftest import find, shown
+from tests.gtk.conftest import find, shown, widgets
 
 
 @dataclass
@@ -36,3 +36,15 @@ def test_without_a_key_fal_offers_to_add_one() -> None:
     assert "Connected" not in shown(page)
     assert find(page, Gtk.Button, "Add key").get_visible()
     assert not find(page, Gtk.PasswordEntry).get_parent().get_visible()
+
+
+def test_a_saved_key_connects_fal_and_is_no_longer_on_screen() -> None:
+    keys = Keys()
+    page = section(keys)
+
+    find(page, Gtk.PasswordEntry).set_text("a-secret-key")
+    find(page, Gtk.Button, "Save").emit("clicked")
+
+    assert keys.key == "a-secret-key"
+    assert "Connected" in shown(page)
+    assert not any(isinstance(widget, Gtk.PasswordEntry) for widget in widgets(page))
