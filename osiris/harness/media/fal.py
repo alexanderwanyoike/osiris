@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import base64
-from typing import cast
 
 from osiris.harness.media.error import MediaError
 from osiris.platform import HttpClient, HttpError
@@ -42,5 +41,23 @@ class FalImages:
                 error.status, f"FAL could not make the picture ({error.status})."
             )
             raise MediaError(reason) from None
-        images = cast("dict[str, list[dict[str, str]]]", answer)["images"]
-        return base64.b64decode(images[0]["url"].split(",", 1)[1])
+        return _picture(answer)
+
+
+def _picture(answer: object) -> bytes:
+    missing = MediaError("FAL did not return a picture.")
+    if not isinstance(answer, dict):
+        raise missing
+    if any(answer.get("has_nsfw_concepts") or ()):
+        raise MediaError(
+            "FAL's safety filter blocked this picture; describe it differently."
+        )
+    images = answer.get("images")
+    first = images[0] if isinstance(images, list) and images else None
+    url = first.get("url") if isinstance(first, dict) else None
+    if not isinstance(url, str) or not url.startswith("data:image/"):
+        raise missing
+    try:
+        return base64.b64decode(url.partition(",")[2], validate=True)
+    except ValueError:
+        raise missing from None
