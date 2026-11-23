@@ -12,6 +12,7 @@ from osiris.harness.media.key import fal_key
 from osiris.harness.media.limit import DailyLimit
 from osiris.harness.media.limit_setting import daily_limit
 from osiris.harness.media.maker import ImageMaker
+from osiris.harness.media.model_setting import saved_model
 from osiris.platform import FileSystem
 
 USAGE_FILE = ".config/osiris/media/images"
@@ -38,10 +39,11 @@ class ConnectedFal:
                 "in the Media section of Models."
             )
         fal = self._maker_for(key)
+        chosen = model or saved_model(self._files, self._home)
         images = daily_limit(self._files, self._home)
         if images is None:
-            return fal.make(description, model)
+            return fal.make(description, chosen)
         limited = DailyLimit(
             fal, self._files, self._home / USAGE_FILE, self._today, images=images
         )
-        return limited.make(description, model)
+        return limited.make(description, chosen)
