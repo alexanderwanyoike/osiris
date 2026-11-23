@@ -7,7 +7,9 @@ import io
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import pytest
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from PIL import Image
 
 from osiris.apps.tool_server import TIERS, server
@@ -87,3 +89,17 @@ def test_a_described_picture_becomes_the_applied_theme() -> None:
         Change("Made Misty Forest", {"action": "delete_theme", "name": "misty-forest"}),
         Change("Applied Misty Forest", {"action": "apply_theme", "name": "nord"}),
     ]
+
+
+def test_a_label_in_use_is_refused_before_anything_is_spent() -> None:
+    store, maker, files = nord(), Maker(), FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+
+    with pytest.raises(ToolError, match="already a theme called Nord"):
+        asyncio.run(
+            tool_server(store, maker, log, files).call_tool(
+                "make_picture_theme", {"label": "Nord", "picture": "A fjord"}
+            )
+        )
+
+    assert maker.asked == []
