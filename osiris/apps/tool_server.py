@@ -21,6 +21,7 @@ from pydantic import Field
 
 from osiris.harness.connectors import OWN_TOOLS
 from osiris.harness.log import HarnessLog
+from osiris.harness.media.error import MediaError
 from osiris.harness.media.pictures import Pictures
 from osiris.harness.proposals import ProposalError, plain
 from osiris.harness.tiers import Tier
@@ -146,6 +147,7 @@ EXPLAINED = (
     UnusableDownload,
     WallpaperError,
     ProposalError,
+    MediaError,
 )
 
 
