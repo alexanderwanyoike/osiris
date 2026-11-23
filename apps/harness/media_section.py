@@ -33,9 +33,17 @@ class MediaSection(Gtk.Box):
         self._card.append(row)
         if self._connected():
             row.append(connected_chip())
+            remove = Gtk.Button(label="Remove key", halign=Gtk.Align.START)
+            remove.add_css_class("flat")
+            remove.connect("clicked", self._removed)
+            self._card.append(remove)
         else:
             add_key(self._card, self._saved)
 
     def _saved(self, key: str) -> None:
         self._save(key)
+        self._draw()
+
+    def _removed(self, _button: Gtk.Button) -> None:
+        self._remove()
         self._draw()
