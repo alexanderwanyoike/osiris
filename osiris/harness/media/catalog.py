@@ -26,7 +26,8 @@ class FalCatalog:
         if words.strip():
             wanted["q"] = words
         query = urlencode(wanted)
-        return [_model(entry) for entry in self._entries(f"{CATALOG}?{query}")]
+        entries = self._entries(f"{CATALOG}?{query}")
+        return [_model(entry) for entry in entries if _draws_pictures(entry)]
 
     def inputs(self, model: str) -> frozenset[str]:
         query = urlencode({"endpoint_id": model, "expand": "openapi-3.0"})
@@ -56,10 +57,16 @@ class FalCatalog:
 def _offered(entry: dict[str, object]) -> bool:
     details = entry.get("metadata")
     return (
-        isinstance(details, dict)
+        _draws_pictures(entry)
+        and isinstance(details, dict)
         and details.get("category") == "text-to-image"
         and details.get("status") == "active"
     )
+
+
+def _draws_pictures(entry: dict[str, object]) -> bool:
+    # FAL files vector models as text-to-image, but an SVG cannot be a Wallpaper.
+    return "vector" not in str(entry.get("endpoint_id", ""))
 
 
 def _fields(entry: dict[str, object], model: str) -> frozenset[str]:
