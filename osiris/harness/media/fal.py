@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import base64
+from collections.abc import Callable
 
 from osiris.harness.media.error import MediaError
 from osiris.platform import HttpClient, HttpError
 
-ENDPOINT = "https://fal.run/fal-ai/flux/schnell"
+RUN = "https://fal.run"
+DEFAULT_MODEL = "fal-ai/flux/schnell"
 _NO_PICTURE = "FAL did not return a picture."
 
 _REASONS = {
@@ -21,15 +23,23 @@ _REASONS = {
 
 
 class FalImages:
-    def __init__(self, http: HttpClient, key: str) -> None:
+    def __init__(
+        self,
+        http: HttpClient,
+        key: str,
+        inputs: Callable[[str], frozenset[str]],
+    ) -> None:
         self._http = http
         self._key = key
+        self._inputs = inputs
 
-    def make(self, description: str) -> bytes:
+    def make(self, description: str, model: str | None = None) -> bytes:
+        chosen = model or DEFAULT_MODEL
+        self._inputs(chosen)
         try:
             answer = self._http.request(
                 "POST",
-                ENDPOINT,
+                f"{RUN}/{chosen}",
                 body={
                     "prompt": description,
                     "image_size": {"width": 1920, "height": 1080},

@@ -10,13 +10,14 @@ import pytest
 
 from osiris.harness.media.connected import USAGE_FILE, ConnectedFal
 from osiris.harness.media.error import MediaError
-from osiris.harness.media.fal import ENDPOINT, FalImages
+from osiris.harness.media.fal import DEFAULT_MODEL, RUN, FalImages
 from osiris.harness.media.key import save_fal_key
 from osiris.harness.media.limit_setting import set_daily_limit
 from osiris.platform import FakeFileSystem, FakeHttpClient
 
 HOME = Path("/home/tester")
 MONDAY = date(2026, 11, 23)
+ENDPOINT = f"{RUN}/{DEFAULT_MODEL}"
 ANSWER = {
     "images": [{"url": "data:image/png;base64," + base64.b64encode(b"p").decode()}],
     "has_nsfw_concepts": [False],
@@ -24,7 +25,12 @@ ANSWER = {
 
 
 def connected(files: FakeFileSystem, http: FakeHttpClient) -> ConnectedFal:
-    return ConnectedFal(files, HOME, lambda key: FalImages(http, key), lambda: MONDAY)
+    return ConnectedFal(
+        files,
+        HOME,
+        lambda key: FalImages(http, key, lambda _model: frozenset({"prompt"})),
+        lambda: MONDAY,
+    )
 
 
 def test_without_a_key_nothing_is_sent_or_counted() -> None:
