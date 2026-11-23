@@ -9,8 +9,6 @@ from gi.repository import Gtk  # noqa: E402
 from badge import badge  # noqa: E402
 from provider_parts import add_key, connected_chip  # noqa: E402
 
-from osiris.harness.media.limit import DAILY_IMAGES  # noqa: E402
-
 
 class MediaSection(Gtk.Box):
     def __init__(self, connected: Callable[[], bool], save: Callable[[str], None],
@@ -21,8 +19,7 @@ class MediaSection(Gtk.Box):
         self._remove = remove
         self.append(Gtk.Label(label="Media", xalign=0))
         purpose = Gtk.Label(
-            label=f"Makes pictures for Themes, up to {DAILY_IMAGES} a day on your "
-                  "FAL account.",
+            label="Makes pictures for Themes on your FAL account.",
             xalign=0, wrap=True)
         purpose.add_css_class("harness-meta")
         self.append(purpose)
