@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlencode
 
@@ -14,8 +15,9 @@ _UNREADABLE = "Osiris could not read FAL's list of image models; check the conne
 
 
 class FalCatalog:
-    def __init__(self, http: HttpClient) -> None:
+    def __init__(self, http: HttpClient, key: Callable[[], str | None]) -> None:
         self._http = http
+        self._key = key
 
     def search(self, words: str) -> list[ImageModel]:
         wanted: dict[str, str | int] = {
@@ -41,7 +43,9 @@ class FalCatalog:
 
     def _entries(self, url: str) -> list[dict[str, object]]:
         try:
-            answer = self._http.request("GET", url)
+            key = self._key()
+            headers = {"Authorization": f"Key {key}"} if key else {}
+            answer = self._http.request("GET", url, headers=headers)
         except HttpError as error:
             if error.status == 404:
                 return []
