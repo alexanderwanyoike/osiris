@@ -92,6 +92,19 @@ def test_a_described_picture_becomes_the_applied_theme() -> None:
     ]
 
 
+def test_the_style_leaves_room_for_a_picture_with_people_in_it() -> None:
+    store, maker, files = nord(), Maker(), FakeFileSystem()
+    crowd = {"label": "Festival", "picture": "A festival crowd at dusk"}
+
+    asyncio.run(
+        tool_server(store, maker, HarnessLog(files, HOME / LOG_FILE), files).call_tool(
+            "make_picture_theme", crowd
+        )
+    )
+
+    assert "no people" not in maker.asked[0]
+
+
 def test_a_label_in_use_is_refused_before_anything_is_spent() -> None:
     store, maker, files = nord(), Maker(), FakeFileSystem()
     log = HarnessLog(files, HOME / LOG_FILE)
