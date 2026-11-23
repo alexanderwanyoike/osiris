@@ -144,6 +144,18 @@ class TestUrllibClient:
 
         assert reply == {"auth": "Key secret"}
 
+    def test_a_redirected_stream_does_not_carry_the_credentials(
+        self, server: str
+    ) -> None:
+        port = server.rsplit(":", 1)[1]
+        Handler.redirect_to = f"http://localhost:{port}/"
+
+        lines = UrllibClient().lines(
+            f"{server}/moved", headers={"Authorization": "Key secret"}
+        )
+
+        assert "secret" not in "".join(lines)
+
     def test_a_stream_arrives_line_by_line(self, server: str) -> None:
         lines = list(UrllibClient().lines(f"{server}/events"))
         assert [line for line in lines if line] == [
