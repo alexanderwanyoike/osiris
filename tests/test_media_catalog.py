@@ -163,3 +163,10 @@ def test_the_persons_key_raises_the_catalogs_rate_limit(
     FalCatalog(http, lambda: key).search("flat anime")
 
     assert seen == [sent]
+
+
+def test_a_rate_limit_is_not_mistaken_for_a_lost_connection() -> None:
+    http = FakeHttpClient(replies={("GET", SEARCH): HttpError(429, "slow down")})
+
+    with pytest.raises(MediaError, match="try again in a minute"):
+        catalog(http).search("flat anime")
