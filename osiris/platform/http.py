@@ -91,7 +91,7 @@ class UrllibClient:
         try:
             # No read timeout: an event stream is quiet for as long as nothing
             # happens, and its heartbeats are the server's business.
-            with urllib.request.urlopen(request) as response:
+            with _OPENER.open(request) as response:
                 for raw in response:
                     yield raw.decode().rstrip("\r\n")
         except urllib.error.HTTPError as error:
