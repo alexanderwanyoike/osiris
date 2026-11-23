@@ -42,8 +42,9 @@ class DailyLimit:
         return self._maker.make(description)
 
     def _reached(self) -> MediaError:
+        pictures = "picture" if self._images == 1 else "pictures"
         return MediaError(
-            f"Osiris has reached today's limit of {self._images} pictures."
+            f"Osiris has reached today's limit of {self._images} {pictures}."
         )
 
     def _used(self, day: str) -> int:

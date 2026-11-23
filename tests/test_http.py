@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -14,6 +15,8 @@ from osiris.platform import FakeHttpClient, HttpError, UrllibClient
 
 class Handler(BaseHTTPRequestHandler):
     """Echoes what it was sent, and serves the fixed routes the tests use."""
+
+    redirect_to = ""
 
     def log_message(self, *_args: object) -> None:
         pass
@@ -35,6 +38,25 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self.path == "/missing":
             self._reply(404, {"message": "no such thing"})
+            return
+        if self.path == "/moved":
+            self.send_response(302)
+            self.send_header("Location", self.redirect_to)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        if self.path == "/dropped":
+            self.close_connection = True
+            return
+        if self.path == "/short":
+            self.send_response(200)
+            self.send_header("Content-Length", "10")
+            self.end_headers()
+            self.wfile.write(b"{}")
+            self.close_connection = True
+            return
+        if self.path == "/slow":
+            time.sleep(0.6)
             return
         self._reply(200, {"auth": self.headers.get("Authorization")})
 
@@ -78,6 +100,37 @@ class TestUrllibClient:
             UrllibClient().request("GET", f"{server}/missing")
         assert raised.value.status == 404
         assert "no such thing" in raised.value.body
+
+    @pytest.mark.parametrize("path", ["/dropped", "/short", "/slow"])
+    def test_a_connection_lost_midway_is_no_answer(
+        self, server: str, path: str
+    ) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient(timeout=0.2).request("GET", f"{server}{path}")
+        assert raised.value.status == 0
+
+    def test_a_redirect_to_another_host_does_not_carry_the_credentials(
+        self, server: str
+    ) -> None:
+        port = server.rsplit(":", 1)[1]
+        Handler.redirect_to = f"http://localhost:{port}/"
+
+        reply = UrllibClient().request(
+            "GET", f"{server}/moved", headers={"Authorization": "Key secret"}
+        )
+
+        assert reply == {"auth": None}
+
+    def test_a_redirect_on_the_same_host_keeps_the_credentials(
+        self, server: str
+    ) -> None:
+        Handler.redirect_to = f"{server}/"
+
+        reply = UrllibClient().request(
+            "GET", f"{server}/moved", headers={"Authorization": "Key secret"}
+        )
+
+        assert reply == {"auth": "Key secret"}
 
     def test_a_stream_arrives_line_by_line(self, server: str) -> None:
         lines = list(UrllibClient().lines(f"{server}/events"))
