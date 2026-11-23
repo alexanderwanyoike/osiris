@@ -236,3 +236,11 @@ def test_the_model_is_told_when_to_generate_a_picture_and_that_it_costs() -> Non
 
     assert "make_picture_theme" in told
     assert "costs the person money" in told
+
+
+def test_the_model_only_changes_the_image_model_when_asked() -> None:
+    told = " ".join(instructions(auto_mode=False).split())
+
+    assert "find_image_models" in told
+    assert "never pick a different model yourself" in told
+    assert "set_default_image_model" in told
