@@ -18,6 +18,7 @@ from osiris.themes.actions import (
     create_theme,
     delete_theme,
     list_themes,
+    unused_name,
     use_wallpaper,
 )
 from osiris.themes.derive import build
@@ -77,6 +78,11 @@ def test_making_a_theme_never_replaces_one_that_exists() -> None:
             dark=True,
         )
     assert store.saved == []
+
+
+def test_a_label_too_long_for_a_file_name_is_refused() -> None:
+    with pytest.raises(ThemeActionError, match="too long"):
+        unused_name(FakeThemeStore(), "A very long name " * 20)
 
 
 def test_a_seed_that_is_not_a_colour_is_refused() -> None:
