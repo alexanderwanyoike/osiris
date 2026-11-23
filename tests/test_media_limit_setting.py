@@ -11,7 +11,7 @@ from osiris.harness.media.limit_setting import (
     daily_limit,
     set_daily_limit,
 )
-from osiris.platform import FakeFileSystem
+from osiris.platform import FakeFileSystem, RealFileSystem
 
 HOME = Path("/home/tester")
 
@@ -47,3 +47,17 @@ def test_a_limit_mistyped_by_hand_stops_spending_rather_than_lifting_it(
     files.write(HOME / LIMIT_FILE, written)
 
     assert daily_limit(files, HOME) == 0
+
+
+def test_a_limit_file_that_is_not_text_stops_spending(tmp_path: Path) -> None:
+    path = tmp_path / LIMIT_FILE
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"\xff\xfe")
+
+    assert daily_limit(RealFileSystem(), tmp_path) == 0
+
+
+def test_a_limit_path_that_cannot_be_read_stops_spending(tmp_path: Path) -> None:
+    (tmp_path / LIMIT_FILE).mkdir(parents=True)
+
+    assert daily_limit(RealFileSystem(), tmp_path) == 0
