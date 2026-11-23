@@ -13,6 +13,10 @@ SEARCH = f"{CATALOG}?category=text-to-image&status=active&limit=12&q=flat+anime"
 DETAILS = f"{CATALOG}?endpoint_id=fal-ai%2Fone&expand=openapi-3.0"
 
 
+def catalog(http: FakeHttpClient) -> FalCatalog:
+    return FalCatalog(http)
+
+
 def listed(endpoint: str, name: str, about: str) -> dict[str, object]:
     return {
         "endpoint_id": endpoint,
@@ -24,7 +28,7 @@ def test_a_search_finds_active_text_to_image_models() -> None:
     reply = {"models": [listed("fal-ai/one", "One", "Draws flat anime")]}
     http = FakeHttpClient(replies={("GET", SEARCH): reply})
 
-    assert FalCatalog(http).search("flat anime") == [
+    assert catalog(http).search("flat anime") == [
         ImageModel("fal-ai/one", "One", "Draws flat anime")
     ]
 
@@ -34,7 +38,7 @@ def test_an_empty_search_lists_what_fal_offers() -> None:
     reply = {"models": [listed("fal-ai/one", "One", "Draws")]}
     http = FakeHttpClient(replies={("GET", every): reply})
 
-    assert [model.id for model in FalCatalog(http).search("")] == ["fal-ai/one"]
+    assert [model.id for model in catalog(http).search("")] == ["fal-ai/one"]
 
 
 def described(
@@ -80,7 +84,7 @@ def described(
 def test_a_models_inputs_come_from_its_published_schema() -> None:
     http = FakeHttpClient(replies={("GET", DETAILS): described()})
 
-    assert FalCatalog(http).inputs("fal-ai/one") == {"prompt", "image_size"}
+    assert catalog(http).inputs("fal-ai/one") == {"prompt", "image_size"}
 
 
 @pytest.mark.parametrize(
@@ -96,14 +100,14 @@ def test_anything_but_an_active_image_model_is_refused(answer: object) -> None:
     http = FakeHttpClient(replies={("GET", DETAILS): answer})
 
     with pytest.raises(MediaError, match="not an image model FAL offers"):
-        FalCatalog(http).inputs("fal-ai/one")
+        catalog(http).inputs("fal-ai/one")
 
 
 def test_a_catalog_that_cannot_be_read_is_given_a_plain_reason() -> None:
     http = FakeHttpClient(replies={("GET", SEARCH): HttpError(0, "no route")})
 
     with pytest.raises(MediaError, match="FAL's list of image models"):
-        FalCatalog(http).search("flat anime")
+        catalog(http).search("flat anime")
 
 
 def test_vector_models_are_not_offered_because_they_cannot_be_a_wallpaper() -> None:
@@ -118,11 +122,9 @@ def test_vector_models_are_not_offered_because_they_cannot_be_a_wallpaper() -> N
         replies={("GET", SEARCH): reply, ("GET", details): {"models": [entry]}}
     )
 
-    assert [model.id for model in FalCatalog(http).search("flat anime")] == [
-        "fal-ai/one"
-    ]
+    assert [model.id for model in catalog(http).search("flat anime")] == ["fal-ai/one"]
     with pytest.raises(MediaError, match="not an image model"):
-        FalCatalog(http).inputs(vector)
+        catalog(http).inputs(vector)
 
 
 def test_a_model_that_needs_more_than_a_description_is_refused() -> None:
@@ -130,4 +132,4 @@ def test_a_model_that_needs_more_than_a_description_is_refused() -> None:
     http = FakeHttpClient(replies={("GET", DETAILS): answer})
 
     with pytest.raises(MediaError, match="needs more than a description"):
-        FalCatalog(http).inputs("fal-ai/one")
+        catalog(http).inputs("fal-ai/one")
