@@ -488,7 +488,9 @@ def _picture_tool(
         model: its exact id from find_image_models.
         """
         pictures.choose(model)
-        logged.write("changed", summary=f"Made {model} the default image model")
+        logged.write(
+            "changed", summary=f"Made {model} the default image model", undo=None
+        )
         return f"{model} now makes the person's pictures unless they name another."
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["make_picture_theme"]])
