@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import base64
+import json
+from collections.abc import Mapping
 
 import pytest
 
 from osiris.harness.media.error import MediaError
 from osiris.harness.media.fal import ENDPOINT, FalImages
 from osiris.platform import FakeHttpClient, HttpError
+from osiris.platform.http import Body
 
 PICTURE = b"a picture"
 KEY = "a-secret-key"
@@ -62,6 +65,33 @@ def test_a_failure_is_given_a_plain_reason_without_the_key(
         FalImages(http, KEY).make("A misty forest")
 
     assert KEY not in str(caught.value)
+    assert caught.value.__suppress_context__
+
+
+@pytest.mark.parametrize(
+    ("failure", "reason"),
+    [
+        (json.JSONDecodeError("not json", "", 0), "did not return a picture"),
+        (UnicodeEncodeError("latin-1", "key", 0, 1, "no"), "did not accept the key"),
+    ],
+)
+def test_a_request_that_breaks_is_given_a_plain_reason(
+    failure: Exception, reason: str
+) -> None:
+    class Broken(FakeHttpClient):
+        def request(
+            self,
+            method: str,
+            url: str,
+            *,
+            body: Body = None,
+            headers: Mapping[str, str] | None = None,
+        ) -> Body:
+            raise failure
+
+    with pytest.raises(MediaError, match=reason) as caught:
+        FalImages(Broken(), KEY).make("A misty forest")
+
     assert caught.value.__suppress_context__
 
 
