@@ -206,7 +206,7 @@ def test_a_picture_theme_wears_the_picture_and_takes_its_colours_from_it() -> No
     picture = picture_bytes((20, 40, 90))
     kept: list[str] = []
 
-    def keep(name: str) -> Path:
+    def keep(name: str, _data: bytes) -> Path:
         kept.append(name)
         return Path(f"/home/tester/Pictures/Osiris/{name}.png")
 
@@ -222,11 +222,26 @@ def test_a_picture_theme_wears_the_picture_and_takes_its_colours_from_it() -> No
     assert store.applied == []
 
 
+def test_a_picture_in_another_format_is_kept_as_a_png() -> None:
+    store = FakeThemeStore()
+    data = io.BytesIO()
+    Image.new("RGB", (64, 36), (20, 40, 90)).save(data, "WEBP")
+    kept: list[bytes] = []
+
+    def keep(name: str, picture: bytes) -> Path:
+        kept.append(picture)
+        return Path(f"/home/tester/Pictures/Osiris/{name}.png")
+
+    create_picture_theme(store, label="Sea", picture=data.getvalue(), keep=keep)
+
+    assert Image.open(io.BytesIO(kept[0])).format == "PNG"
+
+
 def test_a_picture_that_cannot_be_read_keeps_nothing() -> None:
     store = FakeThemeStore()
     kept: list[str] = []
 
-    def keep(name: str) -> Path:
+    def keep(name: str, _data: bytes) -> Path:
         kept.append(name)
         return Path(f"/home/tester/Pictures/Osiris/{name}.png")
 
