@@ -121,6 +121,30 @@ def test_the_style_leaves_the_look_of_the_picture_to_the_person() -> None:
     assert "calm" not in maker.asked[0]
 
 
+def test_a_model_the_person_named_makes_that_picture() -> None:
+    store, maker, files = nord(), Maker(), FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+
+    asyncio.run(
+        tool_server(store, maker, log, files).call_tool(
+            "make_picture_theme", {**FOREST, "image_model": "vendor/flat"}
+        )
+    )
+
+    assert maker.models == ["vendor/flat"]
+
+
+def test_with_no_model_named_the_default_is_left_to_decide() -> None:
+    store, maker, files = nord(), Maker(), FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+
+    asyncio.run(
+        tool_server(store, maker, log, files).call_tool("make_picture_theme", FOREST)
+    )
+
+    assert maker.models == [None]
+
+
 def test_a_label_in_use_is_refused_before_anything_is_spent() -> None:
     store, maker, files = nord(), Maker(), FakeFileSystem()
     log = HarnessLog(files, HOME / LOG_FILE)
