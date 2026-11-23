@@ -474,7 +474,7 @@ def _picture_tool(
         actions.unused_name(store, label)
         data = pictures.make(f"{picture}. {PICTURE_STYLE}")
         name = actions.create_picture_theme(
-            store, label=label, picture=data, keep=lambda at: pictures.keep(at, data)
+            store, label=label, picture=data, keep=pictures.keep
         )
         logged.write(
             "changed",
