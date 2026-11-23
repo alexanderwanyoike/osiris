@@ -19,7 +19,9 @@ def fal_key(files: FileSystem, home: Path) -> str | None:
 
 
 def save_fal_key(files: FileSystem, home: Path, key: str) -> None:
-    files.write(home / KEY_FILE, f"{_clean(key)}\n", mode=0o600)
+    cleaned = _clean(key)
+    if cleaned:
+        files.write(home / KEY_FILE, f"{cleaned}\n", mode=0o600)
 
 
 def remove_fal_key(files: FileSystem, home: Path) -> None:
