@@ -63,6 +63,11 @@ def test_a_step_on_several_files_names_the_first_and_counts_the_rest() -> None:
         ("commit_program", "Saving a change", "Saved a change"),
         ("check_program", "Checking the program", "Checked the program"),
         ("make_wallpaper", "Making a wallpaper", "Made a wallpaper"),
+        (
+            "make_picture_theme",
+            "Making a theme from a picture",
+            "Made a theme from a picture",
+        ),
     ],
 )
 def test_an_osiris_tool_is_named_by_what_it_does(
