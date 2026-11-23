@@ -18,9 +18,14 @@ class FalCatalog:
         self._http = http
 
     def search(self, words: str) -> list[ImageModel]:
-        query = urlencode(
-            {"category": "text-to-image", "status": "active", "limit": 12, "q": words}
-        )
+        wanted: dict[str, str | int] = {
+            "category": "text-to-image",
+            "status": "active",
+            "limit": 12,
+        }
+        if words.strip():
+            wanted["q"] = words
+        query = urlencode(wanted)
         return [_model(entry) for entry in self._entries(f"{CATALOG}?{query}")]
 
     def inputs(self, model: str) -> frozenset[str]:
