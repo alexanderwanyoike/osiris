@@ -184,6 +184,7 @@ def test_a_person_can_make_a_model_their_default() -> None:
     )
 
     assert saved_model(files, HOME) == "vendor/flat"
+    assert log.last_changes()[0].summary == "Made vendor/flat the default image model"
     assert TIERS["set_default_image_model"] is Tier.UNDOABLE
 
 
