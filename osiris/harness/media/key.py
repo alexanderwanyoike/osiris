@@ -15,8 +15,13 @@ KEY_FILE = ".config/osiris/media/fal-key"
 
 def fal_key(files: FileSystem, home: Path) -> str | None:
     path = home / KEY_FILE
-    return files.read(path).strip() or None if files.exists(path) else None
+    return _clean(files.read(path)) or None if files.exists(path) else None
 
 
 def save_fal_key(files: FileSystem, home: Path, key: str) -> None:
-    files.write(home / KEY_FILE, f"{key}\n", mode=0o600)
+    files.write(home / KEY_FILE, f"{_clean(key)}\n", mode=0o600)
+
+
+def _clean(key: str) -> str:
+    # A control character in a request header gets the whole request refused.
+    return "".join(c for c in key if c.isprintable()).strip()
