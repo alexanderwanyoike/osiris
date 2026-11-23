@@ -45,3 +45,23 @@ def test_pictures_are_made_up_to_the_limit_and_no_further() -> None:
         limit.make("three")
 
     assert maker.asked == ["one", "two"]
+
+
+def test_a_failed_request_still_counts_because_it_may_have_been_billed() -> None:
+    files = FakeFileSystem()
+    failing = limited(Maker(failure=MediaError("no")), files, images=1)
+    with pytest.raises(MediaError, match="no"):
+        failing.make("one")
+
+    maker = Maker()
+    with pytest.raises(MediaError, match="limit of 1 picture"):
+        limited(maker, files, images=1).make("two")
+
+    assert maker.asked == []
+
+
+def test_the_limit_starts_again_the_next_day() -> None:
+    files = FakeFileSystem()
+    limited(Maker(), files, images=1).make("monday")
+
+    assert limited(Maker(), files, TUESDAY, images=1).make("tuesday") == b"a picture"
