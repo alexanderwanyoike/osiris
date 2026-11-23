@@ -26,17 +26,35 @@ class FalCatalog:
     def inputs(self, model: str) -> frozenset[str]:
         query = urlencode({"endpoint_id": model, "expand": "openapi-3.0"})
         entries = self._entries(f"{CATALOG}?{query}")
-        return _fields(entries[0], model) if entries else frozenset()
+        if not entries or not _offered(entries[0]):
+            raise MediaError(
+                f"{model} is not an image model FAL offers; "
+                "find one with find_image_models."
+            )
+        return _fields(entries[0], model)
 
     def _entries(self, url: str) -> list[dict[str, object]]:
         try:
             answer = self._http.request("GET", url)
-        except HttpError, ValueError:
+        except HttpError as error:
+            if error.status == 404:
+                return []
+            raise MediaError(_UNREADABLE) from None
+        except ValueError:
             raise MediaError(_UNREADABLE) from None
         models = answer.get("models") if isinstance(answer, dict) else None
         if not isinstance(models, list):
             raise MediaError(_UNREADABLE)
         return [entry for entry in models if isinstance(entry, dict)]
+
+
+def _offered(entry: dict[str, object]) -> bool:
+    details = entry.get("metadata")
+    return (
+        isinstance(details, dict)
+        and details.get("category") == "text-to-image"
+        and details.get("status") == "active"
+    )
 
 
 def _fields(entry: dict[str, object], model: str) -> frozenset[str]:
