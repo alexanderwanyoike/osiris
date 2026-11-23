@@ -40,8 +40,10 @@ class MediaSection(Gtk.Box):
         self._amount = Gtk.SpinButton.new_with_range(0, 99_999, 1)
         self._amount.set_value(SUGGESTED_LIMIT if chosen is None else chosen)
         self._amount.set_visible(chosen is not None)
-        self._amount.connect(
-            "value-changed", lambda amount: self._set_limit(amount.get_value_as_int()))
+        self._kept = self._amount.get_value_as_int()
+        self._readable = True
+        self._amount.connect("changed", self._typed)
+        self._amount.connect("value-changed", self._amount_changed)
         switch = Gtk.Switch(active=chosen is not None, valign=Gtk.Align.CENTER)
         switch.connect("notify::active", self._limit_switched)
         line = Gtk.Box(spacing=8)
@@ -49,6 +51,21 @@ class MediaSection(Gtk.Box):
         line.append(self._amount)
         line.append(switch)
         return line
+
+    def _typed(self, amount: Gtk.SpinButton) -> None:
+        # GTK moves the value before redrawing the text, so text that changes
+        # while the value is still the saved one is what the person typed.
+        if amount.get_value_as_int() == self._kept:
+            text = amount.get_text()
+            self._readable = text.isascii() and text.isdigit()
+
+    def _amount_changed(self, amount: Gtk.SpinButton) -> None:
+        if not self._readable:
+            self._readable = True
+            amount.set_value(self._kept)
+            return
+        self._kept = amount.get_value_as_int()
+        self._set_limit(self._kept)
 
     def _commit_typed(self, _section: Gtk.Widget) -> None:
         # GTK takes a typed number only once focus leaves the field.
