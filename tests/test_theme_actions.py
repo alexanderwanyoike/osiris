@@ -214,3 +214,18 @@ def test_a_picture_theme_wears_the_picture_and_takes_its_colours_from_it() -> No
     assert theme["dark"] is True
     assert theme["intent"]["harmony"] == "analogous"
     assert store.applied == []
+
+
+def test_a_picture_that_cannot_be_read_keeps_nothing() -> None:
+    store = FakeThemeStore()
+    kept: list[str] = []
+
+    def keep(name: str) -> Path:
+        kept.append(name)
+        return Path(f"/home/tester/Pictures/Osiris/{name}.png")
+
+    with pytest.raises(ThemeActionError, match="could not be read"):
+        create_picture_theme(store, label="Broken", picture=b"not a picture", keep=keep)
+
+    assert kept == []
+    assert store.saved == []
