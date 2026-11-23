@@ -161,6 +161,49 @@ def test_a_picture_the_safety_filter_blocked_is_refused() -> None:
 
 
 @pytest.mark.parametrize(
+    "link",
+    [
+        "https://v3.fal.media/files/a/picture.png",
+        "https://fal.media/files/a/picture.png",
+        "https://storage.googleapis.com/falserverless/a/picture.webp",
+    ],
+)
+def test_a_picture_returned_as_a_link_is_fetched_from_fals_storage(link: str) -> None:
+    reply = {"images": [{"url": link}]}
+    http = FakeHttpClient(
+        replies={("POST", ENDPOINT): reply}, downloads={link: PICTURE}
+    )
+
+    assert fal(http).make("A forest") == PICTURE
+
+
+@pytest.mark.parametrize(
+    "link",
+    [
+        "http://v3.fal.media/files/a/picture.png",
+        "https://fal.media.elsewhere.example/picture.png",
+        "https://storage.googleapis.com/someone-else/picture.png",
+    ],
+)
+def test_a_link_outside_fals_storage_is_never_fetched(link: str) -> None:
+    reply = {"images": [{"url": link}]}
+    http = FakeHttpClient(
+        replies={("POST", ENDPOINT): reply}, downloads={link: PICTURE}
+    )
+
+    with pytest.raises(MediaError, match="did not return a picture"):
+        fal(http).make("A forest")
+
+
+def test_a_picture_that_cannot_be_fetched_is_given_a_plain_reason() -> None:
+    link = "https://v3.fal.media/files/a/picture.png"
+    http = FakeHttpClient(replies={("POST", ENDPOINT): {"images": [{"url": link}]}})
+
+    with pytest.raises(MediaError, match="could not download"):
+        fal(http).make("A forest")
+
+
+@pytest.mark.parametrize(
     "reply",
     [
         None,
