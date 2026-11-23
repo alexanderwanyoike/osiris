@@ -99,3 +99,22 @@ def test_a_catalog_that_cannot_be_read_is_given_a_plain_reason() -> None:
 
     with pytest.raises(MediaError, match="FAL's list of image models"):
         FalCatalog(http).search("flat anime")
+
+
+def test_vector_models_are_not_offered_because_they_cannot_be_a_wallpaper() -> None:
+    vector = "fal-ai/one/text-to-vector"
+    details = f"{CATALOG}?endpoint_id=fal-ai%2Fone%2Ftext-to-vector&expand=openapi-3.0"
+    entry = {
+        "endpoint_id": vector,
+        "metadata": {"category": "text-to-image", "status": "active"},
+    }
+    reply = {"models": [listed("fal-ai/one", "One", "Draws"), listed(vector, "V", "")]}
+    http = FakeHttpClient(
+        replies={("GET", SEARCH): reply, ("GET", details): {"models": [entry]}}
+    )
+
+    assert [model.id for model in FalCatalog(http).search("flat anime")] == [
+        "fal-ai/one"
+    ]
+    with pytest.raises(MediaError, match="not an image model"):
+        FalCatalog(http).inputs(vector)
