@@ -23,3 +23,7 @@ def saved_model(files: FileSystem, home: Path) -> str | None:
 
 def save_model(files: FileSystem, home: Path, model: str) -> None:
     files.write(home / MODEL_FILE, f"{model}\n")
+
+
+def clear_model(files: FileSystem, home: Path) -> None:
+    files.remove(home / MODEL_FILE)

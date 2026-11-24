@@ -10,6 +10,7 @@ from osiris.harness.media.maker import ImageMaker
 from osiris.harness.media.model_catalog import ModelCatalog
 from osiris.harness.media.model_setting import (
     DEFAULT_IMAGE_MODEL,
+    clear_model,
     save_model,
     saved_model,
 )
@@ -44,7 +45,14 @@ class Pictures:
     def default_image_model(self) -> str:
         return saved_model(self.files, self.home) or DEFAULT_IMAGE_MODEL
 
+    def saved_choice(self) -> str:
+        return saved_model(self.files, self.home) or ""
+
     def choose(self, model: str) -> None:
+        """Make ``model`` the default; empty goes back to the shipped one."""
+        if not model:
+            clear_model(self.files, self.home)
+            return
         self.catalog.spec(model)
         save_model(self.files, self.home, model)
 

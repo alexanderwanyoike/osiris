@@ -481,14 +481,16 @@ def _picture_tool(
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["set_default_image_model"]])
     @explained
-    def set_default_image_model(model: str) -> str:
+    def set_default_image_model(model: str = "") -> str:
         """Make a model the person's default for pictures, when they ask to keep
         using it.
 
-        model: its exact id from find_image_models.
+        model: its exact id from find_image_models; empty goes back to the
+            default Osiris ships.
         """
-        previous = pictures.default_image_model()
+        previous = pictures.saved_choice()
         pictures.choose(model)
+        model = model or pictures.default_image_model()
         logged.write(
             "changed",
             summary=f"Made {model} the default image model",
