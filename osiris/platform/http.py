@@ -15,10 +15,12 @@ from dataclasses import dataclass, field
 from http.client import HTTPException
 from typing import Protocol, runtime_checkable
 
+from osiris.platform.no_redirects import NoRedirects
 from osiris.platform.redirects import SameOriginCredentials
 
 Body = object | None
 _OPENER = urllib.request.build_opener(SameOriginCredentials)
+_DIRECT = urllib.request.build_opener(NoRedirects)
 
 
 class HttpError(RuntimeError):
@@ -105,16 +107,19 @@ class UrllibClient:
 
     def download(self, url: str, *, limit: int) -> bytes:
         try:
-            with _OPENER.open(url, timeout=self._timeout) as response:
+            with _DIRECT.open(url, timeout=self._timeout) as response:
                 data: bytes = response.read(limit + 1)
+                promised = response.headers.get("Content-Length", "")
         except urllib.error.HTTPError as error:
             raise HttpError(error.code, _error_body(error)) from error
         except urllib.error.URLError as error:
             raise HttpError(0, str(error.reason)) from error
-        except (OSError, HTTPException) as error:
+        except (OSError, HTTPException, ValueError) as error:
             raise HttpError(0, str(error)) from error
         if len(data) > limit:
             raise HttpError(0, f"larger than {limit} bytes")
+        if promised.isdigit() and len(data) != int(promised):
+            raise HttpError(0, "the download was cut off")
         return data
 
 
