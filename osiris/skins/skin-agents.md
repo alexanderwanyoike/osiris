@@ -57,11 +57,10 @@ person what it said.
 - Another style for this Skin, or a new Skin, is a Skin of the person's in
   `~/.local/share/osiris/skins`, made with the create_skin tool.
 - Never write a colour from the Theme literally: use the gaps, so the Skin
-  works under every Theme, light and dark. Write a fixed colour only when the
-  person asks for one. check_skin names the fixed colours this Skin was not
-  made with.
+  works under every Theme, light and dark. check_skin names the fixed colours
+  this Skin was not made with.
 - After each change, check it with the check_skin tool and wear it with
-  wear_skin, and fix whatever check_skin reports. Without those tools, the
+  wear_skin, and fix any problem check_skin reports. Without those tools, the
   engine does the same:
 
       python3 /usr/share/osiris/themes/engine.py --skin SKIN_NAME
