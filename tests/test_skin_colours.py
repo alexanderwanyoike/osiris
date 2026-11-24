@@ -156,7 +156,8 @@ def test_a_link_out_of_the_first_commit_leaves_the_style_to_compare(
 
 
 def test_one_scratch_folder_serves_two_skins(tmp_path: Path) -> None:
-    first = make_skin(tmp_path / "mine" / "a", "", "a { color: #2f7d4a; }")
+    first = make_skin(tmp_path / "mine" / "a", "", "")
+    write(first / "sass" / "_only-in-a.scss", "$a: #2f7d4a;")
     commit(first, "Copy", SubprocessRunner())
     second = make_skin(tmp_path / "mine" / "b", "", "a { color: #000001; }")
     commit(second, "Copy", SubprocessRunner())
