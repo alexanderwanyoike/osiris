@@ -388,7 +388,6 @@ class Window(Adw.ApplicationWindow):
         while (child := self.sections.get_first_child()) is not None:
             self.sections.remove(child)
         self.cards = []
-        active = engine.current()
         starred = engine.favourites()
         mine = {t["name"] for t in self.themes if engine.is_user_theme(t["name"])}
         arranged = arrange(self.themes, query=self.search.get_text(),
@@ -413,13 +412,13 @@ class Window(Adw.ApplicationWindow):
             for theme in members:
                 card = ThemeCard(theme, self.pick, theme["name"] in starred,
                                  self._starred)
-                card.set_selected(theme["name"] == active)
                 self.cards.append(card)
                 flow.append(card)
             section.append(flow)
             self.sections.append(section)
+        self.show_applied(engine.current())
 
-    def show_applied(self, name: str) -> None:
+    def show_applied(self, name: str | None) -> None:
         for card in self.cards:
             card.set_selected(card.theme["name"] == name)
 
