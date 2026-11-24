@@ -66,6 +66,8 @@ class FakeEngine:
     archived: list[str] = field(default_factory=list)
     deleted: list[str] = field(default_factory=list)
     attached: list[tuple[str, Path]] = field(default_factory=list)
+    #: Folders the Engine let go of while idle, forgetting the tools there.
+    unloaded: set[Path] = field(default_factory=set)
     past: list[PastTurn] = field(default_factory=list)
     referenced: list[tuple[str, tuple[Reference, ...]]] = field(default_factory=list)
 
@@ -126,6 +128,10 @@ class FakeEngine:
 
     def attach_tools(self, name: str, command: list[str], directory: Path) -> None:
         self.attached.append((name, directory))
+        self.unloaded.discard(directory)
+
+    def has_tools(self, name: str, directory: Path) -> bool:
+        return (name, directory) in self.attached and directory not in self.unloaded
 
     def where(self, session: str) -> Path:
         return POMODORO
@@ -737,6 +743,17 @@ def test_the_tools_are_attached_where_the_session_runs_once_each() -> None:
     subject.ask("again")
     subject.worked_on("ses_1", POMODORO)
     assert engine.attached == [("osiris", HOME), ("osiris", POMODORO)]
+
+
+def test_a_question_after_the_engine_forgot_the_tools_attaches_them_again() -> None:
+    """The Engine unloads a folder left idle and forgets what was attached
+    there; a running server is left alone, so no tool call is cut off."""
+    subject, engine, _ = harness()
+    subject.ask("hello")
+    engine.unloaded.add(HOME)
+    subject.ask("an hour later")
+    subject.ask("and again")
+    assert engine.attached == [("osiris", HOME), ("osiris", HOME)]
 
 
 def test_a_resumed_conversation_runs_in_its_own_folder() -> None:
