@@ -106,7 +106,9 @@ def test_a_models_inputs_come_from_its_published_schema() -> None:
 def test_anything_but_an_active_image_model_is_refused(answer: object) -> None:
     http = FakeHttpClient(replies={("GET", DETAILS): answer})
 
-    with pytest.raises(MediaError, match="not an image model FAL offers"):
+    with pytest.raises(
+        MediaError, match=r"not an image model FAL offers.*ask the person which model"
+    ):
         catalog(http).spec("fal-ai/one")
 
 
@@ -138,7 +140,9 @@ def test_a_model_that_needs_more_than_a_description_is_refused() -> None:
     answer = described(required=("prompt", "image_url"))
     http = FakeHttpClient(replies={("GET", DETAILS): answer})
 
-    with pytest.raises(MediaError, match="needs more than a description"):
+    with pytest.raises(
+        MediaError, match=r"needs more than a description.*ask the person which model"
+    ):
         catalog(http).spec("fal-ai/one")
 
 
@@ -218,5 +222,7 @@ def test_a_model_that_takes_no_description_is_refused() -> None:
     answer = described(required=(), properties={"image_url": {}})
     http = FakeHttpClient(replies={("GET", DETAILS): answer})
 
-    with pytest.raises(MediaError, match="needs more than a description"):
+    with pytest.raises(
+        MediaError, match=r"needs more than a description.*ask the person which model"
+    ):
         catalog(http).spec("fal-ai/one")
