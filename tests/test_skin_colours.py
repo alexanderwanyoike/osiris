@@ -38,3 +38,13 @@ def test_a_colour_written_as_numbers_is_named(tmp_path: Path) -> None:
     write(tmp_path / "mine" / "gtk-3.0" / "gtk-dark.scss", sheet)
     found = fixed_colours(tmp_path / "mine", None)
     assert found == ["gtk-3.0/gtk-dark.scss: rgb(47, 125, 74)"]
+
+
+def test_a_sheet_full_of_colours_names_a_few_and_counts_the_rest(
+    tmp_path: Path,
+) -> None:
+    sheet = " ".join(f"a{n} {{ color: #00000{n}; }}" for n in range(1, 6))
+    write(tmp_path / "mine" / "files" / "dark" / "gtk-3.0" / "gtk.css", sheet)
+    assert fixed_colours(tmp_path / "mine", None) == [
+        "files/dark/gtk-3.0/gtk.css: #000001, #000002, #000003 and 2 more"
+    ]
