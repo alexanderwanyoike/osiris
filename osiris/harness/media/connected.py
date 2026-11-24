@@ -23,7 +23,7 @@ class ConnectedFal:
         self,
         files: FileSystem,
         home: Path,
-        maker_for: Callable[[str], ImageMaker],
+        maker_for: Callable[[str, Callable[[], None]], ImageMaker],
         today: Callable[[], date],
     ) -> None:
         self._files = files
@@ -38,12 +38,12 @@ class ConnectedFal:
                 "FAL is not connected. The person can add a key in Settings, "
                 "in the Media section of Models."
             )
-        fal = self._maker_for(key)
         chosen = model or saved_model(self._files, self._home)
+        return self._maker_for(key, self._counter()).make(description, chosen)
+
+    def _counter(self) -> Callable[[], None]:
         images = daily_limit(self._files, self._home)
         if images is None:
-            return fal.make(description, chosen)
-        limited = DailyLimit(
-            fal, self._files, self._home / USAGE_FILE, self._today, images=images
-        )
-        return limited.make(description, chosen)
+            return lambda: None
+        usage = self._home / USAGE_FILE
+        return DailyLimit(self._files, usage, self._today, images=images).take

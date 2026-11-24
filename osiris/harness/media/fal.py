@@ -31,14 +31,17 @@ class FalImages:
         http: HttpClient,
         key: str,
         spec: Callable[[str], ModelSpec],
+        before_spending: Callable[[], None] = lambda: None,
     ) -> None:
         self._http = http
         self._key = key
         self._spec = spec
+        self._before_spending = before_spending
 
     def make(self, description: str, model: str | None = None) -> bytes:
         spec = self._spec(model or DEFAULT_IMAGE_MODEL)
         body = _request(description, spec)
+        self._before_spending()
         try:
             answer = self._http.request(
                 "POST",

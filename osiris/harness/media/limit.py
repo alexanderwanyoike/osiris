@@ -10,27 +10,25 @@ from datetime import date
 from pathlib import Path
 
 from osiris.harness.media.error import MediaError
-from osiris.harness.media.maker import ImageMaker
 from osiris.platform import FileSystem
 
 
 class DailyLimit:
     def __init__(
         self,
-        maker: ImageMaker,
         files: FileSystem,
         usage: Path,
         today: Callable[[], date],
         *,
         images: int,
     ) -> None:
-        self._maker = maker
         self._files = files
         self._usage = usage
         self._today = today
         self._images = images
 
-    def make(self, description: str, model: str | None = None) -> bytes:
+    def take(self) -> None:
+        """Count one picture, or refuse it; called just before a paid request."""
         day = self._today().isoformat()
         if self._used(day) >= self._images:
             raise self._reached()
@@ -39,7 +37,6 @@ class DailyLimit:
         # may both stop, but can never both spend it.
         if self._used(day) > self._images:
             raise self._reached()
-        return self._maker.make(description, model)
 
     def _reached(self) -> MediaError:
         pictures = "picture" if self._images == 1 else "pictures"

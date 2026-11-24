@@ -37,7 +37,10 @@ def connected(
     spec: Callable[[str], ModelSpec] = any_model,
 ) -> ConnectedFal:
     return ConnectedFal(
-        files, HOME, lambda key: FalImages(http, key, spec), lambda: MONDAY
+        files,
+        HOME,
+        lambda key, before: FalImages(http, key, spec, before),
+        lambda: MONDAY,
     )
 
 
