@@ -22,10 +22,10 @@ SHOWN = 3
 def fixed_colours(skin: Path, style: Path | None) -> list[str]:
     """Each style sheet of the Skin with the colours written into it that the
     Skin it was made from does not have."""
-    known = {colour for sheet in _sheets(style) for colour in _colours(sheet)}
+    known = {value for sheet in _sheets(style) for value in _colours(sheet)}
     found = []
     for sheet in _sheets(skin):
-        new = [colour for colour in _colours(sheet) if colour not in known]
+        new = [shown for value, shown in _colours(sheet).items() if value not in known]
         if new:
             found.append(f"{sheet.relative_to(skin).as_posix()}: {_listed(new)}")
     return found
@@ -39,9 +39,33 @@ def _sheets(root: Path | None) -> Iterator[Path]:
             yield path
 
 
-def _colours(sheet: Path) -> list[str]:
+def _colours(sheet: Path) -> dict[str, str]:
+    """Each colour in the sheet as #rrggbbaa, with how it was first written."""
     text = _NOT_COLOURS.sub(" ", sheet.read_text(errors="replace"))
-    return list(dict.fromkeys(match.lower() for match in _COLOUR.findall(text)))
+    found: dict[str, str] = {}
+    for written in _COLOUR.findall(text):
+        found.setdefault(_value(written), written)
+    return found
+
+
+def _value(written: str) -> str:
+    if written.startswith("#"):
+        digits = written[1:].lower()
+        if len(digits) < 6:
+            digits = "".join(digit * 2 for digit in digits)
+        return "#" + digits.ljust(8, "f")
+    numbers = re.findall(r"[0-9.]+%?", written)
+    if len(numbers) < 3:
+        return written
+    channels = [_channel(number, 255) for number in numbers[:3]]
+    alpha = _channel(numbers[3], 1) if len(numbers) > 3 else 1.0
+    return "#" + "".join(f"{round(c):02x}" for c in (*channels, alpha * 255))
+
+
+def _channel(number: str, scale: float) -> float:
+    if number.endswith("%"):
+        return float(number[:-1]) * scale / 100
+    return float(number)
 
 
 def _listed(colours: list[str]) -> str:
