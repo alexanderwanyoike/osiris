@@ -101,6 +101,42 @@ def test_the_result_names_the_theme_and_carries_the_dock(tmp_path: Path) -> None
     assert f"GtkTheme={built.theme}\n" in (theme / "index.theme").read_text()
 
 
+def test_a_skin_built_again_unchanged_keeps_its_name(tmp_path: Path) -> None:
+    root = make_pack(tmp_path / "colloid")
+    first = build(
+        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "w", FakeRunner()
+    )
+    again = build(
+        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "w", FakeRunner()
+    )
+    assert again.theme == first.theme
+
+
+def test_an_edited_skin_is_built_under_a_new_name(tmp_path: Path) -> None:
+    """GTK, Muffin and Cinnamon reload only when the theme's name changes, so
+    open apps would keep the look from before the edit."""
+    root = make_pack(tmp_path / "colloid")
+    first = build(
+        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "w", FakeRunner()
+    )
+    (root / "files" / "common" / "gtk-3.0" / "assets" / "check.svg").write_text(
+        "<svg/>"
+    )
+    edited = build(
+        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "w", FakeRunner()
+    )
+    assert edited.theme != first.theme
+
+
+def test_a_skin_in_an_edited_theme_is_built_under_a_new_name(tmp_path: Path) -> None:
+    pack = read(make_pack(tmp_path / "colloid"))
+    first = build(pack, ROSE_PINE, tmp_path / "themes", tmp_path / "w", FakeRunner())
+    recoloured = json.loads(json.dumps(ROSE_PINE))
+    recoloured["colors"]["accent"] = "#ff0000"
+    edited = build(pack, recoloured, tmp_path / "themes", tmp_path / "w", FakeRunner())
+    assert edited.theme != first.theme
+
+
 def test_building_prints_nothing_of_its_own(tmp_path: Path) -> None:
     runner = FakeRunner()
     build_rose_pine(tmp_path, runner)
