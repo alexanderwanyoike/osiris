@@ -189,3 +189,34 @@ def test_a_model_is_given_a_wide_size_from_its_schema() -> None:
     http = FakeHttpClient(replies={("GET", DETAILS): answer})
 
     assert catalog(http).spec("fal-ai/one").size == "1536x1024"
+
+
+def test_a_key_fal_rejects_is_not_mistaken_for_a_lost_connection() -> None:
+    http = FakeHttpClient(replies={("GET", SEARCH): HttpError(401, "no")})
+
+    with pytest.raises(MediaError, match="did not accept the key"):
+        catalog(http).search("flat anime")
+
+
+def test_a_key_that_cannot_be_sent_is_reported_as_the_key() -> None:
+    class Unsendable(FakeHttpClient):
+        def request(
+            self,
+            method: str,
+            url: str,
+            *,
+            body: Body = None,
+            headers: Mapping[str, str] | None = None,
+        ) -> Body:
+            raise UnicodeEncodeError("latin-1", "key", 0, 1, "no")
+
+    with pytest.raises(MediaError, match="did not accept the key"):
+        catalog(Unsendable()).search("flat anime")
+
+
+def test_a_model_that_takes_no_description_is_refused() -> None:
+    answer = described(required=(), properties={"image_url": {}})
+    http = FakeHttpClient(replies={("GET", DETAILS): answer})
+
+    with pytest.raises(MediaError, match="needs more than a description"):
+        catalog(http).spec("fal-ai/one")
