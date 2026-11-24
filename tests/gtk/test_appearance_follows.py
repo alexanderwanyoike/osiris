@@ -84,3 +84,17 @@ def test_a_theme_deleted_elsewhere_leaves_the_list(main: ModuleType) -> None:
     assert "ink-duel" in names(shown)
     main.engine.delete("ink-duel")
     assert settle(lambda: "ink-duel" not in names(shown))
+
+
+def test_a_theme_applied_on_a_new_account_is_selected(
+    main: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Review of #259: with no ~/.config/osiris yet, the record was watched
+    before the Theme folder made it, and GLib only polls for a missing folder."""
+    engine = main.engine
+    osiris = tmp_path / "config" / "osiris"
+    monkeypatch.setattr(engine, "SEARCH", [str(osiris / "themes"), engine.REPO_THEMES])
+    monkeypatch.setattr(engine, "STATE", str(osiris / "theme"))
+    shown = window(main)
+    (osiris / "theme").write_text("rose-pine\n")
+    assert settle(lambda: selected(shown) == ["rose-pine"])
