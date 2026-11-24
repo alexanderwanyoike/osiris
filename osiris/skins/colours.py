@@ -44,7 +44,9 @@ def _colours(sheet: Path) -> dict[str, str]:
     text = _NOT_COLOURS.sub(" ", sheet.read_text(errors="replace"))
     found: dict[str, str] = {}
     for written in _COLOUR.findall(text):
-        found.setdefault(_value(written), written)
+        value = _value(written)
+        if not value.endswith("00"):
+            found.setdefault(value, written)
     return found
 
 
