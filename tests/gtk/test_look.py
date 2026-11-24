@@ -8,7 +8,7 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
-from gi.repository import Adw, Gdk, Gtk
+from gi.repository import Adw, Gdk, Gsk, Gtk
 from look import Look
 
 from osiris.apps.user_css import UserCss
@@ -58,6 +58,47 @@ def test_typed_text_is_in_the_themes_colour_whatever_gtk_read_at_startup(
         foreground.parse(look.theme["colors"]["foreground"])
         for typed in (Gtk.TextView(), Gtk.Text()):
             assert typed.get_color().equal(foreground), (skin, typed)
+
+
+def painted(widget: Gtk.Widget) -> set[str]:
+    """The flat colours a widget paints, read from its render nodes."""
+    snapshot = Gtk.Snapshot()
+    Gtk.WidgetPaintable.new(widget).snapshot(
+        snapshot, widget.get_width(), widget.get_height()
+    )
+    found: set[str] = set()
+
+    def walk(node: Gsk.RenderNode | None) -> None:
+        if isinstance(node, Gsk.ColorNode):
+            found.add(node.get_color().to_string())
+        elif isinstance(node, Gsk.ContainerNode):
+            for index in range(node.get_n_children()):
+                walk(node.get_child(index))
+        elif node is not None and hasattr(node, "get_child"):
+            walk(node.get_child())
+
+    walk(snapshot.to_node())
+    return found
+
+
+def test_a_switch_that_is_on_fills_with_the_themes_accent_whatever_gtk_read_at_startup(
+    tmp_path: Path, frozen_sheet: Callable[[str], None]
+) -> None:
+    """Filming a demo: Allow everything stayed in the old Theme's accent."""
+    frozen_sheet("switch:checked { background-color: #ff0000; }")
+    for skin in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(skin)
+        look = Look(tmp_path, lambda: None)
+        accent = Gdk.RGBA()
+        accent.parse(look.theme["colors"]["accent"])
+        switch = Gtk.Switch(active=True)
+        window = Gtk.Window(child=switch)
+        window.present()
+        settle(lambda shown=switch: shown.get_width() > 0)
+        colours = painted(switch)
+        window.destroy()
+        assert accent.to_string() in colours, (skin, colours)
 
 
 def test_the_drawer_turns_light_when_the_theme_does(
