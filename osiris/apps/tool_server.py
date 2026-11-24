@@ -487,9 +487,12 @@ def _picture_tool(
 
         model: its exact id from find_image_models.
         """
+        previous = pictures.default_image_model()
         pictures.choose(model)
         logged.write(
-            "changed", summary=f"Made {model} the default image model", undo=None
+            "changed",
+            summary=f"Made {model} the default image model",
+            undo={"action": "set_default_image_model", "model": previous},
         )
         return f"{model} now makes the person's pictures unless they name another."
 
@@ -506,13 +509,14 @@ def _picture_tool(
             person asked for that model; leave it out to use their default.
         """
         actions.unused_name(store, label)
-        data = pictures.make(f"{picture}. {PICTURE_STYLE}", image_model or None)
+        used = image_model or pictures.default_image_model()
+        data = pictures.make(f"{picture}. {PICTURE_STYLE}", used)
         name = actions.create_picture_theme(
             store, label=label, picture=data, keep=pictures.keep
         )
         logged.write(
             "changed",
-            summary=f"Made {label}",
+            summary=f"Made {label} with {used}",
             undo={"action": "delete_theme", "name": name},
         )
         previous = actions.apply_theme(store, name)
@@ -522,7 +526,7 @@ def _picture_tool(
             undo={"action": "apply_theme", "name": previous} if previous else None,
         )
         kept = actions.find(store, name)["wallpaper"]
-        return f"Made {label} from a new picture at {kept} and applied it."
+        return f"Made {label} with {used} from a new picture at {kept} and applied it."
 
 
 def _skin_tools(tools: MCPServer, skins: SkinStore, logged: _Logged) -> None:
