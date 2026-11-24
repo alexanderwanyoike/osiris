@@ -4,6 +4,7 @@ the Theme, so they stay the same whatever Theme is worn."""
 from __future__ import annotations
 
 import re
+import shutil
 import tarfile
 from collections.abc import Iterator, Sequence
 from pathlib import Path
@@ -73,8 +74,12 @@ def _first_commit(root: Path, runner: CommandRunner, scratch: Path) -> Path | No
     if not made.ok:
         return None
     target = scratch / "first"
-    with tarfile.open(archive) as unpacked:
-        unpacked.extractall(target, filter="data")
+    shutil.rmtree(target, ignore_errors=True)
+    try:
+        with tarfile.open(archive) as unpacked:
+            unpacked.extractall(target, filter="data")
+    except tarfile.TarError:
+        return None
     return target
 
 
