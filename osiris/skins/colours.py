@@ -35,7 +35,12 @@ def _sheets(root: Path | None) -> Iterator[Path]:
     if root is None:
         return
     for path in sorted(root.rglob("*")):
-        if path.suffix in _SHEETS and ".git" not in path.relative_to(root).parts:
+        if (
+            path.suffix in _SHEETS
+            and ".git" not in path.relative_to(root).parts
+            and path.is_file()
+            and not path.is_symlink()
+        ):
             yield path
 
 
@@ -56,7 +61,7 @@ def _value(written: str) -> str:
         if len(digits) < 6:
             digits = "".join(digit * 2 for digit in digits)
         return "#" + digits.ljust(8, "f")
-    numbers = re.findall(r"[0-9.]+%?", written)
+    numbers = re.findall(r"[0-9]*\.?[0-9]+%?", written)
     if len(numbers) < 3:
         return written
     channels = [_channel(number, 255) for number in numbers[:3]]
