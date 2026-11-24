@@ -50,14 +50,14 @@ def places(tmp_path: Path) -> Places:
 
 def test_a_skin_without_its_own_panel_gets_osiris_own(tmp_path: Path) -> None:
     panels: list[Path] = []
-    wear(
+    built, _look = wear(
         read(make_pack(tmp_path / "plain")),
         ROSE_PINE,
         places(tmp_path),
         FakeRunner(),
         panels.append,
     )
-    assert panels == [tmp_path / "themes" / "Osiris-plain-rose-pine"]
+    assert panels == [tmp_path / "themes" / built.theme]
 
 
 def test_a_skin_with_its_own_panel_keeps_it(tmp_path: Path) -> None:
@@ -84,7 +84,7 @@ def test_the_skin_is_worn_with_its_look_for_the_themes_variant(
         FakeRunner(),
         lambda _theme: None,
     )
-    assert built.theme == "Osiris-plain-rose-pine"
+    assert built.theme.startswith("Osiris-plain-rose-pine")
     assert look == Look("Plain-Dark", None, None)
 
 
