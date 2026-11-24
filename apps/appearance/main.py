@@ -360,7 +360,7 @@ class Window(Adw.ApplicationWindow):
         toolbar.set_content(self.toasts)
         self.set_content(toolbar)
         self.reload()
-        # The person's own folder: what is shipped changes only with a package.
+        # Only the person's own folder; shipped Themes change with a package.
         self._folder_watch = ThemeFolder(Path(engine.SEARCH[0]), self.reload)
         # After the folder, which makes the record's folder on a new account.
         self._record_watch = ThemeRecord(Path(engine.STATE), self.show_applied)
