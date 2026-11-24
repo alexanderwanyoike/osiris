@@ -1067,8 +1067,8 @@ def check_skin(name: str) -> list[str]:
 
 
 def fixed_colours(name: str) -> list[str]:
-    """Colours written into one of the person's Skins that the Skin it was
-    made from does not have; shipped Skins keep their own."""
+    """Colours written into one of the person's Skins that what it was made
+    from does not have; shipped Skins keep their own."""
     if name not in own_skins():
         return []
     pack = _pack(name)

@@ -1,14 +1,15 @@
 # This folder is an Osiris Skin
 
 It is the person's own copy of a Skin: the shape of their desktop (windows,
-panel, dock, launcher), whose colours always come from their current Theme.
+panel, dock, launcher), whose colours come from their current Theme unless
+they ask for a fixed colour.
 Change it when they ask; never touch Skins outside this folder.
 
 ## How it is made
 
 - `skin.json` is its label. An optional `look` block names an icon set
   (`icons`, one name or `{"light": ..., "dark": ...}`), a `cursor` and a `font`.
-- `sass/` holds the Sass partials. Colours come only from these variables,
+- `sass/` holds the Sass partials. Colours come from these variables,
   which Osiris writes into `sass/_gaps.scss` (never edit or ship that file):
   `$gap-variant` ('light' or 'dark'), `$gap-background`, `$gap-surface`,
   `$gap-foreground`, `$gap-accent`, `$gap-success`, `$gap-warning`,
