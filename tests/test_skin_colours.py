@@ -31,3 +31,10 @@ def test_colours_the_original_skin_has_are_part_of_its_look(tmp_path: Path) -> N
 def test_a_picture_pointing_at_its_own_parts_has_no_colour(tmp_path: Path) -> None:
     write(tmp_path / "mine" / "files" / "a.svg", '<rect fill="url(#fade)"/>')
     assert fixed_colours(tmp_path / "mine", None) == []
+
+
+def test_a_colour_written_as_numbers_is_named(tmp_path: Path) -> None:
+    sheet = "a { color: rgba($gap-foreground, 0.1); background: rgb(47, 125, 74); }"
+    write(tmp_path / "mine" / "gtk-3.0" / "gtk-dark.scss", sheet)
+    found = fixed_colours(tmp_path / "mine", None)
+    assert found == ["gtk-3.0/gtk-dark.scss: rgb(47, 125, 74)"]
