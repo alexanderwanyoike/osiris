@@ -102,7 +102,10 @@ def test_a_described_picture_becomes_the_applied_theme() -> None:
     assert maker.asked[0].startswith("A misty forest at dawn. ")
     assert "no text" in maker.asked[0]
     assert log.last_changes() == [
-        Change("Made Misty Forest", {"action": "delete_theme", "name": "misty-forest"}),
+        Change(
+            f"Made Misty Forest with {DEFAULT_IMAGE_MODEL}",
+            {"action": "delete_theme", "name": "misty-forest"},
+        ),
         Change("Applied Misty Forest", {"action": "apply_theme", "name": "nord"}),
     ]
 
@@ -145,9 +148,10 @@ def test_a_model_the_person_named_makes_that_picture() -> None:
     )
 
     assert maker.models == ["vendor/flat"]
+    assert log.last_changes()[0].summary == "Made Misty Forest with vendor/flat"
 
 
-def test_with_no_model_named_the_default_is_left_to_decide() -> None:
+def test_with_no_model_named_the_default_makes_the_picture() -> None:
     store, maker, files = nord(), Maker(), FakeFileSystem()
     log = HarnessLog(files, HOME / LOG_FILE)
 
@@ -155,7 +159,7 @@ def test_with_no_model_named_the_default_is_left_to_decide() -> None:
         tool_server(store, maker, log, files).call_tool("make_picture_theme", FOREST)
     )
 
-    assert maker.models == [None]
+    assert maker.models == [DEFAULT_IMAGE_MODEL]
 
 
 def test_the_model_can_see_fals_image_models_and_the_default() -> None:
@@ -185,7 +189,12 @@ def test_a_person_can_make_a_model_their_default() -> None:
     )
 
     assert saved_model(files, HOME) == "vendor/flat"
-    assert log.last_changes()[0].summary == "Made vendor/flat the default image model"
+    change = log.last_changes()[0]
+    assert change.summary == "Made vendor/flat the default image model"
+    assert change.undo == {
+        "action": "set_default_image_model",
+        "model": DEFAULT_IMAGE_MODEL,
+    }
     assert TIERS["set_default_image_model"] is Tier.UNDOABLE
 
 
@@ -201,6 +210,19 @@ def test_a_model_fal_does_not_offer_cannot_become_the_default() -> None:
         )
 
     assert saved_model(files, HOME) is None
+
+
+def test_the_result_names_the_model_that_made_the_picture() -> None:
+    store, maker, files = nord(), Maker(), FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+
+    reply = asyncio.run(
+        tool_server(store, maker, log, files).call_tool(
+            "make_picture_theme", {**FOREST, "image_model": "vendor/flat"}
+        )
+    )
+
+    assert "vendor/flat" in reply.content[0].text
 
 
 def test_a_label_in_use_is_refused_before_anything_is_spent() -> None:
