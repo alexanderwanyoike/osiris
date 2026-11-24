@@ -24,6 +24,29 @@ Change it when they ask; never touch Skins outside this folder.
   `{{background_plank}}`.
 - `rofi/launcher.rasi`, if present, is the launcher, with `{{gap}}` markers.
 
+## One look on every surface
+
+The same rule comes out differently on each surface, because each is drawn
+by something else:
+
+- libadwaita and GTK 4 windows draw their own edge and shadow
+  (`window.background.csd`).
+- Many GTK 3 windows, such as Files and the text editor, have frames the
+  window manager draws from `window.ssd > decoration` and
+  `headerbar.titlebar.default-decoration`. It keeps only what the
+  decoration's background covers, so a border there disappears: to outline
+  these windows, give the decoration a background in the outline colour.
+  The window manager adds its own soft shadow to them.
+- The panel is an edge of the screen. An outline belongs on the side facing
+  the desktop (`.panel-top`, `.panel-bottom` and so on).
+- The dock can draw only a stroke (`LineWidth`, `OuterStrokeColor`), corner
+  roundness and padding; it has no shadow.
+
+So decide each part of a look once: its width, colour and corners, kept in
+one partial that every surface uses, with the same gap for the same thing in
+the dock theme. Where a surface cannot draw part of it, give that surface
+what makes it look like the rest.
+
 ## An imported theme
 
 If `skin.json` says the author is "Imported", this Skin came from a GTK theme
@@ -65,6 +88,13 @@ person what it said.
   engine does the same:
 
       python3 /usr/share/osiris/themes/engine.py --skin SKIN_NAME
+
+- Then look at it before saying it is done. With a GTK 3 window (Files:
+  `setsid -f nemo`) and a libadwaita window (Appearance:
+  `setsid -f osiris-appearance`) open, take a screenshot with
+  `gnome-screenshot -f .look.png` and read it. Compare the two windows, the
+  panel and the dock, fix what differs, and look again. Delete the
+  screenshot before committing.
 
 - Commit each change in this folder with a message saying what changed and
   why, so the person can read the Skin's history.
