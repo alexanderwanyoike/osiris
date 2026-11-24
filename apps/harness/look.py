@@ -1,4 +1,5 @@
-"""How the drawer looks: the Theme's colours and the chosen Skin, kept current.
+"""How the drawer looks: the Theme's colours, its light or dark, and the chosen
+Skin, kept current.
 
 The colours, the code scheme and the choice of Skin are decided in
 osiris/harness/style.py, where they are tested. This loads them into GTK and
