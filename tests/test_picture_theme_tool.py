@@ -16,7 +16,7 @@ from osiris.apps.tool_server import TIERS, instructions, server
 from osiris.harness.log import LOG_FILE, Change, HarnessLog
 from osiris.harness.media.error import MediaError
 from osiris.harness.media.image_model import ImageModel
-from osiris.harness.media.model_setting import DEFAULT_MODEL, saved_model
+from osiris.harness.media.model_setting import DEFAULT_IMAGE_MODEL, saved_model
 from osiris.harness.media.pictures import Pictures
 from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem, FakeRunner
@@ -169,7 +169,7 @@ def test_the_model_can_see_fals_image_models_and_the_default() -> None:
 
     text = reply.content[0].text
     assert "vendor/flat" in text
-    assert DEFAULT_MODEL in text
+    assert DEFAULT_IMAGE_MODEL in text
     assert TIERS["find_image_models"] is Tier.LOOK
 
 

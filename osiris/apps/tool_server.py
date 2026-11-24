@@ -475,7 +475,7 @@ def _picture_tool(
         model names better than styles; leave it empty to see a selection.
         """
         return {
-            "default": pictures.default_model(),
+            "default": pictures.default_image_model(),
             "models": [asdict(model) for model in pictures.find(search)],
         }
 

@@ -13,12 +13,12 @@ from osiris.harness.media.error import MediaError
 from osiris.harness.media.fal import RUN, FalImages
 from osiris.harness.media.key import save_fal_key
 from osiris.harness.media.limit_setting import set_daily_limit
-from osiris.harness.media.model_setting import DEFAULT_MODEL, save_model
+from osiris.harness.media.model_setting import DEFAULT_IMAGE_MODEL, save_model
 from osiris.platform import FakeFileSystem, FakeHttpClient
 
 HOME = Path("/home/tester")
 MONDAY = date(2026, 11, 23)
-ENDPOINT = f"{RUN}/{DEFAULT_MODEL}"
+ENDPOINT = f"{RUN}/{DEFAULT_IMAGE_MODEL}"
 ANSWER = {
     "images": [{"url": "data:image/png;base64," + base64.b64encode(b"p").decode()}],
     "has_nsfw_concepts": [False],

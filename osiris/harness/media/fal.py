@@ -7,7 +7,7 @@ from collections.abc import Callable
 from urllib.parse import urlsplit
 
 from osiris.harness.media.error import MediaError
-from osiris.harness.media.model_setting import DEFAULT_MODEL
+from osiris.harness.media.model_setting import DEFAULT_IMAGE_MODEL
 from osiris.platform import HttpClient, HttpError
 
 RUN = "https://fal.run"
@@ -36,7 +36,7 @@ class FalImages:
         self._inputs = inputs
 
     def make(self, description: str, model: str | None = None) -> bytes:
-        chosen = model or DEFAULT_MODEL
+        chosen = model or DEFAULT_IMAGE_MODEL
         body = _request(description, self._inputs(chosen))
         try:
             answer = self._http.request(

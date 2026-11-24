@@ -9,7 +9,7 @@ from osiris.harness.media.image_model import ImageModel
 from osiris.harness.media.maker import ImageMaker
 from osiris.harness.media.model_catalog import ModelCatalog
 from osiris.harness.media.model_setting import (
-    DEFAULT_MODEL,
+    DEFAULT_IMAGE_MODEL,
     save_model,
     saved_model,
 )
@@ -41,8 +41,8 @@ class Pictures:
     def find(self, words: str) -> list[ImageModel]:
         return self.catalog.search(words)
 
-    def default_model(self) -> str:
-        return saved_model(self.files, self.home) or DEFAULT_MODEL
+    def default_image_model(self) -> str:
+        return saved_model(self.files, self.home) or DEFAULT_IMAGE_MODEL
 
     def choose(self, model: str) -> None:
         self.catalog.inputs(model)

@@ -10,13 +10,13 @@ import pytest
 
 from osiris.harness.media.error import MediaError
 from osiris.harness.media.fal import RUN, FalImages
-from osiris.harness.media.model_setting import DEFAULT_MODEL
+from osiris.harness.media.model_setting import DEFAULT_IMAGE_MODEL
 from osiris.platform import FakeHttpClient, HttpError
 from osiris.platform.http import Body
 
 PICTURE = b"a picture"
 KEY = "a-secret-key"
-ENDPOINT = f"{RUN}/{DEFAULT_MODEL}"
+ENDPOINT = f"{RUN}/{DEFAULT_IMAGE_MODEL}"
 EVERY_INPUT = frozenset(
     {"prompt", "image_size", "num_images", "output_format", "sync_mode"}
 )
