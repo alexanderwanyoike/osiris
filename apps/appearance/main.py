@@ -46,6 +46,7 @@ from skin_editor import CSS as EDITOR_CSS, SkinEditor  # noqa: E402
 from skins_page import CSS as SKINS_CSS, SkinsPage, new_skin  # noqa: E402
 
 # creator has put the osiris package on sys.path.
+from osiris.apps.theme_record import ThemeRecord  # noqa: E402
 from osiris.apps.theme_scheme import ThemeScheme  # noqa: E402
 from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.model.names import slug  # noqa: E402
@@ -358,6 +359,7 @@ class Window(Adw.ApplicationWindow):
         toolbar.set_content(self.toasts)
         self.set_content(toolbar)
         self.reload()
+        self._applied = ThemeRecord(Path(engine.STATE), self.show_applied)
         self._explain_drift()
         GLib.timeout_add_seconds(5, self._explain_drift)
 
@@ -412,6 +414,10 @@ class Window(Adw.ApplicationWindow):
                 flow.append(card)
             section.append(flow)
             self.sections.append(section)
+
+    def show_applied(self, name: str) -> None:
+        for card in self.cards:
+            card.set_selected(card.theme["name"] == name)
 
     # --------------------------------------------------------------- actions
 
