@@ -13,7 +13,7 @@ from osiris.platform.process import CommandRunner
 from osiris.skins.library import find
 from osiris.skins.pack import Skinpack
 
-_SHEETS = {".scss", ".css", ".svg", ".rasi"}
+_SHEET_SUFFIXES = {".scss", ".css", ".svg", ".rasi"}
 # Hex-shaped text that is not a colour: references, links and entities.
 _NOT_COLOURS = re.compile(r"url\([^)]*\)|href=(?:\"[^\"]*\"|'[^']*')|&#\w+;")
 # Not a selector such as &#add-color-button or #cafe-box.
@@ -21,9 +21,8 @@ _HEX = r"(?<![&\w])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\w-])"
 # Numbers only: rgba($gap-foreground, 0.1) fades a Theme colour.
 _NUMBERS = r"\brgba?\(\s*[0-9][0-9.,%/\s]*\)"
 _COLOUR = re.compile(f"{_HEX}|{_NUMBERS}")
-# How many colours per sheet and how many sheets are named; a downloaded
-# theme can hold hundreds of each.
-_SHOWN = 3
+# A downloaded theme can hold hundreds of each.
+_COLOURS_SHOWN = 3
 _SHEETS_SHOWN = 10
 
 
@@ -58,6 +57,8 @@ def _first_commit(root: Path, runner: CommandRunner, scratch: Path) -> Path | No
     ).stdout.split()
     if not first:
         return None
+    # rev-list lists newest first, so a history joined from two roots ends
+    # with the older one: the Skin as Osiris first made it.
     scratch.mkdir(parents=True, exist_ok=True)
     archive = scratch / "first.tar"
     made = runner.run(
@@ -106,7 +107,7 @@ def fixed_colours(skin: Path, originals: Sequence[Path]) -> list[str]:
 def _sheets(root: Path) -> Iterator[Path]:
     for path in sorted(root.rglob("*")):
         if (
-            path.suffix in _SHEETS
+            path.suffix in _SHEET_SUFFIXES
             and ".git" not in path.relative_to(root).parts
             and path.is_file()
             and not path.is_symlink()
@@ -120,6 +121,7 @@ def _colours(sheet: Path) -> dict[str, str]:
     found: dict[str, str] = {}
     for written in _COLOUR.findall(text):
         value = _value(written)
+        # An alpha of 00 shows nothing, so cannot clash with a Theme.
         if not value.endswith("00"):
             found.setdefault(value, written)
     return found
@@ -146,6 +148,6 @@ def _channel(number: str, scale: float) -> float:
 
 
 def _listed(colours: list[str]) -> str:
-    shown = ", ".join(colours[:_SHOWN])
-    rest = len(colours) - _SHOWN
+    shown = ", ".join(colours[:_COLOURS_SHOWN])
+    rest = len(colours) - _COLOURS_SHOWN
     return f"{shown} and {rest} more" if rest > 0 else shown
