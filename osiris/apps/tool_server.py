@@ -482,8 +482,10 @@ def _skin_tools(tools: MCPServer, skins: SkinStore, logged: _Logged) -> None:
         colours = skins.fixed_colours(name)
         if colours:
             found += (
-                "\nFixed colours, the same under every Theme. Use a gap for each "
-                "the person did not ask for:\n" + "\n".join(colours)
+                "\nFixed colours, the same under every Theme. Replace with a gap "
+                "only those you wrote in this conversation that the person did not "
+                "ask for, and ask the person before changing any other:\n"
+                + "\n".join(colours)
             )
         return found
 
