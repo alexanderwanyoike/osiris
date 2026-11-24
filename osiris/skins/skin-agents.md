@@ -1,14 +1,15 @@
 # This folder is an Osiris Skin
 
 It is the person's own copy of a Skin: the shape of their desktop (windows,
-panel, dock, launcher), whose colours always come from their current Theme.
+panel, dock, launcher), whose colours come from their current Theme unless
+they ask for a fixed colour.
 Change it when they ask; never touch Skins outside this folder.
 
 ## How it is made
 
 - `skin.json` is its label. An optional `look` block names an icon set
   (`icons`, one name or `{"light": ..., "dark": ...}`), a `cursor` and a `font`.
-- `sass/` holds the Sass partials. Colours come only from these variables,
+- `sass/` holds the Sass partials. Colours come from these variables,
   which Osiris writes into `sass/_gaps.scss` (never edit or ship that file):
   `$gap-variant` ('light' or 'dark'), `$gap-background`, `$gap-surface`,
   `$gap-foreground`, `$gap-accent`, `$gap-success`, `$gap-warning`,
@@ -57,10 +58,10 @@ person what it said.
 - Another style for this Skin, or a new Skin, is a Skin of the person's in
   `~/.local/share/osiris/skins`, made with the create_skin tool.
 - Never write a colour from the Theme literally: use the gaps, so the Skin
-  works under every Theme, light and dark. Fixed colours are only for things
-  that are part of the look whatever the Theme, and only if asked.
+  works under every Theme, light and dark. check_skin names the fixed colours
+  this Skin was not made with.
 - After each change, check it with the check_skin tool and wear it with
-  wear_skin, and fix whatever check_skin reports. Without those tools, the
+  wear_skin, and fix any problem check_skin reports. Without those tools, the
   engine does the same:
 
       python3 /usr/share/osiris/themes/engine.py --skin SKIN_NAME
