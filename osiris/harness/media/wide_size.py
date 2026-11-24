@@ -18,7 +18,7 @@ def wide_size(field: Mapping[str, Any]) -> object:
     """
     kinds = field.get("anyOf") or [field]
     presets = [value for kind in kinds for value in kind.get("enum", ())]
-    limited = "must" in str(field.get("description", "")).lower()
+    limited = re.search(r"must|\d", str(field.get("description", "")).lower())
     if any("$ref" in kind for kind in kinds) and not limited:
         return FULL_HD
     return _WIDE_PRESET if _WIDE_PRESET in presets else _widest(presets)
