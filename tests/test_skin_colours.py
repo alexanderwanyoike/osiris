@@ -48,3 +48,11 @@ def test_a_sheet_full_of_colours_names_a_few_and_counts_the_rest(
     assert fixed_colours(tmp_path / "mine", None) == [
         "files/dark/gtk-3.0/gtk.css: #000001, #000002, #000003 and 2 more"
     ]
+
+
+def test_references_entities_and_selectors_are_not_colours(tmp_path: Path) -> None:
+    svg = '<a xlink:href="#abc"/>&#160;&#8212;<g fill="url(\'#face\')" s="url( #bad)"/>'
+    write(tmp_path / "mine" / "files" / "a.svg", svg)
+    scss = "&#add-color-button { margin: 0; }\n#cafe-box, #beef_row { margin: 0; }\n"
+    write(tmp_path / "mine" / "sass" / "_rows.scss", scss)
+    assert fixed_colours(tmp_path / "mine", None) == []
