@@ -38,3 +38,15 @@ def test_a_record_caught_empty_is_not_heard(tmp_path: Path) -> None:
         Gio.FileMonitorEvent.CREATED,
     )
     assert heard == []
+
+
+def test_a_record_taken_away_is_not_heard(tmp_path: Path) -> None:
+    record = tmp_path / "theme"
+    record.write_text("ink-duel\n")
+    heard: list[str] = []
+    following = ThemeRecord(record, heard.append)
+    record.unlink()
+    # Called rather than emitted: PyGObject prints an exception raised in a
+    # signal handler and carries on, which would hide one here.
+    following._heard(None, None, None, Gio.FileMonitorEvent.DELETED)
+    assert heard == []
