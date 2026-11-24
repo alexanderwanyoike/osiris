@@ -25,6 +25,7 @@ from osiris.themes.store import ThemeStore
 
 # A Theme's name becomes file and folder names, with prefixes and suffixes.
 _LONGEST_NAME = 64
+_CHARGED = "It may still have been charged, so ask the person before trying again."
 
 
 class ThemeActionError(ValueError):
@@ -112,10 +113,11 @@ def create_picture_theme(
         intent = intent_from(image)
         png = picture if image.format == "PNG" else _as_png(image)
     except (OSError, ValueError) as error:
-        raise ThemeActionError(
-            "The picture could not be read. It may still have been charged, so ask "
-            "the person before trying again."
-        ) from error
+        raise ThemeActionError(f"The picture could not be read. {_CHARGED}") from error
+    try:
+        kept = keep(name, png)
+    except OSError as error:
+        raise ThemeActionError(f"The picture could not be saved. {_CHARGED}") from error
     store.save(
         {
             **build(name, label, seeds(intent)),
@@ -124,7 +126,7 @@ def create_picture_theme(
                 "harmony": intent.harmony.value,
                 "mood": intent.mood.value,
             },
-            "wallpaper": str(keep(name, png)),
+            "wallpaper": str(kept),
         }
     )
     return name
