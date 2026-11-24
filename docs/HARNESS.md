@@ -271,8 +271,8 @@ is written into the person's own opencode configuration. opencode forgets a
 runtime server when it unloads a folder left idle
 (`experimental.location_idle_timeout`, an hour by default), so before each
 question the Harness asks whether `osiris` still runs there and attaches it
-again if not. The timeout is left as it is: turning it off would keep every
-folder's servers running until the Engine restarts.
+again if not. The timeout is left as it is, since turning it off would keep
+every folder's servers running until the Engine restarts.
 
 | Tool | Action tier | What it does | Logged step to reverse it |
 |---|---|---|---|
