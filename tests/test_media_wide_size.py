@@ -23,6 +23,8 @@ def test_a_model_with_no_stated_limits_gets_full_hd(about: str) -> None:
         "Concrete sizes must have both dimensions as multiples of 16.",
         "Explicit dimensions must match a supported size.",
         "Width and height must be between 1920 and 4096.",
+        "Supports sizes up to at most 4,220,160 total pixels.",
+        "Each side can be 256 to 4096 pixels.",
     ],
 )
 def test_a_model_with_size_rules_gets_its_own_wide_preset(about: str) -> None:
