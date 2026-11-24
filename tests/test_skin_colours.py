@@ -66,3 +66,8 @@ def test_a_colour_the_original_has_counts_however_it_is_written(
     )
     write(tmp_path / "mine" / "sass" / "_c.scss", "$a: #FFFFFF; $b: rgba(0,0,0,.2);")
     assert fixed_colours(tmp_path / "mine", tmp_path / "graphite") == []
+
+
+def test_transparent_is_no_colour(tmp_path: Path) -> None:
+    write(tmp_path / "mine" / "sass" / "_c.scss", "$a: #0000; $b: rgba(0, 0, 0, 0);")
+    assert fixed_colours(tmp_path / "mine", None) == []
