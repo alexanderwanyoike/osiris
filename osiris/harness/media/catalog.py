@@ -14,6 +14,7 @@ from osiris.platform import HttpClient, HttpError
 
 CATALOG = "https://api.fal.ai/v1/models"
 _UNREADABLE = "Osiris could not read FAL's list of image models; check the connection."
+_BAD_KEY = "FAL did not accept the key; check it in Settings."
 
 
 class FalCatalog:
@@ -51,12 +52,16 @@ class FalCatalog:
         except HttpError as error:
             if error.status == 404:
                 return []
+            if error.status == 401:
+                raise MediaError(_BAD_KEY) from None
             if error.status == 429:
                 raise MediaError(
                     "FAL is limiting requests for its model list; try again in a "
                     "minute."
                 ) from None
             raise MediaError(_UNREADABLE) from None
+        except UnicodeEncodeError:
+            raise MediaError(_BAD_KEY) from None
         except ValueError:
             raise MediaError(_UNREADABLE) from None
         models = answer.get("models") if isinstance(answer, dict) else None
@@ -88,7 +93,8 @@ def _spec(entry: dict[str, object], model: str) -> ModelSpec:
         schema = body["content"]["application/json"]["schema"]["$ref"]
         name = schema.rsplit("/", 1)[1]
         described = spec["components"]["schemas"][name]
-        if set(described.get("required", ())) - {"prompt"}:
+        needed = set(described.get("required", ())) - {"prompt"}
+        if needed or "prompt" not in described["properties"]:
             raise MediaError(f"{model} needs more than a description; choose another.")
         fields = described["properties"]
         return ModelSpec(
