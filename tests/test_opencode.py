@@ -934,6 +934,25 @@ class TestConnectors:
             "tracker": State("needs_auth", "sign in", "mcp-tracker"),
         }
 
+    @pytest.mark.parametrize(
+        ("servers", "running"),
+        [
+            ([{"name": "osiris", "status": {"status": "connected"}}], True),
+            ([{"name": "osiris", "status": {"status": "pending"}}], True),
+            ([{"name": "osiris", "status": {"status": "failed"}}], False),
+            ([{"name": "wiki", "status": {"status": "connected"}}], False),
+        ],
+    )
+    def test_tools_run_in_a_folder_only_while_their_server_is_up(
+        self, servers: list[dict[str, object]], running: bool
+    ) -> None:
+        """An idle folder is unloaded after experimental.location_idle_timeout,
+        and opencode loads it again with only the servers in its config."""
+        http = FakeHttpClient(
+            replies={("GET", f"{URL}/api/mcp?{self.WHERE}"): {"data": servers}}
+        )
+        assert engine(http).has_tools("osiris", Path("/home/tester")) is running
+
     def test_the_servers_resources_are_offered_by_name(self) -> None:
         catalog = {
             "resources": [
