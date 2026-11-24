@@ -27,6 +27,9 @@ class ThemeRecord:
     ) -> None:
         if event not in WRITTEN:
             return
-        name = self._record.read_text().strip()
+        try:
+            name = self._record.read_text().strip()
+        except OSError:
+            return
         if name:
             self._applied(name)
