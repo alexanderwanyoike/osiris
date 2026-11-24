@@ -40,7 +40,7 @@ class FalCatalog:
         if not entries or not _offered(entries[0]):
             raise MediaError(
                 f"{model} is not an image model FAL offers; "
-                "find one with find_image_models."
+                "ask the person which model to use instead."
             )
         return _spec(entries[0], model)
 
@@ -95,7 +95,10 @@ def _spec(entry: dict[str, object], model: str) -> ModelSpec:
         described = spec["components"]["schemas"][name]
         needed = set(described.get("required", ())) - {"prompt"}
         if needed or "prompt" not in described["properties"]:
-            raise MediaError(f"{model} needs more than a description; choose another.")
+            raise MediaError(
+                f"{model} needs more than a description; "
+                "ask the person which model to use instead."
+            )
         fields = described["properties"]
         return ModelSpec(
             path, frozenset(fields), wide_size(fields.get("image_size", {}))
