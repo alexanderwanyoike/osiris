@@ -52,7 +52,7 @@ class HttpClient(Protocol):
         ...
 
     def download(self, url: str, *, limit: int) -> bytes:
-        """The file at ``url``, refused if larger than ``limit`` bytes."""
+        """The file at ``url``, refused if redirected, cut off or over ``limit``."""
         ...
 
 
