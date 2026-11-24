@@ -87,3 +87,16 @@ def test_only_the_skins_own_files_are_read(tmp_path: Path) -> None:
 def test_numbers_that_are_no_number_are_still_read(tmp_path: Path) -> None:
     write(tmp_path / "mine" / "sass" / "_c.scss", "$a: rgb(1.2.3, 4, 5);")
     assert fixed_colours(tmp_path / "mine", None) == ["sass/_c.scss: rgb(1.2.3, 4, 5)"]
+
+
+def test_a_skin_full_of_colours_names_ten_sheets_and_counts_the_rest(
+    tmp_path: Path,
+) -> None:
+    for n in range(12):
+        write(
+            tmp_path / "mine" / "files" / f"{n:02}.svg",
+            f'<p fill="#00000{n % 9 + 1}"/>',
+        )
+    found = fixed_colours(tmp_path / "mine", None)
+    assert len(found) == 11
+    assert found[-1] == "and 2 more sheets"
