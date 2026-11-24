@@ -17,6 +17,9 @@ from osiris.apps.user_css import WRITTEN  # noqa: E402
 class ThemeFolder:
     def __init__(self, folder: Path, changed: Callable[[], None]) -> None:
         self._changed = changed
+        # A directory monitor on a folder not yet made never hears what is
+        # later written into it.
+        folder.mkdir(parents=True, exist_ok=True)
         self._monitor = Gio.File.new_for_path(str(folder)).monitor_directory(
             Gio.FileMonitorFlags.NONE, None
         )
