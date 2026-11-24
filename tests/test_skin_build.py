@@ -6,6 +6,7 @@ import json
 import re
 import shutil
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -102,40 +103,33 @@ def test_the_result_names_the_theme_and_carries_the_dock(tmp_path: Path) -> None
     assert f"GtkTheme={built.theme}\n" in (theme / "index.theme").read_text()
 
 
+def name_of(root: Path, theme: dict[str, Any], tmp_path: Path) -> str:
+    """The name a Skin's folder is built under in a Theme."""
+    work = tmp_path / "work"
+    return build(read(root), theme, tmp_path / "themes", work, FakeRunner()).theme
+
+
 def test_a_skin_built_again_unchanged_keeps_its_name(tmp_path: Path) -> None:
     root = make_pack(tmp_path / "colloid")
-    first = build(
-        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "w", FakeRunner()
-    )
-    again = build(
-        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "w", FakeRunner()
-    )
-    assert again.theme == first.theme
+    first = name_of(root, ROSE_PINE, tmp_path)
+    assert name_of(root, ROSE_PINE, tmp_path) == first
 
 
 def test_an_edited_skin_is_built_under_a_new_name(tmp_path: Path) -> None:
-    """GTK, Muffin and Cinnamon reload only when the theme's name changes, so
-    open apps would keep the look from before the edit."""
     root = make_pack(tmp_path / "colloid")
-    first = build(
-        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "w", FakeRunner()
-    )
+    first = name_of(root, ROSE_PINE, tmp_path)
     (root / "files" / "common" / "gtk-3.0" / "assets" / "check.svg").write_text(
         "<svg/>"
     )
-    edited = build(
-        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "w", FakeRunner()
-    )
-    assert edited.theme != first.theme
+    assert name_of(root, ROSE_PINE, tmp_path) != first
 
 
 def test_a_skin_in_an_edited_theme_is_built_under_a_new_name(tmp_path: Path) -> None:
-    pack = read(make_pack(tmp_path / "colloid"))
-    first = build(pack, ROSE_PINE, tmp_path / "themes", tmp_path / "w", FakeRunner())
+    root = make_pack(tmp_path / "colloid")
+    first = name_of(root, ROSE_PINE, tmp_path)
     recoloured = json.loads(json.dumps(ROSE_PINE))
     recoloured["colors"]["accent"] = "#ff0000"
-    edited = build(pack, recoloured, tmp_path / "themes", tmp_path / "w", FakeRunner())
-    assert edited.theme != first.theme
+    assert name_of(root, recoloured, tmp_path) != first
 
 
 def test_a_skin_in_a_theme_with_a_new_border_is_built_under_a_new_name(
@@ -143,27 +137,21 @@ def test_a_skin_in_a_theme_with_a_new_border_is_built_under_a_new_name(
 ) -> None:
     """Osiris's own panel, worn when a Skin has none, reads Theme colours a
     Skin's gaps leave out."""
-    pack = read(make_gtk_only_pack(tmp_path / "neon"))
+    root = make_gtk_only_pack(tmp_path / "neon")
     bordered = json.loads(json.dumps(ROSE_PINE))
     bordered["colors"]["border"] = "#26233a"
-    first = build(pack, bordered, tmp_path / "themes", tmp_path / "w", FakeRunner())
+    first = name_of(root, bordered, tmp_path)
     bordered["colors"]["border"] = "#ff0000"
-    edited = build(pack, bordered, tmp_path / "themes", tmp_path / "w", FakeRunner())
-    assert edited.theme != first.theme
+    assert name_of(root, bordered, tmp_path) != first
 
 
 def test_a_commit_in_a_skins_history_keeps_its_name(tmp_path: Path) -> None:
     root = make_pack(tmp_path / "colloid")
     (root / ".git").mkdir()
     (root / ".git" / "HEAD").write_text("ref: refs/heads/main\n")
-    first = build(
-        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "w", FakeRunner()
-    )
+    first = name_of(root, ROSE_PINE, tmp_path)
     (root / ".git" / "HEAD").write_text("0123abcd\n")
-    again = build(
-        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "w", FakeRunner()
-    )
-    assert again.theme == first.theme
+    assert name_of(root, ROSE_PINE, tmp_path) == first
 
 
 def test_building_prints_nothing_of_its_own(tmp_path: Path) -> None:
