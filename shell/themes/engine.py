@@ -48,11 +48,10 @@ from osiris.model.names import is_slug  # noqa: E402
 from osiris.platform.process import CommandError, SubprocessRunner  # noqa: E402
 from osiris.provision.seeding import may_write  # noqa: E402
 from osiris.skins import (  # noqa: E402
-    carried, edit, imports, library as skins, looks, pictures, share, wear,
-    xcursor)
+    carried, colours, edit, imports, library as skins, looks, pictures, share,
+    wear, xcursor)
 from osiris.skins.build import Built, build as build_skin_pack  # noqa: E402
 from osiris.skins.check import problems as check_programs  # noqa: E402
-from osiris.skins.colours import fixed_colours as colours_in  # noqa: E402
 from osiris.skins.pack import Look, SkinpackError, refuse_programs  # noqa: E402
 from osiris.themes import terminal  # noqa: E402
 from osiris.themes.at_login import theme_to_apply  # noqa: E402
@@ -1073,10 +1072,10 @@ def fixed_colours(name: str) -> list[str]:
     if name not in own_skins():
         return []
     pack = _pack(name)
-    style = (skins.find([Path(folder) for folder in SKIN_DIRS], pack.style)
-             if pack.style else None)
-    originals = [style.root] if style and style.root != pack.root else []
-    return colours_in(pack.root, originals)
+    with tempfile.TemporaryDirectory() as scratch:
+        made_from = colours.originals(pack, [Path(folder) for folder in SKIN_DIRS],
+                                      SubprocessRunner(), Path(scratch))
+        return colours.fixed_colours(pack.root, made_from)
 
 
 def remove_icon_sets(names: list[str]) -> None:
