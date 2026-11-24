@@ -76,3 +76,11 @@ def test_a_theme_made_elsewhere_joins_the_list(main: ModuleType) -> None:
     shown = window(main)
     main.engine.save(a_theme(main, "ink-and-silence", "Ink and Silence"))
     assert settle(lambda: "ink-and-silence" in names(shown), seconds=10)
+
+
+def test_a_theme_deleted_elsewhere_leaves_the_list(main: ModuleType) -> None:
+    main.engine.save(a_theme(main, "ink-duel", "Ink Duel"))
+    shown = window(main)
+    assert "ink-duel" in names(shown)
+    main.engine.delete("ink-duel")
+    assert settle(lambda: "ink-duel" not in names(shown))
