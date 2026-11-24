@@ -38,7 +38,7 @@ class FalImages:
 
     def make(self, description: str, model: str | None = None) -> bytes:
         spec = self._spec(model or DEFAULT_IMAGE_MODEL)
-        body = _request(description, spec.inputs)
+        body = _request(description, spec)
         try:
             answer = self._http.request(
                 "POST",
@@ -59,17 +59,21 @@ class FalImages:
         return _picture(answer, self._http)
 
 
-def _request(description: str, accepted: frozenset[str]) -> dict[str, object]:
+def _request(description: str, spec: ModelSpec) -> dict[str, object]:
     wanted: dict[str, object] = {
         "prompt": description,
-        "image_size": {"width": 1920, "height": 1080},
+        "image_size": spec.size,
         "num_images": 1,
         "output_format": "png",
         "sync_mode": True,
     }
-    if "image_size" not in accepted:
+    if "image_size" not in spec.inputs:
         wanted["aspect_ratio"] = "16:9"
-    return {name: value for name, value in wanted.items() if name in accepted}
+    return {
+        name: value
+        for name, value in wanted.items()
+        if name in spec.inputs and value is not None
+    }
 
 
 def _picture(answer: object, http: HttpClient) -> bytes:
