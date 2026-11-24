@@ -24,28 +24,30 @@ Change it when they ask; never touch Skins outside this folder.
   `{{background_plank}}`.
 - `rofi/launcher.rasi`, if present, is the launcher, with `{{gap}}` markers.
 
-## One look on every surface
+## Every surface alike
 
-The same rule comes out differently on each surface, because each is drawn
-by something else:
+The same outline or shadow comes out differently on each surface, because
+each is drawn by something else:
 
 - libadwaita and GTK 4 windows draw their own edge and shadow
-  (`window.background.csd`).
+  (`window.background.csd`). libadwaita takes its shape only from
+  `libadwaita/libadwaita-<variant>.scss`; add one if this Skin has none.
 - Many GTK 3 windows, such as Files and the text editor, have frames the
-  window manager draws from `window.ssd > decoration` and
-  `headerbar.titlebar.default-decoration`. It keeps only what the
-  decoration's background covers, so a border there disappears: to outline
-  these windows, give the decoration a background in the outline colour.
-  The window manager adds its own soft shadow to them.
+  window manager, Muffin, draws from the decoration
+  (`window.ssd > decoration`, written `.ssd decoration` in most Skins) and
+  `headerbar.titlebar.default-decoration`. Muffin keeps only what the
+  decoration's background covers, so a border there disappears. To outline
+  these windows, give the decoration a background in the outline's gap, for
+  example `$gap-foreground`. Muffin adds its own soft shadow to them.
 - The panel is an edge of the screen. An outline belongs on the side facing
   the desktop (`.panel-top`, `.panel-bottom` and so on).
 - The dock can draw only a stroke (`LineWidth`, `OuterStrokeColor`), corner
   roundness and padding; it has no shadow.
 
-So decide each part of a look once: its width, colour and corners, kept in
-one partial that every surface uses, with the same gap for the same thing in
-the dock theme. Where a surface cannot draw part of it, give that surface
-what makes it look like the rest.
+So decide each part once: its width, colour and corners, kept in one Sass
+partial that every style sheet imports. Set the same width and roundness in
+the dock theme, with the same gap for its colour. Where a surface cannot draw
+part of it, give that surface what makes it look like the rest.
 
 ## An imported theme
 
