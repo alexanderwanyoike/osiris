@@ -84,9 +84,7 @@ def _picture(answer: object, http: HttpClient) -> bytes:
     if not isinstance(answer, dict):
         raise missing
     if any(answer.get("has_nsfw_concepts") or ()):
-        raise MediaError(
-            "FAL's safety filter blocked this picture; describe it differently."
-        )
+        raise MediaError(f"FAL's safety filter blocked this picture. {_CHARGED}")
     images = answer.get("images")
     first = images[0] if isinstance(images, list) and images else None
     url = first.get("url") if isinstance(first, dict) else None
