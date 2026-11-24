@@ -71,3 +71,19 @@ def test_a_colour_the_original_has_counts_however_it_is_written(
 def test_transparent_is_no_colour(tmp_path: Path) -> None:
     write(tmp_path / "mine" / "sass" / "_c.scss", "$a: #0000; $b: rgba(0, 0, 0, 0);")
     assert fixed_colours(tmp_path / "mine", None) == []
+
+
+def test_only_the_skins_own_files_are_read(tmp_path: Path) -> None:
+    """A link can point at nothing, or outside the Skin; neither is the Skin's."""
+    write(tmp_path / "outside.css", "a { color: #2f7d4a; }")
+    sheets = tmp_path / "mine" / "gtk-3.0"
+    sheets.mkdir(parents=True)
+    (sheets / "gtk.css").symlink_to(tmp_path / "outside.css")
+    (sheets / "gone.css").symlink_to(tmp_path / "missing.css")
+    (sheets / "folder.css").mkdir()
+    assert fixed_colours(tmp_path / "mine", None) == []
+
+
+def test_numbers_that_are_no_number_are_still_read(tmp_path: Path) -> None:
+    write(tmp_path / "mine" / "sass" / "_c.scss", "$a: rgb(1.2.3, 4, 5);")
+    assert fixed_colours(tmp_path / "mine", None) == ["sass/_c.scss: rgb(1.2.3, 4, 5)"]
