@@ -82,15 +82,29 @@ def _draws_pictures(entry: dict[str, object]) -> bool:
 def _spec(entry: dict[str, object], model: str) -> ModelSpec:
     spec: Any = entry.get("openapi")
     try:
-        body = spec["paths"][f"/{model}"]["post"]["requestBody"]
+        path = _runs_at(spec["paths"], model)
+        body = spec["paths"][f"/{path}"]["post"]["requestBody"]
         schema = body["content"]["application/json"]["schema"]["$ref"]
         name = schema.rsplit("/", 1)[1]
         described = spec["components"]["schemas"][name]
         if set(described.get("required", ())) - {"prompt"}:
             raise MediaError(f"{model} needs more than a description; choose another.")
-        return ModelSpec(model, frozenset(described["properties"]))
+        return ModelSpec(path, frozenset(described["properties"]))
     except KeyError, TypeError, AttributeError, IndexError:
         raise MediaError(_UNREADABLE) from None
+
+
+def _runs_at(paths: Any, model: str) -> str:
+    if f"/{model}" in paths:
+        return model
+    posts = [
+        path
+        for path, ways in paths.items()
+        if "post" in ways and "/requests/" not in path
+    ]
+    if len(posts) != 1:
+        raise KeyError(model)
+    return str(posts[0]).removeprefix("/")
 
 
 def _model(entry: dict[str, object]) -> ImageModel:
