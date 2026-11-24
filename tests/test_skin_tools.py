@@ -138,3 +138,10 @@ def test_the_model_is_told_a_skin_is_data_and_never_a_program() -> None:
     assert "create_skin" in told and "wear_skin" in told
     assert "never write scripts" in told.lower()
     assert "/usr/share/osiris" in told
+
+
+def test_the_model_may_write_a_fixed_colour_the_person_asks_for() -> None:
+    """A Skin follows the Theme, but the person may want a colour that stays."""
+    told = " ".join(instructions(auto_mode=True).split())
+    assert "always come from the Theme" not in told
+    assert "a fixed colour only when the person asks for one" in told
