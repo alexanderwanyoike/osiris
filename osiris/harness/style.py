@@ -130,6 +130,12 @@ def colours_css(theme: Mapping[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+#: What libadwaita draws in the drawer, held to the Theme by rules rather than
+#: named colours alone: GTK keeps the user sheet it read at startup, and a
+#: Skin's sheet there sets these in the colours of the Theme it was worn with.
+HELD_CSS = "textview, textview > text, text { color: @harness_fg; }\n"
+
+
 def code_font_css(theme: Mapping[str, Any]) -> str:
     """Code in the font the terminal uses, ligatures on as ghostty has them,
     at one size and line height for every look."""
