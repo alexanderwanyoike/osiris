@@ -23,7 +23,8 @@ class ThemeFolder:
         self._monitor.connect("changed", self._heard)
 
     def _heard(
-        self, _monitor: object, _file: object, _other: object, event: object
+        self, _monitor: object, file: Gio.File, _other: object, event: object
     ) -> None:
-        if event in WRITTEN:
+        # The engine reads only these; see engine._files.
+        if event in WRITTEN and (file.get_basename() or "").endswith(".json"):
             self._changed()
