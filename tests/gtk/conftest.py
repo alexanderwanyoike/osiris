@@ -6,6 +6,7 @@ CI has no GTK yet; build/gtktest.py runs these in the Arch container.
 from __future__ import annotations
 
 import sys
+import time
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
@@ -15,7 +16,7 @@ gi = pytest.importorskip("gi")
 try:
     gi.require_version("Gtk", "4.0")
     gi.require_version("GtkSource", "5")
-    from gi.repository import Gtk
+    from gi.repository import GLib, Gtk
 except ValueError, ImportError:
     pytest.skip("GTK 4 is not available", allow_module_level=True)
 if not Gtk.init_check():
@@ -28,6 +29,18 @@ sys.path.insert(0, str(APPS / "harness"))
 sys.path.append(str(APPS / "installer"))
 sys.path.append(str(APPS / "appearance"))
 sys.path.append(str(APPS / "switcher"))
+
+
+def settle(until: Callable[[], bool], seconds: float = 3.0) -> bool:
+    deadline = time.monotonic() + seconds
+    context = GLib.MainContext.default()
+    while time.monotonic() < deadline:
+        while context.pending():
+            context.iteration(False)
+        if until():
+            return True
+        time.sleep(0.02)
+    return False
 
 
 def widgets(root: Gtk.Widget) -> Iterator[Gtk.Widget]:
