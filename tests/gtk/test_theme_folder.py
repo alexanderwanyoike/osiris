@@ -46,3 +46,15 @@ def test_a_file_that_is_not_a_theme_is_not_heard(tmp_path: Path) -> None:
     settle(lambda: heard.times > 0, seconds=0.5)
     assert heard.times == 0
     assert following is not None
+
+
+def test_a_folder_made_after_the_app_opened_is_heard(tmp_path: Path) -> None:
+    """The folder is made by the engine on the first Theme saved, which on a
+    new account is often the one Osiris makes while Appearance is open."""
+    folder = tmp_path / "themes"
+    heard = Heard()
+    following = ThemeFolder(folder, heard)
+    folder.mkdir(exist_ok=True)
+    (folder / "ink-and-silence.json").write_text("{}\n")
+    assert settle(lambda: heard.times > 0)
+    assert following is not None
