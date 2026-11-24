@@ -3,6 +3,7 @@ someone else while it is open, typically Osiris working from a prompt."""
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -58,3 +59,20 @@ def test_a_theme_applied_elsewhere_is_the_one_selected(
     assert selected(shown) == ["nord"]
     (tmp_path / "theme").write_text("rose-pine\n")
     assert settle(lambda: selected(shown) == ["rose-pine"])
+
+
+def a_theme(main: ModuleType, name: str, label: str) -> dict[str, Any]:
+    theme = json.loads(Path(main.engine.REPO_THEMES, "nord.json").read_text())
+    return {**theme, "name": name, "label": label}
+
+
+def names(shown: Any) -> list[str]:
+    return [card.theme["name"] for card in shown.cards]
+
+
+def test_a_theme_made_elsewhere_joins_the_list(main: ModuleType) -> None:
+    """Filming a demo: Osiris made "Ink and Silence" while Appearance was
+    open, and the list still said 8 themes until Appearance was reopened."""
+    shown = window(main)
+    main.engine.save(a_theme(main, "ink-and-silence", "Ink and Silence"))
+    assert settle(lambda: "ink-and-silence" in names(shown), seconds=10)
