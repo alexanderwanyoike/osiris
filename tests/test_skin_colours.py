@@ -3,9 +3,13 @@ the Theme, which stay the same whatever Theme is worn."""
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
-from osiris.skins.colours import fixed_colours
+from osiris.platform.process import SubprocessRunner
+from osiris.skins.colours import fixed_colours, originals
+from osiris.skins.pack import read
+from osiris.skins.share import commit
 
 
 def write(path: Path, text: str) -> None:
@@ -100,3 +104,40 @@ def test_a_skin_full_of_colours_names_ten_sheets_and_counts_the_rest(
     found = fixed_colours(tmp_path / "mine", [])
     assert len(found) == 11
     assert found[-1] == "and 2 more sheets"
+
+
+def make_skin(root: Path, style: str, sheet: str) -> Path:
+    label = {"label": root.name, "author": "a", "version": "1", "licence": "MIT"}
+    write(root / "skin.json", json.dumps({**label, "source": "", "style": style}))
+    write(root / "gtk-3.0" / "gtk-dark.scss", sheet)
+    return root
+
+
+def named(root: Path, folders: list[Path], scratch: Path) -> list[str]:
+    found = originals(read(root), folders, SubprocessRunner(), scratch)
+    return fixed_colours(root, found)
+
+
+def test_colours_the_skin_had_when_it_was_made_are_not_named(tmp_path: Path) -> None:
+    """Its style may since have been deleted, upgraded or never been here."""
+    mine = make_skin(tmp_path / "mine" / "sumi", "gone", "a { color: #123456; }")
+    commit(mine, "Copy Graphite", SubprocessRunner())
+    write(
+        mine / "gtk-3.0" / "gtk-dark.scss",
+        "a { color: #123456; } b { color: #2f7d4a; }",
+    )
+    found = named(mine, [tmp_path / "mine"], tmp_path / "scratch")
+    assert found == ["gtk-3.0/gtk-dark.scss: #2f7d4a"]
+
+
+def test_the_skin_its_style_names_is_an_original(tmp_path: Path) -> None:
+    make_skin(tmp_path / "shipped" / "graphite", "", "a { color: #123456; }")
+    mine = make_skin(tmp_path / "mine" / "sumi", "graphite", "a { color: #123456; }")
+    folders = [tmp_path / "mine", tmp_path / "shipped"]
+    assert named(mine, folders, tmp_path / "scratch") == []
+
+
+def test_a_skin_is_not_its_own_original(tmp_path: Path) -> None:
+    mine = make_skin(tmp_path / "mine" / "sumi", "sumi", "a { color: #2f7d4a; }")
+    found = named(mine, [tmp_path / "mine"], tmp_path / "scratch")
+    assert found == ["gtk-3.0/gtk-dark.scss: #2f7d4a"]

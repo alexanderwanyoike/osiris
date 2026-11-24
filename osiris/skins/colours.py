@@ -7,6 +7,9 @@ import re
 from collections.abc import Iterator, Sequence
 from pathlib import Path
 
+from osiris.platform.process import CommandRunner
+from osiris.skins.pack import Skinpack
+
 _SHEETS = {".scss", ".css", ".svg", ".rasi"}
 # Hex-shaped text that is not a colour: references, links and entities.
 _NOT_COLOURS = re.compile(r"url\([^)]*\)|href=(?:\"[^\"]*\"|'[^']*')|&#\w+;")
@@ -19,6 +22,12 @@ _COLOUR = re.compile(f"{_HEX}|{_NUMBERS}")
 # theme can hold hundreds of each.
 _SHOWN = 3
 _SHEETS_SHOWN = 10
+
+
+def originals(
+    pack: Skinpack, folders: Sequence[Path], runner: CommandRunner, scratch: Path
+) -> list[Path]:
+    raise NotImplementedError
 
 
 def fixed_colours(skin: Path, originals: Sequence[Path]) -> list[str]:
