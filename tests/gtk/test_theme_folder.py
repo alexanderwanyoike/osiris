@@ -36,3 +36,13 @@ def test_a_removed_theme_is_heard(tmp_path: Path) -> None:
     assert settle(lambda: heard.times > 0)
     assert following is not None
 
+
+def test_a_file_that_is_not_a_theme_is_not_heard(tmp_path: Path) -> None:
+    """Each Theme heard rebuilds the list, which loses the place it was
+    scrolled to, and an editor's swap file beside a Theme is written often."""
+    heard = Heard()
+    following = ThemeFolder(tmp_path, heard)
+    (tmp_path / ".ink-duel.json.swp").write_text("swap\n")
+    settle(lambda: heard.times > 0, seconds=0.5)
+    assert heard.times == 0
+    assert following is not None
