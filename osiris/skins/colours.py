@@ -9,7 +9,10 @@ from pathlib import Path
 
 _SHEETS = {".scss", ".css", ".svg", ".rasi"}
 # A hex colour, but not an SVG reference such as url(#fade).
-_HEX = re.compile(r"(?<!url\()#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b")
+_HEX = r"(?<!url\()#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b"
+# Numbers only: rgba($gap-foreground, 0.1) fades a Theme colour.
+_NUMBERS = r"\brgba?\(\s*[0-9][0-9.,%/\s]*\)"
+_COLOUR = re.compile(f"{_HEX}|{_NUMBERS}")
 
 
 def fixed_colours(skin: Path, style: Path | None) -> list[str]:
@@ -34,4 +37,4 @@ def _sheets(root: Path | None) -> Iterator[Path]:
 
 def _colours(sheet: Path) -> list[str]:
     text = sheet.read_text(errors="replace")
-    return list(dict.fromkeys(match.lower() for match in _HEX.findall(text)))
+    return list(dict.fromkeys(match.lower() for match in _COLOUR.findall(text)))
