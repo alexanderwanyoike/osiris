@@ -112,7 +112,10 @@ def create_picture_theme(
         intent = intent_from(image)
         png = picture if image.format == "PNG" else _as_png(image)
     except (OSError, ValueError) as error:
-        raise ThemeActionError("The picture could not be read") from error
+        raise ThemeActionError(
+            "The picture could not be read. It may still have been charged, so ask "
+            "the person before trying again."
+        ) from error
     store.save(
         {
             **build(name, label, seeds(intent)),
