@@ -25,7 +25,9 @@ EVERY_INPUT = frozenset(
 
 
 def fal(http: FakeHttpClient) -> FalImages:
-    return FalImages(http, KEY, lambda model: ModelSpec(model, EVERY_INPUT, FULL_HD))
+    return FalImages(
+        http, KEY, lambda model: ModelSpec(model, EVERY_INPUT, FULL_HD), lambda: None
+    )
 
 
 def answer(picture: bytes = PICTURE) -> dict[str, object]:
@@ -70,9 +72,9 @@ def test_only_the_inputs_a_model_accepts_are_sent() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): answer()})
     accepted = frozenset({"prompt", "image_size"})
 
-    FalImages(http, KEY, lambda model: ModelSpec(model, accepted, FULL_HD)).make(
-        "A forest", DEFAULT_IMAGE_MODEL
-    )
+    FalImages(
+        http, KEY, lambda model: ModelSpec(model, accepted, FULL_HD), lambda: None
+    ).make("A forest", DEFAULT_IMAGE_MODEL)
 
     assert http.requests[0][2] == {
         "prompt": "A forest",
@@ -85,7 +87,10 @@ def test_a_model_is_sent_the_size_its_schema_allows() -> None:
     accepted = frozenset({"prompt", "image_size"})
 
     FalImages(
-        http, KEY, lambda model: ModelSpec(model, accepted, "landscape_16_9")
+        http,
+        KEY,
+        lambda model: ModelSpec(model, accepted, "landscape_16_9"),
+        lambda: None,
     ).make("A forest", DEFAULT_IMAGE_MODEL)
 
     assert http.requests[0][2] == {
@@ -98,7 +103,7 @@ def test_a_model_with_no_wide_size_is_left_to_its_own_default() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): answer()})
     accepted = frozenset({"prompt", "image_size"})
 
-    FalImages(http, KEY, lambda model: ModelSpec(model, accepted)).make(
+    FalImages(http, KEY, lambda model: ModelSpec(model, accepted), lambda: None).make(
         "A forest", DEFAULT_IMAGE_MODEL
     )
 
@@ -109,7 +114,7 @@ def test_a_model_without_a_size_input_is_asked_for_a_wide_picture() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): answer()})
     accepted = frozenset({"prompt", "aspect_ratio"})
 
-    FalImages(http, KEY, lambda model: ModelSpec(model, accepted)).make(
+    FalImages(http, KEY, lambda model: ModelSpec(model, accepted), lambda: None).make(
         "A forest", DEFAULT_IMAGE_MODEL
     )
 
@@ -123,7 +128,7 @@ def test_a_model_the_catalog_refuses_spends_nothing() -> None:
     http = FakeHttpClient()
 
     with pytest.raises(MediaError, match="not an image model"):
-        FalImages(http, KEY, refuse).make("A forest", "vendor/video")
+        FalImages(http, KEY, refuse, lambda: None).make("A forest", "vendor/video")
 
     assert http.requests == []
 

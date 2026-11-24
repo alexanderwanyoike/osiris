@@ -30,7 +30,7 @@ class FalImages:
         http: HttpClient,
         key: str,
         spec: Callable[[str], ModelSpec],
-        before_spending: Callable[[], None] = lambda: None,
+        before_spending: Callable[[], None],
     ) -> None:
         self._http = http
         self._key = key
