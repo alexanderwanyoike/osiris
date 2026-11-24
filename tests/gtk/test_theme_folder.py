@@ -58,3 +58,15 @@ def test_a_folder_made_after_the_app_opened_is_heard(tmp_path: Path) -> None:
     (folder / "ink-and-silence.json").write_text("{}\n")
     assert settle(lambda: heard.times > 0)
     assert following is not None
+
+
+def test_a_theme_written_once_is_heard_once(tmp_path: Path) -> None:
+    """Review of #259: a file written is created, then finished, and each
+    event rebuilt Appearance's list."""
+    heard = Heard()
+    following = ThemeFolder(tmp_path, heard)
+    (tmp_path / "ink-and-silence.json").write_text("{}\n")
+    assert settle(lambda: heard.times > 0)
+    settle(lambda: heard.times > 1, seconds=1)
+    assert heard.times == 1
+    assert following is not None
