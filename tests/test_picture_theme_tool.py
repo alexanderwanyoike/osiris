@@ -193,9 +193,24 @@ def test_a_person_can_make_a_model_their_default() -> None:
     assert change.summary == "Made vendor/flat the default image model"
     assert change.undo == {
         "action": "set_default_image_model",
-        "model": DEFAULT_IMAGE_MODEL,
+        "model": "",
     }
     assert TIERS["set_default_image_model"] is Tier.UNDOABLE
+
+
+def test_an_empty_choice_goes_back_to_the_shipped_default() -> None:
+    files = FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+    tools = tool_server(nord(), Maker(), log, files)
+    asyncio.run(tools.call_tool("set_default_image_model", {"model": "vendor/flat"}))
+
+    asyncio.run(tools.call_tool("set_default_image_model", {"model": ""}))
+
+    assert saved_model(files, HOME) is None
+    assert log.last_changes()[-1].undo == {
+        "action": "set_default_image_model",
+        "model": "vendor/flat",
+    }
 
 
 def test_a_model_fal_does_not_offer_cannot_become_the_default() -> None:
