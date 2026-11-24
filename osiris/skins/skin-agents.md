@@ -24,6 +24,31 @@ Change it when they ask; never touch Skins outside this folder.
   `{{background_plank}}`.
 - `rofi/launcher.rasi`, if present, is the launcher, with `{{gap}}` markers.
 
+## Every surface alike
+
+The same outline or shadow comes out differently on each surface, because
+each is drawn by something else:
+
+- libadwaita and GTK 4 windows draw their own edge and shadow
+  (`window.background.csd`). libadwaita takes its shape only from
+  `libadwaita/libadwaita-<variant>.scss`; add one if this Skin has none.
+- Many GTK 3 windows, such as Files and the text editor, have frames the
+  window manager, Muffin, draws from the decoration
+  (`window.ssd > decoration`, written `.ssd decoration` in most Skins) and
+  `headerbar.titlebar.default-decoration`. Muffin keeps only what the
+  decoration's background covers, so a border there disappears. To outline
+  these windows, give the decoration a background in the outline's gap, for
+  example `$gap-foreground`. Muffin adds its own soft shadow to them.
+- The panel is an edge of the screen. An outline belongs on the side facing
+  the desktop (`.panel-top`, `.panel-bottom` and so on).
+- The dock can draw only a stroke (`LineWidth`, `OuterStrokeColor`), corner
+  roundness and padding; it has no shadow.
+
+So decide each part once: its width, colour and corners, kept in one Sass
+partial that every style sheet imports. Set the same width and roundness in
+the dock theme, with the same gap for its colour. Where a surface cannot draw
+part of it, give that surface what makes it look like the rest.
+
 ## An imported theme
 
 If `skin.json` says the author is "Imported", this Skin came from a GTK theme
@@ -65,6 +90,16 @@ person what it said.
   engine does the same:
 
       python3 /usr/share/osiris/themes/engine.py --skin SKIN_NAME
+
+- Then look at it before saying it is done. Open a GTK 3 window (Files:
+  `setsid -f nemo`) and a libadwaita window (Appearance:
+  `setsid -f osiris-appearance`) if none is open, take a screenshot with
+  `gnome-screenshot -f .look.png` and read it. Compare the two windows, the
+  panel and the dock, fix what does not look like one Skin, and look again.
+  If you cannot see images, tell the person and ask them to look instead.
+- Delete `.look.png` before committing, and check that `git status` does not
+  list it. A screenshot can show the person's private windows, and anything
+  committed is shared with the Skin.
 
 - Commit each change in this folder with a message saying what changed and
   why, so the person can read the Skin's history.
