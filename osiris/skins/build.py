@@ -33,6 +33,7 @@ from osiris.skins.pack import (
     refuse_programs,
     sass_gaps,
 )
+from osiris.skins.pictures import signature
 
 SURFACES = (
     ("gtk-3.0/gtk", "gtk-3.0/gtk.css"),
@@ -113,12 +114,8 @@ def build(
 
 def _fingerprint(root: Path, theme: Mapping[str, Any]) -> str:
     colours = sorted(theme["colors"].items())
-    digest = hashlib.sha256(f"{theme.get('dark', True)}{colours}".encode())
-    for path in sorted(root.rglob("*")):
-        if path.is_file():
-            digest.update(f"\0{path.relative_to(root)}\0".encode())
-            digest.update(path.read_bytes())
-    return digest.hexdigest()[:12]
+    drawn = f"{signature([root])}{theme.get('dark', True)}{colours}"
+    return hashlib.sha256(drawn.encode()).hexdigest()[:12]
 
 
 def _compile(
