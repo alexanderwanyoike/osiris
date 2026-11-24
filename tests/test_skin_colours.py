@@ -56,3 +56,13 @@ def test_references_entities_and_selectors_are_not_colours(tmp_path: Path) -> No
     scss = "&#add-color-button { margin: 0; }\n#cafe-box, #beef_row { margin: 0; }\n"
     write(tmp_path / "mine" / "sass" / "_rows.scss", scss)
     assert fixed_colours(tmp_path / "mine", None) == []
+
+
+def test_a_colour_the_original_has_counts_however_it_is_written(
+    tmp_path: Path,
+) -> None:
+    write(
+        tmp_path / "graphite" / "sass" / "_c.scss", "$a: #fff; $b: rgba(0, 0, 0, 0.2);"
+    )
+    write(tmp_path / "mine" / "sass" / "_c.scss", "$a: #FFFFFF; $b: rgba(0,0,0,.2);")
+    assert fixed_colours(tmp_path / "mine", tmp_path / "graphite") == []
