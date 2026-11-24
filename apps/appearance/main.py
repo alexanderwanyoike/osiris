@@ -46,6 +46,7 @@ from skin_editor import CSS as EDITOR_CSS, SkinEditor  # noqa: E402
 from skins_page import CSS as SKINS_CSS, SkinsPage, new_skin  # noqa: E402
 
 # creator has put the osiris package on sys.path.
+from osiris.apps.theme_folder import ThemeFolder  # noqa: E402
 from osiris.apps.theme_record import ThemeRecord  # noqa: E402
 from osiris.apps.theme_scheme import ThemeScheme  # noqa: E402
 from osiris.apps.user_css import UserCss  # noqa: E402
@@ -360,6 +361,8 @@ class Window(Adw.ApplicationWindow):
         self.set_content(toolbar)
         self.reload()
         self._applied = ThemeRecord(Path(engine.STATE), self.show_applied)
+        # The person's own folder: what is shipped changes only with a package.
+        self._mine = ThemeFolder(Path(engine.SEARCH[0]), self.reload)
         self._explain_drift()
         GLib.timeout_add_seconds(5, self._explain_drift)
 
