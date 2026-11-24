@@ -475,7 +475,14 @@ def _skin_tools(tools: MCPServer, skins: SkinStore, logged: _Logged) -> None:
         """What would stop a Skin from being worn: anything in it that is not
         data, and Sass that does not compile, with the compiler's errors."""
         problems = skins.check(name)
-        return "\n".join(problems) if problems else "No problems found."
+        found = "\n".join(problems) if problems else "No problems found."
+        colours = skins.fixed_colours(name)
+        if colours:
+            found += (
+                "\nFixed colours, the same under every Theme. Use a gap for each "
+                "unless the person asked for that colour:\n" + "\n".join(colours)
+            )
+        return found
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["wear_skin"]])
     @explained

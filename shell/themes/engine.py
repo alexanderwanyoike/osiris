@@ -52,6 +52,7 @@ from osiris.skins import (  # noqa: E402
     xcursor)
 from osiris.skins.build import Built, build as build_skin_pack  # noqa: E402
 from osiris.skins.check import problems as check_programs  # noqa: E402
+from osiris.skins.colours import fixed_colours as colours_in  # noqa: E402
 from osiris.skins.pack import Look, SkinpackError, refuse_programs  # noqa: E402
 from osiris.themes import terminal  # noqa: E402
 from osiris.themes.at_login import theme_to_apply  # noqa: E402
@@ -1064,6 +1065,18 @@ def check_skin(name: str) -> list[str]:
         except (SkinpackError, OSError) as error:
             return [str(error)]
     return []
+
+
+def fixed_colours(name: str) -> list[str]:
+    """Colours written into one of the person's Skins that the Skin it was
+    made from does not have; shipped Skins keep their own."""
+    if name not in own_skins():
+        return []
+    pack = _pack(name)
+    style = (skins.find([Path(folder) for folder in SKIN_DIRS], pack.style)
+             if pack.style else None)
+    original = style.root if style and style.root != pack.root else None
+    return colours_in(pack.root, original)
 
 
 def remove_icon_sets(names: list[str]) -> None:
