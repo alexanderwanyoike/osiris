@@ -25,5 +25,8 @@ class ThemeRecord:
     def _heard(
         self, _monitor: object, _file: object, _other: object, event: object
     ) -> None:
-        if event in WRITTEN:
-            self._applied(self._record.read_text().strip())
+        if event not in WRITTEN:
+            return
+        name = self._record.read_text().strip()
+        if name:
+            self._applied(name)
