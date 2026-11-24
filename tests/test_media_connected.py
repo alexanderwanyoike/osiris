@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 
@@ -15,7 +16,7 @@ from osiris.harness.media.key import save_fal_key
 from osiris.harness.media.limit_setting import set_daily_limit
 from osiris.harness.media.model_setting import DEFAULT_IMAGE_MODEL, save_model
 from osiris.harness.media.model_spec import ModelSpec
-from osiris.platform import FakeFileSystem, FakeHttpClient
+from osiris.platform import FakeFileSystem, FakeHttpClient, HttpError
 
 HOME = Path("/home/tester")
 MONDAY = date(2026, 11, 23)
@@ -26,14 +27,17 @@ ANSWER = {
 }
 
 
-def connected(files: FakeFileSystem, http: FakeHttpClient) -> ConnectedFal:
+def any_model(model: str) -> ModelSpec:
+    return ModelSpec(model, frozenset({"prompt"}))
+
+
+def connected(
+    files: FakeFileSystem,
+    http: FakeHttpClient,
+    spec: Callable[[str], ModelSpec] = any_model,
+) -> ConnectedFal:
     return ConnectedFal(
-        files,
-        HOME,
-        lambda key: FalImages(
-            http, key, lambda model: ModelSpec(model, frozenset({"prompt"}))
-        ),
-        lambda: MONDAY,
+        files, HOME, lambda key: FalImages(http, key, spec), lambda: MONDAY
     )
 
 
@@ -104,4 +108,37 @@ def test_a_limit_the_person_set_is_counted_and_holds() -> None:
         fal.make("Two")
 
     assert files.read(HOME / USAGE_FILE) == "2026-11-23\n"
+    assert len(http.requests) == 1
+
+
+def test_a_refused_model_does_not_use_up_a_daily_picture() -> None:
+    def spec(model: str) -> ModelSpec:
+        if model == "vendor/refused":
+            raise MediaError("vendor/refused is not an image model FAL offers")
+        return any_model(model)
+
+    files = FakeFileSystem()
+    http = FakeHttpClient(replies={("POST", ENDPOINT): ANSWER})
+    save_fal_key(files, HOME, "a-key")
+    set_daily_limit(files, HOME, 1)
+    fal = connected(files, http, spec)
+
+    with pytest.raises(MediaError, match="not an image model"):
+        fal.make("One", "vendor/refused")
+
+    assert fal.make("Two") == b"p"
+
+
+def test_a_failed_request_still_counts_because_it_may_have_been_billed() -> None:
+    files = FakeFileSystem()
+    http = FakeHttpClient(replies={("POST", ENDPOINT): HttpError(500, "no")})
+    save_fal_key(files, HOME, "a-key")
+    set_daily_limit(files, HOME, 1)
+    fal = connected(files, http)
+
+    with pytest.raises(MediaError, match="could not make"):
+        fal.make("One")
+    with pytest.raises(MediaError, match="limit of 1"):
+        fal.make("Two")
+
     assert len(http.requests) == 1
