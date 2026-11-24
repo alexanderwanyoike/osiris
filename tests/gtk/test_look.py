@@ -4,10 +4,11 @@ replaces the drawer's glass."""
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
-from gi.repository import Adw, Gtk
+from gi.repository import Adw, Gdk, Gtk
 from look import Look
 
 from osiris.apps.user_css import UserCss
@@ -27,6 +28,36 @@ def test_the_drawers_look_outranks_the_user_sheet(tmp_path: Path) -> None:
     Look(tmp_path, lambda: None)
     probe = Gtk.Label(css_classes=["look-probe"])
     assert probe.get_color().to_string() != "rgb(255,0,0)"
+
+
+@pytest.fixture
+def frozen_sheet() -> Iterator[Callable[[str], None]]:
+    """What GTK read from the user sheet at startup: it never reloads that,
+    so a Skin worn then keeps its literal colours after the Skin changes."""
+    frozen = Gtk.CssProvider()
+    display = Gdk.Display.get_default()
+    assert display is not None
+    Gtk.StyleContext.add_provider_for_display(
+        display, frozen, Gtk.STYLE_PROVIDER_PRIORITY_USER
+    )
+    yield frozen.load_from_string
+    Gtk.StyleContext.remove_provider_for_display(display, frozen)
+
+
+def test_typed_text_is_in_the_themes_colour_whatever_gtk_read_at_startup(
+    tmp_path: Path, frozen_sheet: Callable[[str], None]
+) -> None:
+    """Filming a demo: the drawer had started under a Skin whose sheet wrote
+    the old Theme's dark text, and the prompt vanished on a dark Theme."""
+    frozen_sheet("textview, textview > text, text { color: #ff0000; }")
+    for skin in ("studio", "bubbles", "transcript"):
+        (tmp_path / ".config/osiris/harness").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".config/osiris/harness/skin").write_text(skin)
+        look = Look(tmp_path, lambda: None)
+        foreground = Gdk.RGBA()
+        foreground.parse(look.theme["colors"]["foreground"])
+        for typed in (Gtk.TextView(), Gtk.Text()):
+            assert typed.get_color().equal(foreground), (skin, typed)
 
 
 def test_the_drawer_turns_light_when_the_theme_does(
