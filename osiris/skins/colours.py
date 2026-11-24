@@ -15,8 +15,10 @@ _HEX = r"(?<![&\w])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\w-])"
 # Numbers only: rgba($gap-foreground, 0.1) fades a Theme colour.
 _NUMBERS = r"\brgba?\(\s*[0-9][0-9.,%/\s]*\)"
 _COLOUR = re.compile(f"{_HEX}|{_NUMBERS}")
-#: Named per sheet; an imported theme can hold hundreds.
-SHOWN = 3
+# How many colours per sheet and how many sheets are named; a downloaded
+# theme can hold hundreds of each.
+_SHOWN = 3
+_SHEETS_SHOWN = 10
 
 
 def fixed_colours(skin: Path, style: Path | None) -> list[str]:
@@ -28,6 +30,9 @@ def fixed_colours(skin: Path, style: Path | None) -> list[str]:
         new = [shown for value, shown in _colours(sheet).items() if value not in known]
         if new:
             found.append(f"{sheet.relative_to(skin).as_posix()}: {_listed(new)}")
+    if len(found) > _SHEETS_SHOWN:
+        rest = len(found) - _SHEETS_SHOWN
+        return [*found[:_SHEETS_SHOWN], f"and {rest} more sheets"]
     return found
 
 
@@ -76,6 +81,6 @@ def _channel(number: str, scale: float) -> float:
 
 
 def _listed(colours: list[str]) -> str:
-    shown = ", ".join(colours[:SHOWN])
-    rest = len(colours) - SHOWN
+    shown = ", ".join(colours[:_SHOWN])
+    rest = len(colours) - _SHOWN
     return f"{shown} and {rest} more" if rest > 0 else shown
