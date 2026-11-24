@@ -15,6 +15,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("GtkSource", "5")
 from gi.repository import Gdk, Gio, Gtk, GtkSource  # noqa: E402
 
+from osiris.apps.theme_scheme import ThemeScheme  # noqa: E402
 from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.harness.style import (  # noqa: E402
     SCHEME_FILE,
@@ -55,6 +56,9 @@ class Look:
         self.scheme: GtkSource.StyleScheme | None = None
         self._monitors = [self._watch(Path(engine.STATE)),
                           self._watch(home / SKIN_FILE)]
+        # libadwaita draws what the drawer's colours leave alone, such as a
+        # message box's text, in its own light or dark.
+        self._light_or_dark = ThemeScheme(Path(engine.STATE), engine.load)
         self.reload()
 
     def _watch(self, path: Path) -> Gio.FileMonitor:
