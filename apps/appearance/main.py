@@ -863,8 +863,7 @@ class Window(Adw.ApplicationWindow):
         self.get_application().theme_scheme.follow()
         self.get_application().reload_user_css()
         self._show_skins()
-        for card in self.cards:
-            card.set_selected(card.theme["name"] == theme["name"])
+        self.show_applied(theme["name"])
         note = f"{theme['label']} applied"
         if restart:
             note += (f" - reopen {' and '.join(restart).lower()}"
