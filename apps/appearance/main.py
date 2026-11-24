@@ -890,7 +890,7 @@ class Application(Adw.Application):
                 display, provider, UserCss.PRIORITY + 1)
 
     def do_activate(self):
-        Window(self).present()
+        (self.get_active_window() or Window(self)).present()
 
 
 if __name__ == "__main__":
