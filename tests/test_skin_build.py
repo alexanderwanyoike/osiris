@@ -151,6 +151,20 @@ def test_a_skin_in_a_theme_with_a_new_border_is_built_under_a_new_name(
     assert edited.theme != first.theme
 
 
+def test_a_commit_in_a_skins_history_keeps_its_name(tmp_path: Path) -> None:
+    root = make_pack(tmp_path / "colloid")
+    (root / ".git").mkdir()
+    (root / ".git" / "HEAD").write_text("ref: refs/heads/main\n")
+    first = build(
+        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "w", FakeRunner()
+    )
+    (root / ".git" / "HEAD").write_text("0123abcd\n")
+    again = build(
+        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "w", FakeRunner()
+    )
+    assert again.theme == first.theme
+
+
 def test_building_prints_nothing_of_its_own(tmp_path: Path) -> None:
     runner = FakeRunner()
     build_rose_pine(tmp_path, runner)
