@@ -227,6 +227,15 @@ main {
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
 }
 
+.video iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  border: 1px solid var(--surface-muted);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
 .shot figcaption {
   margin-top: 12px;
   text-align: center;
