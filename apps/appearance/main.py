@@ -360,9 +360,10 @@ class Window(Adw.ApplicationWindow):
         toolbar.set_content(self.toasts)
         self.set_content(toolbar)
         self.reload()
-        self._applied = ThemeRecord(Path(engine.STATE), self.show_applied)
         # The person's own folder: what is shipped changes only with a package.
         self._mine = ThemeFolder(Path(engine.SEARCH[0]), self.reload)
+        # After the folder, which makes the record's folder on a new account.
+        self._applied = ThemeRecord(Path(engine.STATE), self.show_applied)
         self._explain_drift()
         GLib.timeout_add_seconds(5, self._explain_drift)
 
