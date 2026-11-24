@@ -16,6 +16,7 @@ A skinpack is laid out by surface, one Sass entry per variant:
 
 from __future__ import annotations
 
+import hashlib
 import shutil
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -70,7 +71,9 @@ def build(
     (work / "sass").mkdir(exist_ok=True)
     (work / "sass" / "_gaps.scss").write_text(sass_gaps(filled))
 
-    name = f"Osiris-{pack.name}-{theme['name']}"
+    # GTK, Muffin and Cinnamon reload a theme only when its name changes, so
+    # the name carries what it was built from: an edit reaches open apps.
+    name = f"Osiris-{pack.name}-{theme['name']}-{_fingerprint(pack.root, filled)}"
     target = themes_dir / name
     shutil.rmtree(target, ignore_errors=True)
     target.mkdir(parents=True)
@@ -106,6 +109,15 @@ def build(
         or (target / "cinnamon" / "cinnamon.css").is_file(),
         launcher=launcher,
     )
+
+
+def _fingerprint(root: Path, filled: Mapping[str, str]) -> str:
+    digest = hashlib.sha256(repr(sorted(filled.items())).encode())
+    for path in sorted(root.rglob("*")):
+        if path.is_file():
+            digest.update(f"\0{path.relative_to(root)}\0".encode())
+            digest.update(path.read_bytes())
+    return digest.hexdigest()[:12]
 
 
 def _compile(
