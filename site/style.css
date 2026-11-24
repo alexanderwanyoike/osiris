@@ -220,7 +220,8 @@ main {
   margin: 0;
 }
 
-.shot img {
+.shot img,
+.video iframe {
   width: 100%;
   border-radius: 12px;
   border: 1px solid var(--surface-muted);
@@ -229,11 +230,7 @@ main {
 
 .video iframe {
   display: block;
-  width: 100%;
   aspect-ratio: 16 / 9;
-  border-radius: 12px;
-  border: 1px solid var(--surface-muted);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
 }
 
 .shot figcaption {
