@@ -49,6 +49,7 @@ def described(
     status: str = "active",
     required: tuple[str, ...] = ("prompt",),
     path: str = "/fal-ai/one",
+    properties: dict[str, object] | None = None,
 ) -> dict[str, object]:
     return {
         "models": [
@@ -76,7 +77,8 @@ def described(
                         "schemas": {
                             "OneInput": {
                                 "required": list(required),
-                                "properties": {"prompt": {}, "image_size": {}},
+                                "properties": properties
+                                or {"prompt": {}, "image_size": {}},
                             }
                         }
                     },
@@ -179,3 +181,11 @@ def test_a_model_runs_where_its_schema_says() -> None:
     http = FakeHttpClient(replies={("GET", DETAILS): answer})
 
     assert catalog(http).spec("fal-ai/one").path == "fal-ai/runs-here"
+
+
+def test_a_model_is_given_a_wide_size_from_its_schema() -> None:
+    size = {"enum": ["1024x1024", "1536x1024"]}
+    answer = described(properties={"prompt": {}, "image_size": size})
+    http = FakeHttpClient(replies={("GET", DETAILS): answer})
+
+    assert catalog(http).spec("fal-ai/one").size == "1536x1024"
