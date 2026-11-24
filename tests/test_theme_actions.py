@@ -245,7 +245,7 @@ def test_a_picture_that_cannot_be_read_keeps_nothing() -> None:
         kept.append(name)
         return Path(f"/home/tester/Pictures/Osiris/{name}.png")
 
-    with pytest.raises(ThemeActionError, match="could not be read"):
+    with pytest.raises(ThemeActionError, match=r"could not be read.*ask the person"):
         create_picture_theme(store, label="Broken", picture=b"not a picture", keep=keep)
 
     assert kept == []
