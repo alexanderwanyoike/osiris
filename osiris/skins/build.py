@@ -72,9 +72,9 @@ def build(
     (work / "sass").mkdir(exist_ok=True)
     (work / "sass" / "_gaps.scss").write_text(sass_gaps(filled))
 
-    # GTK, Muffin and Cinnamon reload a theme only when its name changes, so
-    # the name carries what it was built from: an edit reaches open apps.
-    name = f"Osiris-{pack.name}-{theme['name']}-{_fingerprint(pack.root, theme)}"
+    # An edit must be a new name to reach open apps (ADR 0006).
+    drawn = _fingerprint(pack.root, variant, theme["colors"])
+    name = f"Osiris-{pack.name}-{theme['name']}-{drawn}"
     target = themes_dir / name
     shutil.rmtree(target, ignore_errors=True)
     target.mkdir(parents=True)
@@ -112,9 +112,8 @@ def build(
     )
 
 
-def _fingerprint(root: Path, theme: Mapping[str, Any]) -> str:
-    colours = sorted(theme["colors"].items())
-    drawn = f"{signature([root])}{theme.get('dark', True)}{colours}"
+def _fingerprint(root: Path, variant: str, colours: Mapping[str, str]) -> str:
+    drawn = f"{signature([root])}{variant}{sorted(colours.items())}"
     return hashlib.sha256(drawn.encode()).hexdigest()[:12]
 
 
