@@ -237,6 +237,20 @@ def test_a_picture_in_another_format_is_kept_as_a_png() -> None:
     assert Image.open(io.BytesIO(kept[0])).format == "PNG"
 
 
+def test_a_picture_that_cannot_be_saved_warns_of_a_possible_charge() -> None:
+    store = FakeThemeStore()
+
+    def keep(_name: str, _data: bytes) -> Path:
+        raise OSError("No space left on device")
+
+    with pytest.raises(ThemeActionError, match=r"could not be saved.*ask the person"):
+        create_picture_theme(
+            store, label="Sea", picture=picture_bytes((20, 40, 90)), keep=keep
+        )
+
+    assert store.saved == []
+
+
 def test_a_picture_that_cannot_be_read_keeps_nothing() -> None:
     store = FakeThemeStore()
     kept: list[str] = []
