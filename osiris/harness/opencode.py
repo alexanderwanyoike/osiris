@@ -262,7 +262,7 @@ class OpencodeEngine:
 
     def has_tools(self, name: str, directory: Path) -> bool:
         state = self.connector_states(directory).get(name)
-        return state is not None and state.status in ("connected", "pending")
+        return state is not None and state.running
 
     def resources(self, directory: Path) -> list[Entry]:
         reply: Any = self._http.request(
