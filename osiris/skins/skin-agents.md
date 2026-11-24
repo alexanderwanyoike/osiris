@@ -91,12 +91,15 @@ person what it said.
 
       python3 /usr/share/osiris/themes/engine.py --skin SKIN_NAME
 
-- Then look at it before saying it is done. With a GTK 3 window (Files:
+- Then look at it before saying it is done. Open a GTK 3 window (Files:
   `setsid -f nemo`) and a libadwaita window (Appearance:
-  `setsid -f osiris-appearance`) open, take a screenshot with
+  `setsid -f osiris-appearance`) if none is open, take a screenshot with
   `gnome-screenshot -f .look.png` and read it. Compare the two windows, the
-  panel and the dock, fix what differs, and look again. Delete the
-  screenshot before committing.
+  panel and the dock, fix what does not look like one Skin, and look again.
+  If you cannot see images, tell the person and ask them to look instead.
+- Delete `.look.png` before committing, and check that `git status` does not
+  list it. A screenshot can show the person's private windows, and anything
+  committed is shared with the Skin.
 
 - Commit each change in this folder with a message saying what changed and
   why, so the person can read the Skin's history.
