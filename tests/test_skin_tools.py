@@ -101,8 +101,8 @@ def test_checking_names_fixed_colours_without_refusing_the_skin() -> None:
     skins = FakeSkinStore(colours={"colloid": ["gtk-3.0/gtk-dark.scss: #2f7d4a"]})
     assert text(call(skins, "check_skin", {"name": "colloid"}, new_log())) == (
         "No problems found.\n"
-        "Fixed colours, the same under every Theme. Use a gap for each, or "
-        "tell the person which stay and why:\n"
+        "Fixed colours, the same under every Theme. Use a gap for each the "
+        "person did not ask for:\n"
         "gtk-3.0/gtk-dark.scss: #2f7d4a"
     )
     call(skins, "wear_skin", {"name": "colloid"}, new_log())
