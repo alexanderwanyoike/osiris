@@ -9,6 +9,7 @@ from urllib.parse import urlencode
 from osiris.harness.media.error import MediaError
 from osiris.harness.media.image_model import ImageModel
 from osiris.harness.media.model_spec import ModelSpec
+from osiris.harness.media.wide_size import wide_size
 from osiris.platform import HttpClient, HttpError
 
 CATALOG = "https://api.fal.ai/v1/models"
@@ -89,7 +90,10 @@ def _spec(entry: dict[str, object], model: str) -> ModelSpec:
         described = spec["components"]["schemas"][name]
         if set(described.get("required", ())) - {"prompt"}:
             raise MediaError(f"{model} needs more than a description; choose another.")
-        return ModelSpec(path, frozenset(described["properties"]))
+        fields = described["properties"]
+        return ModelSpec(
+            path, frozenset(fields), wide_size(fields.get("image_size", {}))
+        )
     except KeyError, TypeError, AttributeError, IndexError:
         raise MediaError(_UNREADABLE) from None
 

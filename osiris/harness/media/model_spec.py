@@ -10,3 +10,5 @@ class ModelSpec:
     #: Where it runs, which can differ from its id in the catalog.
     path: str
     inputs: frozenset[str]
+    #: What to send as its image size; None leaves that to the model.
+    size: object = None
