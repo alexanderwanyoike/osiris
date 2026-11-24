@@ -6,12 +6,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from gi.repository import Gtk
+import pytest
+from gi.repository import Adw, Gtk
 from look import Look
 
 from osiris.apps.user_css import UserCss
 
-from .conftest import widgets
+from .conftest import settle, widgets
 
 
 def test_the_drawers_look_outranks_the_user_sheet(tmp_path: Path) -> None:
@@ -26,6 +27,24 @@ def test_the_drawers_look_outranks_the_user_sheet(tmp_path: Path) -> None:
     Look(tmp_path, lambda: None)
     probe = Gtk.Label(css_classes=["look-probe"])
     assert probe.get_color().to_string() != "rgb(255,0,0)"
+
+
+def test_the_drawer_turns_light_when_the_theme_does(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Filming a demo: after a dark Theme gave way to a light one, the
+    message box kept the dark Theme's near-white text on the light drawer."""
+    import engine
+
+    record = tmp_path / "theme"
+    record.write_text("rose-pine\n")
+    monkeypatch.setattr(engine, "STATE", str(record))
+    manager = Adw.StyleManager.get_default()
+    manager.set_color_scheme(Adw.ColorScheme.FORCE_DARK)
+    look = Look(tmp_path, lambda: None)
+    record.write_text("rose-pine-dawn\n")
+    assert settle(lambda: manager.get_color_scheme() == Adw.ColorScheme.FORCE_LIGHT)
+    assert look is not None
 
 
 def test_code_is_drawn_in_the_themes_terminal_font(tmp_path: Path) -> None:
