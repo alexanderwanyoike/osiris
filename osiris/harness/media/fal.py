@@ -12,14 +12,14 @@ from osiris.harness.media.model_spec import ModelSpec
 from osiris.platform import HttpClient, HttpError
 
 RUN = "https://fal.run"
-_NO_PICTURE = "FAL did not return a picture."
+_CHARGED = (
+    "The picture may still have been charged, so ask the person before trying again."
+)
+_NO_PICTURE = f"FAL did not return a picture. {_CHARGED}"
 _LARGEST_PICTURE = 64 * 1024 * 1024
 
 _REASONS = {
-    0: (
-        "Osiris could not reach FAL; check the connection. The picture may still "
-        "have been charged, so ask the person before trying again."
-    ),
+    0: f"Osiris could not reach FAL; check the connection. {_CHARGED}",
     401: "FAL did not accept the key; check it in Settings.",
     403: "FAL refused the request; the account may be out of credit.",
 }
@@ -52,7 +52,8 @@ class FalImages:
         except HttpError as error:
             # Not chained: the error's body could echo the request and its key.
             reason = _REASONS.get(
-                error.status, f"FAL could not make the picture ({error.status})."
+                error.status,
+                f"FAL could not make the picture ({error.status}). {_CHARGED}",
             )
             raise MediaError(reason) from None
         except UnicodeEncodeError:
@@ -117,5 +118,5 @@ def _fetched(url: str, http: HttpClient) -> bytes:
         return http.download(url, limit=_LARGEST_PICTURE)
     except HttpError:
         raise MediaError(
-            "FAL made the picture, but Osiris could not download it."
+            f"FAL made the picture, but Osiris could not download it. {_CHARGED}"
         ) from None
