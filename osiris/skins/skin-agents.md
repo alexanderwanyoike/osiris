@@ -59,8 +59,7 @@ person what it said.
 - Never write a colour from the Theme literally: use the gaps, so the Skin
   works under every Theme, light and dark. Fixed colours are only for things
   that are part of the look whatever the Theme, and only if asked. check_skin
-  names the fixed colours this Skin has that the Skin it was made from does
-  not; replace each with a gap, or tell the person which ones stay and why.
+  names the fixed colours this Skin was not made with.
 - After each change, check it with the check_skin tool and wear it with
   wear_skin, and fix whatever check_skin reports. Without those tools, the
   engine does the same:
