@@ -154,6 +154,23 @@ def test_no_answer_warns_the_picture_may_still_have_been_charged() -> None:
 
 
 @pytest.mark.parametrize(
+    "reply",
+    [
+        HttpError(500, "no"),
+        {},
+        {"images": [{"url": "https://v3.fal.media/files/a/picture.png"}]},
+    ],
+)
+def test_a_failure_after_the_request_warns_it_may_have_been_charged(
+    reply: object,
+) -> None:
+    http = FakeHttpClient(replies={("POST", ENDPOINT): reply})
+
+    with pytest.raises(MediaError, match="ask the person before trying again"):
+        fal(http).make("A forest")
+
+
+@pytest.mark.parametrize(
     ("failure", "reason"),
     [
         (json.JSONDecodeError("not json", "", 0), "did not return a picture"),
