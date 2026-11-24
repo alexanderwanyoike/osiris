@@ -13,6 +13,8 @@ _HEX = r"(?<!url\()#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b"
 # Numbers only: rgba($gap-foreground, 0.1) fades a Theme colour.
 _NUMBERS = r"\brgba?\(\s*[0-9][0-9.,%/\s]*\)"
 _COLOUR = re.compile(f"{_HEX}|{_NUMBERS}")
+#: Named per sheet; an imported theme can hold hundreds.
+SHOWN = 3
 
 
 def fixed_colours(skin: Path, style: Path | None) -> list[str]:
@@ -23,7 +25,7 @@ def fixed_colours(skin: Path, style: Path | None) -> list[str]:
     for sheet in _sheets(skin):
         new = [colour for colour in _colours(sheet) if colour not in known]
         if new:
-            found.append(f"{sheet.relative_to(skin).as_posix()}: {', '.join(new)}")
+            found.append(f"{sheet.relative_to(skin).as_posix()}: {_listed(new)}")
     return found
 
 
@@ -38,3 +40,9 @@ def _sheets(root: Path | None) -> Iterator[Path]:
 def _colours(sheet: Path) -> list[str]:
     text = sheet.read_text(errors="replace")
     return list(dict.fromkeys(match.lower() for match in _COLOUR.findall(text)))
+
+
+def _listed(colours: list[str]) -> str:
+    shown = ", ".join(colours[:SHOWN])
+    rest = len(colours) - SHOWN
+    return f"{shown} and {rest} more" if rest > 0 else shown
