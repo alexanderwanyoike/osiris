@@ -97,6 +97,18 @@ def test_checking_names_every_problem_or_none() -> None:
     ) == ("No problems found.")
 
 
+def test_checking_names_fixed_colours_without_refusing_the_skin() -> None:
+    skins = FakeSkinStore(colours={"colloid": ["gtk-3.0/gtk-dark.scss: #2f7d4a"]})
+    assert text(call(skins, "check_skin", {"name": "colloid"}, new_log())) == (
+        "No problems found.\n"
+        "Fixed colours, the same under every Theme. Use a gap for each unless "
+        "the person asked for that colour:\n"
+        "gtk-3.0/gtk-dark.scss: #2f7d4a"
+    )
+    call(skins, "wear_skin", {"name": "colloid"}, new_log())
+    assert skins.worn() == "colloid"
+
+
 def test_downloads_come_in_through_osiris_and_can_be_undone() -> None:
     skins, log = FakeSkinStore(), new_log()
     call(skins, "import_gtk_theme", {"path": "/tmp/Yaru-Green.tar.xz"}, log)
