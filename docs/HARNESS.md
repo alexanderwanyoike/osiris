@@ -267,7 +267,12 @@ on first use. Super+A and the panel button both run
 What the model may do on this machine is offered by Osiris as an MCP server
 (`osiris`), built on the official SDK (Arch's `python-mcp`). The drawer attaches
 it to the Engine when it connects, with opencode's runtime MCP API, so nothing
-is written into the person's own opencode configuration.
+is written into the person's own opencode configuration. opencode forgets a
+runtime server when it unloads a folder left idle
+(`experimental.location_idle_timeout`, an hour by default), so before each
+question the Harness asks whether `osiris` still runs there and attaches it
+again if not. The timeout is left as it is, since turning it off would keep
+every folder's servers running until the Engine restarts.
 
 | Tool | Action tier | What it does | Logged step to reverse it |
 |---|---|---|---|

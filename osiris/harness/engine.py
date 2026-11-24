@@ -253,6 +253,11 @@ class Engine(Protocol):
         a ``ToolRequested`` before it runs."""
         ...
 
+    def has_tools(self, name: str, directory: Path) -> bool:
+        """Whether the tool server attached there still runs, which the Engine
+        may forget when the folder goes idle."""
+        ...
+
     def action(self, server: str, tool: str) -> str:
         """The action a ``ToolRequested`` names for one of a tool server's tools."""
         ...

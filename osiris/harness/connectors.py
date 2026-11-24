@@ -41,6 +41,11 @@ class State:
     #: The Engine's integration a sign-in goes through.
     integration: str = ""
 
+    @property
+    def running(self) -> bool:
+        """Up or starting, so attaching it again would cut a call short."""
+        return self.status in ("connected", "pending")
+
 
 def connectors(config: dict[str, Any]) -> list[Connector]:
     servers: dict[str, dict[str, Any]] = config.get("mcp", {}).get("servers", {})

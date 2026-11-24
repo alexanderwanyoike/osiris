@@ -135,8 +135,8 @@ class Harness:
         """Send a question; while the session works it waits and steers the
         model at its next step. Answers where it waits."""
         directory, session = self._directory, self._session
+        self._ready(directory)
         if session is None:
-            self._ready(directory)
             session = self._session = self._engine.start(self._model, directory)
             self._engine.rename(session, title_of(text))
         self._running[session] = directory
@@ -184,9 +184,13 @@ class Harness:
 
     def _ready(self, directory: Path) -> None:
         with self._attaching:
-            if self._tools is not None and directory not in self._tools_in:
-                self._engine.attach_tools(*self._tools, directory)
-                self._tools_in.add(directory)
+            if self._tools is None:
+                return
+            name, command = self._tools
+            if directory in self._tools_in and self._engine.has_tools(name, directory):
+                return
+            self._engine.attach_tools(name, command, directory)
+            self._tools_in.add(directory)
 
     def restart_tools(self) -> None:
         """Attach the tool server again where it runs now; other folders get a
