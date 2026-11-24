@@ -4,10 +4,12 @@ the Theme, so they stay the same whatever Theme is worn."""
 from __future__ import annotations
 
 import re
+import tarfile
 from collections.abc import Iterator, Sequence
 from pathlib import Path
 
 from osiris.platform.process import CommandRunner
+from osiris.skins.library import find
 from osiris.skins.pack import Skinpack
 
 _SHEETS = {".scss", ".css", ".svg", ".rasi"}
@@ -27,7 +29,53 @@ _SHEETS_SHOWN = 10
 def originals(
     pack: Skinpack, folders: Sequence[Path], runner: CommandRunner, scratch: Path
 ) -> list[Path]:
-    raise NotImplementedError
+    """What a person's Skin was made from: the Skin as its first commit holds
+    it, and the Skin its style names, unpacked under scratch if need be."""
+    found = []
+    first = _first_commit(pack.root, runner, scratch)
+    if first is not None:
+        found.append(first)
+    style = find(folders, pack.style) if pack.style else None
+    if style is not None and style.root.resolve() != pack.root.resolve():
+        found.append(style.root)
+    return found
+
+
+def _first_commit(root: Path, runner: CommandRunner, scratch: Path) -> Path | None:
+    if not (root / ".git").exists():
+        return None
+    where = str(root)
+    first = runner.run(
+        "git",
+        "-C",
+        where,
+        "rev-list",
+        "--max-parents=0",
+        "HEAD",
+        check=False,
+        quiet=True,
+    ).stdout.split()
+    if not first:
+        return None
+    scratch.mkdir(parents=True, exist_ok=True)
+    archive = scratch / "first.tar"
+    made = runner.run(
+        "git",
+        "-C",
+        where,
+        "archive",
+        "-o",
+        str(archive),
+        first[-1],
+        check=False,
+        quiet=True,
+    )
+    if not made.ok:
+        return None
+    target = scratch / "first"
+    with tarfile.open(archive) as unpacked:
+        unpacked.extractall(target, filter="data")
+    return target
 
 
 def fixed_colours(skin: Path, originals: Sequence[Path]) -> list[str]:
