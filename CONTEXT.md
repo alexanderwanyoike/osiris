@@ -26,6 +26,12 @@ pictures with named gaps for the **Theme**'s colours, and its fonts, icons and
 cursor. One file when shared; nothing in it runs.
 _Avoid_: skin file, preset
 
+**Fixed colour**:
+A colour written into a **Skin** rather than taken from the **Theme**, so it
+stays the same whatever **Theme** is worn. Osiris names the ones a person's
+**Skin** was not made with; the ones it was made with are part of its look.
+_Avoid_: hard-coded colour, literal colour
+
 **Theme intent**:
 What a **Theme** is asked to be - a seed colour or a **Wallpaper**, a harmony,
 light or dark, and a mood - from which its colours are derived.
