@@ -73,7 +73,7 @@ def build(
 
     # GTK, Muffin and Cinnamon reload a theme only when its name changes, so
     # the name carries what it was built from: an edit reaches open apps.
-    name = f"Osiris-{pack.name}-{theme['name']}-{_fingerprint(pack.root, filled)}"
+    name = f"Osiris-{pack.name}-{theme['name']}-{_fingerprint(pack.root, theme)}"
     target = themes_dir / name
     shutil.rmtree(target, ignore_errors=True)
     target.mkdir(parents=True)
@@ -111,8 +111,9 @@ def build(
     )
 
 
-def _fingerprint(root: Path, filled: Mapping[str, str]) -> str:
-    digest = hashlib.sha256(repr(sorted(filled.items())).encode())
+def _fingerprint(root: Path, theme: Mapping[str, Any]) -> str:
+    colours = sorted(theme["colors"].items())
+    digest = hashlib.sha256(f"{theme.get('dark', True)}{colours}".encode())
     for path in sorted(root.rglob("*")):
         if path.is_file():
             digest.update(f"\0{path.relative_to(root)}\0".encode())
