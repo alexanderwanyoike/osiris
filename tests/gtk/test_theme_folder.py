@@ -26,3 +26,13 @@ def test_a_theme_written_to_the_folder_is_heard(tmp_path: Path) -> None:
     (tmp_path / "ink-and-silence.json").write_text("{}\n")
     assert settle(lambda: heard.times > 0)
     assert following is not None
+
+
+def test_a_removed_theme_is_heard(tmp_path: Path) -> None:
+    (tmp_path / "ink-duel.json").write_text("{}\n")
+    heard = Heard()
+    following = ThemeFolder(tmp_path, heard)
+    (tmp_path / "ink-duel.json").unlink()
+    assert settle(lambda: heard.times > 0)
+    assert following is not None
+
