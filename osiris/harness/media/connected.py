@@ -12,7 +12,6 @@ from osiris.harness.media.key import fal_key
 from osiris.harness.media.limit import DailyLimit
 from osiris.harness.media.limit_setting import daily_limit
 from osiris.harness.media.maker import ImageMaker
-from osiris.harness.media.model_setting import saved_model
 from osiris.platform import FileSystem
 
 USAGE_FILE = ".config/osiris/media/images"
@@ -31,15 +30,14 @@ class ConnectedFal:
         self._maker_for = maker_for
         self._today = today
 
-    def make(self, description: str, model: str | None = None) -> bytes:
+    def make(self, description: str, model: str) -> bytes:
         key = fal_key(self._files, self._home)
         if key is None:
             raise MediaError(
                 "FAL is not connected. The person can add a key in Settings, "
                 "in the Media section of Models."
             )
-        chosen = model or saved_model(self._files, self._home)
-        return self._maker_for(key, self._counter()).make(description, chosen)
+        return self._maker_for(key, self._counter()).make(description, model)
 
     def _counter(self) -> Callable[[], None]:
         images = daily_limit(self._files, self._home)

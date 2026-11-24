@@ -48,7 +48,7 @@ class Pictures:
         self.catalog.spec(model)
         save_model(self.files, self.home, model)
 
-    def make(self, description: str, model: str | None = None) -> bytes:
+    def make(self, description: str, model: str) -> bytes:
         return self.maker.make(description, model)
 
     def keep(self, name: str, data: bytes) -> Path:

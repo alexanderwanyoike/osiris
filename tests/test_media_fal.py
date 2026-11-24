@@ -39,7 +39,7 @@ def answer(picture: bytes = PICTURE) -> dict[str, object]:
 def test_a_description_comes_back_as_the_picture_fal_made() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): answer()})
 
-    picture = fal(http).make("A misty forest at dawn")
+    picture = fal(http).make("A misty forest at dawn", DEFAULT_IMAGE_MODEL)
 
     assert picture == PICTURE
     assert http.requests == [
@@ -71,7 +71,7 @@ def test_only_the_inputs_a_model_accepts_are_sent() -> None:
     accepted = frozenset({"prompt", "image_size"})
 
     FalImages(http, KEY, lambda model: ModelSpec(model, accepted, FULL_HD)).make(
-        "A forest"
+        "A forest", DEFAULT_IMAGE_MODEL
     )
 
     assert http.requests[0][2] == {
@@ -86,7 +86,7 @@ def test_a_model_is_sent_the_size_its_schema_allows() -> None:
 
     FalImages(
         http, KEY, lambda model: ModelSpec(model, accepted, "landscape_16_9")
-    ).make("A forest")
+    ).make("A forest", DEFAULT_IMAGE_MODEL)
 
     assert http.requests[0][2] == {
         "prompt": "A forest",
@@ -98,7 +98,9 @@ def test_a_model_with_no_wide_size_is_left_to_its_own_default() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): answer()})
     accepted = frozenset({"prompt", "image_size"})
 
-    FalImages(http, KEY, lambda model: ModelSpec(model, accepted)).make("A forest")
+    FalImages(http, KEY, lambda model: ModelSpec(model, accepted)).make(
+        "A forest", DEFAULT_IMAGE_MODEL
+    )
 
     assert http.requests[0][2] == {"prompt": "A forest"}
 
@@ -107,7 +109,9 @@ def test_a_model_without_a_size_input_is_asked_for_a_wide_picture() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): answer()})
     accepted = frozenset({"prompt", "aspect_ratio"})
 
-    FalImages(http, KEY, lambda model: ModelSpec(model, accepted)).make("A forest")
+    FalImages(http, KEY, lambda model: ModelSpec(model, accepted)).make(
+        "A forest", DEFAULT_IMAGE_MODEL
+    )
 
     assert http.requests[0][2] == {"prompt": "A forest", "aspect_ratio": "16:9"}
 
@@ -140,7 +144,7 @@ def test_a_failure_is_given_a_plain_reason_without_the_key(
     http = FakeHttpClient(replies={("POST", ENDPOINT): refusal})
 
     with pytest.raises(MediaError, match=reason) as caught:
-        fal(http).make("A misty forest")
+        fal(http).make("A misty forest", DEFAULT_IMAGE_MODEL)
 
     assert KEY not in str(caught.value)
     assert caught.value.__suppress_context__
@@ -150,7 +154,7 @@ def test_no_answer_warns_the_picture_may_still_have_been_charged() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): HttpError(0, "timed out")})
 
     with pytest.raises(MediaError, match="ask the person before trying again"):
-        fal(http).make("A misty forest")
+        fal(http).make("A misty forest", DEFAULT_IMAGE_MODEL)
 
 
 @pytest.mark.parametrize(
@@ -167,7 +171,7 @@ def test_a_failure_after_the_request_warns_it_may_have_been_charged(
     http = FakeHttpClient(replies={("POST", ENDPOINT): reply})
 
     with pytest.raises(MediaError, match="ask the person before trying again"):
-        fal(http).make("A forest")
+        fal(http).make("A forest", DEFAULT_IMAGE_MODEL)
 
 
 @pytest.mark.parametrize(
@@ -192,7 +196,7 @@ def test_a_request_that_breaks_is_given_a_plain_reason(
             raise failure
 
     with pytest.raises(MediaError, match=reason) as caught:
-        fal(Broken()).make("A misty forest")
+        fal(Broken()).make("A misty forest", DEFAULT_IMAGE_MODEL)
 
     assert caught.value.__suppress_context__
 
@@ -202,7 +206,7 @@ def test_a_picture_the_safety_filter_blocked_is_refused() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): blocked})
 
     with pytest.raises(MediaError, match="blocked"):
-        fal(http).make("A misty forest")
+        fal(http).make("A misty forest", DEFAULT_IMAGE_MODEL)
 
 
 @pytest.mark.parametrize(
@@ -219,7 +223,7 @@ def test_a_picture_returned_as_a_link_is_fetched_from_fals_storage(link: str) ->
         replies={("POST", ENDPOINT): reply}, downloads={link: PICTURE}
     )
 
-    assert fal(http).make("A forest") == PICTURE
+    assert fal(http).make("A forest", DEFAULT_IMAGE_MODEL) == PICTURE
 
 
 @pytest.mark.parametrize(
@@ -237,7 +241,7 @@ def test_a_link_outside_fals_storage_is_never_fetched(link: str) -> None:
     )
 
     with pytest.raises(MediaError, match="did not return a picture"):
-        fal(http).make("A forest")
+        fal(http).make("A forest", DEFAULT_IMAGE_MODEL)
 
 
 def test_a_picture_that_cannot_be_fetched_is_given_a_plain_reason() -> None:
@@ -245,7 +249,7 @@ def test_a_picture_that_cannot_be_fetched_is_given_a_plain_reason() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): {"images": [{"url": link}]}})
 
     with pytest.raises(MediaError, match="could not download"):
-        fal(http).make("A forest")
+        fal(http).make("A forest", DEFAULT_IMAGE_MODEL)
 
 
 @pytest.mark.parametrize(
@@ -262,4 +266,4 @@ def test_an_answer_without_a_picture_is_refused(reply: object) -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): reply})
 
     with pytest.raises(MediaError, match="did not return a picture"):
-        fal(http).make("A misty forest")
+        fal(http).make("A misty forest", DEFAULT_IMAGE_MODEL)

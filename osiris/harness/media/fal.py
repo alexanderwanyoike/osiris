@@ -7,7 +7,6 @@ from collections.abc import Callable
 from urllib.parse import urlsplit
 
 from osiris.harness.media.error import MediaError
-from osiris.harness.media.model_setting import DEFAULT_IMAGE_MODEL
 from osiris.harness.media.model_spec import ModelSpec
 from osiris.platform import HttpClient, HttpError
 
@@ -38,8 +37,8 @@ class FalImages:
         self._spec = spec
         self._before_spending = before_spending
 
-    def make(self, description: str, model: str | None = None) -> bytes:
-        spec = self._spec(model or DEFAULT_IMAGE_MODEL)
+    def make(self, description: str, model: str) -> bytes:
+        spec = self._spec(model)
         body = _request(description, spec)
         self._before_spending()
         try:

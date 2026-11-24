@@ -35,13 +35,13 @@ def test_an_older_picture_of_that_name_is_never_overwritten() -> None:
 
 def test_pictures_are_made_by_the_maker_and_kept_in_the_persons_folder() -> None:
     class Maker:
-        def make(self, description: str, model: str | None = None) -> bytes:
-            return f"{description}{model or ''}".encode()
+        def make(self, description: str, model: str) -> bytes:
+            return f"{description}{model}".encode()
 
     files = FakeFileSystem()
     pictures = Pictures(Maker(), files, HOME, Catalog())
 
-    data = pictures.make("forest")
+    data = pictures.make("forest", "")
     path = pictures.keep("misty-forest", data)
 
     assert path == FOLDER / "misty-forest.png"

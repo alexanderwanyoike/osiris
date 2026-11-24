@@ -21,8 +21,5 @@ def saved_model(files: FileSystem, home: Path) -> str | None:
         return None
 
 
-def save_model(files: FileSystem, home: Path, model: str | None) -> None:
-    if model is None:
-        files.remove(home / MODEL_FILE)
-    else:
-        files.write(home / MODEL_FILE, f"{model}\n")
+def save_model(files: FileSystem, home: Path, model: str) -> None:
+    files.write(home / MODEL_FILE, f"{model}\n")
