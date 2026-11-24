@@ -1075,8 +1075,8 @@ def fixed_colours(name: str) -> list[str]:
     pack = _pack(name)
     style = (skins.find([Path(folder) for folder in SKIN_DIRS], pack.style)
              if pack.style else None)
-    original = style.root if style and style.root != pack.root else None
-    return colours_in(pack.root, original)
+    originals = [style.root] if style and style.root != pack.root else []
+    return colours_in(pack.root, originals)
 
 
 def remove_icon_sets(names: list[str]) -> None:

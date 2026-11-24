@@ -4,7 +4,7 @@ the Theme, so they stay the same whatever Theme is worn."""
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 
 _SHEETS = {".scss", ".css", ".svg", ".rasi"}
@@ -21,10 +21,15 @@ _SHOWN = 3
 _SHEETS_SHOWN = 10
 
 
-def fixed_colours(skin: Path, style: Path | None) -> list[str]:
-    """Each style sheet of the Skin with the colours written into it that the
-    Skin it was made from does not have."""
-    known = {value for sheet in _sheets(style) for value in _colours(sheet)}
+def fixed_colours(skin: Path, originals: Sequence[Path]) -> list[str]:
+    """Each style sheet of the Skin with the colours written into it that none
+    of the Skins it was made from have."""
+    known = {
+        value
+        for original in originals
+        for sheet in _sheets(original)
+        for value in _colours(sheet)
+    }
     found = []
     for sheet in _sheets(skin):
         new = [shown for value, shown in _colours(sheet).items() if value not in known]
@@ -36,9 +41,7 @@ def fixed_colours(skin: Path, style: Path | None) -> list[str]:
     return found
 
 
-def _sheets(root: Path | None) -> Iterator[Path]:
-    if root is None:
-        return
+def _sheets(root: Path) -> Iterator[Path]:
     for path in sorted(root.rglob("*")):
         if (
             path.suffix in _SHEETS
