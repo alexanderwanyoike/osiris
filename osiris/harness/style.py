@@ -133,7 +133,10 @@ def colours_css(theme: Mapping[str, Any]) -> str:
 #: What libadwaita draws in the drawer, held to the Theme by rules rather than
 #: named colours alone: GTK keeps the user sheet it read at startup, and a
 #: Skin's sheet there sets these in the colours of the Theme it was worn with.
-HELD_CSS = "textview, textview > text, text { color: @harness_fg; }\n"
+HELD_CSS = (
+    "textview, textview > text, text { color: @harness_fg; }\n"
+    "switch:checked { background-color: @harness_accent; }\n"
+)
 
 
 def code_font_css(theme: Mapping[str, Any]) -> str:
