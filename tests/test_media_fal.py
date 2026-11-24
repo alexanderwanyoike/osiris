@@ -11,6 +11,7 @@ import pytest
 from osiris.harness.media.error import MediaError
 from osiris.harness.media.fal import RUN, FalImages
 from osiris.harness.media.model_setting import DEFAULT_IMAGE_MODEL
+from osiris.harness.media.model_spec import ModelSpec
 from osiris.platform import FakeHttpClient, HttpError
 from osiris.platform.http import Body
 
@@ -23,7 +24,7 @@ EVERY_INPUT = frozenset(
 
 
 def fal(http: FakeHttpClient) -> FalImages:
-    return FalImages(http, KEY, lambda _model: EVERY_INPUT)
+    return FalImages(http, KEY, lambda model: ModelSpec(model, EVERY_INPUT))
 
 
 def answer(picture: bytes = PICTURE) -> dict[str, object]:
@@ -68,7 +69,7 @@ def test_only_the_inputs_a_model_accepts_are_sent() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): answer()})
     accepted = frozenset({"prompt", "image_size"})
 
-    FalImages(http, KEY, lambda _model: accepted).make("A forest")
+    FalImages(http, KEY, lambda model: ModelSpec(model, accepted)).make("A forest")
 
     assert http.requests[0][2] == {
         "prompt": "A forest",
@@ -80,13 +81,13 @@ def test_a_model_without_a_size_input_is_asked_for_a_wide_picture() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): answer()})
     accepted = frozenset({"prompt", "aspect_ratio"})
 
-    FalImages(http, KEY, lambda _model: accepted).make("A forest")
+    FalImages(http, KEY, lambda model: ModelSpec(model, accepted)).make("A forest")
 
     assert http.requests[0][2] == {"prompt": "A forest", "aspect_ratio": "16:9"}
 
 
 def test_a_model_the_catalog_refuses_spends_nothing() -> None:
-    def refuse(model: str) -> frozenset[str]:
+    def refuse(model: str) -> ModelSpec:
         raise MediaError(f"{model} is not an image model FAL offers")
 
     http = FakeHttpClient()

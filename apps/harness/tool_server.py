@@ -43,7 +43,7 @@ if __name__ == "__main__":
     http = UrllibClient(timeout=120)
     catalog = FalCatalog(http, lambda: fal_key(files, home))
     fal = ConnectedFal(
-        files, home, lambda key: FalImages(http, key, catalog.inputs), date.today)
+        files, home, lambda key: FalImages(http, key, catalog.spec), date.today)
     server(EngineStore(), programs, HarnessLog(files, home / LOG_FILE), wallpapers,
            skins=EngineSkinStore(),
            pictures=Pictures(fal, files, home, catalog),

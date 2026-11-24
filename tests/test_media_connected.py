@@ -14,6 +14,7 @@ from osiris.harness.media.fal import RUN, FalImages
 from osiris.harness.media.key import save_fal_key
 from osiris.harness.media.limit_setting import set_daily_limit
 from osiris.harness.media.model_setting import DEFAULT_IMAGE_MODEL, save_model
+from osiris.harness.media.model_spec import ModelSpec
 from osiris.platform import FakeFileSystem, FakeHttpClient
 
 HOME = Path("/home/tester")
@@ -29,7 +30,9 @@ def connected(files: FakeFileSystem, http: FakeHttpClient) -> ConnectedFal:
     return ConnectedFal(
         files,
         HOME,
-        lambda key: FalImages(http, key, lambda _model: frozenset({"prompt"})),
+        lambda key: FalImages(
+            http, key, lambda model: ModelSpec(model, frozenset({"prompt"}))
+        ),
         lambda: MONDAY,
     )
 

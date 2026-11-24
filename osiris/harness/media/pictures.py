@@ -45,7 +45,7 @@ class Pictures:
         return saved_model(self.files, self.home) or DEFAULT_IMAGE_MODEL
 
     def choose(self, model: str) -> None:
-        self.catalog.inputs(model)
+        self.catalog.spec(model)
         save_model(self.files, self.home, model)
 
     def make(self, description: str, model: str | None = None) -> bytes:

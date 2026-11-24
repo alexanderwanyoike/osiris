@@ -8,6 +8,7 @@ from urllib.parse import urlencode
 
 from osiris.harness.media.error import MediaError
 from osiris.harness.media.image_model import ImageModel
+from osiris.harness.media.model_spec import ModelSpec
 from osiris.platform import HttpClient, HttpError
 
 CATALOG = "https://api.fal.ai/v1/models"
@@ -31,7 +32,7 @@ class FalCatalog:
         entries = self._entries(f"{CATALOG}?{query}")
         return [_model(entry) for entry in entries if _draws_pictures(entry)]
 
-    def inputs(self, model: str) -> frozenset[str]:
+    def spec(self, model: str) -> ModelSpec:
         query = urlencode({"endpoint_id": model, "expand": "openapi-3.0"})
         entries = self._entries(f"{CATALOG}?{query}")
         if not entries or not _offered(entries[0]):
@@ -39,7 +40,7 @@ class FalCatalog:
                 f"{model} is not an image model FAL offers; "
                 "find one with find_image_models."
             )
-        return _fields(entries[0], model)
+        return _spec(entries[0], model)
 
     def _entries(self, url: str) -> list[dict[str, object]]:
         try:
@@ -78,7 +79,7 @@ def _draws_pictures(entry: dict[str, object]) -> bool:
     return "vector" not in str(entry.get("endpoint_id", ""))
 
 
-def _fields(entry: dict[str, object], model: str) -> frozenset[str]:
+def _spec(entry: dict[str, object], model: str) -> ModelSpec:
     spec: Any = entry.get("openapi")
     try:
         body = spec["paths"][f"/{model}"]["post"]["requestBody"]
@@ -87,7 +88,7 @@ def _fields(entry: dict[str, object], model: str) -> frozenset[str]:
         described = spec["components"]["schemas"][name]
         if set(described.get("required", ())) - {"prompt"}:
             raise MediaError(f"{model} needs more than a description; choose another.")
-        return frozenset(described["properties"])
+        return ModelSpec(model, frozenset(described["properties"]))
     except KeyError, TypeError, AttributeError, IndexError:
         raise MediaError(_UNREADABLE) from None
 

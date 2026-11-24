@@ -17,6 +17,7 @@ from osiris.harness.log import LOG_FILE, Change, HarnessLog
 from osiris.harness.media.error import MediaError
 from osiris.harness.media.image_model import ImageModel
 from osiris.harness.media.model_setting import DEFAULT_IMAGE_MODEL, saved_model
+from osiris.harness.media.model_spec import ModelSpec
 from osiris.harness.media.pictures import Pictures
 from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem, FakeRunner
@@ -52,10 +53,10 @@ class Catalog:
     def search(self, _words: str) -> list[ImageModel]:
         return [ImageModel("vendor/flat", "Flat", "Draws flat pictures")]
 
-    def inputs(self, model: str) -> frozenset[str]:
+    def spec(self, model: str) -> ModelSpec:
         if model != "vendor/flat":
             raise MediaError(f"{model} is not an image model FAL offers")
-        return frozenset({"prompt"})
+        return ModelSpec(model, frozenset({"prompt"}))
 
 
 def tool_server(

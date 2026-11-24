@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 
 from osiris.harness.media.error import MediaError
 from osiris.harness.media.model_setting import DEFAULT_IMAGE_MODEL
+from osiris.harness.media.model_spec import ModelSpec
 from osiris.platform import HttpClient, HttpError
 
 RUN = "https://fal.run"
@@ -29,19 +30,19 @@ class FalImages:
         self,
         http: HttpClient,
         key: str,
-        inputs: Callable[[str], frozenset[str]],
+        spec: Callable[[str], ModelSpec],
     ) -> None:
         self._http = http
         self._key = key
-        self._inputs = inputs
+        self._spec = spec
 
     def make(self, description: str, model: str | None = None) -> bytes:
-        chosen = model or DEFAULT_IMAGE_MODEL
-        body = _request(description, self._inputs(chosen))
+        spec = self._spec(model or DEFAULT_IMAGE_MODEL)
+        body = _request(description, spec.inputs)
         try:
             answer = self._http.request(
                 "POST",
-                f"{RUN}/{chosen}",
+                f"{RUN}/{spec.path}",
                 body=body,
                 headers={"Authorization": f"Key {self._key}"},
             )
