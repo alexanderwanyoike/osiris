@@ -141,3 +141,29 @@ def test_a_skin_is_not_its_own_original(tmp_path: Path) -> None:
     mine = make_skin(tmp_path / "mine" / "sumi", "sumi", "a { color: #2f7d4a; }")
     found = named(mine, [tmp_path / "mine"], tmp_path / "scratch")
     assert found == ["gtk-3.0/gtk-dark.scss: #2f7d4a"]
+
+
+def test_a_link_out_of_the_first_commit_leaves_the_style_to_compare(
+    tmp_path: Path,
+) -> None:
+    """The tar filter refuses such a link; the check must still answer."""
+    make_skin(tmp_path / "shipped" / "graphite", "", "a { color: #123456; }")
+    mine = make_skin(tmp_path / "mine" / "sumi", "graphite", "a { color: #123456; }")
+    (mine / "themes").symlink_to("/usr/share/themes")
+    commit(mine, "Copy Graphite", SubprocessRunner())
+    folders = [tmp_path / "mine", tmp_path / "shipped"]
+    assert named(mine, folders, tmp_path / "scratch") == []
+
+
+def test_one_scratch_folder_serves_two_skins(tmp_path: Path) -> None:
+    first = make_skin(tmp_path / "mine" / "a", "", "a { color: #2f7d4a; }")
+    commit(first, "Copy", SubprocessRunner())
+    second = make_skin(tmp_path / "mine" / "b", "", "a { color: #000001; }")
+    commit(second, "Copy", SubprocessRunner())
+    write(
+        second / "gtk-3.0" / "gtk-dark.scss",
+        "a { color: #000001; } b { color: #2f7d4a; }",
+    )
+    named(first, [], tmp_path / "scratch")
+    found = named(second, [], tmp_path / "scratch")
+    assert found == ["gtk-3.0/gtk-dark.scss: #2f7d4a"]
