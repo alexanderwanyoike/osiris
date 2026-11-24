@@ -48,6 +48,7 @@ def described(
     category: str = "text-to-image",
     status: str = "active",
     required: tuple[str, ...] = ("prompt",),
+    path: str = "/fal-ai/one",
 ) -> dict[str, object]:
     return {
         "models": [
@@ -56,7 +57,8 @@ def described(
                 "metadata": {"category": category, "status": status},
                 "openapi": {
                     "paths": {
-                        "/fal-ai/one": {
+                        f"{path}/requests/{{request_id}}/cancel": {"put": {}},
+                        path: {
                             "post": {
                                 "requestBody": {
                                     "content": {
@@ -68,7 +70,7 @@ def described(
                                     }
                                 }
                             }
-                        }
+                        },
                     },
                     "components": {
                         "schemas": {
@@ -170,3 +172,10 @@ def test_a_rate_limit_is_not_mistaken_for_a_lost_connection() -> None:
 
     with pytest.raises(MediaError, match="try again in a minute"):
         catalog(http).search("flat anime")
+
+
+def test_a_model_runs_where_its_schema_says() -> None:
+    answer = described(path="/fal-ai/runs-here")
+    http = FakeHttpClient(replies={("GET", DETAILS): answer})
+
+    assert catalog(http).spec("fal-ai/one").path == "fal-ai/runs-here"
