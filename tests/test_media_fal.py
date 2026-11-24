@@ -205,7 +205,7 @@ def test_a_picture_the_safety_filter_blocked_is_refused() -> None:
     blocked = {**answer(), "has_nsfw_concepts": [True]}
     http = FakeHttpClient(replies={("POST", ENDPOINT): blocked})
 
-    with pytest.raises(MediaError, match="blocked"):
+    with pytest.raises(MediaError, match=r"blocked.*ask the person"):
         fal(http).make("A misty forest", DEFAULT_IMAGE_MODEL)
 
 
