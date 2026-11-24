@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -84,7 +85,7 @@ def test_the_skin_is_worn_with_its_look_for_the_themes_variant(
         FakeRunner(),
         lambda _theme: None,
     )
-    assert built.theme.startswith("Osiris-plain-rose-pine")
+    assert re.fullmatch(r"Osiris-plain-rose-pine-[0-9a-f]{12}", built.theme)
     assert look == Look("Plain-Dark", None, None)
 
 
