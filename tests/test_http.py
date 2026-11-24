@@ -172,6 +172,32 @@ class TestUrllibClient:
             UrllibClient().download(f"{server}/picture", limit=4)
         assert raised.value.status == 0
 
+    def test_a_download_does_not_follow_a_redirect(self, server: str) -> None:
+        Handler.redirect_to = f"{server}/picture"
+
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().download(f"{server}/moved", limit=100)
+
+        assert raised.value.status == 302
+
+    def test_a_download_cut_off_midway_is_refused(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().download(f"{server}/short", limit=100)
+
+        assert raised.value.status == 0
+
+    def test_a_download_keeps_the_status_it_failed_with(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().download(f"{server}/missing", limit=100)
+
+        assert raised.value.status == 404
+
+    def test_a_link_that_is_not_a_valid_address_is_no_answer(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().download(f"{server}/pict\u00fcre", limit=100)
+
+        assert raised.value.status == 0
+
     def test_a_stream_arrives_line_by_line(self, server: str) -> None:
         lines = list(UrllibClient().lines(f"{server}/events"))
         assert [line for line in lines if line] == [
