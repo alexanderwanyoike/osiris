@@ -137,6 +137,20 @@ def test_a_skin_in_an_edited_theme_is_built_under_a_new_name(tmp_path: Path) -> 
     assert edited.theme != first.theme
 
 
+def test_a_skin_in_a_theme_with_a_new_border_is_built_under_a_new_name(
+    tmp_path: Path,
+) -> None:
+    """Osiris's own panel, worn when a Skin has none, reads Theme colours a
+    Skin's gaps leave out."""
+    pack = read(make_gtk_only_pack(tmp_path / "neon"))
+    bordered = json.loads(json.dumps(ROSE_PINE))
+    bordered["colors"]["border"] = "#26233a"
+    first = build(pack, bordered, tmp_path / "themes", tmp_path / "w", FakeRunner())
+    bordered["colors"]["border"] = "#ff0000"
+    edited = build(pack, bordered, tmp_path / "themes", tmp_path / "w", FakeRunner())
+    assert edited.theme != first.theme
+
+
 def test_building_prints_nothing_of_its_own(tmp_path: Path) -> None:
     runner = FakeRunner()
     build_rose_pine(tmp_path, runner)
