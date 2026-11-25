@@ -1,0 +1,45 @@
+// adw-gtk3 draws through these named colours (ADR 0006), so setting them from
+// the Theme's gaps colours every widget it styles.
+@import 'gaps';
+
+$blank-raised: mix($gap-foreground, $gap-surface, 6%);
+$blank-border: mix($gap-foreground, $gap-surface, 15%);
+
+@define-color accent_color #{$gap-accent};
+@define-color accent_bg_color #{$gap-accent};
+@define-color accent_fg_color #{$gap-background};
+
+@define-color window_bg_color #{$gap-surface};
+@define-color window_fg_color #{$gap-foreground};
+@define-color view_bg_color #{$gap-background};
+@define-color view_fg_color #{$gap-foreground};
+
+@define-color headerbar_bg_color #{$gap-surface};
+@define-color headerbar_fg_color #{$gap-foreground};
+@define-color headerbar_border_color #{$blank-border};
+@define-color headerbar_backdrop_color #{$gap-background};
+
+@define-color sidebar_bg_color #{$gap-surface};
+@define-color sidebar_fg_color #{$gap-foreground};
+@define-color sidebar_backdrop_color #{$gap-background};
+@define-color sidebar_border_color #{$blank-border};
+
+@define-color popover_bg_color #{$gap-surface};
+@define-color popover_fg_color #{$gap-foreground};
+@define-color card_bg_color #{$blank-raised};
+@define-color card_fg_color #{$gap-foreground};
+@define-color dialog_bg_color #{$gap-surface};
+@define-color dialog_fg_color #{$gap-foreground};
+
+@define-color destructive_bg_color #{$gap-danger};
+@define-color destructive_color #{$gap-danger};
+@define-color success_bg_color #{$gap-success};
+@define-color success_color #{$gap-success};
+@define-color warning_bg_color #{$gap-warning};
+@define-color warning_color #{$gap-warning};
+@define-color error_bg_color #{$gap-danger};
+@define-color error_color #{$gap-danger};
+
+@define-color borders #{$blank-border};
+@define-color theme_selected_bg_color #{$gap-accent};
+@define-color theme_selected_fg_color #{$gap-background};
