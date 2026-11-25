@@ -46,6 +46,14 @@ def test_a_persons_skin_overrides_a_shipped_one_of_the_same_name(
     assert labels == ["My Colloid", "Graphite"]
 
 
+def test_the_blank_slate_is_never_offered_to_wear(tmp_path: Path) -> None:
+    """It is where a new Skin can start, with no look of its own (CONTEXT.md)."""
+    make_pack(tmp_path / "shipped" / "blank", "Blank")
+    make_pack(tmp_path / "shipped" / "colloid", "Colloid")
+    assert [pack.name for pack in available([tmp_path / "shipped"])] == ["colloid"]
+    assert find([tmp_path / "shipped"], "blank") is None
+
+
 def test_folders_that_are_not_skinpacks_are_skipped(tmp_path: Path) -> None:
     (tmp_path / "shipped" / "junk").mkdir(parents=True)
     make_pack(tmp_path / "shipped" / "colloid", "Colloid")
