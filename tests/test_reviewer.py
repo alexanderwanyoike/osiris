@@ -134,3 +134,12 @@ def test_a_skin_passes_only_once_every_control_is_redrawn() -> None:
         assert control in skill
     assert "Verdict: pass" in skill
     assert "partial" in skill and "fail" in skill
+
+
+def test_the_skin_reviewer_and_its_skill_are_given_to_the_engine() -> None:
+    from osiris.harness.reviewer import write_reviewer
+
+    files = FakeFileSystem()
+    write_reviewer(files, HOME)
+    for name in ("agents/skin-reviewer.md", "skills/skin-review/SKILL.md"):
+        assert files.read(ENGINE / name) == Resources().read(f"engine/{name}")
