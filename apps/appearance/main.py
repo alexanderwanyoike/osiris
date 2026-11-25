@@ -401,6 +401,8 @@ class Window(Adw.ApplicationWindow):
         active = engine.current()
         starred = engine.favourites()
         mine = {t["name"] for t in self.themes if engine.is_user_theme(t["name"])}
+        by_name = {t["name"]: t for t in self.themes}
+        wearing_dark = bool(by_name.get(active, {}).get("dark", True))
         arranged = arrange(self.themes, query=self.search.get_text(),
                            chosen=self.chosen, favourites=starred, mine=mine)
         shown = sum(len(members) for _title, members in arranged)
@@ -422,8 +424,9 @@ class Window(Adw.ApplicationWindow):
                                row_spacing=8, column_spacing=8)
             for theme in members:
                 card = ThemeCard(theme, self.pick, theme["name"] in starred,
-                                 self._starred)
-                card.set_selected(theme["name"] == active)
+                                 self._starred, partner=by_name.get(theme.get("pair")),
+                                 dark=wearing_dark)
+                card.set_selected(card.wears(active))
                 self.cards.append(card)
                 flow.append(card)
             section.append(flow)
@@ -874,7 +877,7 @@ class Window(Adw.ApplicationWindow):
         self.get_application().reload_user_css()
         self._show_skins()
         for card in self.cards:
-            card.set_selected(card.theme["name"] == theme["name"])
+            card.set_selected(card.wears(theme["name"]))
         note = f"{theme['label']} applied"
         if restart:
             note += (f" - reopen {' and '.join(restart).lower()}"
