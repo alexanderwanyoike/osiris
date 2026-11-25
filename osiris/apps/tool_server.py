@@ -80,8 +80,8 @@ create_skin. Where the person says to start, start there: a Skin they name, or
 "blank" when they ask for one from scratch. Otherwise start from the existing
 Skin closest to what they ask for (list_skins shows them), or from "blank", the
 blank slate with no look of its own, when the look has an identity no Skin is
-close to, such as a character, a film, a place, an era or a material; then say
-which you chose before you change it. Change its style sheets in the folder
+close to, such as a character, a film, a place, an era or a material, and
+say which you chose in your first reply. Change its style sheets in the folder
 create_skin gives you, following the AGENTS.md there. A downloaded GTK theme
 becomes a Skin with import_gtk_theme, after which you replace its written-in
 colours with the Theme's gaps; downloaded icon sets, cursor sets and fonts go
