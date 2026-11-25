@@ -356,6 +356,17 @@ def test_a_skin_starts_where_the_person_says_or_osiris_says_where() -> None:
     assert "say which you chose in your first reply" in text
 
 
+def test_a_skin_is_briefed_made_whole_and_reviewed_before_it_is_done() -> None:
+    """#269: three minutes, one look and a few decals was called done."""
+    from osiris.apps.tool_server import INSTRUCTIONS
+
+    text = " ".join(INSTRUCTIONS.split())
+    assert "a brief" in text
+    assert text.index("a brief") < text.index("skin-reviewer subagent")
+    assert "every surface" in text
+    assert "Never call a Skin done on a partial or a fail" in text
+
+
 def test_making_a_wallpaper_wears_it_and_logs_each_step_to_undo() -> None:
     log = new_log()
     store = FakeThemeStore(
