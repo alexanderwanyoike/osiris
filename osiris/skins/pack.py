@@ -119,13 +119,20 @@ ROLES = (
 )
 
 
+#: The second and third accents, which a Theme names only when its look has them.
+EXTRA_ACCENTS = ("accent2", "accent3")
+
+
 def gaps(theme: Mapping[str, Any]) -> dict[str, str]:
     """The Theme's colours by the names a skinpack's gaps use."""
-    colours = theme["colors"]
+    colours = {role: theme["colors"][role] for role in ROLES}
+    named = theme.get("accents", [])
+    for index, role in enumerate(EXTRA_ACCENTS):
+        colours[role] = named[index] if index < len(named) else colours["accent"]
     found = {"variant": "dark" if theme.get("dark", True) else "light"}
-    for role in ROLES:
-        found[role] = colours[role]
-        red, green, blue = (int(colours[role][i : i + 2], 16) for i in (1, 3, 5))
+    for role, colour in colours.items():
+        found[role] = colour
+        red, green, blue = (int(colour[i : i + 2], 16) for i in (1, 3, 5))
         found[f"{role}_plank"] = f"{red};;{green};;{blue};;255"
     return found
 
