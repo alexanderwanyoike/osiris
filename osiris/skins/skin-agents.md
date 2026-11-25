@@ -91,14 +91,18 @@ person what it said.
 
       python3 /usr/share/osiris/themes/engine.py --skin SKIN_NAME
 
-- Then look at it before saying it is done. Open a GTK 3 window (Files:
-  `setsid -f nemo`) and a libadwaita window (Appearance:
-  `setsid -f osiris-appearance`) if none is open, take a screenshot with
+- Then look at it before saying it is done. You need a GTK 3 window (Files)
+  and a libadwaita window (Appearance). Open Files with `setsid -f nemo` only
+  if `pgrep -x nemo` finds nothing, because every Files window shares one
+  process and a second window would be left among the person's own. Open
+  Appearance with `setsid -f osiris-appearance`, which shows its open window
+  rather than another. Take a screenshot with
   `gnome-screenshot -f .look.png` and read it. Compare the two windows, the
   panel and the dock, fix what does not look like one Skin, and look again.
   If you cannot see images, tell the person and ask them to look instead.
-  When you have looked, close the windows you opened, and only those: the
-  person's own windows stay as they were.
+  Once the Skin looks right, close the windows you opened. If you started
+  Files, quit it with `nemo -q`, which leaves the desktop icons in place.
+  Never quit Files when it was already running.
 - Delete `.look.png` before committing, and check that `git status` does not
   list it. A screenshot can show the person's private windows, and anything
   committed is shared with the Skin.
