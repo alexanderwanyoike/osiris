@@ -62,6 +62,59 @@ def create_theme(
 ) -> str:
     """Make and keep a User theme from a Theme intent and the extra accents its
     look has, if any. Returns its name."""
+    theme = _document(store, label, seed, harmony, mood, dark, accents)
+    store.save(theme)
+    return str(theme["name"])
+
+
+def make_theme_pair(
+    store: ThemeStore,
+    *,
+    label: str,
+    seed: str,
+    harmony: str,
+    mood: str,
+    accents: Sequence[str] = (),
+) -> tuple[str, str]:
+    """Make a light Theme and a dark one from one idea, each naming the other.
+    Returns their names, light first."""
+    light = _document(store, label, seed, harmony, mood, False, accents)
+    dark = _document(store, f"{label} Night", seed, harmony, mood, True, accents)
+    store.save({**light, "pair": dark["name"]})
+    store.save({**dark, "pair": light["name"]})
+    return str(light["name"]), str(dark["name"])
+
+
+def make_other_half(store: ThemeStore, name: str) -> str:
+    """Make the light or dark Theme a Theme made alone lacks, from its accents,
+    and pair the two. Returns the new one's name."""
+    theme = find(store, name)
+    if theme.get("pair"):
+        raise ThemeActionError(f"{theme['label']} already has its other half")
+    dark = not theme["dark"]
+    other = _document(
+        store,
+        f"{theme['label']} {'Night' if dark else 'Day'}",
+        theme["colors"]["accent"],
+        "analogous",
+        "balanced",
+        dark,
+        theme.get("accents", ()),
+    )
+    store.save({**theme, "pair": other["name"]})
+    store.save({**other, "pair": name})
+    return str(other["name"])
+
+
+def _document(
+    store: ThemeStore,
+    label: str,
+    seed: str,
+    harmony: str,
+    mood: str,
+    dark: bool,
+    accents: Sequence[str],
+) -> dict[str, object]:
     colour = _colour(seed)
     if len(accents) > MOST_EXTRA_ACCENTS:
         raise ThemeActionError("A theme names at most two extra accents")
@@ -77,8 +130,7 @@ def create_theme(
         raise ThemeActionError(
             f"There is already a theme called {label}; choose another label"
         )
-    store.save(build(name, label, seeds(intent), accents=extra))
-    return name
+    return build(name, label, seeds(intent), accents=extra)
 
 
 def _colour(text: str) -> Colour:
