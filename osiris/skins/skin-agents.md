@@ -13,13 +13,15 @@ Change it when they ask; never touch Skins outside this folder.
   which Osiris writes into `sass/_gaps.scss` (never edit or ship that file):
   `$gap-variant` ('light' or 'dark'), `$gap-background`, `$gap-surface`,
   `$gap-foreground`, `$gap-accent`, `$gap-success`, `$gap-warning`,
-  `$gap-danger`.
+  `$gap-danger`, and `$gap-accent2` and `$gap-accent3`, the second and third
+  accents a Theme names when its look has them. Under a Theme with one accent
+  they are that accent, so draw details in them freely.
 - One entry per surface and variant: `gtk-3.0/gtk-<variant>.scss`,
   `gtk-4.0/gtk-<variant>.scss`, `cinnamon/cinnamon-<variant>.scss`,
   `libadwaita/libadwaita-<variant>.scss`. Every entry but GTK 3 is optional.
 - `files/common/` and `files/<variant>/` are copied into the installed theme.
-  In SVG and CSS files there, `{{accent}}`, `{{background}}` and the other
-  role names are gaps.
+  In SVG and CSS files there, `{{accent}}`, `{{accent2}}`, `{{background}}`
+  and the other role names are gaps.
 - `plank/dock-<variant>.theme` is the dock; colours there are gaps like
   `{{background_plank}}`.
 - `rofi/launcher.rasi`, if present, is the launcher, with `{{gap}}` markers.
