@@ -28,37 +28,52 @@ Change it when they ask; never touch Skins outside this folder.
 
 A Skin redraws the whole desktop. Once it is worn, no control should look as
 the Skin it started from drew it, and every part should look as if one hand
-drew it. Recolouring is not a redraw: the Theme already does that. Work through
-each part below, then look at it before moving on:
+drew it. The Theme already recolours everything, so recolouring alone changes
+nothing. Work through each part below, then look at it before moving on.
+
+GTK windows are drawn by the `sass/` partials the `gtk-3.0` and `gtk-4.0`
+sheets import; a Skin started from the blank slate draws them in
+`sass/_look.scss`. Where GTK 4 names a part differently, its name is in
+brackets:
 
 - Window frames and shadows: `decoration`, `.ssd decoration` (see below).
 - Title bars and their buttons: `headerbar`, `.titlebar`,
-  `button.titlebutton` (`windowcontrols button` in GTK 4).
+  `button.titlebutton` (`windowcontrols button`).
 - Buttons in every state: `button`, with `:hover`, `:active`, `:checked`,
   `:disabled`, and `.suggested-action` and `.destructive-action`.
-- Text entries: `entry`, `spinbutton`, `combobox`.
+- Text entries: `entry`, `spinbutton`.
 - Checkboxes, radio buttons and switches: `checkbutton check`,
-  `radiobutton radio`, `switch` and its `slider`.
+  `radiobutton radio` (`checkbutton radio`), `switch` and its `slider`.
 - Scrollbars: `scrollbar`, its `trough` and `slider`.
 - Tabs: `notebook > header > tabs > tab`, `stackswitcher button`.
-- Lists, rows and sidebars: `list`, `row`, `treeview`, `.sidebar`.
-- Menus, popovers and tooltips: `menu`, `menuitem`, `popover`, `tooltip`.
+- Lists, rows and sidebars: `list`, `row`, `treeview` (`listview`,
+  `columnview`), `.sidebar`.
+- Menus, popovers and tooltips: `menu`, `menuitem` (`popover.menu`),
+  `popover`, `tooltip`.
 - Progress bars and sliders: `progressbar`, `scale`.
-- The panel and its menus, in `cinnamon/cinnamon-<variant>.scss`:
-  `.panel-top` and the other edges, `.applet-box`, `.popup-menu`.
-- The dock, in `plank/dock-<variant>.theme`, and the launcher, in
-  `rofi/launcher.rasi`.
+
+The other surfaces each have files of their own, one per variant. A Skin
+started from the blank slate has none of them yet, so add each one:
+
+- libadwaita apps, which are Osiris's own apps and every Program:
+  `libadwaita/libadwaita-<variant>.scss`, written with GTK 4's names.
+- The panel and its menus: `cinnamon/cinnamon-<variant>.scss`, with
+  `.panel-top` and the other edges, `.applet-box` and `.popup-menu`. A
+  Cinnamon sheet replaces Osiris's own panel sheet entirely, so never start one
+  from nothing: copy a shipped Skin's `cinnamon/` and the `sass/` partials it
+  imports from `/usr/share/osiris/skins`, then reshape it.
+- The dock: `plank/dock-<variant>.theme`, copied from a shipped Skin in
+  `/usr/share/osiris/skins` and reshaped through its keys.
+- The launcher: `rofi/launcher.rasi`, copied from a shipped Skin that has one.
 
 Where a shape alone cannot carry the look, draw the control as a picture: an
 SVG in `files/common/gtk-3.0/assets/` (and `gtk-4.0`) using gaps such as
 `{{accent}}` for the Theme's colours, set with
 `-gtk-icon-source: -gtk-scaled(url("assets/check-checked.svg"))` on check and
-radio marks, or with `background-image: url("assets/...")` elsewhere. A Skin
-started from the blank slate draws everything in `sass/_look.scss`, which every
-style sheet imports.
+radio marks, or with `background-image: url("assets/...")` elsewhere.
 
-A look is carried by shapes, not by stamps: one motif repeated across every
-title bar, or an outline added around everything, reads as clip-art. Give each
+A look is carried by shapes, not by stamps. One motif repeated across every
+title bar, or an outline added around everything, reads as clip-art; give each
 part a shape of its own that belongs to the look.
 
 ## Every surface alike
