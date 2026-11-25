@@ -85,6 +85,8 @@ def test_the_server_offers_the_theme_and_program_actions_and_nothing_else() -> N
     assert set(tools(FakeThemeStore())) == {
         "list_themes",
         "create_theme",
+        "make_theme_pair",
+        "make_other_half",
         "apply_theme",
         "list_programs",
         "create_program",
