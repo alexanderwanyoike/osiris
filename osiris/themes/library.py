@@ -118,3 +118,12 @@ def arrange(
         if members:
             sections.append((family.value, members))
     return sections
+
+
+def half_to_wear(theme: Theme, themes: Iterable[Theme], dark: bool) -> Theme:
+    """The half of ``theme``'s pair that is dark or light as asked, or the
+    Theme itself when it has no such other half."""
+    partner = next((t for t in themes if t["name"] == theme.get("pair")), None)
+    if partner is not None and bool(partner.get("dark", True)) == dark:
+        return partner
+    return theme
