@@ -122,21 +122,22 @@ def test_the_skin_reviewer_only_looks_and_reads() -> None:
 SKIN_SKILL = "engine/skills/skin-review/SKILL.md"
 
 
-def test_a_skin_passes_only_once_every_control_is_redrawn() -> None:
-    """#269: a Skin redraws the whole desktop, not a few accents."""
+def test_a_skin_passes_only_once_every_part_its_guide_lists_is_redrawn() -> None:
+    """#269: a Skin redraws the whole desktop, not a few accents. The parts are
+    listed once, in the Skin's own AGENTS.md, which the reviewer reads."""
     skill = Resources().read(SKIN_SKILL)
     head = skill.split("---")[1]
     assert "\nname: skin-review\n" in head
     assert "\ndescription: " in head
     for axis in ("### Look", "### Every control", "### Craft"):
         assert axis in skill
-    for control in ("scrollbars", "checkboxes", "the panel", "the dock"):
-        assert control in skill
+    assert "The whole look" in skill
     assert "Verdict: pass" in skill
     assert "partial" in skill and "fail" in skill
 
 
 def test_the_skin_reviewer_and_its_skill_are_given_to_the_engine() -> None:
+    """#269: written beside the Program reviewer, where the person has none."""
     from osiris.harness.reviewer import write_reviewer
 
     files = FakeFileSystem()
