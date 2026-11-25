@@ -353,7 +353,7 @@ def test_a_skin_starts_where_the_person_says_or_osiris_says_where() -> None:
     text = " ".join(INSTRUCTIONS.split())
     assert '"blank"' in text
     assert "Where the person says to start, start there" in text
-    assert "say which you chose" in text
+    assert "say which you chose in your first reply" in text
 
 
 def test_making_a_wallpaper_wears_it_and_logs_each_step_to_undo() -> None:
