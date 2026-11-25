@@ -365,6 +365,7 @@ def test_a_skin_is_briefed_made_whole_and_reviewed_before_it_is_done() -> None:
     assert text.index("a brief") < text.index("skin-reviewer subagent")
     assert "every surface" in text
     assert "Never call a Skin done on a partial or a fail" in text
+    assert text.count("keep its report for when the person asks") == 2
 
 
 def test_making_a_wallpaper_wears_it_and_logs_each_step_to_undo() -> None:
