@@ -101,7 +101,16 @@ check_skin says what would stop a Skin from being worn; wear_skin puts it on. A
 Skin is data only: style sheets, pictures and settings. Never write scripts,
 programs or services for a Skin, never change settings outside its folder, and
 never write to /usr/share/osiris; if something cannot be done that way, tell
-the person."""
+the person.
+
+A look's colours belong to Themes, which come light or dark. When the person
+asks for a Skin whose look is mostly its colours, offer a Theme pair to go with
+it in your first reply, naming the colours you would use, and call
+make_theme_pair only once the person says yes: the look's main colour as the
+seed and its other colours as accents. Then apply the half that matches the
+Theme the person has on now, light or dark. When the person asks for a Theme on
+its own, make that one, then offer its other half with make_other_half, and
+make it only if they say yes."""
 
 #: What the model may touch beyond its tools, by the person's choice
 #: (osiris.harness.trust).
