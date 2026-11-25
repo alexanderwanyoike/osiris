@@ -147,6 +147,13 @@ def test_making_a_theme_through_the_server_keeps_it() -> None:
     assert [theme["name"] for theme in store.saved] == ["harbour"]
 
 
+def test_a_theme_made_through_the_server_can_name_its_extra_accents() -> None:
+    """#266: the van's teal and orange beside its green."""
+    store = FakeThemeStore()
+    call(store, "create_theme", {**HARBOUR, "accents": ["#2a9d9a", "#e8822a"]})
+    assert len(store.saved[0]["accents"]) == 2
+
+
 def test_a_refused_action_reaches_the_model_with_its_reason() -> None:
     store = FakeThemeStore(themes=[{"name": "nord", "label": "Nord", "dark": True}])
     with pytest.raises(ToolError, match="no theme called harbour"):
