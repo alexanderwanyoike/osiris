@@ -82,10 +82,11 @@ Skin closest to what they ask for (list_skins shows them), or from "blank", the
 blank slate with no look of its own, when the look has an identity no Skin is
 close to, such as a character, a film, a place, an era or a material; then say
 which you chose before you change it. Change its style sheets in the folder
-create_skin gives you, following the AGENTS.md there. A downloaded GTK theme becomes a Skin with
-import_gtk_theme, after which you replace its written-in colours with the
-Theme's gaps; downloaded icon sets, cursor sets and fonts go in with
-install_icon_set and install_fonts and are named in the Skin's skin.json.
+create_skin gives you, following the AGENTS.md there. A downloaded GTK theme
+becomes a Skin with import_gtk_theme, after which you replace its written-in
+colours with the Theme's gaps; downloaded icon sets, cursor sets and fonts go
+in with install_icon_set and install_fonts and are named in the Skin's
+skin.json.
 check_skin says what would stop a Skin from being worn; wear_skin puts it on. A
 Skin is data only: style sheets, pictures and settings. Never write scripts,
 programs or services for a Skin, never change settings outside its folder, and

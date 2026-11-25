@@ -56,10 +56,8 @@ def available(folders: Sequence[Path]) -> list[Skinpack]:
 
 def starts(folders: Sequence[Path]) -> list[Skinpack]:
     """Where a new Skin can start: the blank slate, if shipped, then every Skin."""
-    blank = [
-        read(folder / BLANK) for folder in folders if (folder / BLANK).is_dir()
-    ][:1]
-    return blank + available(folders)
+    shipped = [folder / BLANK for folder in folders if (folder / BLANK).is_dir()]
+    return [read(blank) for blank in shipped[:1]] + available(folders)
 
 
 def find(folders: Sequence[Path], name: str) -> Skinpack | None:
