@@ -40,3 +40,20 @@ def test_launching_again_brings_back_the_open_window() -> None:
     app.activate()
     app.activate()
     assert len(app.get_windows()) == 1
+
+
+def test_a_pair_card_switches_between_its_light_and_dark_themes() -> None:
+    """#266: one card per pair, with a switch between its halves."""
+    from .conftest import widgets
+
+    van = {"name": "van", "label": "Van", "dark": False, "pair": "van-night"}
+    night = {"name": "van-night", "label": "Van Night", "dark": True, "pair": "van"}
+    picked: list[dict[str, object]] = []
+    card = appearance().ThemeCard(
+        van, picked.append, False, lambda *_: None, partner=night, dark=False
+    )
+    switch = next(w for w in widgets(card) if isinstance(w, Gtk.Switch))
+    card.button.emit("clicked")
+    switch.set_active(True)
+    card.button.emit("clicked")
+    assert [theme["name"] for theme in picked] == ["van", "van-night", "van-night"]
