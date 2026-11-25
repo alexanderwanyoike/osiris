@@ -182,3 +182,37 @@ def test_a_copy_that_would_replace_a_theme_is_refused() -> None:
     )
     with pytest.raises(ThemeActionError, match="already a theme called Nord Rain"):
         use_wallpaper(store, "rain", "Rain")
+
+
+def test_a_theme_can_name_the_extra_accents_its_look_has() -> None:
+    """#266: the van's teal and orange beside its green."""
+    store = FakeThemeStore()
+    create_theme(
+        store,
+        label="Van",
+        seed="#3f9a4a",
+        harmony="analogous",
+        mood="vivid",
+        dark=False,
+        accents=["#2a9d9a", "#e8822a"],
+    )
+    assert len(store.saved[0]["accents"]) == 2
+
+
+@pytest.mark.parametrize(
+    ("accents", "refused"),
+    [(["teal"], "not a colour"), (["#111111"] * 3, "at most two")],
+)
+def test_extra_accents_that_are_not_colours_or_too_many_are_refused(
+    accents: list[str], refused: str
+) -> None:
+    with pytest.raises(ThemeActionError, match=refused):
+        create_theme(
+            FakeThemeStore(),
+            label="Van",
+            seed="#3f9a4a",
+            harmony="analogous",
+            mood="vivid",
+            dark=False,
+            accents=accents,
+        )
