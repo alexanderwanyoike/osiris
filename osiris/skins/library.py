@@ -9,6 +9,8 @@ from osiris.skins.pack import Skinpack, SkinpackError, read
 
 #: Osiris's own look: adw-gtk3 recoloured by the Theme engine, with no skinpack.
 OSIRIS = "osiris"
+#: Where a new Skin can start when no Skin is close to what is asked; never worn.
+BLANK = "blank"
 
 
 def chosen(choice: Path) -> str:
@@ -36,13 +38,14 @@ def wear_choice(
 
 
 def available(folders: Sequence[Path]) -> list[Skinpack]:
-    """Every skinpack in `folders`; an earlier folder wins a name."""
+    """Every skinpack in `folders` but the blank slate; an earlier folder wins a
+    name."""
     found: dict[str, Skinpack] = {}
     for folder in folders:
         if not folder.is_dir():
             continue
         for root in sorted(folder.iterdir()):
-            if root.name in found or not root.is_dir():
+            if root.name in found or root.name == BLANK or not root.is_dir():
                 continue
             try:
                 found[root.name] = read(root)
