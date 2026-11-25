@@ -104,3 +104,21 @@ def test_within_a_section_themes_are_alphabetical() -> None:
 
 def test_nothing_matching_gives_no_sections() -> None:
     assert arrange(LIBRARY, query="no such theme") == []
+
+
+VAN = {**theme("van", "#3f9a4a", dark=False), "pair": "van-night"}
+VAN_NIGHT = {**theme("van-night", "#2a6fbf"), "pair": "van"}
+
+
+def test_a_theme_pair_is_shown_once_under_its_light_themes_colour() -> None:
+    """#266: the van's night half is blue and would otherwise sit apart."""
+    names = [t["name"] for _, ts in arrange([VAN, VAN_NIGHT, NORD]) for t in ts]
+    assert names == ["van", "nord"]
+    assert arrange([VAN, VAN_NIGHT])[0][0] == Family.GREEN.value
+
+
+def test_only_the_dark_half_of_a_pair_shows_among_the_dark_themes() -> None:
+    names = [
+        t["name"] for _, ts in arrange([VAN, VAN_NIGHT], chosen=Filter.DARK) for t in ts
+    ]
+    assert names == ["van-night"]
