@@ -134,7 +134,7 @@ def colours_css(theme: Mapping[str, Any]) -> str:
 #: named colours alone: GTK keeps the user sheet it read at startup, and a
 #: Skin's sheet there sets these in the colours of the Theme it was worn with.
 HELD_CSS = (
-    "textview, textview > text, text { color: @harness_fg; }\n"
+    "textview, text { color: @harness_fg; }\n"
     "switch:checked { background-color: @harness_accent; }\n"
 )
 
