@@ -61,6 +61,10 @@ def starts(folders: Sequence[Path]) -> list[Skinpack]:
     return [pack for pack in _packs(folders) if pack.start] + available(folders)
 
 
+def find_start(folders: Sequence[Path], name: str) -> Skinpack | None:
+    return next((pack for pack in starts(folders) if pack.name == name), None)
+
+
 def find(folders: Sequence[Path], name: str) -> Skinpack | None:
     return next((pack for pack in available(folders) if pack.name == name), None)
 
