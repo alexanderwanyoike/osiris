@@ -14,6 +14,7 @@ from osiris.skins.library import (
     chosen,
     credit,
     find,
+    starts,
     styles,
     wear_choice,
 )
@@ -52,6 +53,15 @@ def test_the_blank_slate_is_never_offered_to_wear(tmp_path: Path) -> None:
     make_pack(tmp_path / "shipped" / "colloid", "Colloid")
     assert [pack.name for pack in available([tmp_path / "shipped"])] == ["colloid"]
     assert find([tmp_path / "shipped"], "blank") is None
+
+
+def test_a_new_skin_can_start_from_the_blank_slate_first_or_any_skin(
+    tmp_path: Path,
+) -> None:
+    make_pack(tmp_path / "shipped" / "colloid", "Colloid")
+    make_pack(tmp_path / "shipped" / "blank", "Blank")
+    names = [pack.name for pack in starts([tmp_path / "shipped"])]
+    assert names == ["blank", "colloid"]
 
 
 def test_folders_that_are_not_skinpacks_are_skipped(tmp_path: Path) -> None:
