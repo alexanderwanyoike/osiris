@@ -252,7 +252,12 @@ def server(
     @tools.tool(annotations=ANNOTATIONS[TIERS["create_theme"]])
     @explained
     def create_theme(
-        label: str, seed: Seed, harmony: Harmony, mood: Mood, dark: bool
+        label: str,
+        seed: Seed,
+        harmony: Harmony,
+        mood: Mood,
+        dark: bool,
+        accents: list[Seed] | None = None,
     ) -> str:
         """Make a theme and keep it with the person's own themes.
 
@@ -263,6 +268,10 @@ def server(
         monochrome is tonal.
         mood: muted, balanced, vivid or pastel.
         dark: a dark background, or a light one.
+        accents: only when the look is known for more colours than the seed's,
+        up to two more as #rrggbb, such as a van's teal and orange beside its
+        green; Skins draw details in them. Osiris fits each to show on the
+        background.
 
         Returns the theme's name, which apply_theme takes.
         """
@@ -273,6 +282,7 @@ def server(
             harmony=harmony.value,
             mood=mood.value,
             dark=dark,
+            accents=accents or [],
         )
         logged.write(
             "changed",
