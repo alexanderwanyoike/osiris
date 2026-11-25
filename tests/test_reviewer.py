@@ -117,3 +117,20 @@ def test_the_skin_reviewer_only_looks_and_reads() -> None:
     assert effect("shell", "rm -rf sass", SKIN_AGENT) == "deny"
     assert effect("read", LOOK, SKIN_AGENT) == "allow"
     assert effect("skill", "skin-review", SKIN_AGENT) == "allow"
+
+
+SKIN_SKILL = "engine/skills/skin-review/SKILL.md"
+
+
+def test_a_skin_passes_only_once_every_control_is_redrawn() -> None:
+    """#269: a Skin redraws the whole desktop, not a few accents."""
+    skill = Resources().read(SKIN_SKILL)
+    head = skill.split("---")[1]
+    assert "\nname: skin-review\n" in head
+    assert "\ndescription: " in head
+    for axis in ("### Look", "### Every control", "### Craft"):
+        assert axis in skill
+    for control in ("scrollbars", "checkboxes", "the panel", "the dock"):
+        assert control in skill
+    assert "Verdict: pass" in skill
+    assert "partial" in skill and "fail" in skill
