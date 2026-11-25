@@ -13,6 +13,8 @@ from osiris.themes.actions import (
     create_theme,
     delete_theme,
     list_themes,
+    make_other_half,
+    make_theme_pair,
     use_wallpaper,
 )
 from osiris.themes.derive import build
@@ -216,3 +218,48 @@ def test_extra_accents_that_are_not_colours_or_too_many_are_refused(
             dark=False,
             accents=accents,
         )
+
+
+def test_a_theme_pair_is_a_light_and_a_dark_theme_made_from_one_idea() -> None:
+    """#266: two Themes, chosen as one, each naming the other."""
+    store = FakeThemeStore()
+    names = make_theme_pair(
+        store,
+        label="Van",
+        seed="#3f9a4a",
+        harmony="analogous",
+        mood="vivid",
+        accents=["#2a9d9a", "#e8822a"],
+    )
+    light, dark = store.saved
+    assert names == ("van", "van-night")
+    assert (light["dark"], dark["dark"], dark["label"]) == (False, True, "Van Night")
+    assert (light["pair"], dark["pair"]) == ("van-night", "van")
+    assert len(dark["accents"]) == 2
+
+
+def test_the_other_half_of_a_theme_made_alone_completes_its_pair() -> None:
+    """#266: Osiris makes the Theme asked for, then offers its other half."""
+    store = FakeThemeStore()
+    create_theme(
+        store,
+        label="Harbour",
+        seed="#3a6ea5",
+        harmony="analogous",
+        mood="muted",
+        dark=True,
+    )
+    assert make_other_half(store, "harbour") == "harbour-day"
+    halves = {theme["name"]: theme for theme in store.themes()}
+    assert halves["harbour"]["pair"] == "harbour-day"
+    assert halves["harbour-day"]["pair"] == "harbour"
+    assert halves["harbour-day"]["dark"] is False
+
+
+def test_a_theme_already_in_a_pair_has_no_other_half_to_make() -> None:
+    store = FakeThemeStore()
+    make_theme_pair(
+        store, label="Van", seed="#3f9a4a", harmony="analogous", mood="vivid"
+    )
+    with pytest.raises(ThemeActionError, match="already has"):
+        make_other_half(store, "van")
