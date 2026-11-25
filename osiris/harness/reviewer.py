@@ -23,7 +23,7 @@ SHIPPED = (
 )
 
 
-def write_reviewer(files: FileSystem, home: Path) -> None:
+def write_reviewers(files: FileSystem, home: Path) -> None:
     resources = Resources()
     for name in SHIPPED:
         target = home / ENGINE_DIR / name

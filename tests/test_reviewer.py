@@ -81,10 +81,10 @@ def test_the_skills_it_is_adapted_from_are_credited_under_their_licences() -> No
 
 
 def test_the_reviewer_and_its_skill_are_given_to_the_engine() -> None:
-    from osiris.harness.reviewer import write_reviewer
+    from osiris.harness.reviewer import write_reviewers
 
     files = FakeFileSystem()
-    write_reviewer(files, HOME)
+    write_reviewers(files, HOME)
     resources = Resources()
     for name in (
         "agents/reviewer.md",
@@ -98,11 +98,11 @@ def test_the_reviewer_and_its_skill_are_given_to_the_engine() -> None:
 
 def test_a_reviewer_the_person_changed_is_kept() -> None:
     """What Osiris gives is the person's to change, and no upgrade undoes it."""
-    from osiris.harness.reviewer import write_reviewer
+    from osiris.harness.reviewer import write_reviewers
 
     files = FakeFileSystem()
     files.write(ENGINE / "skills/review/SKILL.md", "my own review")
-    write_reviewer(files, HOME)
+    write_reviewers(files, HOME)
     assert files.read(ENGINE / "skills/review/SKILL.md") == "my own review"
 
 
@@ -138,9 +138,9 @@ def test_a_skin_passes_only_once_every_part_its_guide_lists_is_redrawn() -> None
 
 def test_the_skin_reviewer_and_its_skill_are_given_to_the_engine() -> None:
     """#269: written beside the Program reviewer, where the person has none."""
-    from osiris.harness.reviewer import write_reviewer
+    from osiris.harness.reviewer import write_reviewers
 
     files = FakeFileSystem()
-    write_reviewer(files, HOME)
+    write_reviewers(files, HOME)
     for name in ("agents/skin-reviewer.md", "skills/skin-review/SKILL.md"):
         assert files.read(ENGINE / name) == Resources().read(f"engine/{name}")
