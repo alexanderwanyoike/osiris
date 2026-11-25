@@ -30,6 +30,7 @@ that supersedes it and say so in both.
 | [0018](0018-the-agents-sudo-asks-in-an-admin-password-card.md) | The agent's sudo asks in an admin password card | Accepted |
 | [0019](0019-a-skin-is-a-skinpack-compiled-with-the-themes-colours.md) | A Skin is a skinpack compiled with the Theme's colours | Accepted |
 | [0020](0020-the-engines-permission-rules-decide-what-asks.md) | The Engine's permission rules decide what asks | Accepted |
+| [0021](0021-a-theme-names-extra-accents-only-when-its-look-has-them.md) | A Theme names extra accents only when its look has them | Proposed |
 
 ## Format
 
