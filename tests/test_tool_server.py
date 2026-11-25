@@ -99,6 +99,8 @@ def test_listing_and_checking_are_looks_and_the_rest_undoable_changes() -> None:
     assert TIERS == {
         "list_themes": Tier.LOOK,
         "create_theme": Tier.UNDOABLE,
+        "make_theme_pair": Tier.UNDOABLE,
+        "make_other_half": Tier.UNDOABLE,
         "apply_theme": Tier.UNDOABLE,
         "list_programs": Tier.LOOK,
         "create_program": Tier.UNDOABLE,
@@ -171,6 +173,27 @@ def test_making_a_theme_is_logged_as_a_change_undone_by_deleting_it() -> None:
     assert log.last_changes() == [
         Change("Made Harbour", {"action": "delete_theme", "name": "harbour"})
     ]
+
+
+def test_a_theme_pair_made_through_the_server_is_undone_half_by_half() -> None:
+    """#266: the van's light and dark Themes, each deleted on its own undo."""
+    log, store = new_log(), FakeThemeStore()
+    van = {k: v for k, v in HARBOUR.items() if k != "dark"} | {"label": "Van"}
+    call(store, "make_theme_pair", van, log)
+    assert [theme["name"] for theme in store.themes()] == ["van", "van-night"]
+    assert log.last_changes() == [
+        Change("Made Van", {"action": "delete_theme", "name": "van"}),
+        Change("Made Van Night", {"action": "delete_theme", "name": "van-night"}),
+    ]
+
+
+def test_the_other_half_made_through_the_server_is_undone_by_deleting_it() -> None:
+    log, store = new_log(), FakeThemeStore()
+    call(store, "create_theme", HARBOUR, log)
+    call(store, "make_other_half", {"name": "harbour"}, log)
+    assert log.last_changes()[-1] == Change(
+        "Made Harbour Day", {"action": "delete_theme", "name": "harbour-day"}
+    )
 
 
 def asked_by(session: str, subject: MCPServer) -> Context:
