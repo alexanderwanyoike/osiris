@@ -400,6 +400,16 @@ def test_a_skin_is_briefed_made_whole_and_reviewed_before_it_is_done() -> None:
     assert text.count("keep its report for when the person asks") == 2
 
 
+def test_osiris_offers_a_theme_pair_with_a_skin_of_colour_and_asks_first() -> None:
+    """#266: the Unit settled that Osiris asks before making the Themes."""
+    from osiris.apps.tool_server import INSTRUCTIONS
+
+    text = " ".join(INSTRUCTIONS.split())
+    assert "whose look is mostly its colours, offer a Theme pair" in text
+    assert "make_theme_pair only once the person says yes" in text
+    assert "offer its other half with make_other_half" in text
+
+
 def test_making_a_wallpaper_wears_it_and_logs_each_step_to_undo() -> None:
     log = new_log()
     store = FakeThemeStore(
