@@ -99,6 +99,7 @@ def test_a_switch_that_is_on_fills_with_the_themes_accent_whatever_gtk_read_at_s
         colours = painted(switch)
         window.destroy()
         assert accent.to_string() in colours, (skin, colours)
+        assert "rgb(255,0,0)" not in colours, (skin, colours)
 
 
 def test_the_drawer_turns_light_when_the_theme_does(
