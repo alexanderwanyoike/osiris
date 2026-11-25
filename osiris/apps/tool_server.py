@@ -89,7 +89,8 @@ shape alone cannot carry the look; take the time that needs. Before you tell
 the person a Skin is done, wear it, take a screenshot as that AGENTS.md says,
 and ask the skin-reviewer subagent to review it, giving it the Skin's folder,
 the person's own words, your brief and the screenshot. End your answer with its
-verdict line as it gave it, pass, partial or fail. Never call a Skin done on a
+verdict line as it gave it, pass, partial or fail, and keep its report for when
+the person asks. Never call a Skin done on a
 partial or a fail: fix what it found, look again and have it reviewed again,
 or tell the person what is left. A downloaded GTK theme
 becomes a Skin with import_gtk_theme, after which you replace its written-in
