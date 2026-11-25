@@ -55,6 +55,16 @@ def test_the_blank_slate_is_never_offered_to_wear(tmp_path: Path) -> None:
     assert find([tmp_path / "shipped"], "blank") is None
 
 
+def test_a_persons_own_skin_called_blank_is_still_theirs_to_wear(
+    tmp_path: Path,
+) -> None:
+    """Review of #268: one made before the blank slate shipped vanished."""
+    make_pack(tmp_path / "mine" / "blank", "Blank")
+    make_pack(tmp_path / "shipped" / "colloid", "Colloid")
+    folders = [tmp_path / "mine", tmp_path / "shipped"]
+    assert [pack.name for pack in available(folders)] == ["blank", "colloid"]
+
+
 def test_a_new_skin_can_start_from_the_blank_slate_first_or_any_skin(
     tmp_path: Path,
 ) -> None:
