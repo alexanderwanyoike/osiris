@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from osiris.themes.library import Family, Filter, arrange, family_of
+from osiris.themes.library import Family, Filter, arrange, family_of, half_to_wear
 
 
 def theme(name: str, accent: str, dark: bool = True, label: str | None = None) -> dict:
@@ -122,3 +122,11 @@ def test_only_the_dark_half_of_a_pair_shows_among_the_dark_themes() -> None:
         t["name"] for _, ts in arrange([VAN, VAN_NIGHT], chosen=Filter.DARK) for t in ts
     ]
     assert names == ["van-night"]
+
+
+def test_a_pair_wears_the_half_that_matches_light_or_dark() -> None:
+    """#266: picking the van's card keeps the person in light or in dark."""
+    themes = [VAN, VAN_NIGHT, NORD]
+    assert half_to_wear(VAN, themes, dark=True)["name"] == "van-night"
+    assert half_to_wear(VAN, themes, dark=False)["name"] == "van"
+    assert half_to_wear(NORD, themes, dark=False)["name"] == "nord"
