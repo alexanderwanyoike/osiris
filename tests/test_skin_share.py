@@ -238,6 +238,21 @@ def test_a_duplicate_tells_osiris_how_to_change_it(tmp_path: Path) -> None:
     assert "$gap-accent" in agents
 
 
+def test_a_skin_is_told_every_part_of_the_desktop_a_whole_look_covers(
+    tmp_path: Path,
+) -> None:
+    """#269: a Skin from the blank slate changed a few accents and stopped."""
+    copy = duplicate(
+        read(make_pack(tmp_path / "shipped" / "colloid")),
+        tmp_path / "mine",
+        FakeRunner(),
+    )
+    agents = (copy.root / "AGENTS.md").read_text()
+    for part in ("scrollbar", "checkbutton", "switch", "notebook", ".panel-top"):
+        assert part in agents, part
+    assert "-gtk-icon-source" in agents
+
+
 def test_a_duplicate_keeps_its_history_so_changes_can_be_undone(tmp_path: Path) -> None:
     runner = FakeRunner()
     copy = duplicate(
