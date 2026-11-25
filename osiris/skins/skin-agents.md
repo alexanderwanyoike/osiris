@@ -97,6 +97,8 @@ person what it said.
   `gnome-screenshot -f .look.png` and read it. Compare the two windows, the
   panel and the dock, fix what does not look like one Skin, and look again.
   If you cannot see images, tell the person and ask them to look instead.
+  When you have looked, close the windows you opened, and only those: the
+  person's own windows stay as they were.
 - Delete `.look.png` before committing, and check that `git status` does not
   list it. A screenshot can show the person's private windows, and anything
   committed is shared with the Skin.
