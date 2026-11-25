@@ -79,6 +79,19 @@ def test_a_themes_roles_fill_the_gaps() -> None:
     assert filled == "a { color: #c4a7e7; background: #191724; }"
 
 
+def test_a_skin_can_draw_on_a_themes_extra_accents() -> None:
+    """#266: the van's teal trim and orange flowers."""
+    van = {**ROSE_PINE, "accents": ["#2a9d9a", "#e8822a"]}
+    filled = fill("{{accent2}} {{accent3}}", gaps(van))
+    assert filled == "#2a9d9a #e8822a"
+
+
+def test_a_theme_without_extra_accents_gives_its_accent_in_their_place() -> None:
+    """ADR 0021: a Skin made for three accents still looks whole under one."""
+    assert fill("{{accent2}} {{accent3}}", gaps(ROSE_PINE)) == "#c4a7e7 #c4a7e7"
+    assert "$gap-accent3: #c4a7e7;" in sass_gaps(gaps(ROSE_PINE))
+
+
 def test_plank_gaps_take_its_own_colour_format() -> None:
     assert fill("Fill={{background_plank}}", gaps(ROSE_PINE)) == "Fill=25;;23;;36;;255"
 
