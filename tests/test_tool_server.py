@@ -346,6 +346,16 @@ def test_the_model_checks_then_has_a_program_reviewed_before_calling_it_done() -
     assert "Never call a Program done on a partial or a fail" in text
 
 
+def test_a_skin_starts_where_the_person_says_or_osiris_says_where() -> None:
+    """#265: a look no Skin is close to starts from the blank slate."""
+    from osiris.apps.tool_server import INSTRUCTIONS
+
+    text = " ".join(INSTRUCTIONS.split())
+    assert '"blank"' in text
+    assert "Where the person says to start, start there" in text
+    assert "say which you chose" in text
+
+
 def test_making_a_wallpaper_wears_it_and_logs_each_step_to_undo() -> None:
     log = new_log()
     store = FakeThemeStore(
