@@ -174,3 +174,20 @@ class TestBuild:
     def test_the_document_is_json_serialisable(self) -> None:
         """It is written to disk as JSON; a stray Colour would break that."""
         json.dumps(build("mine", "Mine", Seeds(DARK, ACCENT)))
+
+
+def test_a_themes_extra_accents_keep_their_hue_and_read_on_its_background() -> None:
+    """#266: a look known for several colours names them, and each must still
+    show against the Theme's background."""
+    orange, teal = Colour("#3a1f00"), Colour("#0f3f3f")
+    theme = build("van", "Van", Seeds(DARK, ACCENT), accents=(orange, teal))
+    named = theme["accents"]
+    assert isinstance(named, list)
+    accents = [Colour(hex_) for hex_ in named]
+    for given, fitted in zip((orange, teal), accents, strict=True):
+        assert fitted.readable_against(DARK, INTERFACE_CONTRAST)
+        assert abs(fitted.hls[0] - given.hls[0]) < 0.02
+
+
+def test_a_theme_names_no_extra_accents_unless_its_look_has_them() -> None:
+    assert "accents" not in build("plain", "Plain", Seeds(DARK, ACCENT))
