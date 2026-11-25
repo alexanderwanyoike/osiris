@@ -270,6 +270,20 @@ def test_a_skin_is_told_how_to_add_the_surfaces_the_blank_slate_leaves_out(
     assert "/usr/share/osiris/skins" in whole
 
 
+def test_a_skin_is_told_of_the_themes_second_and_third_accents(
+    tmp_path: Path,
+) -> None:
+    """#266: a look known for several colours draws its details in them."""
+    copy = duplicate(
+        read(make_pack(tmp_path / "shipped" / "colloid")),
+        tmp_path / "mine",
+        FakeRunner(),
+    )
+    agents = (copy.root / "AGENTS.md").read_text()
+    assert "$gap-accent2" in agents and "$gap-accent3" in agents
+    assert "{{accent2}}" in agents
+
+
 def test_a_duplicate_keeps_its_history_so_changes_can_be_undone(tmp_path: Path) -> None:
     runner = FakeRunner()
     copy = duplicate(
