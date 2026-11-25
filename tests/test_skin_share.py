@@ -253,6 +253,23 @@ def test_a_skin_is_told_every_part_of_the_desktop_a_whole_look_covers(
     assert "-gtk-icon-source" in agents
 
 
+def test_a_skin_is_told_how_to_add_the_surfaces_the_blank_slate_leaves_out(
+    tmp_path: Path,
+) -> None:
+    """Review of #270: the blank slate has no panel, dock, launcher or
+    libadwaita sheet, and adding one is not like editing one."""
+    copy = duplicate(
+        read(make_pack(tmp_path / "shipped" / "colloid")),
+        tmp_path / "mine",
+        FakeRunner(),
+    )
+    agents = (copy.root / "AGENTS.md").read_text()
+    whole = agents[agents.index("## The whole look") : agents.index("## Every surface")]
+    assert "libadwaita/libadwaita-<variant>.scss" in whole
+    assert "replaces Osiris's own panel" in whole
+    assert "/usr/share/osiris/skins" in whole
+
+
 def test_a_duplicate_keeps_its_history_so_changes_can_be_undone(tmp_path: Path) -> None:
     runner = FakeRunner()
     copy = duplicate(
