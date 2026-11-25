@@ -247,6 +247,18 @@ def test_osiris_closes_the_windows_it_opened_to_look_at_a_skin(tmp_path: Path) -
     assert "close the windows you opened" in agents
 
 
+def test_osiris_opens_files_to_look_only_when_it_can_close_it_again(
+    tmp_path: Path,
+) -> None:
+    """Review of #264: Files runs every window in one process and no window
+    tool ships, so Osiris can only quit Files, and only if it started it."""
+    pack = read(make_pack(tmp_path / "shipped" / "colloid"))
+    copy = duplicate(pack, tmp_path / "mine", FakeRunner())
+    agents = (copy.root / "AGENTS.md").read_text()
+    assert "pgrep -x nemo" in agents
+    assert "nemo -q" in agents
+
+
 def test_a_duplicate_keeps_its_history_so_changes_can_be_undone(tmp_path: Path) -> None:
     runner = FakeRunner()
     copy = duplicate(
