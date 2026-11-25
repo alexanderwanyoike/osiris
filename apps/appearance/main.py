@@ -154,14 +154,21 @@ class ThemeCard(Gtk.Overlay):
     the card one large hit target and its small buttons their own.
     """
 
-    def __init__(self, theme: dict, on_pick, starred: bool, on_star):
+    def __init__(self, theme: dict, on_pick, starred: bool, on_star,
+                 partner: dict | None = None, dark: bool = False):
         super().__init__()
         self.theme = theme
+        self.partner = partner
+        self.dark = Gtk.Switch(active=dark, tooltip_text="Dark",
+                               halign=Gtk.Align.START, valign=Gtk.Align.END,
+                               margin_start=14, margin_bottom=10,
+                               visible=partner is not None)
 
         self.button = Gtk.Button()
         self.button.add_css_class("theme-card")
         self.button.add_css_class("flat")
-        self.button.connect("clicked", lambda _b: on_pick(theme))
+        self.button.connect("clicked", lambda _b: on_pick(self.half()))
+        self.dark.connect("notify::active", lambda _s, _p: on_pick(self.half()))
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         for side in ("top", "bottom", "start", "end"):
@@ -175,7 +182,8 @@ class ThemeCard(Gtk.Overlay):
         name.add_css_class("theme-name")
         name.set_hexpand(True)
         row.append(name)
-        badge = Gtk.Label(label="Dark" if theme.get("dark", True) else "Light")
+        badge = Gtk.Label(label="Light and dark" if partner else
+                          "Dark" if theme.get("dark", True) else "Light")
         badge.add_css_class("variant-badge")
         row.append(badge)
         # Room for the overlaid menu button, which would otherwise cover this.
@@ -186,6 +194,14 @@ class ThemeCard(Gtk.Overlay):
         self.set_child(self.button)
         self.add_overlay(self._star(theme, starred, on_star))
         self.add_overlay(self._menu(theme))
+        self.add_overlay(self.dark)
+
+    def half(self) -> dict:
+        """The Theme the card wears: its partner when the switch says dark."""
+        return self.partner if self.partner and self.dark.get_active() else self.theme
+
+    def wears(self, name: str) -> bool:
+        return name in (self.theme["name"], (self.partner or {}).get("name"))
 
     def _star(self, theme: dict, starred: bool, on_star) -> Gtk.ToggleButton:
         star = Gtk.ToggleButton(active=starred,
