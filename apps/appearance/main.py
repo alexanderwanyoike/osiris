@@ -589,7 +589,7 @@ class Window(Adw.ApplicationWindow):
                                             timeout=6))
 
     def create_skin(self) -> None:
-        bases = [skin for skin in engine.skin_choices() if skin[0] != "osiris"]
+        bases = engine.skin_starts()
 
         def create(label: str, base: str) -> None:
             try:
