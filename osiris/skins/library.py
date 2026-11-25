@@ -9,8 +9,6 @@ from osiris.skins.pack import Skinpack, SkinpackError, read
 
 #: Osiris's own look: adw-gtk3 recoloured by the Theme engine, with no skinpack.
 OSIRIS = "osiris"
-#: Where a new Skin can start when no Skin is close to what is asked; never worn.
-BLANK = "blank"
 
 
 def chosen(choice: Path) -> str:
@@ -37,15 +35,14 @@ def wear_choice(
         raise failed
 
 
-def available(folders: Sequence[Path]) -> list[Skinpack]:
-    """Every skinpack in `folders` but the blank slate; an earlier folder wins a
-    name."""
+def _packs(folders: Sequence[Path]) -> list[Skinpack]:
+    """Every skinpack in `folders`; an earlier folder wins a name."""
     found: dict[str, Skinpack] = {}
     for folder in folders:
         if not folder.is_dir():
             continue
         for root in sorted(folder.iterdir()):
-            if root.name in found or root.name == BLANK or not root.is_dir():
+            if root.name in found or not root.is_dir():
                 continue
             try:
                 found[root.name] = read(root)
@@ -54,10 +51,14 @@ def available(folders: Sequence[Path]) -> list[Skinpack]:
     return list(found.values())
 
 
+def available(folders: Sequence[Path]) -> list[Skinpack]:
+    """Every Skin there is to wear in `folders`; an earlier folder wins a name."""
+    return [pack for pack in _packs(folders) if not pack.start]
+
+
 def starts(folders: Sequence[Path]) -> list[Skinpack]:
-    """Where a new Skin can start: the blank slate, if shipped, then every Skin."""
-    shipped = [folder / BLANK for folder in folders if (folder / BLANK).is_dir()]
-    return [read(blank) for blank in shipped[:1]] + available(folders)
+    """Where a new Skin can start: the blank slate first, then every Skin."""
+    return [pack for pack in _packs(folders) if pack.start] + available(folders)
 
 
 def find(folders: Sequence[Path], name: str) -> Skinpack | None:

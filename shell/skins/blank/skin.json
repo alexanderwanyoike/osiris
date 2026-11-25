@@ -3,5 +3,6 @@
   "author": "Osiris",
   "version": "1",
   "licence": "GPL-3.0",
-  "source": "https://github.com/alexanderwanyoike/osiris"
+  "source": "https://github.com/alexanderwanyoike/osiris",
+  "start": true
 }

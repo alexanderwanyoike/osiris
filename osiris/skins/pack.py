@@ -40,6 +40,8 @@ class Skinpack:
     choices: Mapping[str, Any] = field(default_factory=dict)
     #: The Skin a person's own took its style from, if known.
     style: str | None = None
+    #: Only a start for new Skins, never worn: the blank slate.
+    start: bool = False
 
     def look(self, variant: str) -> Look:
         icons = self.choices.get("icons")
@@ -76,6 +78,7 @@ def read(root: Path) -> Skinpack:
         root=root,
         choices=label.get("look", {}),
         style=label.get("style"),
+        start=label.get("start") is True,
     )
 
 
