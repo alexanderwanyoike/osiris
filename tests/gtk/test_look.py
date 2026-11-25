@@ -56,12 +56,20 @@ def test_typed_text_is_in_the_themes_colour_whatever_gtk_read_at_startup(
         look = Look(tmp_path, lambda: None)
         foreground = Gdk.RGBA()
         foreground.parse(look.theme["colors"]["foreground"])
-        for typed in (Gtk.TextView(), Gtk.Text()):
-            assert typed.get_color().equal(foreground), (skin, typed)
+        prompt = Gtk.TextView()
+        prompt.get_buffer().set_text("Make me a Theme")
+        window = Gtk.Window(child=prompt)
+        window.present()
+        settle(lambda shown=prompt: shown.get_width() > 0)
+        colours = painted(prompt)
+        window.destroy()
+        assert foreground.to_string() in colours, (skin, colours)
+        assert "rgb(255,0,0)" not in colours, (skin, colours)
+        assert Gtk.Text().get_color().equal(foreground), skin
 
 
 def painted(widget: Gtk.Widget) -> set[str]:
-    """The flat colours a widget paints, read from its render nodes."""
+    """The flat and text colours a widget paints, read from its render nodes."""
     snapshot = Gtk.Snapshot()
     Gtk.WidgetPaintable.new(widget).snapshot(
         snapshot, widget.get_width(), widget.get_height()
@@ -69,7 +77,7 @@ def painted(widget: Gtk.Widget) -> set[str]:
     found: set[str] = set()
 
     def walk(node: Gsk.RenderNode | None) -> None:
-        if isinstance(node, Gsk.ColorNode):
+        if isinstance(node, (Gsk.ColorNode, Gsk.TextNode)):
             found.add(node.get_color().to_string())
         elif isinstance(node, Gsk.ContainerNode):
             for index in range(node.get_n_children()):
