@@ -18,6 +18,7 @@ Three groups, derived differently:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from osiris.model.colour import (
@@ -102,6 +103,20 @@ def semantic(hue_degrees: float, accent: Colour, background: Colour) -> Colour:
     return candidate
 
 
+def fitted_accent(colour: Colour, background: Colour) -> Colour:
+    """An accent a look names, keeping its hue, made lighter or darker until it
+    shows against the background."""
+    hue, lightness, saturation = colour.hls
+    step = 0.03 if background.is_dark else -0.03
+    candidate = colour
+    for _ in range(34):
+        if candidate.readable_against(background, INTERFACE_CONTRAST):
+            return candidate
+        lightness = min(max(lightness + step, 0.0), 1.0)
+        candidate = Colour.from_hls(hue, lightness, saturation)
+    return candidate
+
+
 def palette(seeds: Seeds) -> dict[str, str]:
     """The thirty-odd interface colours."""
     background, accent = seeds.background, seeds.accent
@@ -162,6 +177,7 @@ def build(
     seeds: Seeds,
     folder_colour: str | None = None,
     wallpaper_style: str | None = None,
+    accents: Sequence[Colour] = (),
 ) -> dict[str, object]:
     """A complete theme document, ready to write to disk.
 
@@ -205,6 +221,10 @@ def build(
         ],
         "wallpaper": "generated",
     }
+    if accents:
+        document["accents"] = [
+            fitted_accent(colour, seeds.background).hex for colour in accents
+        ]
     if folder_colour:
         document["folder_colour"] = folder_colour
     if wallpaper_style:
