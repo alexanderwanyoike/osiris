@@ -11,9 +11,9 @@ of the desktop wearing the Skin. If any is missing, say so in your verdict line
 and review what you can. If you cannot see images, answer
 `Verdict: fail - cannot see the screenshot` and stop.
 
-The bar: a Skin redraws the whole desktop. Once it is worn, no control should
-look as it did before, and the desktop should read as one designed thing that
-anyone would recognise from the person's words.
+A Skin passes only when it redraws the whole desktop. Once it is worn, no
+control should look as it did before, and the desktop should read as one
+designed thing that anyone would recognise from the person's words.
 
 ## 1. Look
 
@@ -33,23 +33,10 @@ Quote the person's words or the brief for every finding.
 
 ### Every control: is the whole desktop redrawn?
 
-For each of these, say whether the Skin redraws it or leaves it as the Skin it
-started from drew it:
-
-- window frames and their shadows
-- title bars and their buttons
-- buttons, in their normal, hover, pressed and disabled states
-- text entries
-- checkboxes, radio buttons and switches
-- scrollbars
-- tabs
-- lists, rows and sidebars
-- menus, popovers and tooltips
-- the panel and its menus
-- the dock
-- the launcher
-
-Recolouring alone is not a redraw: the Theme already does that.
+Go through each part the Skin's `AGENTS.md` lists under "The whole look",
+libadwaita apps, the panel, the dock and the launcher among them. For each, say
+whether the Skin redraws it or leaves it as the Skin it started from drew it.
+Recolouring alone is not a redraw, because the Theme already does that.
 
 ### Craft: does it look designed?
 
@@ -64,8 +51,8 @@ Report only what you can see in the screenshot:
 ## 3. Decide the verdict
 
 - **fail**: the look would not be recognised from the person's words, or most
-  of the controls listed are as the Skin it started from drew them.
-- **partial**: some listed controls are not redrawn, the brief is only partly
+  of the parts listed are as the Skin it started from drew them.
+- **partial**: some listed parts are not redrawn, the brief is only partly
   on screen, or a craft problem is plain to see.
 - **pass**: anything else.
 
