@@ -238,6 +238,15 @@ def test_a_duplicate_tells_osiris_how_to_change_it(tmp_path: Path) -> None:
     assert "$gap-accent" in agents
 
 
+def test_osiris_closes_the_windows_it_opened_to_look_at_a_skin(tmp_path: Path) -> None:
+    """Filming a demo: a Files window opened for the look was left behind
+    the person's own windows after Paper was worn."""
+    pack = read(make_pack(tmp_path / "shipped" / "colloid"))
+    copy = duplicate(pack, tmp_path / "mine", FakeRunner())
+    agents = (copy.root / "AGENTS.md").read_text()
+    assert "close the windows you opened" in agents
+
+
 def test_a_duplicate_keeps_its_history_so_changes_can_be_undone(tmp_path: Path) -> None:
     runner = FakeRunner()
     copy = duplicate(
