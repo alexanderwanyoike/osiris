@@ -19,12 +19,12 @@ _RULE = re.compile(
 )
 
 
-def effect(action: str, resource: str) -> str:
+def effect(action: str, resource: str, agent: str = AGENT) -> str:
     """What the reviewer's own rules decide, the last match winning as in the
     Engine; with no match the Engine's own default would apply."""
     found = "unmatched"
     for rule_action, rule_resource, rule_effect in _RULE.findall(
-        Resources().read(AGENT)
+        Resources().read(agent)
     ):
         if fnmatchcase(action, rule_action) and fnmatchcase(resource, rule_resource):
             found = rule_effect
@@ -104,3 +104,16 @@ def test_a_reviewer_the_person_changed_is_kept() -> None:
     files.write(ENGINE / "skills/review/SKILL.md", "my own review")
     write_reviewer(files, HOME)
     assert files.read(ENGINE / "skills/review/SKILL.md") == "my own review"
+
+
+SKIN_AGENT = "engine/agents/skin-reviewer.md"
+LOOK = "/home/tester/.local/share/osiris/skins/van/.look.png"
+
+
+def test_the_skin_reviewer_only_looks_and_reads() -> None:
+    """#269: a Skin is not done until someone who did not make it has looked."""
+    assert "\nmode: subagent\n" in Resources().read(SKIN_AGENT)
+    assert effect("edit", "sass/_look.scss", SKIN_AGENT) == "deny"
+    assert effect("shell", "rm -rf sass", SKIN_AGENT) == "deny"
+    assert effect("read", LOOK, SKIN_AGENT) == "allow"
+    assert effect("skill", "skin-review", SKIN_AGENT) == "allow"
