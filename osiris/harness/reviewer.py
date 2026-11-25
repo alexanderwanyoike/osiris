@@ -1,6 +1,7 @@
-"""The reviewer Thoth asks before it calls a Program done (#161), given to the
-Engine as one of its subagents and a skill. Its files live in the Engine's own
-config, the person's to change, so one is written only where none is."""
+"""The reviewers Thoth asks before it calls a Program (#161) or a Skin (#269)
+done, given to the Engine as its subagents and skills. Their files live in the
+Engine's own config, the person's to change, so one is written only where none
+is."""
 
 from __future__ import annotations
 
@@ -17,6 +18,8 @@ SHIPPED = (
     "skills/review/NOTICE.md",
     "skills/review/LICENSE-MIT",
     "skills/review/LICENSE-APACHE",
+    "agents/skin-reviewer.md",
+    "skills/skin-review/SKILL.md",
 )
 
 
