@@ -8,7 +8,7 @@ Appearance. Errors are worded for the model to read and correct itself.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from enum import Enum
 from typing import Any
 
@@ -21,6 +21,10 @@ from osiris.themes.store import ThemeStore
 
 class ThemeActionError(ValueError):
     pass
+
+
+#: Every Theme has its accent; a look known for more colours names up to two more.
+MOST_EXTRA_ACCENTS = 2
 
 
 def list_themes(store: ThemeStore) -> list[dict[str, object]]:
@@ -54,14 +58,14 @@ def create_theme(
     harmony: str,
     mood: str,
     dark: bool,
+    accents: Sequence[str] = (),
 ) -> str:
-    """Make and keep a User theme from a Theme intent. Returns its name."""
-    try:
-        colour = Colour(seed)
-    except InvalidColour as error:
-        raise ThemeActionError(
-            f"{seed!r} is not a colour; give it as #rrggbb"
-        ) from error
+    """Make and keep a User theme from a Theme intent and the extra accents its
+    look has, if any. Returns its name."""
+    colour = _colour(seed)
+    if len(accents) > MOST_EXTRA_ACCENTS:
+        raise ThemeActionError("A theme names at most two extra accents")
+    extra = [_colour(accent) for accent in accents]
     intent = ThemeIntent(
         seed=colour,
         harmony=_choice(Harmony, harmony, "harmony"),
@@ -73,8 +77,17 @@ def create_theme(
         raise ThemeActionError(
             f"There is already a theme called {label}; choose another label"
         )
-    store.save(build(name, label, seeds(intent)))
+    store.save(build(name, label, seeds(intent), accents=extra))
     return name
+
+
+def _colour(text: str) -> Colour:
+    try:
+        return Colour(text)
+    except InvalidColour as error:
+        raise ThemeActionError(
+            f"{text!r} is not a colour; give it as #rrggbb"
+        ) from error
 
 
 def find(store: ThemeStore, name: str) -> Mapping[str, Any]:
