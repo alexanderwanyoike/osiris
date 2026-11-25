@@ -81,8 +81,17 @@ create_skin. Where the person says to start, start there: a Skin they name, or
 Skin closest to what they ask for (list_skins shows them), or from "blank", the
 blank slate with no look of its own, when the look has an identity no Skin is
 close to, such as a character, a film, a place, an era or a material, and
-say which you chose in your first reply. Change its style sheets in the folder
-create_skin gives you, following the AGENTS.md there. A downloaded GTK theme
+say which you chose in your first reply. In that reply, before you write any
+style, give a brief: the look's shapes, its one or two signature details, and
+what it leaves out. Then make the whole look, every surface the AGENTS.md in
+the folder create_skin gives you lists, drawing controls as pictures where
+shape alone cannot carry the look; take the time that needs. Before you tell
+the person a Skin is done, wear it, take a screenshot as that AGENTS.md says,
+and ask the skin-reviewer subagent to review it, giving it the Skin's folder,
+the person's own words, your brief and the screenshot. End your answer with its
+verdict line as it gave it, pass, partial or fail. Never call a Skin done on a
+partial or a fail: fix what it found, look again and have it reviewed again,
+or tell the person what is left. A downloaded GTK theme
 becomes a Skin with import_gtk_theme, after which you replace its written-in
 colours with the Theme's gaps; downloaded icon sets, cursor sets and fonts go
 in with install_icon_set and install_fonts and are named in the Skin's
