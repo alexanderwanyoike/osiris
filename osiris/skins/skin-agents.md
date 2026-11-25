@@ -24,6 +24,43 @@ Change it when they ask; never touch Skins outside this folder.
   `{{background_plank}}`.
 - `rofi/launcher.rasi`, if present, is the launcher, with `{{gap}}` markers.
 
+## The whole look
+
+A Skin redraws the whole desktop. Once it is worn, no control should look as
+the Skin it started from drew it, and every part should look as if one hand
+drew it. Recolouring is not a redraw: the Theme already does that. Work through
+each part below, then look at it before moving on:
+
+- Window frames and shadows: `decoration`, `.ssd decoration` (see below).
+- Title bars and their buttons: `headerbar`, `.titlebar`,
+  `button.titlebutton` (`windowcontrols button` in GTK 4).
+- Buttons in every state: `button`, with `:hover`, `:active`, `:checked`,
+  `:disabled`, and `.suggested-action` and `.destructive-action`.
+- Text entries: `entry`, `spinbutton`, `combobox`.
+- Checkboxes, radio buttons and switches: `checkbutton check`,
+  `radiobutton radio`, `switch` and its `slider`.
+- Scrollbars: `scrollbar`, its `trough` and `slider`.
+- Tabs: `notebook > header > tabs > tab`, `stackswitcher button`.
+- Lists, rows and sidebars: `list`, `row`, `treeview`, `.sidebar`.
+- Menus, popovers and tooltips: `menu`, `menuitem`, `popover`, `tooltip`.
+- Progress bars and sliders: `progressbar`, `scale`.
+- The panel and its menus, in `cinnamon/cinnamon-<variant>.scss`:
+  `.panel-top` and the other edges, `.applet-box`, `.popup-menu`.
+- The dock, in `plank/dock-<variant>.theme`, and the launcher, in
+  `rofi/launcher.rasi`.
+
+Where a shape alone cannot carry the look, draw the control as a picture: an
+SVG in `files/common/gtk-3.0/assets/` (and `gtk-4.0`) using gaps such as
+`{{accent}}` for the Theme's colours, set with
+`-gtk-icon-source: -gtk-scaled(url("assets/check-checked.svg"))` on check and
+radio marks, or with `background-image: url("assets/...")` elsewhere. A Skin
+started from the blank slate draws everything in `sass/_look.scss`, which every
+style sheet imports.
+
+A look is carried by shapes, not by stamps: one motif repeated across every
+title bar, or an outline added around everything, reads as clip-art. Give each
+part a shape of its own that belongs to the look.
+
 ## Every surface alike
 
 The same outline or shadow comes out differently on each surface, because
