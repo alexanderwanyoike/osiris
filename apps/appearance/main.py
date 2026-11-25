@@ -160,8 +160,8 @@ class ThemeCard(Gtk.Overlay):
         self.theme = theme
         self.partner = partner
         self.dark = Gtk.Switch(active=dark, tooltip_text="Dark",
-                               halign=Gtk.Align.START, valign=Gtk.Align.END,
-                               margin_start=14, margin_bottom=10,
+                               halign=Gtk.Align.START, valign=Gtk.Align.START,
+                               margin_start=14, margin_top=14,
                                visible=partner is not None)
 
         self.button = Gtk.Button()
