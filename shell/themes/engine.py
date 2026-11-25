@@ -961,9 +961,20 @@ def duplicate_skin(name: str) -> str:
     return copy.name
 
 
+def skin_starts() -> list[tuple[str, str, str]]:
+    """Where a new Skin can start as (name, label, who made it): the blank
+    slate first, then every Skin."""
+    return [(pack.name, pack.label, skins.credit(pack))
+            for pack in skins.starts([Path(folder) for folder in SKIN_DIRS])]
+
+
 def create_skin(label: str, base: str) -> str:
     """A new Skin of the person's, named label, started from base."""
-    made = share.duplicate(_pack(base), Path(SKIN_DIRS[0]), SubprocessRunner(),
+    start = next((pack for pack in skins.starts([Path(d) for d in SKIN_DIRS])
+                  if pack.name == base), None)
+    if start is None:
+        raise SkinpackError(f"no Skin called {base}")
+    made = share.duplicate(start, Path(SKIN_DIRS[0]), SubprocessRunner(),
                            label=label, shipped=_shipped_skin_dirs())
     return made.name
 
