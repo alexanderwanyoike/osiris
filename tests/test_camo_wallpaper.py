@@ -37,3 +37,11 @@ def test_camo_lays_the_accent_down_in_patches(wallpaper: ModuleType) -> None:
     assert set(np.unique(accent)) <= {0.0, 1.0}
     assert 0.05 < patches.mean() < 0.4
     assert wallpaper._edges(patches).sum() < 0.2 * patches.sum()
+
+
+def test_camo_is_offered_where_contour_was(wallpaper: ModuleType) -> None:
+    """The person never wants Contour again. Camo takes its place first in the
+    list and among the styles a Theme naming none falls back to."""
+    assert wallpaper.STYLES[0] == "camo"
+    assert "contour" not in wallpaper.styles()
+    assert wallpaper.FALLBACK_STYLES == ("camo", "arcs", "strata")
