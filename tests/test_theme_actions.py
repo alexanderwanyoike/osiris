@@ -262,6 +262,8 @@ def test_a_file_that_is_not_a_picture_is_refused_as_a_wallpaper() -> None:
     store = FakeThemeStore(themes=[stored("van", "Van", False)])
     with pytest.raises(ThemeActionError, match="picture"):
         wear_picture(store, "van", Path("/tmp/van.html"), lambda _n, p: p)
+
+
 def picture_bytes(colour: tuple[int, int, int]) -> bytes:
     data = io.BytesIO()
     Image.new("RGB", (64, 36), colour).save(data, "PNG")
