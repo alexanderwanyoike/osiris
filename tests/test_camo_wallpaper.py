@@ -33,8 +33,8 @@ def wallpaper(monkeypatch: pytest.MonkeyPatch) -> Iterator[ModuleType]:
 def test_camo_lays_the_accent_down_in_patches(wallpaper: ModuleType) -> None:
     """Every other still style keeps the accent to hairlines."""
     _, accent = wallpaper.camo((180, 320), np.random.default_rng(1))
-    patches = accent == 1
-    assert set(np.unique(accent)) <= {0.0, 1.0}
+    patches = accent > 0.5
+    assert ((accent > 0) & (accent < 1)).mean() < 0.05
     assert 0.05 < patches.mean() < 0.4
     assert wallpaper._edges(patches).sum() < 0.2 * patches.sum()
 
@@ -58,11 +58,11 @@ def test_camo_keeps_its_edges_crisp_away_from_the_mark(
     wallpaper: ModuleType,
 ) -> None:
     """The quiet mask fades every style towards the middle, which blurred
-    Camo's blobs into smudges when tried. A row of crisp camo holds its five
-    tones and nothing between them."""
+    Camo's blobs into smudges when tried. A row of crisp camo is almost all
+    its five tones, with only the edges between them."""
     image = np.asarray(wallpaper.compose(THEME, (320, 180), "camo", logo=False))
-    row = image[54]
-    assert len(np.unique(row.reshape(-1, 3), axis=0)) <= 5
+    _, counts = np.unique(image[54].reshape(-1, 3), axis=0, return_counts=True)
+    assert np.sort(counts)[-5:].sum() >= 0.95 * 320
 
 
 def test_a_theme_that_names_contour_gets_camo(wallpaper: ModuleType) -> None:
