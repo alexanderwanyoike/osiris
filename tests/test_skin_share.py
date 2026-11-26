@@ -238,6 +238,21 @@ def test_a_duplicate_tells_osiris_how_to_change_it(tmp_path: Path) -> None:
     assert "$gap-accent" in agents
 
 
+def test_a_skins_instructions_name_no_tool_osiris_no_longer_offers(
+    tmp_path: Path,
+) -> None:
+    """Review of #273: an agent working on a Skin has no Osiris tools."""
+    copy = duplicate(
+        read(make_pack(tmp_path / "shipped" / "colloid")),
+        tmp_path / "mine",
+        FakeRunner(),
+    )
+    agents = (copy.root / "AGENTS.md").read_text()
+    for tool in ("create_skin", "check_skin", "install_icon_set", "install_fonts"):
+        assert tool not in agents, tool
+    assert "engine.py --skin" in agents
+
+
 def test_a_duplicate_keeps_its_history_so_changes_can_be_undone(tmp_path: Path) -> None:
     runner = FakeRunner()
     copy = duplicate(
