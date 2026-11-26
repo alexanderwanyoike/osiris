@@ -61,7 +61,7 @@ MOOD_LABELS = {
 DEBOUNCE_MS = 120
 
 STYLE_LABELS = {
-    "contour": "Contour - topographic bands",
+    "camo": "Camo - blobs of the theme's tones and accent",
     "arcs": "Arcs - woven quarter circles",
     "strata": "Strata - warped horizontal layers",
     "aurora": "Aurora - soft light from the edges",
@@ -366,7 +366,7 @@ class Creator(Adw.Dialog):
         """
         values = {"label": "My Theme", "dark": True, "background": "#15151c",
                   "accent": "#7aa2f7", "secondary": "#bb9af7",
-                  "has_secondary": False, "style": "contour", "start": "colour",
+                  "has_secondary": False, "style": "camo", "start": "colour",
                   "custom": False, "seed": "#7aa2f7",
                   "harmony": Harmony.ANALOGOUS, "mood": Mood.BALANCED,
                   "picture": None, "picture_seed": None}
