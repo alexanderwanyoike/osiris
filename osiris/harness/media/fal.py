@@ -50,16 +50,23 @@ class FalImages:
             )
         except HttpError as error:
             # Not chained: the error's body could echo the request and its key.
-            reason = _REASONS.get(
-                error.status,
-                f"FAL could not make the picture ({error.status}). {_CHARGED}",
-            )
-            raise MediaError(reason) from None
+            raise MediaError(_reason(error)) from None
         except UnicodeEncodeError:
             raise MediaError(_REASONS[401]) from None
         except ValueError:
             raise MediaError(_NO_PICTURE) from None
         return _picture(answer, self._http)
+
+
+def _reason(error: HttpError) -> str:
+    if error.status == 422 and "content_policy_violation" in error.body:
+        return (
+            "FAL's content checker refused the description; it often refuses "
+            f"one that names a character, a brand or a real person. {_CHARGED}"
+        )
+    return _REASONS.get(
+        error.status, f"FAL could not make the picture ({error.status}). {_CHARGED}"
+    )
 
 
 def _request(description: str, spec: ModelSpec) -> dict[str, object]:
