@@ -713,7 +713,7 @@ def compose(theme: dict, size: tuple[int, int] = (WIDTH, HEIGHT),
     width, height = size
     shape = (height, width)
     palette = tones(theme)
-    style = drawn_as(style or style_of(theme))
+    style = drawn_as(style) if style else style_of(theme)
     if style not in RENDERERS:
         found, _ = packages.discover(PACKAGE_DIRS)
         if style not in found:
