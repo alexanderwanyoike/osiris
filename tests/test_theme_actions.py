@@ -23,6 +23,7 @@ from osiris.themes.actions import (
     make_theme_pair,
     unused_name,
     use_wallpaper,
+    wear_painting,
     wear_picture,
 )
 from osiris.themes.derive import build
@@ -333,3 +334,31 @@ def test_a_picture_that_cannot_be_read_keeps_nothing() -> None:
 
     assert kept == []
     assert store.saved == []
+
+
+def test_a_painting_that_cannot_be_read_keeps_nothing_and_may_have_cost() -> None:
+    """Review of #272: a paid picture gets the same guards as a picture Theme."""
+    store = FakeThemeStore(themes=[stored("van", "Van", False)])
+    kept: list[bytes] = []
+
+    def keep(name: str, data: bytes) -> Path:
+        kept.append(data)
+        return Path(f"/home/tester/Pictures/Osiris/{name}.png")
+
+    with pytest.raises(ThemeActionError, match=r"could not be read.*charged"):
+        wear_painting(store, "van", b"not a picture", keep)
+    assert kept == []
+
+
+def test_a_painting_in_another_format_is_kept_as_a_png() -> None:
+    store = FakeThemeStore(themes=[stored("van", "Van", False)])
+    data = io.BytesIO()
+    Image.new("RGB", (8, 8), (10, 120, 110)).save(data, "JPEG")
+    kept: list[bytes] = []
+
+    def keep(name: str, picture: bytes) -> Path:
+        kept.append(picture)
+        return Path(f"/home/tester/Pictures/Osiris/{name}.png")
+
+    wear_painting(store, "van", data.getvalue(), keep)
+    assert Image.open(io.BytesIO(kept[0])).format == "PNG"
