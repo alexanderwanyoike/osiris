@@ -24,12 +24,19 @@ def colour(css: str, selector: str) -> tuple[float, ...]:
 
 @pytest.mark.skipif(shutil.which("sassc") is None, reason="needs sassc")
 @pytest.mark.parametrize(
-    "selector", [".csd treeview.view:selected", ".background.csd .view:selected"]
+    "selector",
+    [
+        ".csd treeview.view:selected",
+        ".background.csd .view:selected",
+        # Files' window is decorated by the window manager, not GTK, so its
+        # list takes the plain rule; found by hand on the VM.
+        "treeview.view:selected",
+    ],
 )
 def test_jasper_fills_a_selected_file_with_the_accent(
     selector: str, tmp_path: Path
 ) -> None:
-    """Upstream marks selections in a window it decorates with a grey wash."""
+    """Upstream marks a selected file or row with a grey wash."""
     css = compiled("jasper", THEME, tmp_path)
     assert colour(css, selector) == ACCENT
 
