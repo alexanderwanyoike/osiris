@@ -23,7 +23,6 @@ from osiris.harness.log import HarnessLog
 from osiris.harness.proposals import ProposalError, plain
 from osiris.harness.tiers import Tier
 from osiris.programs.programs import FOLLOW_THEME, ProgramError, Programs
-from osiris.skins.imports import UnusableDownload
 from osiris.skins.pack import SkinpackError
 from osiris.skins.store import SkinStore
 from osiris.themes import actions
@@ -121,7 +120,6 @@ EXPLAINED = (
     actions.ThemeActionError,
     ProgramError,
     SkinpackError,
-    UnusableDownload,
     WallpaperError,
     ProposalError,
 )

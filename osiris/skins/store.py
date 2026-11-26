@@ -32,13 +32,12 @@ class FakeSkinStore:
         worn: str = "osiris",
     ) -> None:
         self.labels = {"osiris": "Osiris", "colloid": "Colloid"}
-        self.mine: set[str] = set()
         self.problems = problems or {}
         self.current = worn
 
     def skins(self) -> list[dict[str, object]]:
         return [
-            {"name": name, "label": label, "mine": name in self.mine,
+            {"name": name, "label": label, "mine": False,
              "worn": name == self.current}
             for name, label in self.labels.items()
         ]  # fmt: skip
