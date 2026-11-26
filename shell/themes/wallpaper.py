@@ -72,12 +72,13 @@ MASK_PATHS = (
     "/usr/share/osiris/logo-mask.png",
 )
 
-STYLES = ("contour", "arcs", "strata", "aurora", "dots", "cells", "bubbles",
+STYLES = ("camo", "arcs", "strata", "aurora", "dots", "cells", "bubbles",
           "ridges", "facets", "wave")
 # What a theme naming no style falls back to, chosen by hashing its name. Fixed
 # at the original three: hashing over STYLES would move every such theme to a
-# different wallpaper whenever a style is added.
-FALLBACK_STYLES = ("contour", "arcs", "strata")
+# different wallpaper whenever a style is added. Camo took Contour's slot, so
+# only the themes that fell on Contour changed.
+FALLBACK_STYLES = ("camo", "arcs", "strata")
 
 # Moving wallpapers as packages (osiris/themes/wallpapers.py): the user's own
 # first, so one there replaces a shipped one of the same name.
@@ -623,7 +624,7 @@ def wave(shape, rng, ribbons: int = WAVE_RIBBONS, phase: float = 0.0,
     return np.clip(fill, 0, 1), np.clip(line, 0, 1)
 
 
-RENDERERS = {"contour": contour, "arcs": arcs, "strata": strata, "aurora": aurora, "dots": dots,
+RENDERERS = {"camo": camo, "contour": contour, "arcs": arcs, "strata": strata, "aurora": aurora, "dots": dots,
              "cells": cells, "bubbles": bubbles, "ridges": ridges,
              "facets": facets, "wave": wave}
 
