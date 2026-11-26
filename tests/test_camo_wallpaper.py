@@ -90,3 +90,13 @@ def test_contour_asked_for_by_name_is_camo(wallpaper: ModuleType) -> None:
         np.asarray(wallpaper.compose(THEME, (320, 180), "contour", logo=False)),
         np.asarray(wallpaper.compose(THEME, (320, 180), "camo", logo=False)),
     )
+
+
+def test_a_theme_that_names_contour_boots_on_camo(wallpaper: ModuleType) -> None:
+    """Review of #275: the boot menu's own lookup had no test."""
+    contour = {**THEME, "wallpaper_style": "contour"}
+    camo = {**THEME, "wallpaper_style": "camo"}
+    assert np.array_equal(
+        np.asarray(wallpaper.boot_background(contour, (320, 180))),
+        np.asarray(wallpaper.boot_background(camo, (320, 180))),
+    )
