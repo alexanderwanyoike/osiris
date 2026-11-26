@@ -123,6 +123,10 @@ def find(store: ThemeStore, name: str) -> Mapping[str, Any]:
     raise ThemeActionError(f"There is no theme called {name}")
 
 
+def _paired(theme: Mapping[str, Any], other: Mapping[str, Any]) -> bool:
+    return theme.get("pair") == other["name"] and other.get("pair") == theme["name"]
+
+
 #: What a Theme's wallpaper is made of, kept to put back on undo.
 _WALLPAPER_FIELDS = ("wallpaper_style", "wallpaper")
 
@@ -133,7 +137,7 @@ def wear_wallpaper_style(
     """Give the Theme, and the other half of its pair, the wallpaper ``style``.
     Returns each one's wallpaper before, by name."""
     theme = find(store, name)
-    halves = [theme, *(t for t in store.themes() if t["name"] == theme.get("pair"))]
+    halves = [theme, *(t for t in store.themes() if _paired(theme, t))]
     before: dict[str, dict[str, str]] = {}
     for half in halves:
         before[half["name"]] = {key: half.get(key) or "" for key in _WALLPAPER_FIELDS}
