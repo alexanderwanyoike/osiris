@@ -81,3 +81,12 @@ def test_camo_blends_its_edges_over_about_a_pixel(wallpaper: ModuleType) -> None
     _, accent = wallpaper.camo((180, 320), np.random.default_rng(1))
     edges = wallpaper._edges(accent > 0.5).sum()
     assert ((accent > 0.05) & (accent < 0.95)).sum() > 0.5 * edges
+
+
+def test_contour_asked_for_by_name_is_camo(wallpaper: ModuleType) -> None:
+    """Review of #275: a style passed in directly skipped the theme's lookup and
+    raised for Contour."""
+    assert np.array_equal(
+        np.asarray(wallpaper.compose(THEME, (320, 180), "contour", logo=False)),
+        np.asarray(wallpaper.compose(THEME, (320, 180), "camo", logo=False)),
+    )
