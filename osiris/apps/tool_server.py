@@ -96,9 +96,8 @@ make it in this order. First a Theme pair with make_theme_pair, asking first
 unless they already asked for one: the look's main colour as the seed. Then
 one moving wallpaper for the look, written for it with make_wallpaper with
 theme set to the light half, so both halves wear it, each in its own colours.
-Last, list_skins and wear_skin the shipped Skin whose shapes fit the look best,
-and say why you chose it. Apply the half that matches the Theme the person has
-on now, light or dark."""
+Leave the person's Skin as it is. Apply the half that matches the Theme the
+person has on now, light or dark."""
 
 #: What the model may touch beyond its tools, by the person's choice
 #: (osiris.harness.trust).
