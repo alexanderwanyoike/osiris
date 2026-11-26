@@ -216,6 +216,27 @@ def test_a_theme_takes_a_wallpaper_osiris_found_and_logs_the_one_it_replaced() -
     )
 
 
+def test_a_theme_with_no_wallpaper_before_logs_an_empty_one_to_undo_to() -> None:
+    """Review of #271: an undo's values are text, never None."""
+    log = new_log()
+    store = FakeThemeStore(themes=[{"name": "plain", "label": "Plain", "dark": True}])
+    files = FakeFileSystem()
+    files.write(Path("/tmp/plain.png"), "png")
+    wallpapers = UserWallpapers(files, FakeRunner(), Path("/home/tester/w"), "")
+    call(
+        store,
+        "set_theme_wallpaper",
+        {"name": "plain", "path": "/tmp/plain.png"},
+        log,
+        wallpapers=wallpapers,
+    )
+    assert log.last_changes()[-1].undo == {
+        "action": "set_theme_wallpaper",
+        "name": "plain",
+        "wallpaper": "",
+    }
+
+
 def asked_by(session: str, subject: MCPServer) -> Context:
     """A tool call as the Engine makes it for one of its sessions."""
     request = ServerRequestContext(
