@@ -382,7 +382,8 @@ def test_a_whole_look_is_a_theme_pair_whose_wallpaper_osiris_never_writes() -> N
     text = whole[start : whole.index("light or dark.", start)]
     assert "make_theme_pair" in text
     assert "make_wallpaper" not in text
-    assert "never write one for the look" in text
+    # Review of #271: the person said draw, which covers more than writing.
+    assert "never write or draw one yourself" in text
     assert "Leave the person's Skin as it is" in text
     assert "wear_skin" not in text
     assert "wallpaper site" not in whole
