@@ -166,9 +166,21 @@ def test_a_new_wallpaper_is_worn_by_a_copy_of_the_theme_in_use() -> None:
             "label": "Nord Rain",
             "dark": True,
             "wallpaper_style": "rain",
+            "wallpaper": "generated",
         }
     ]
     assert store.applied == ["nord-rain"]
+
+
+def test_a_copy_wearing_a_new_wallpaper_gives_up_the_picture() -> None:
+    """Review of #271: a picture wins over a style, so a copy of a painted
+    Theme would never show the moving wallpaper made for it."""
+    store = FakeThemeStore(
+        themes=[{**stored("van", "Van", False), "wallpaper": "/p/van.png"}],
+        current="van",
+    )
+    theme, _previous = use_wallpaper(store, "rain", "Rain")
+    assert find(store, theme)["wallpaper"] == "generated"
 
 
 def test_a_wallpaper_needs_a_theme_in_use_to_wear_it() -> None:
