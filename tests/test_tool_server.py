@@ -428,11 +428,21 @@ def test_a_wallpaper_made_for_a_theme_is_worn_by_its_pair_with_no_copy() -> None
         ),
         Change(
             "Gave Van the Rain wallpaper",
-            {"action": "set_wallpaper_style", "name": "van", "style": ""},
+            {
+                "action": "set_wallpaper",
+                "name": "van",
+                "wallpaper_style": "",
+                "wallpaper": "",
+            },
         ),
         Change(
             "Gave Van Night the Rain wallpaper",
-            {"action": "set_wallpaper_style", "name": "van-night", "style": ""},
+            {
+                "action": "set_wallpaper",
+                "name": "van-night",
+                "wallpaper_style": "",
+                "wallpaper": "",
+            },
         ),
     ]
 

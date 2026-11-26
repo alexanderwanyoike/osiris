@@ -12,6 +12,7 @@ from osiris.themes.actions import (
     apply_theme,
     create_theme,
     delete_theme,
+    find,
     list_themes,
     make_other_half,
     make_theme_pair,
@@ -201,11 +202,29 @@ def test_a_wallpaper_style_is_worn_by_a_theme_and_its_other_half() -> None:
         ]
     )
     before = wear_wallpaper_style(store, "van-night", "haunted-van")
-    assert before == {"van-night": "dots", "van": None}
+    assert before == {
+        "van-night": {"wallpaper_style": "dots", "wallpaper": ""},
+        "van": {"wallpaper_style": "", "wallpaper": ""},
+    }
     assert {t["name"]: t["wallpaper_style"] for t in store.themes()} == {
         "van": "haunted-van",
         "van-night": "haunted-van",
     }
+
+
+def test_a_half_wearing_a_picture_gives_it_up_for_the_style() -> None:
+    """Review of #271: a picture wins over a style, so a half that kept one
+    would never show the wallpaper it was given."""
+    painted = "/home/tester/Pictures/Osiris/van.png"
+    store = FakeThemeStore(
+        themes=[
+            {**stored("van", "Van", False), "pair": "van-night", "wallpaper": painted},
+            {**stored("van-night", "Van Night"), "pair": "van"},
+        ]
+    )
+    before = wear_wallpaper_style(store, "van", "haunted-van")
+    assert before["van"] == {"wallpaper_style": "", "wallpaper": painted}
+    assert find(store, "van")["wallpaper"] == "generated"
 
 
 def test_a_theme_pair_is_a_light_and_a_dark_theme_made_from_one_idea() -> None:
