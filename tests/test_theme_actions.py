@@ -227,6 +227,20 @@ def test_a_half_wearing_a_picture_gives_it_up_for_the_style() -> None:
     assert find(store, "van")["wallpaper"] == "generated"
 
 
+def test_a_theme_naming_a_partner_that_does_not_name_it_back_wears_alone() -> None:
+    """Review of #271: an undone other half leaves a stale name, which a later,
+    unrelated Theme may take."""
+    store = FakeThemeStore(
+        themes=[
+            {**stored("van", "Van", False), "pair": "van-night"},
+            stored("van-night", "Van Night"),
+        ]
+    )
+    before = wear_wallpaper_style(store, "van", "haunted-van")
+    assert list(before) == ["van"]
+    assert "wallpaper_style" not in find(store, "van-night")
+
+
 def test_a_theme_pair_is_a_light_and_a_dark_theme_made_from_one_idea() -> None:
     """#266: two Themes, chosen as one, each naming the other."""
     store = FakeThemeStore()
