@@ -92,10 +92,16 @@ SVG_GAPS = Recolour(
         "#242424": "{{background}}",
     }
 )
-# In a window it decorates, which is every Osiris window, upstream marks a
-# selected view or row with a grey wash; the other Skins fill it with the
-# accent, so Jasper does too, with its own accent fill.
+# Upstream marks a selected view or row with a grey wash; the other Skins fill
+# it with the accent, so Jasper does too, with its own accent fill. Files'
+# window is decorated by the window manager, so it takes the plain tree view
+# rule rather than the one for windows GTK decorates.
 SELECTED = (
+    (
+        "  &:selected {\n    background-image: image($overlay-checked);\n"
+        "    background-color: $base;\n    color: $text;\n  }",
+        "  &:selected { @extend %selected_items_primary; }",
+    ),
     (
         "  .csd &:selected {\n    @extend %selected_items;",
         "  .csd &:selected {\n    @extend %selected_items_primary;",
