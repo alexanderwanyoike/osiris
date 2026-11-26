@@ -240,11 +240,7 @@ def _wear_on_pair(
         logged.write(
             "changed",
             summary=f"Gave {actions.find(store, name)['label']} the {label} wallpaper",
-            undo={
-                "action": "set_wallpaper_style",
-                "name": name,
-                "style": previous or "",
-            },
+            undo={"action": "set_wallpaper", "name": name, **previous},
         )
     return f"Gave {' and '.join(worn)} the {label} wallpaper."
 
