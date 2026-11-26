@@ -20,6 +20,7 @@ from osiris.themes.actions import (
     make_theme_pair,
     use_wallpaper,
     wear_picture,
+    wear_wallpaper_style,
 )
 from osiris.themes.derive import build
 from osiris.themes.intent import Harmony, Mood, ThemeIntent, seeds
@@ -188,6 +189,27 @@ def test_a_copy_that_would_replace_a_theme_is_refused() -> None:
     )
     with pytest.raises(ThemeActionError, match="already a theme called Nord Rain"):
         use_wallpaper(store, "rain", "Rain")
+
+
+def test_a_wallpaper_style_is_worn_by_a_theme_and_its_other_half() -> None:
+    """A whole look's wallpaper without an image model: one moving wallpaper
+    for the pair, coloured by each half."""
+    store = FakeThemeStore(
+        themes=[
+            {**stored("van", "Van", False), "pair": "van-night"},
+            {
+                **stored("van-night", "Van Night"),
+                "pair": "van",
+                "wallpaper_style": "dots",
+            },
+        ]
+    )
+    before = wear_wallpaper_style(store, "van-night", "haunted-van")
+    assert before == {"van-night": "dots", "van": None}
+    assert {t["name"]: t["wallpaper_style"] for t in store.themes()} == {
+        "van": "haunted-van",
+        "van-night": "haunted-van",
+    }
 
 
 def test_a_theme_pair_is_a_light_and_a_dark_theme_made_from_one_idea() -> None:
