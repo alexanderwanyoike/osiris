@@ -338,7 +338,9 @@ def test_a_whole_look_paints_its_wallpapers_when_an_image_model_is_there() -> No
 
     text = " ".join(INSTRUCTIONS.split())
     painted = text.index("paint one for each half with paint_theme_wallpaper")
-    assert painted < text.index("If it cannot paint, write one moving wallpaper")
+    assert painted < text.index("If it cannot paint both, write one moving wallpaper")
+    # Review of #272: one half painted and the other not would not match.
+    assert "in place of any picture it did paint" in text
 
 
 @pytest.mark.parametrize(
