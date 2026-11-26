@@ -337,13 +337,13 @@ def test_a_whole_look_paints_its_wallpapers_when_an_image_model_is_there() -> No
     from osiris.apps.tool_server import INSTRUCTIONS
 
     text = " ".join(INSTRUCTIONS.split())
-    look = text[text.index("asks for a whole look") :]
+    start = text.index("asks for a whole look")
+    look = text[start : text.index("light or dark.", start)]
     painted = look.index("paint one for each half with paint_theme_wallpaper")
     # The person never wants a model to draw a wallpaper: without a painting,
-    # Osiris says why and the person decides.
+    # Osiris says why and the person decides. test_tool_server checks that
+    # Osiris never writes one.
     assert painted < look.index("If it cannot paint, tell the person why")
-    assert "make_wallpaper" not in look
-    assert "never write one for the look" in look
 
 
 @pytest.mark.parametrize(
