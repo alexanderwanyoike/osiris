@@ -8,7 +8,9 @@ from pathlib import Path
 from types import ModuleType
 
 import pytest
-from gi.repository import Gtk
+from gi.repository import Adw, Gtk
+
+from .conftest import settle, widgets
 
 THEMES = Path(__file__).resolve().parents[2] / "shell" / "themes"
 
@@ -37,3 +39,18 @@ def test_a_new_theme_starts_on_camo_and_says_so(creator: ModuleType) -> None:
     labels = [patterns.get_string(i) for i in range(patterns.get_n_items())]
     assert labels[dialog.style.get_selected()].startswith("Camo - ")
     assert not any("Contour" in label for label in labels)
+
+
+def test_camos_label_fits_the_pattern_row(creator: ModuleType) -> None:
+    """Review of #275: the label was cut off twice, found by hand."""
+    window = Adw.ApplicationWindow(default_width=1000, default_height=900)
+    window.present()
+    dialog = creator.Creator(window, lambda *_args: None)
+    dialog.present(window)
+    shown = [
+        label
+        for label in widgets(dialog.style)
+        if isinstance(label, Gtk.Label) and label.get_text().startswith("Camo")
+    ]
+    assert settle(lambda: bool(shown) and shown[0].get_width() > 0)
+    assert not shown[0].get_layout().is_ellipsized()
