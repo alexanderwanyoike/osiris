@@ -63,3 +63,13 @@ def test_camo_keeps_its_edges_crisp_away_from_the_mark(
     image = np.asarray(wallpaper.compose(THEME, (320, 180), "camo", logo=False))
     row = image[54]
     assert len(np.unique(row.reshape(-1, 3), axis=0)) <= 5
+
+
+def test_a_theme_that_names_contour_gets_camo(wallpaper: ModuleType) -> None:
+    """Themes made before Camo name Contour, the Theme creator's old default."""
+    contour = {**THEME, "wallpaper_style": "contour"}
+    camo = {**THEME, "wallpaper_style": "camo"}
+    assert np.array_equal(
+        np.asarray(wallpaper.compose(contour, (320, 180), logo=False)),
+        np.asarray(wallpaper.compose(camo, (320, 180), logo=False)),
+    )
