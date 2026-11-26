@@ -45,3 +45,23 @@ def test_camo_is_offered_where_contour_was(wallpaper: ModuleType) -> None:
     assert wallpaper.STYLES[0] == "camo"
     assert "contour" not in wallpaper.styles()
     assert wallpaper.FALLBACK_STYLES == ("camo", "arcs", "strata")
+
+
+def test_camo_keeps_its_edges_crisp_away_from_the_mark(
+    wallpaper: ModuleType,
+) -> None:
+    """The quiet mask fades every style towards the middle, which blurred
+    Camo's blobs into smudges when tried. A row of crisp camo holds its five
+    tones and nothing between them."""
+    theme = {
+        "name": "camo-test",
+        "dark": True,
+        "colors": {
+            "background": "#15151c",
+            "accent": "#7aa2f7",
+            "foreground": "#c0caf5",
+        },
+    }
+    image = np.asarray(wallpaper.compose(theme, (320, 180), "camo", logo=False))
+    row = image[54]
+    assert len(np.unique(row.reshape(-1, 3), axis=0)) <= 5
