@@ -125,3 +125,12 @@ def test_camo_runs_behind_the_mark(wallpaper: ModuleType) -> None:
     image = np.asarray(wallpaper.compose(THEME, (640, 360), "camo", logo=False))
     _, counts = np.unique(image[180, 248:392], axis=0, return_counts=True)
     assert np.sort(counts)[-4:].sum() >= 0.9 * 144
+
+
+def test_camos_blobs_lie_wider_than_tall(wallpaper: ModuleType) -> None:
+    """The person, against woodland cloth: the first Camo's blobs were round."""
+    _, accent = wallpaper.camo((360, 640), np.random.default_rng(1))
+    patch = accent > 0.5
+    across = (patch[:, 1:] != patch[:, :-1]).mean()
+    down = (patch[1:, :] != patch[:-1, :]).mean()
+    assert across < 0.7 * down
