@@ -50,7 +50,7 @@ from osiris.apps.theme_scheme import ThemeScheme  # noqa: E402
 from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.model.names import slug  # noqa: E402
 from osiris.skins.imports import ARCHIVE_SUFFIXES, FONT_SUFFIXES  # noqa: E402
-from osiris.themes.library import Filter, arrange  # noqa: E402
+from osiris.themes.library import Filter, arrange, half_to_wear  # noqa: E402
 
 ARCHIVES = ARCHIVE_SUFFIXES
 FONTS = tuple(sorted(FONT_SUFFIXES))
@@ -197,8 +197,10 @@ class ThemeCard(Gtk.Overlay):
         self.add_overlay(self.dark)
 
     def half(self) -> dict:
-        """The Theme the card wears: its partner when the switch says dark."""
-        return self.partner if self.partner and self.dark.get_active() else self.theme
+        """The Theme the card wears: the half that is dark or light as the
+        switch says, whichever half the card shows."""
+        partners = [self.partner] if self.partner else []
+        return dict(half_to_wear(self.theme, partners, self.dark.get_active()))
 
     def wears(self, name: str) -> bool:
         return name in (self.theme["name"], (self.partner or {}).get("name"))
