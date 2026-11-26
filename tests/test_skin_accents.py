@@ -52,9 +52,16 @@ def test_graphite_fills_a_selected_file_with_the_accent(tmp_path: Path) -> None:
 
 @pytest.mark.skipif(shutil.which("sassc") is None, reason="needs sassc")
 def test_graphite_keeps_the_files_sidebar_plain(tmp_path: Path) -> None:
-    """Upstream's styled sidebar fills all of Files' sidebar with the accent."""
+    """Upstream's styled sidebar fills all of Files' sidebar with the accent.
+    Review of #274: checking one selector passed once that rule was gone."""
     css = compiled("graphite", THEME, tmp_path)
-    assert (
-        declared(css, ".nemo-window paned > .sidebar").get("background-color")
-        != (THEME["colors"]["accent"])
-    )
+    fill = re.compile(rf"background(-color)?:\s*{THEME['colors']['accent']}")
+    painted = [
+        selectors
+        for selectors, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css)
+        if ".nemo-window" in selectors
+        and ".sidebar" in selectors
+        and ":selected" not in selectors
+        and fill.search(body)
+    ]
+    assert painted == []
