@@ -344,6 +344,9 @@ def test_a_whole_look_paints_its_wallpapers_when_an_image_model_is_there() -> No
     # Osiris says why and the person decides. test_tool_server checks that
     # Osiris never writes one.
     assert painted < look.index("If it cannot paint, tell the person why")
+    assert "until they choose a picture" in look
+    # Review of #272: one half painted and the other not would not match.
+    assert "If it paints only one half, say which" in look
 
 
 @pytest.mark.parametrize(
