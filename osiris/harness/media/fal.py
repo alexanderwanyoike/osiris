@@ -61,10 +61,7 @@ class FalImages:
 
 def _reason(error: HttpError) -> str:
     if error.status == 422 and "content_policy_violation" in _error_types(error.body):
-        return (
-            "FAL's content checker refused the description; it often refuses "
-            f"one that names a character, a brand or a real person. {_CHARGED}"
-        )
+        return f"FAL's content checker refused the description. {_CHARGED}"
     return _REASONS.get(
         error.status, f"FAL could not make the picture ({error.status}). {_CHARGED}"
     )
