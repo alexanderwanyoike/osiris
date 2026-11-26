@@ -105,8 +105,9 @@ a film, a character or a place, its colours and its pictures carry it, so make
 it in this order. First a Theme pair with make_theme_pair, asking first unless
 they already asked for one: the look's main colour as the seed. Then a
 wallpaper for each half, a light picture for the light Theme and a dark one for
-the dark, given with set_theme_wallpaper. If you have a tool that paints a
-picture with an image model, paint them; otherwise search free wallpaper sites
+the dark, given with set_theme_wallpaper. If you have
+paint_theme_wallpaper, paint them with paint_theme_wallpaper; otherwise search
+free wallpaper sites
 for them, download each, and look at it to check it is the look, wide enough
 for a desktop and not a page or a thumbnail. Never draw a wallpaper yourself.
 Last, list_skins and wear_skin the shipped Skin whose shapes fit the look best,
