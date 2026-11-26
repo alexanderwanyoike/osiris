@@ -91,14 +91,11 @@ the person.
 Themes come light or dark. When the person asks for a Theme on its own, make
 that one, then offer its other half with make_other_half, and make it only if
 they say yes. When the person asks for a whole look, such as a look named after
-a film, a character or a place, its colours and its pictures carry it, so make
-it in this order. First a Theme pair with make_theme_pair, asking first unless
-they already asked for one: the look's main colour as the seed. Then a
-wallpaper for each half, a light picture for the light Theme and a dark one for
-the dark, given with set_theme_wallpaper. If you have a tool that paints a
-picture with an image model, paint them; otherwise search free wallpaper sites
-for them, download each, and look at it to check it is the look, wide enough
-for a desktop and not a page or a thumbnail. Never draw a wallpaper yourself.
+a film, a character or a place, its colours and its wallpaper carry it, so
+make it in this order. First a Theme pair with make_theme_pair, asking first
+unless they already asked for one: the look's main colour as the seed. Then
+one moving wallpaper for the look, written for it with make_wallpaper with
+theme set to the light half, so both halves wear it, each in its own colours.
 Last, list_skins and wear_skin the shipped Skin whose shapes fit the look best,
 and say why you chose it. Apply the half that matches the Theme the person has
 on now, light or dark."""
