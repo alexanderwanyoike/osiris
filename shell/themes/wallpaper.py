@@ -89,7 +89,8 @@ LOGO_ALPHA = 0.30        # a watermark, not a sticker
 QUIET_RADIUS = 0.70      # of the image height; pattern fades inside this
 # The wave runs beneath the mark rather than around it, and the full radius
 # would put most of its length in the faded zone; this still clears the mark.
-QUIET_REACH = {"wave": 0.40, "camo": 0.05}
+# Camo is cloth, which has no quiet middle; fading it only blurs its edges.
+QUIET_REACH = {"wave": 0.40, "camo": 0.0}
 
 
 # --------------------------------------------------------------------------- #
@@ -216,6 +217,8 @@ def quiet_mask(shape: tuple[int, int],
     Smoothstep rather than a linear ramp - a linear falloff leaves a visible
     circular seam where the gradient changes.
     """
+    if not reach:
+        return np.ones(shape, dtype=np.float32)
     height, width = shape
     y, x = np.mgrid[0:height, 0:width].astype(np.float32)
     radius = np.hypot((x - width / 2) / height, (y - height / 2) / height)
@@ -264,14 +267,11 @@ def camo(shape, rng, phase: float = 0.0, drift=None):
     """Woodland camouflage: blobs of four tones, each layer over the last.
 
     Each tone is its own noise field cut at a threshold, so the edges are
-    crisp. The quiet mask would blur them into smudges, so the blobs thin out
-    towards the middle instead and the mask is kept to the mark (QUIET_REACH).
-    The accent gets patches of its own (docs/THEMING.md says why).
+    crisp, and the pattern runs behind the mark (QUIET_REACH). The accent gets
+    patches of its own (docs/THEMING.md says why).
     """
-    clear = 1 - quiet_mask(shape, 0.5)
-
     def blobs(cover: float) -> np.ndarray:
-        field = _square_noise(shape, rng, 3) - clear * 0.35
+        field = _square_noise(shape, rng, 3)
         level = field - np.quantile(field, 1 - cover)
         # Divided by the field's slope, the cut ramps over one pixel wherever
         # it falls, since a hard cut aliases into stairs.
