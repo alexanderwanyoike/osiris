@@ -403,12 +403,13 @@ def test_a_whole_look_is_a_theme_pair_a_found_wallpaper_each_and_a_shipped_skin(
     a shipped Skin fits it, and Osiris never draws a wallpaper itself."""
     from osiris.apps.tool_server import INSTRUCTIONS
 
-    text = " ".join(INSTRUCTIONS.split())
+    whole = " ".join(INSTRUCTIONS.split())
+    text = whole[whole.index("asks for a whole look") :]
     first = text.index("make_theme_pair")
     assert first < text.index("set_theme_wallpaper") < text.index("wear_skin")
     assert "search free wallpaper sites" in text
     assert "Never draw a wallpaper yourself" in text
-    assert "make_other_half" in text
+    assert "make_other_half" in whole
 
 
 def test_making_a_wallpaper_wears_it_and_logs_each_step_to_undo() -> None:
