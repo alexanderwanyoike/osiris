@@ -270,18 +270,19 @@ def camo(shape, rng, phase: float = 0.0, drift=None):
     """
     clear = 1 - quiet_mask(shape, 0.5)
 
-    def blobs(cut: float) -> np.ndarray:
-        level = _square_noise(shape, rng, 3) - clear * 0.35 - cut
+    def blobs(cover: float) -> np.ndarray:
+        field = _square_noise(shape, rng, 3) - clear * 0.35
+        level = field - np.quantile(field, 1 - cover)
         # Divided by the field's slope, the cut ramps over one pixel wherever
         # it falls, since a hard cut aliases into stairs.
         slope = np.hypot(*np.gradient(level)) + 1e-6
         return np.clip(level / slope + 0.5, 0, 1).astype(np.float32)
 
-    deep, middle, shade, accent = blobs(0.50), blobs(0.52), blobs(0.56), blobs(0.62)
-    # Below zero mixes away from the shape tone: one tone deeper than the base.
-    fill = deep * -0.6
-    for layer, tone in ((middle, 0.45), (shade, 1.0)):
-        fill += (tone - fill) * layer
+    # Each layer over the last, covering a half, a third and a quarter, leaves
+    # the base, the middle tone, the shape tone and the accent a quarter each.
+    middle, shade, accent = blobs(1 / 2), blobs(1 / 3), blobs(1 / 4)
+    fill = middle * 0.5
+    fill += (1.0 - fill) * shade
     return fill * (1 - accent), accent
 
 
