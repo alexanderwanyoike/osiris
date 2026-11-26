@@ -134,3 +134,19 @@ def test_camos_blobs_lie_wider_than_tall(wallpaper: ModuleType) -> None:
     across = (patch[:, 1:] != patch[:, :-1]).mean()
     down = (patch[1:, :] != patch[:-1, :]).mean()
     assert across < 0.7 * down
+
+
+def test_a_moving_wallpaper_named_contour_keeps_its_name(
+    wallpaper: ModuleType, tmp_path: Path
+) -> None:
+    """Review of #275: a wallpaper the person asked Osiris for, labelled
+    Contour, was drawn as Camo and its shader never ran."""
+    package = tmp_path / "contour"
+    package.mkdir()
+    (package / "wallpaper.json").write_text(
+        '{"name": "contour", "label": "Contour", "loop": 60}'
+    )
+    (package / "shader.glsl").write_text("")
+    (package / "still.py").write_text("")
+    wallpaper.PACKAGE_DIRS = (tmp_path,)
+    assert wallpaper.style_of({**THEME, "wallpaper_style": "contour"}) == "contour"
