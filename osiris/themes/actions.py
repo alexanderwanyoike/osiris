@@ -146,6 +146,20 @@ def wear_picture(
     return str(previous) if previous else None
 
 
+def wear_wallpaper_style(
+    store: ThemeStore, name: str, style: str
+) -> dict[str, str | None]:
+    """Give the Theme, and the other half of its pair, the wallpaper ``style``.
+    Returns each one's style before, by name."""
+    theme = find(store, name)
+    halves = [theme, *(t for t in store.themes() if t["name"] == theme.get("pair"))]
+    before: dict[str, str | None] = {}
+    for half in halves:
+        before[half["name"]] = half.get("wallpaper_style")
+        store.save({**half, "wallpaper_style": style})
+    return before
+
+
 def apply_theme(store: ThemeStore, name: str) -> str | None:
     """Apply a Theme. Returns the one it replaced."""
     find(store, name)
