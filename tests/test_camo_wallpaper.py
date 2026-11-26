@@ -54,15 +54,13 @@ THEME = {
 }
 
 
-def test_camo_keeps_its_edges_crisp_away_from_the_mark(
-    wallpaper: ModuleType,
-) -> None:
-    """The quiet mask fades every style towards the middle, which blurred
-    Camo's blobs into smudges when tried. A row of crisp camo is almost all
-    its five tones, with only the edges between them."""
+def test_camo_keeps_its_edges_crisp(wallpaper: ModuleType) -> None:
+    """Fading Camo towards the middle, as every other style is, blurred its
+    blobs into smudges when tried. A row of crisp camo is almost all its four
+    tones, with only the edges between them."""
     image = np.asarray(wallpaper.compose(THEME, (640, 360), "camo", logo=False))
     _, counts = np.unique(image[108].reshape(-1, 3), axis=0, return_counts=True)
-    assert np.sort(counts)[-5:].sum() >= 0.95 * 640
+    assert np.sort(counts)[-4:].sum() >= 0.95 * 640
 
 
 def test_a_theme_that_names_contour_gets_camo(wallpaper: ModuleType) -> None:
