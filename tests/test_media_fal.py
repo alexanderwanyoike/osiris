@@ -162,6 +162,7 @@ def test_a_description_the_content_checker_refuses_is_named_as_such() -> None:
         "loc": ["body", "prompt"],
         "type": "content_policy_violation",
         "msg": "flagged by a content checker",
+        "input": f"echoed {KEY}",
     }
     refusal = HttpError(422, json.dumps({"detail": [detail]}))
     http = FakeHttpClient(replies={("POST", ENDPOINT): refusal})
@@ -170,6 +171,9 @@ def test_a_description_the_content_checker_refuses_is_named_as_such() -> None:
         fal(http).make("A famous cartoon dog", DEFAULT_IMAGE_MODEL)
 
     assert "ask the person before trying again" in str(caught.value)
+    assert "echoed" not in str(caught.value)
+    assert KEY not in str(caught.value)
+    assert caught.value.__suppress_context__
 
 
 def test_no_answer_warns_the_picture_may_still_have_been_charged() -> None:
