@@ -319,3 +319,33 @@ def test_a_whole_look_paints_its_wallpapers_when_an_image_model_is_there() -> No
 
     text = " ".join(INSTRUCTIONS.split())
     assert "paint them with paint_theme_wallpaper" in text
+
+
+@pytest.mark.parametrize(
+    ("dark", "asked"), [(False, "A light picture"), (True, "A dark picture")]
+)
+def test_a_half_is_painted_light_or_dark_as_the_theme_is(
+    dark: bool, asked: str
+) -> None:
+    """Review of #272: the light half must not get a night scene."""
+    store = FakeThemeStore(themes=[{"name": "van", "label": "Van", "dark": dark}])
+    maker, files = Maker(), FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+    asyncio.run(
+        tool_server(store, maker, log, files).call_tool(
+            "paint_theme_wallpaper", {"name": "van", "picture": "The van"}
+        )
+    )
+    assert asked in maker.asked[0]
+
+
+def test_a_theme_that_does_not_exist_is_refused_before_anything_is_painted() -> None:
+    store, maker, files = nord(), Maker(), FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+    with pytest.raises(ToolError, match="no theme called van"):
+        asyncio.run(
+            tool_server(store, maker, log, files).call_tool(
+                "paint_theme_wallpaper", {"name": "van", "picture": "The van"}
+            )
+        )
+    assert maker.asked == []
