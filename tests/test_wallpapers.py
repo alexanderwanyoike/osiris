@@ -5,11 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from osiris.platform import FakeFileSystem
 from osiris.platform.process import FakeRunner, Result
 from osiris.themes.wallpapers import (
     CODE,
-    UserWallpapers,
     WallpaperError,
     check,
     discover,
@@ -142,29 +140,3 @@ def test_every_shipped_theme_has_a_moving_wallpaper(theme: str) -> None:
     found, problems = discover([SHIPPED / "wallpapers"])
     style = json.loads((SHIPPED / f"{theme}.json").read_text())["wallpaper_style"]
     assert style in found, problems
-
-
-def test_a_picture_for_a_theme_is_kept_among_the_persons_pictures() -> None:
-    """A downloaded file can move or vanish; the Theme keeps its own copy."""
-    files = FakeFileSystem()
-    files.write(Path("/tmp/van-day.jpg"), "jpeg")
-    own = UserWallpapers(
-        files, FakeRunner(), Path("/home/tester/.local/share/osiris/wallpapers"), ""
-    )
-    kept = own.keep_picture("van", Path("/tmp/van-day.jpg"))
-    assert kept == Path("/home/tester/.local/share/osiris/wallpapers/van-picture.jpg")
-    assert files.read(kept) == "jpeg"
-
-
-def test_a_second_picture_for_a_theme_keeps_the_first() -> None:
-    """Review of #271: undoing a new wallpaper needs the old one still there."""
-    files = FakeFileSystem()
-    files.write(Path("/tmp/a.jpg"), "first")
-    files.write(Path("/tmp/b.jpg"), "second")
-    own = UserWallpapers(
-        files, FakeRunner(), Path("/home/tester/.local/share/osiris/wallpapers"), ""
-    )
-    first = own.keep_picture("van", Path("/tmp/a.jpg"))
-    second = own.keep_picture("van", Path("/tmp/b.jpg"))
-    assert first != second
-    assert files.read(first) == "first"

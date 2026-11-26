@@ -87,7 +87,6 @@ def test_the_server_offers_the_theme_and_program_actions_and_nothing_else() -> N
         "create_theme",
         "make_theme_pair",
         "make_other_half",
-        "set_theme_wallpaper",
         "apply_theme",
         "list_programs",
         "create_program",
@@ -104,7 +103,6 @@ def test_listing_and_checking_are_looks_and_the_rest_undoable_changes() -> None:
         "create_theme": Tier.UNDOABLE,
         "make_theme_pair": Tier.UNDOABLE,
         "make_other_half": Tier.UNDOABLE,
-        "set_theme_wallpaper": Tier.UNDOABLE,
         "apply_theme": Tier.UNDOABLE,
         "list_programs": Tier.LOOK,
         "create_program": Tier.UNDOABLE,
@@ -191,50 +189,6 @@ def test_the_other_half_made_through_the_server_is_undone_by_deleting_it() -> No
     assert log.last_changes()[-1] == Change(
         "Made Harbour Day", {"action": "delete_theme", "name": "harbour-day"}
     )
-
-
-def test_a_theme_takes_a_wallpaper_osiris_found_and_logs_the_one_it_replaced() -> None:
-    log, store = new_log(), FakeThemeStore()
-    call(store, "create_theme", HARBOUR, log)
-    files = FakeFileSystem()
-    files.write(Path("/tmp/harbour.jpg"), "jpeg")
-    wallpapers = UserWallpapers(
-        files, FakeRunner(), Path("/home/tester/.local/share/osiris/wallpapers"), ""
-    )
-    call(
-        store,
-        "set_theme_wallpaper",
-        {"name": "harbour", "path": "/tmp/harbour.jpg"},
-        log,
-        wallpapers=wallpapers,
-    )
-    kept = "/home/tester/.local/share/osiris/wallpapers/harbour-picture.jpg"
-    assert store.themes()[0]["wallpaper"] == kept
-    assert log.last_changes()[-1] == Change(
-        "Gave Harbour a new wallpaper",
-        {"action": "set_theme_wallpaper", "name": "harbour", "wallpaper": "generated"},
-    )
-
-
-def test_a_theme_with_no_wallpaper_before_logs_an_empty_one_to_undo_to() -> None:
-    """Review of #271: an undo's values are text, never None."""
-    log = new_log()
-    store = FakeThemeStore(themes=[{"name": "plain", "label": "Plain", "dark": True}])
-    files = FakeFileSystem()
-    files.write(Path("/tmp/plain.png"), "png")
-    wallpapers = UserWallpapers(files, FakeRunner(), Path("/home/tester/w"), "")
-    call(
-        store,
-        "set_theme_wallpaper",
-        {"name": "plain", "path": "/tmp/plain.png"},
-        log,
-        wallpapers=wallpapers,
-    )
-    assert log.last_changes()[-1].undo == {
-        "action": "set_theme_wallpaper",
-        "name": "plain",
-        "wallpaper": "",
-    }
 
 
 def asked_by(session: str, subject: MCPServer) -> Context:
