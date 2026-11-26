@@ -39,6 +39,12 @@ name comes as a pair, each half with its own wallpaper; a **Theme** asked for on
 its own is made alone, and Osiris offers its other half.
 _Avoid_: variant, mode, light/dark theme
 
+**Whole look**:
+A look asked for by name, such as a film, a character or a place: a **Theme
+pair**, a wallpaper for each half found online or painted by an image model,
+and the shipped **Skin** whose shapes fit it. Osiris makes no **Skin** for one.
+_Avoid_: theme pack, full theme
+
 **Theme intent**:
 What a **Theme** is asked to be - a seed colour or a **Wallpaper**, a harmony,
 light or dark, and a mood - from which its colours are derived.
