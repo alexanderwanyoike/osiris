@@ -469,7 +469,9 @@ its own, because camouflage in near tones reads as a stain.
 **The centre stays quiet.** A radial mask flattens the pattern towards the
 middle, leaving a calm field for the Osiris mark and for desktop icons. This is
 why centre-seeking algorithms - phyllotaxis and friends - are not used: they
-put their most interesting structure exactly where the mark goes.
+put their most interesting structure exactly where the mark goes. Camo breaks
+this rule too, since cloth has no quiet middle and fading it only blurred its
+edges; the mark sits over the pattern.
 
 **Low contrast between fills.** Shapes are separated by a few percent of
 lightness, not by colour. The structure comes from accent hairlines on the
@@ -480,7 +482,7 @@ stable across regeneration and no two themes compose alike:
 
 | Style | Mathematics | Reads as |
 |---|---|---|
-| `camo` | four noise fields cut at thresholds, the accent's among them; the blobs thin towards the middle rather than fade | woodland camouflage |
+| `camo` | three noise fields, stretched sideways, each cut where it covers a set share and laid over the last, so the base, a middle tone, the shape tone and the accent cover a quarter each | woodland camouflage |
 | `arcs` | Truchet tiling of quarter circles | woven circuitry |
 | `strata` | horizontal bands warped by a slow noise field | sedimentary layers |
 | `aurora` | wide gaussian glows centred just beyond the frame, no line work | light from off screen |
