@@ -245,20 +245,22 @@ def _edges(index: np.ndarray) -> np.ndarray:
 # the quiet mask by the caller.
 
 def _square_noise(shape: tuple[int, int], rng: np.random.Generator,
-                  cells: int, octaves: int = 4) -> np.ndarray:
-    """Value noise whose features are as wide as they are tall, in [0, 1].
+                  cells: int, octaves: int = 3) -> np.ndarray:
+    """Value noise whose features lie about twice as wide as they are tall,
+    as woodland cloth's do, in [0, 1].
 
-    fbm's lattices stretch with the frame, which suits bands and layers but
-    pulls blobs into streaks.
+    fbm's lattices stretch with the frame, so the stretch would change with
+    the screen's shape. Three octaves at a gain under a half keep the edges
+    wavy without fraying; both were set by eye against the cloth.
     """
     height, width = shape
     total = np.zeros(shape, dtype=np.float32)
     amplitude = 1.0
     for octave in range(octaves):
         rows = cells * 2 ** octave
-        columns = max(2, round(rows * width / height))
+        columns = max(2, round(rows * width / height / 2.2))
         total += amplitude * _smooth(rng.random((rows + 1, columns + 1)), shape)
-        amplitude *= 0.5
+        amplitude *= 0.45
     total -= total.min()
     return total / max(total.max(), 1e-6)
 
@@ -271,7 +273,7 @@ def camo(shape, rng, phase: float = 0.0, drift=None):
     patches of its own (docs/THEMING.md says why).
     """
     def blobs(cover: float) -> np.ndarray:
-        field = _square_noise(shape, rng, 3)
+        field = _square_noise(shape, rng, 6)
         level = field - np.quantile(field, 1 - cover)
         # Divided by the field's slope, the cut ramps over one pixel wherever
         # it falls, since a hard cut aliases into stairs.
