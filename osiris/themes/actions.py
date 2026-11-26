@@ -124,7 +124,9 @@ def find(store: ThemeStore, name: str) -> Mapping[str, Any]:
 
 
 def _paired(theme: Mapping[str, Any], other: Mapping[str, Any]) -> bool:
-    return theme.get("pair") == other["name"] and other.get("pair") == theme["name"]
+    return bool(
+        theme.get("pair") == other["name"] and other.get("pair") == theme["name"]
+    )
 
 
 #: What a Theme's wallpaper is made of, kept to put back on undo.
