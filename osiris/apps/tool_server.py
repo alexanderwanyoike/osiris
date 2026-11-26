@@ -109,6 +109,7 @@ TIERS = {
     "create_theme": Tier.UNDOABLE,
     "make_theme_pair": Tier.UNDOABLE,
     "make_other_half": Tier.UNDOABLE,
+    "set_theme_wallpaper": Tier.UNDOABLE,
     "apply_theme": Tier.UNDOABLE,
     "list_programs": Tier.LOOK,
     "create_program": Tier.UNDOABLE,
@@ -217,6 +218,31 @@ def _made_theme(logged: _Logged, store: ThemeStore, name: str) -> None:
         summary=f"Made {actions.find(store, name)['label']}",
         undo={"action": "delete_theme", "name": name},
     )
+
+
+def _picture_wallpaper_tool(
+    tools: MCPServer, store: ThemeStore, wallpapers: UserWallpapers, logged: _Logged
+) -> None:
+    @tools.tool(annotations=ANNOTATIONS[TIERS["set_theme_wallpaper"]])
+    @explained
+    def set_theme_wallpaper(name: str, path: str) -> str:
+        """Give a theme a picture as its wallpaper: one an image model painted
+        for it, or one downloaded from a free wallpaper site. Never draw one
+        yourself.
+
+        name: the theme's name from list_themes.
+        path: the picture's file, PNG, JPEG or WebP; the theme keeps a copy.
+        """
+        previous = actions.wear_picture(
+            store, name, Path(path), wallpapers.keep_picture
+        )
+        theme = actions.find(store, name)
+        logged.write(
+            "changed",
+            summary=f"Gave {theme['label']} a new wallpaper",
+            undo={"action": "set_theme_wallpaper", "name": name, "wallpaper": previous},
+        )
+        return f"{theme['label']} now wears {theme['wallpaper']}."
 
 
 def _pair_tools(tools: MCPServer, store: ThemeStore, logged: _Logged) -> None:
@@ -452,6 +478,7 @@ def server(
         return f"Made the {label} wallpaper and applied it as {theme_label}."
 
     _pair_tools(tools, store, logged)
+    _picture_wallpaper_tool(tools, store, wallpapers, logged)
     _propose_tool(tools, logged, skill_taken)
     if skins is not None:
         _skin_tools(tools, skins, logged)
