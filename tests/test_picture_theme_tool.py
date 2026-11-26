@@ -312,3 +312,10 @@ def test_a_painted_picture_becomes_the_wallpaper_of_one_half_of_a_pair() -> None
             {"action": "set_theme_wallpaper", "name": "van", "wallpaper": "generated"},
         )
     ]
+
+
+def test_a_whole_look_paints_its_wallpapers_when_an_image_model_is_there() -> None:
+    from osiris.apps.tool_server import INSTRUCTIONS
+
+    text = " ".join(INSTRUCTIONS.split())
+    assert "paint them with paint_theme_wallpaper" in text
