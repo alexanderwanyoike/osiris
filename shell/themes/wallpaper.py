@@ -661,8 +661,11 @@ def style_for(name: str) -> str:
 
 def current(style: str) -> str:
     """The style drawn for a name. Contour was replaced by Camo, and themes
-    made before then still name it."""
-    return "camo" if style == "contour" else style
+    made before then still name it, unless the name is a moving wallpaper's."""
+    if style != "contour":
+        return style
+    found, _ = packages.discover(PACKAGE_DIRS)
+    return style if style in found else "camo"
 
 
 def style_of(theme: dict) -> str:
