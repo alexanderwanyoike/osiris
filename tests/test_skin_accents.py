@@ -1,5 +1,5 @@
-"""Every shipped Skin marks what is selected in the Theme's accent and keeps its
-sidebars plain, so changing Skin never changes where the accent shows."""
+"""Jasper and Graphite mark a selected file in the Theme's accent and keep Files'
+sidebar plain, as the other shipped Skins do."""
 
 from __future__ import annotations
 
