@@ -272,15 +272,18 @@ def camo(shape, rng, phase: float = 0.0, drift=None):
     clear = 1 - quiet_mask(shape, 0.5)
 
     def blobs(cut: float) -> np.ndarray:
-        return _square_noise(shape, rng, 3) - clear * 0.35 > cut
+        level = _square_noise(shape, rng, 3) - clear * 0.35 - cut
+        # Divided by the field's slope, the cut ramps over one pixel wherever
+        # it falls: a hard cut aliases into stairs.
+        slope = np.hypot(*np.gradient(level)) + 1e-6
+        return np.clip(level / slope + 0.5, 0, 1).astype(np.float32)
 
     deep, middle, shade, accent = blobs(0.50), blobs(0.52), blobs(0.56), blobs(0.62)
     # Below zero mixes away from the shape tone: one tone deeper than the base.
-    fill = np.where(deep, -0.6, 0.0).astype(np.float32)
-    fill[middle] = 0.45
-    fill[shade] = 1.0
-    fill[accent] = 0.0
-    return fill, accent.astype(np.float32)
+    fill = deep * -0.6
+    for layer, tone in ((middle, 0.45), (shade, 1.0)):
+        fill += (tone - fill) * layer
+    return fill * (1 - accent), accent
 
 
 def arcs(shape, rng, grid: int = 9, phase: float = 0.0,
