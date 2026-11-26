@@ -109,7 +109,7 @@ picture for the light Theme and a dark one for the dark. If it cannot paint,
 tell the person why and that the Themes keep their usual wallpaper until they
 choose a picture. If it paints only one half, say which and why the other
 failed, and leave the person to keep or undo it. The wallpaper is theirs, so
-never write one for the look. Leave the person's Skin as it is. Apply the
+never write or draw one yourself. Leave the person's Skin as it is. Apply the
 half that matches the Theme the person has on now, light or dark."""
 
 #: What the model may touch beyond its tools, by the person's choice
