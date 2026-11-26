@@ -101,7 +101,9 @@ COLORS_ANCHOR = "//\n// Basic colors\n"
 # pictures and paths; ours is the Theme's accent, so it must read as a colour.
 THEME_TWEAK = ("$theme: 'default';", "$theme: 'osiris';")
 # Upstream's styled sidebar fills Files' whole sidebar with the accent, which
-# no other Skin does; its own `--tweaks normal` turns that off the same way.
+# no other Skin does; its own `--tweaks normal` turns that off the same way. It
+# also makes the GTK 4 sidebars (Osiris's, Appearance's) plain panes rather
+# than floating cards.
 SIDEBAR_TWEAK = ("$sidebar: 'styled';", "$sidebar: 'normal';")
 # Upstream marks a selected row in a list with a grey wash, which outranks the
 # accent tint it gives Files, so Files' list view showed grey where its icon
