@@ -383,8 +383,7 @@ class Creator(Adw.Dialog):
             "accent": derived.get("accent") or colors.get("accent", "#7aa2f7"),
             "secondary": secondary or colors.get("accent", "#bb9af7"),
             "has_secondary": secondary is not None,
-            "style": source.get("wallpaper_style") or wallpaper.style_for(
-                source["name"]),
+            "style": wallpaper.style_of(source),
             "custom": True,
         })
         intent = source.get("intent")
