@@ -214,17 +214,28 @@ def _wear(store: ThemeStore, name: str, kept: Callable[[], Path]) -> str | None:
     return str(previous) if previous else None
 
 
+def _paired(theme: Mapping[str, Any], other: Mapping[str, Any]) -> bool:
+    return bool(
+        theme.get("pair") == other["name"] and other.get("pair") == theme["name"]
+    )
+
+
+#: What a Theme's wallpaper is made of, kept to put back on undo.
+_WALLPAPER_FIELDS = ("wallpaper_style", "wallpaper")
+
+
 def wear_wallpaper_style(
     store: ThemeStore, name: str, style: str
-) -> dict[str, str | None]:
+) -> dict[str, dict[str, str]]:
     """Give the Theme, and the other half of its pair, the wallpaper ``style``.
-    Returns each one's style before, by name."""
+    Returns each one's wallpaper before, by name."""
     theme = find(store, name)
-    halves = [theme, *(t for t in store.themes() if t["name"] == theme.get("pair"))]
-    before: dict[str, str | None] = {}
+    halves = [theme, *(t for t in store.themes() if _paired(theme, t))]
+    before: dict[str, dict[str, str]] = {}
     for half in halves:
-        before[half["name"]] = half.get("wallpaper_style")
-        store.save({**half, "wallpaper_style": style})
+        before[half["name"]] = {key: half.get(key) or "" for key in _WALLPAPER_FIELDS}
+        # A picture wins over a style, so it gives way to the generated one.
+        store.save({**half, "wallpaper_style": style, "wallpaper": "generated"})
     return before
 
 

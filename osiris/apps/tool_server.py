@@ -263,11 +263,7 @@ def _wear_on_pair(
         logged.write(
             "changed",
             summary=f"Gave {actions.find(store, name)['label']} the {label} wallpaper",
-            undo={
-                "action": "set_wallpaper_style",
-                "name": name,
-                "style": previous or "",
-            },
+            undo={"action": "set_wallpaper", "name": name, **previous},
         )
     return f"Gave {' and '.join(worn)} the {label} wallpaper."
 
@@ -301,6 +297,8 @@ def _wallpaper_tool(
         theme: a theme's name from list_themes to give the wallpaper to, with
         the other half of its pair, instead of a copy; nothing is applied.
         """
+        if theme:
+            actions.find(store, theme)
         name = wallpapers.write(label, shader)
         logged.write(
             "changed",
