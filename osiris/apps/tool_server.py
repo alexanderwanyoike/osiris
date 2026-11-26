@@ -255,7 +255,11 @@ def _picture_wallpaper_tool(
         logged.write(
             "changed",
             summary=f"Gave {theme['label']} a new wallpaper",
-            undo={"action": "set_theme_wallpaper", "name": name, "wallpaper": previous},
+            undo={
+                "action": "set_theme_wallpaper",
+                "name": name,
+                "wallpaper": previous or "",
+            },
         )
         return f"{theme['label']} now wears {theme['wallpaper']}."
 
