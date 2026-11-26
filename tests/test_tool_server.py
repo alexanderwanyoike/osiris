@@ -417,19 +417,18 @@ def test_the_model_checks_then_has_a_program_reviewed_before_calling_it_done() -
     assert "Never call a Program done on a partial or a fail" in text
 
 
-def test_a_whole_look_is_a_theme_pair_a_found_wallpaper_each_and_a_shipped_skin() -> (
-    None
-):
-    """#266, as the person settled it: Themes and their pictures carry a look,
-    a shipped Skin fits it, and Osiris never draws a wallpaper itself."""
+def test_a_whole_look_is_a_theme_pair_a_moving_wallpaper_and_a_shipped_skin() -> None:
+    """#266, as the person settled it: a Theme pair carries a look, with one
+    moving wallpaper written for it, and a shipped Skin fits it. Pictures from
+    wallpaper sites were dropped after testing."""
     from osiris.apps.tool_server import INSTRUCTIONS
 
     whole = " ".join(INSTRUCTIONS.split())
     text = whole[whole.index("asks for a whole look") :]
     first = text.index("make_theme_pair")
-    assert first < text.index("set_theme_wallpaper") < text.index("wear_skin")
-    assert "search free wallpaper sites" in text
-    assert "Never draw a wallpaper yourself" in text
+    assert first < text.index("make_wallpaper") < text.index("wear_skin")
+    assert "with theme set to the light half" in text
+    assert "wallpaper site" not in whole
     assert "make_other_half" in whole
 
 
