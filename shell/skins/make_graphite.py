@@ -106,6 +106,13 @@ THEME_TWEAK = ("$theme: 'default';", "$theme: 'osiris';")
 # Upstream's styled sidebar fills Files' whole sidebar with the accent, which
 # no other Skin does; its own `--tweaks normal` turns that off the same way.
 SIDEBAR_TWEAK = ("$sidebar: 'styled';", "$sidebar: 'normal';")
+# Upstream marks a selected row in a list with a grey wash, which outranks its
+# accent tint in Files; the other Skins fill it with the accent, so Graphite
+# does too, with its own accent fill.
+SELECTED = (
+    "    @extend %selected_items;\n    background-image: image($overlay-checked);",
+    "    @extend %selected_items_primary;\n    background-image: none;",
+)
 
 # Graphite ships one folder of pictures per accent instead of recolouring them;
 # the blue one's accent and the off-state ink become gaps.
@@ -156,6 +163,10 @@ def make(upstream: Path, pack: Path) -> None:
     (sass / "_colors.scss").write_text(colors + "\n@import 'colors-osiris';\n")
     (sass / "_color-palette-osiris.scss").write_text(PALETTE)
     (sass / "_colors-osiris.scss").write_text(COLORS)
+    common_sheet = sass / "gtk" / "_common-3.0.scss"
+    common_sheet.write_text(
+        replace_once(common_sheet.read_text(), *SELECTED, "_common-3.0.scss")
+    )
     for entry, source in ENTRIES.items():
         (pack / entry).parent.mkdir(exist_ok=True)
         for variant in ("Light", "Dark"):
