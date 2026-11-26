@@ -95,7 +95,7 @@ $destructive: $gap-danger;
 $success: $gap-success;
 $link: $gap-accent;
 
-// Graphite's styled sidebar keeps its shape; the Theme's surface colours it.
+// Graphite's sidebars take the Theme's surface colour.
 $sidebg: $gap-surface;
 """
 
@@ -103,6 +103,9 @@ COLORS_ANCHOR = "//\n// Basic colors\n"
 # Upstream treats a theme colour of 'default' as grey and swaps in grey-only
 # pictures and paths; ours is the Theme's accent, so it must read as a colour.
 THEME_TWEAK = ("$theme: 'default';", "$theme: 'osiris';")
+# Upstream's styled sidebar fills Files' whole sidebar with the accent, which
+# no other Skin does; its own `--tweaks normal` turns that off the same way.
+SIDEBAR_TWEAK = ("$sidebar: 'styled';", "$sidebar: 'normal';")
 
 # Graphite ships one folder of pictures per accent instead of recolouring them;
 # the blue one's accent and the off-state ink become gaps.
@@ -140,8 +143,9 @@ def make(upstream: Path, pack: Path) -> None:
     sass = pack / "sass"
     shutil.copytree(src / "sass", sass, ignore=shutil.ignore_patterns("gnome-shell"))
     tweaks = (src / "sass" / "_tweaks.scss").read_text()
+    tweaks = replace_once(tweaks, *THEME_TWEAK, "_tweaks.scss")
     (sass / "_tweaks-temp.scss").write_text(
-        replace_once(tweaks, *THEME_TWEAK, "_tweaks.scss")
+        replace_once(tweaks, *SIDEBAR_TWEAK, "_tweaks.scss")
     )
     colors = replace_once(
         (sass / "_colors.scss").read_text(),
