@@ -91,13 +91,12 @@ the person.
 Themes come light or dark. When the person asks for a Theme on its own, make
 that one, then offer its other half with make_other_half, and make it only if
 they say yes. When the person asks for a whole look, such as a look named after
-a film, a character or a place, its colours and its wallpaper carry it, so
-make it in this order. First a Theme pair with make_theme_pair, asking first
-unless they already asked for one: the look's main colour as the seed. Then
-one moving wallpaper for the look, written for it with make_wallpaper with
-theme set to the light half, so both halves wear it, each in its own colours.
-Leave the person's Skin as it is. Apply the half that matches the Theme the
-person has on now, light or dark."""
+a film, a character or a place, its colours carry it: make a Theme pair with
+make_theme_pair, asking first unless they already asked for one, with the
+look's main colour as the seed. Its wallpaper is the person's to choose, so
+never write one for the look; tell them the Themes keep their usual one until
+they pick a picture. Leave the person's Skin as it is. Apply the half that
+matches the Theme the person has on now, light or dark."""
 
 #: What the model may touch beyond its tools, by the person's choice
 #: (osiris.harness.trust).
