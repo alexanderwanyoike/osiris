@@ -90,7 +90,7 @@ LOGO_ALPHA = 0.30        # a watermark, not a sticker
 QUIET_RADIUS = 0.70      # of the image height; pattern fades inside this
 # The wave runs beneath the mark rather than around it, and the full radius
 # would put most of its length in the faded zone; this still clears the mark.
-QUIET_REACH = {"wave": 0.40}
+QUIET_REACH = {"wave": 0.40, "camo": 0.05}
 
 
 # --------------------------------------------------------------------------- #
