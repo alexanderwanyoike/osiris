@@ -200,8 +200,20 @@ def wear_picture(
         raise ThemeActionError(
             f"{picture.name} is not a picture; give a PNG, JPEG or WebP file"
         )
+    return _wear(store, name, lambda: keep(name, picture))
+
+
+def wear_painting(
+    store: ThemeStore, name: str, data: bytes, keep: Callable[[str, bytes], Path]
+) -> str | None:
+    """Make a painted picture the Theme's wallpaper, kept by ``keep`` under the
+    Theme's name. Returns the wallpaper it replaced."""
+    return _wear(store, name, lambda: keep(name, data))
+
+
+def _wear(store: ThemeStore, name: str, kept: Callable[[], Path]) -> str | None:
     theme = find(store, name)
-    store.save({**theme, "wallpaper": str(keep(name, picture))})
+    store.save({**theme, "wallpaper": str(kept())})
     previous = theme.get("wallpaper")
     return str(previous) if previous else None
 
