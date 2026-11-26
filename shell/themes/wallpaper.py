@@ -253,6 +253,48 @@ def contour(shape, rng, bands: int = 11, phase: float = 0.0,
     return index / (bands - 1), _edges(index)
 
 
+def _square_noise(shape: tuple[int, int], rng: np.random.Generator,
+                  cells: int, octaves: int = 4) -> np.ndarray:
+    """Value noise whose features are as wide as they are tall, in [0, 1].
+
+    fbm's lattices stretch with the frame, which suits bands and layers but
+    pulls blobs into streaks.
+    """
+    height, width = shape
+    total = np.zeros(shape, dtype=np.float32)
+    amplitude = 1.0
+    for octave in range(octaves):
+        rows = cells * 2 ** octave
+        columns = max(2, round(rows * width / height))
+        total += amplitude * _smooth(rng.random((rows + 1, columns + 1)), shape)
+        amplitude *= 0.5
+    total -= total.min()
+    return total / max(total.max(), 1e-6)
+
+
+def camo(shape, rng, phase: float = 0.0, drift=None):
+    """Woodland camouflage: blobs of four tones, each layer over the last.
+
+    Each tone is its own noise field cut at a threshold, so the edges are
+    crisp. The quiet mask would blur them into smudges, so the blobs thin out
+    towards the middle instead and the mask is kept to the mark (QUIET_REACH).
+    The accent gets patches of its own, the one style where it is more than
+    line work, because a camouflage of near tones reads as a stain.
+    """
+    clear = 1 - quiet_mask(shape, 0.5)
+
+    def blobs(cut: float) -> np.ndarray:
+        return _square_noise(shape, rng, 3) - clear * 0.35 > cut
+
+    deep, middle, shade, accent = blobs(0.50), blobs(0.52), blobs(0.56), blobs(0.62)
+    # Below zero mixes away from the shape tone: one tone deeper than the base.
+    fill = np.where(deep, -0.6, 0.0).astype(np.float32)
+    fill[middle] = 0.45
+    fill[shade] = 1.0
+    fill[accent] = 0.0
+    return fill, accent.astype(np.float32)
+
+
 def arcs(shape, rng, grid: int = 9, phase: float = 0.0,
          drift=None):
     """Truchet tiling: quarter arcs joining the midpoints of each cell's edges.
