@@ -309,9 +309,28 @@ def test_a_painted_picture_becomes_the_wallpaper_of_one_half_of_a_pair() -> None
     assert log.last_changes() == [
         Change(
             f"Painted a wallpaper for Van with {DEFAULT_IMAGE_MODEL}",
-            {"action": "set_theme_wallpaper", "name": "van", "wallpaper": "generated"},
+            {"action": "set_wallpaper", "name": "van", "wallpaper": "generated"},
         )
     ]
+
+
+def test_a_painting_for_a_theme_with_no_wallpaper_logs_an_empty_one() -> None:
+    """Review of #272: the merge dropped the tool whose undo the painting
+    named, and an undo's values are text, never None."""
+    store = FakeThemeStore(themes=[{"name": "van", "label": "Van", "dark": False}])
+    maker, files = Maker(), FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+    sunny = {"name": "van", "picture": "The van on a sunny road"}
+
+    asyncio.run(
+        tool_server(store, maker, log, files).call_tool("paint_theme_wallpaper", sunny)
+    )
+
+    assert log.last_changes()[-1].undo == {
+        "action": "set_wallpaper",
+        "name": "van",
+        "wallpaper": "",
+    }
 
 
 def test_a_whole_look_paints_its_wallpapers_when_an_image_model_is_there() -> None:
