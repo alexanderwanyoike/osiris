@@ -94,9 +94,6 @@ $error: $gap-danger;
 $destructive: $gap-danger;
 $success: $gap-success;
 $link: $gap-accent;
-
-// Graphite's sidebars take the Theme's surface colour.
-$sidebg: $gap-surface;
 """
 
 COLORS_ANCHOR = "//\n// Basic colors\n"
