@@ -1,5 +1,5 @@
-"""Jasper and Graphite mark a selected file in the Theme's accent and keep Files'
-sidebar plain, as the other shipped Skins do."""
+"""Jasper and Graphite mark a selected file in the Theme's accent, and Graphite
+keeps Files' sidebar plain, as the other shipped Skins do."""
 
 from __future__ import annotations
 
