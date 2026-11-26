@@ -1,6 +1,5 @@
-"""The Skin tools the Harness's model is given, so it makes Skins the way
-Osiris does: from a base Skin, as style sheets and settings, checked and worn
-by Osiris, every change undoable, and never with a program of its own."""
+"""The Skin tools the Harness's model is given: it puts Skins on, checked and
+worn by Osiris and undoable, and makes none of its own."""
 
 from __future__ import annotations
 
@@ -16,7 +15,6 @@ from osiris.harness.log import LOG_FILE, HarnessLog
 from osiris.harness.tiers import Tier
 from osiris.platform import FakeFileSystem, FakeRunner
 from osiris.programs.programs import Programs
-from osiris.skins.imports import UnusableDownload
 from osiris.skins.store import FakeSkinStore
 from osiris.themes.store import FakeThemeStore
 from osiris.themes.wallpapers import UserWallpapers
@@ -24,12 +22,7 @@ from osiris.themes.wallpapers import UserWallpapers
 HOME = Path("/home/tester")
 SKIN_TOOLS = {
     "list_skins": Tier.LOOK,
-    "create_skin": Tier.UNDOABLE,
-    "check_skin": Tier.LOOK,
     "wear_skin": Tier.UNDOABLE,
-    "import_gtk_theme": Tier.UNDOABLE,
-    "install_icon_set": Tier.UNDOABLE,
-    "install_fonts": Tier.UNDOABLE,
 }
 
 
@@ -59,18 +52,6 @@ def test_the_skin_tools_are_offered_with_their_reach() -> None:
         assert TIERS[name] is tier
 
 
-def test_a_new_skin_starts_from_a_base_and_is_undone_by_deleting_it() -> None:
-    skins, log = FakeSkinStore(), new_log()
-    answer = text(
-        call(skins, "create_skin", {"label": "Old Forest", "base": "colloid"}, log)
-    )
-    assert "old-forest" in answer and "AGENTS.md" in answer
-    assert log.last_changes()[-1].undo == {
-        "action": "delete_skin",
-        "name": "old-forest",
-    }
-
-
 def test_a_skin_with_problems_is_not_worn_and_the_model_is_told_why() -> None:
     skins = FakeSkinStore(problems={"colloid": ["follow.py is not part of a Skin"]})
     with pytest.raises(ToolError, match=r"follow\.py is not part of a Skin"):
@@ -83,69 +64,6 @@ def test_wearing_is_undone_by_wearing_the_skin_it_replaced() -> None:
     call(skins, "wear_skin", {"name": "colloid"}, log)
     assert skins.worn() == "colloid"
     assert log.last_changes()[-1].undo == {"action": "wear_skin", "name": "osiris"}
-
-
-def test_checking_names_every_problem_or_none() -> None:
-    skins = FakeSkinStore(
-        problems={"colloid": ["a.py is not part of a Skin", "sassc: bad"]}
-    )
-    assert text(call(skins, "check_skin", {"name": "colloid"}, new_log())) == (
-        "a.py is not part of a Skin\nsassc: bad"
-    )
-    assert text(
-        call(FakeSkinStore(), "check_skin", {"name": "colloid"}, new_log())
-    ) == ("No problems found.")
-
-
-def test_checking_names_fixed_colours_without_refusing_the_skin() -> None:
-    skins = FakeSkinStore(colours={"colloid": ["gtk-3.0/gtk-dark.scss: #2f7d4a"]})
-    assert text(call(skins, "check_skin", {"name": "colloid"}, new_log())) == (
-        "No problems found.\n"
-        "Fixed colours, the same under every Theme. Replace with a gap only "
-        "those you wrote in this conversation that the person did not ask for, "
-        "and ask the person before changing any other:\n"
-        "gtk-3.0/gtk-dark.scss: #2f7d4a"
-    )
-    call(skins, "wear_skin", {"name": "colloid"}, new_log())
-    assert skins.worn() == "colloid"
-
-
-def test_downloads_come_in_through_osiris_and_can_be_undone() -> None:
-    skins, log = FakeSkinStore(), new_log()
-    call(skins, "import_gtk_theme", {"path": "/tmp/Yaru-Green.tar.xz"}, log)
-    call(skins, "install_icon_set", {"path": "/tmp/buuf.tar.xz"}, log)
-    call(skins, "install_fonts", {"paths": ["/tmp/FiraCode.zip"]}, log)
-    assert [change.undo["action"] for change in log.last_changes()[-3:]] == [
-        "delete_skin",
-        "remove_icon_sets",
-        "remove_fonts",
-    ]
-
-
-class EmptyDownloads(FakeSkinStore):
-    def import_gtk_theme(self, path: Path) -> str:
-        raise UnusableDownload(f"{path.name}: no GTK theme in it")
-
-
-def test_an_unusable_download_reaches_the_model_with_its_reason() -> None:
-    with pytest.raises(ToolError, match=r"notes\.zip: no GTK theme in it"):
-        call(
-            EmptyDownloads(), "import_gtk_theme", {"path": "/tmp/notes.zip"}, new_log()
-        )
-
-
-def test_the_model_is_told_a_skin_is_data_and_never_a_program() -> None:
-    told = instructions(auto_mode=True)
-    assert "create_skin" in told and "wear_skin" in told
-    assert "never write scripts" in told.lower()
-    assert "/usr/share/osiris" in told
-
-
-def test_the_model_may_write_a_fixed_colour_the_person_asks_for() -> None:
-    """A Skin follows the Theme, but the person may want a colour that stays."""
-    told = " ".join(instructions(auto_mode=True).split())
-    assert "always come from the Theme" not in told
-    assert "a fixed colour only when the person asks for one" in told
 
 
 def test_osiris_wears_skins_but_builds_none() -> None:

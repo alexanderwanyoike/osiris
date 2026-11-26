@@ -11,7 +11,6 @@ from __future__ import annotations
 import functools
 from collections.abc import Callable
 from contextvars import ContextVar
-from pathlib import Path
 from typing import Annotated, Any
 
 from mcp.server.mcpserver import Context, MCPServer
@@ -72,21 +71,10 @@ fix what it found and have it reviewed again, or tell the person what is left.
 The person tries and installs a Program themselves, from the card
 under your answer; a failed build comes back to you to fix.
 
-You can make and change Skins too: the shape of the desktop (windows, panel,
-dock, launcher) and the icons, cursor and font it wears, whose colours come
-from the Theme. Write a fixed colour only when the person asks for one, and
-tell them it will stay the same whatever Theme they wear. Start a Skin with
-create_skin from the existing Skin closest to what the person asks for
-(list_skins shows them), then change its style sheets in the folder it gives
-you, following the AGENTS.md there. A downloaded GTK theme becomes a Skin with
-import_gtk_theme, after which you replace its written-in colours with the
-Theme's gaps; downloaded icon sets, cursor sets and fonts go in with
-install_icon_set and install_fonts and are named in the Skin's skin.json.
-check_skin says what would stop a Skin from being worn; wear_skin puts it on. A
-Skin is data only: style sheets, pictures and settings. Never write scripts,
-programs or services for a Skin, never change settings outside its folder, and
-never write to /usr/share/osiris; if something cannot be done that way, tell
-the person."""
+Skins are the shape of the desktop (windows, panel, dock, launcher) and the
+icons, cursor and font it wears, whose colours come from the Theme. Put one on
+with list_skins and wear_skin. You do not make or change Skins: a person who
+wants their own can work on one in its folder with an agent of their own."""
 
 #: What the model may touch beyond its tools, by the person's choice
 #: (osiris.harness.trust).
@@ -114,12 +102,7 @@ TIERS = {
     "check_program": Tier.LOOK,
     "make_wallpaper": Tier.UNDOABLE,
     "list_skins": Tier.LOOK,
-    "create_skin": Tier.UNDOABLE,
-    "check_skin": Tier.LOOK,
     "wear_skin": Tier.UNDOABLE,
-    "import_gtk_theme": Tier.UNDOABLE,
-    "install_icon_set": Tier.UNDOABLE,
-    "install_fonts": Tier.UNDOABLE,
     # It changes nothing: the person reads it and decides.
     "propose_skill": Tier.LOOK,
 }
@@ -452,43 +435,6 @@ def _skin_tools(tools: MCPServer, skins: SkinStore, logged: _Logged) -> None:
         """The Skins on this desktop, which are the person's own, and which is worn."""
         return skins.skins()
 
-    @tools.tool(annotations=ANNOTATIONS[TIERS["create_skin"]])
-    @explained
-    def create_skin(label: str, base: str) -> str:
-        """Start a Skin of the person's from an existing one.
-
-        label: what the person will see it called, such as "Old Forest".
-        base: the name, from list_skins, of the Skin it starts as.
-        """
-        folder = skins.create(label, base)
-        logged.write(
-            "changed",
-            summary=f"Made the {label} Skin",
-            undo={"action": "delete_skin", "name": folder.name},
-        )
-        return (
-            f"Made {label}, named {folder.name}, at {folder}. Change it there by "
-            "the AGENTS.md in that folder, then check_skin and wear_skin."
-        )
-
-    @tools.tool(annotations=ANNOTATIONS[TIERS["check_skin"]])
-    @explained
-    def check_skin(name: str) -> str:
-        """What would stop a Skin from being worn: anything in it that is not
-        data, and Sass that does not compile, with the compiler's errors. Also
-        names fixed colours, which do not follow the Theme."""
-        problems = skins.check(name)
-        found = "\n".join(problems) if problems else "No problems found."
-        colours = skins.fixed_colours(name)
-        if colours:
-            found += (
-                "\nFixed colours, the same under every Theme. Replace with a gap "
-                "only those you wrote in this conversation that the person did not "
-                "ask for, and ask the person before changing any other:\n"
-                + "\n".join(colours)
-            )
-        return found
-
     @tools.tool(annotations=ANNOTATIONS[TIERS["wear_skin"]])
     @explained
     def wear_skin(name: str) -> str:
@@ -504,42 +450,3 @@ def _skin_tools(tools: MCPServer, skins: SkinStore, logged: _Logged) -> None:
             undo={"action": "wear_skin", "name": previous},
         )
         return f"Wearing {name} in place of {previous}."
-
-    @tools.tool(annotations=ANNOTATIONS[TIERS["import_gtk_theme"]])
-    @explained
-    def import_gtk_theme(path: str) -> str:
-        """Make a downloaded GTK theme (a zip or tar archive, by its absolute
-        path) a Skin of the person's, worn in its own colours until you convert
-        them to the Theme's gaps."""
-        name = skins.import_gtk_theme(Path(path))
-        logged.write(
-            "changed",
-            summary=f"Imported {Path(path).name} as a Skin",
-            undo={"action": "delete_skin", "name": name},
-        )
-        return f"Imported as the Skin {name}."
-
-    @tools.tool(annotations=ANNOTATIONS[TIERS["install_icon_set"]])
-    @explained
-    def install_icon_set(path: str) -> str:
-        """Install the icon or cursor sets in a downloaded archive, by its
-        absolute path; name them in a Skin's skin.json to wear them."""
-        names = skins.install_icon_sets(Path(path))
-        logged.write(
-            "changed",
-            summary=f"Installed {', '.join(names)}",
-            undo={"action": "remove_icon_sets", "names": "\n".join(names)},
-        )
-        return "Installed " + ", ".join(names) + "."
-
-    @tools.tool(annotations=ANNOTATIONS[TIERS["install_fonts"]])
-    @explained
-    def install_fonts(paths: list[str]) -> str:
-        """Install fonts, as font files or archives of them, by absolute path."""
-        names = skins.install_fonts([Path(path) for path in paths])
-        logged.write(
-            "changed",
-            summary=f"Installed {', '.join(names)}",
-            undo={"action": "remove_fonts", "names": "\n".join(names)},
-        )
-        return "Installed " + ", ".join(names) + "."
