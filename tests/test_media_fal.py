@@ -155,6 +155,23 @@ def test_a_failure_is_given_a_plain_reason_without_the_key(
     assert caught.value.__suppress_context__
 
 
+def test_a_description_the_content_checker_refuses_is_named_as_such() -> None:
+    """Seen on the VM: FLUX 3 refused a wallpaper naming cartoon characters,
+    and a bare status told Osiris nothing it could explain to the person."""
+    detail = {
+        "loc": ["body", "prompt"],
+        "type": "content_policy_violation",
+        "msg": "flagged by a content checker",
+    }
+    refusal = HttpError(422, json.dumps({"detail": [detail]}))
+    http = FakeHttpClient(replies={("POST", ENDPOINT): refusal})
+
+    with pytest.raises(MediaError, match="content checker refused") as caught:
+        fal(http).make("A famous cartoon dog", DEFAULT_IMAGE_MODEL)
+
+    assert "ask the person before trying again" in str(caught.value)
+
+
 def test_no_answer_warns_the_picture_may_still_have_been_charged() -> None:
     http = FakeHttpClient(replies={("POST", ENDPOINT): HttpError(0, "timed out")})
 
