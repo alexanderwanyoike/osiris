@@ -152,5 +152,5 @@ def test_a_picture_for_a_theme_is_kept_among_the_persons_pictures() -> None:
         files, FakeRunner(), Path("/home/tester/.local/share/osiris/wallpapers"), ""
     )
     kept = own.keep_picture("van", Path("/tmp/van-day.jpg"))
-    assert kept == Path("/home/tester/.local/share/osiris/pictures/van.jpg")
+    assert kept == Path("/home/tester/.local/share/osiris/wallpapers/van-picture.jpg")
     assert files.read(kept) == "jpeg"
