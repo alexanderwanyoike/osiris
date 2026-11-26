@@ -157,6 +157,9 @@ TIERS = {
     "propose_skill": Tier.LOOK,
 }
 
+#: Added to a half's description, so a pair's pictures suit their Themes.
+LIGHT_PICTURE = "A light picture, bright enough to sit behind a light desktop"
+DARK_PICTURE = "A dark picture, deep enough to sit behind a dark desktop"
 #: Added to each description, so the picture works behind a desktop.
 PICTURE_STYLE = "wide desktop wallpaper, no text"
 
@@ -603,7 +606,8 @@ def _picture_tool(
         """
         theme = actions.find(store, name)
         used = image_model or pictures.default_image_model()
-        data = pictures.make(f"{picture}. {PICTURE_STYLE}", used)
+        tone = DARK_PICTURE if theme["dark"] else LIGHT_PICTURE
+        data = pictures.make(f"{picture}. {tone}. {PICTURE_STYLE}", used)
         previous = actions.wear_painting(store, name, data, pictures.keep)
         logged.write(
             "changed",
