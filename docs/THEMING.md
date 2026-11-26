@@ -463,8 +463,8 @@ Three rules make the output reliable rather than lucky:
 
 **Two or three tones.** Background and secondary carry the shapes; the accent
 appears only as line work. A wallpaper that spends the whole palette stops
-reading as a background. Camo is the one exception: it gives the accent patches
-of its own, because camouflage in near tones reads as a stain.
+reading as a background. Camo is the one exception, giving the accent patches of
+its own, because camouflage in near tones reads as a stain.
 
 **The centre stays quiet.** A radial mask flattens the pattern towards the
 middle, leaving a calm field for the Osiris mark and for desktop icons. This is
@@ -495,9 +495,9 @@ stable across regeneration and no two themes compose alike:
 style; 0, the default, keeps the name alone as the seed, so wallpapers rendered
 before variations existed did not change. A theme that names no style falls
 back to one of three, chosen by hashing its name; hashing over all ten would
-move every such theme to a new wallpaper whenever a style is added. Camo took
-the slot of Contour, which the person did not want, and a theme that still
-names `contour` is drawn in Camo.
+move every such theme to a new wallpaper whenever a style is added. Camo has
+Contour's old slot, so only the themes that fell on Contour changed, and a
+theme that still names `contour` is drawn in Camo.
 
 ### Drift
 

@@ -76,8 +76,7 @@ STYLES = ("camo", "arcs", "strata", "aurora", "dots", "cells", "bubbles",
           "ridges", "facets", "wave")
 # What a theme naming no style falls back to, chosen by hashing its name. Fixed
 # at the original three: hashing over STYLES would move every such theme to a
-# different wallpaper whenever a style is added. Camo took Contour's slot, so
-# only the themes that fell on Contour changed.
+# different wallpaper whenever a style is added.
 FALLBACK_STYLES = ("camo", "arcs", "strata")
 
 # Moving wallpapers as packages (osiris/themes/wallpapers.py): the user's own
@@ -274,7 +273,7 @@ def camo(shape, rng, phase: float = 0.0, drift=None):
     def blobs(cut: float) -> np.ndarray:
         level = _square_noise(shape, rng, 3) - clear * 0.35 - cut
         # Divided by the field's slope, the cut ramps over one pixel wherever
-        # it falls: a hard cut aliases into stairs.
+        # it falls, since a hard cut aliases into stairs.
         slope = np.hypot(*np.gradient(level)) + 1e-6
         return np.clip(level / slope + 0.5, 0, 1).astype(np.float32)
 
@@ -658,7 +657,7 @@ def style_for(name: str) -> str:
 
 
 def current(style: str) -> str:
-    """The style drawn for a name: Contour was replaced by Camo, and themes
+    """The style drawn for a name. Contour was replaced by Camo, and themes
     made before then still name it."""
     return "camo" if style == "contour" else style
 

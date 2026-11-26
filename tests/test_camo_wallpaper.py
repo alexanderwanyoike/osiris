@@ -1,5 +1,5 @@
-"""Camo, the still wallpaper style that replaced Contour: blobs of the Theme's
-tones with the accent laid down in patches of its own."""
+"""Camo, the still wallpaper style that replaced Contour, draws blobs of the
+Theme's tones with the accent laid down in patches of its own."""
 
 from __future__ import annotations
 
