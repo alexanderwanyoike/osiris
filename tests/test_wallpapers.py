@@ -154,3 +154,17 @@ def test_a_picture_for_a_theme_is_kept_among_the_persons_pictures() -> None:
     kept = own.keep_picture("van", Path("/tmp/van-day.jpg"))
     assert kept == Path("/home/tester/.local/share/osiris/wallpapers/van-picture.jpg")
     assert files.read(kept) == "jpeg"
+
+
+def test_a_second_picture_for_a_theme_keeps_the_first() -> None:
+    """Review of #271: undoing a new wallpaper needs the old one still there."""
+    files = FakeFileSystem()
+    files.write(Path("/tmp/a.jpg"), "first")
+    files.write(Path("/tmp/b.jpg"), "second")
+    own = UserWallpapers(
+        files, FakeRunner(), Path("/home/tester/.local/share/osiris/wallpapers"), ""
+    )
+    first = own.keep_picture("van", Path("/tmp/a.jpg"))
+    second = own.keep_picture("van", Path("/tmp/b.jpg"))
+    assert first != second
+    assert files.read(first) == "first"
