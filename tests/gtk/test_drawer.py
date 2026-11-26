@@ -132,6 +132,21 @@ class FakeApp(Adw.Application):
     def footer_line(self) -> str:
         return ""
 
+    def fal_connected(self) -> bool:
+        return False
+
+    def save_fal_key(self, _key: str) -> None:
+        pass
+
+    def remove_fal_key(self) -> None:
+        pass
+
+    def picture_limit(self) -> int | None:
+        return None
+
+    def set_picture_limit(self, _images: int | None) -> None:
+        pass
+
 
 def drawer():
     import main

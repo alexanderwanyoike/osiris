@@ -11,6 +11,7 @@ from __future__ import annotations
 import functools
 from collections.abc import Callable
 from contextvars import ContextVar
+from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -21,6 +22,8 @@ from pydantic import Field
 
 from osiris.harness.connectors import OWN_TOOLS
 from osiris.harness.log import HarnessLog
+from osiris.harness.media.error import MediaError
+from osiris.harness.media.pictures import Pictures
 from osiris.harness.proposals import ProposalError, plain
 from osiris.harness.tiers import Tier
 from osiris.programs.programs import FOLLOW_THEME, ProgramError, Programs
@@ -40,7 +43,14 @@ the person knows you by that name. You can list its themes, make a new
 one and apply it. You never choose a theme's colours: describe what the person
 asked for as a seed colour, a harmony, a mood and light or dark, and Osiris
 derives a harmonious, legible palette from that. Applying a theme repaints the
-whole desktop at once, and the person can ask you to change it back.
+whole desktop at once, and the person can ask you to change it back. When they
+describe a picture for their desktop, make_picture_theme generates it and makes
+the theme from it. Each picture costs the person money, so make one unless they
+ask for more; if it says FAL is not connected, tell them where to add a key.
+It uses their default image model. When they name another, get its exact id
+from find_image_models and pass it as image_model; never pick a different model
+yourself, because prices differ. If they want to keep using a model,
+set_default_image_model saves it.
 
 You can also build Programs: anything the person wants to keep and use. Start
 one with create_program, which makes its folder as a git repository and tells
@@ -131,6 +141,9 @@ TIERS = {
     "commit_program": Tier.UNDOABLE,
     "check_program": Tier.LOOK,
     "make_wallpaper": Tier.UNDOABLE,
+    "make_picture_theme": Tier.UNDOABLE,
+    "find_image_models": Tier.LOOK,
+    "set_default_image_model": Tier.UNDOABLE,
     "list_skins": Tier.LOOK,
     "create_skin": Tier.UNDOABLE,
     "check_skin": Tier.LOOK,
@@ -141,6 +154,9 @@ TIERS = {
     # It changes nothing: the person reads it and decides.
     "propose_skill": Tier.LOOK,
 }
+
+#: Added to each description, so the picture works behind a desktop.
+PICTURE_STYLE = "wide desktop wallpaper, no text"
 
 #: A seed as the model must give it; words like "dusk blue" are refused.
 Seed = Annotated[str, Field(pattern="^#[0-9a-fA-F]{6}$")]
@@ -159,6 +175,7 @@ EXPLAINED = (
     UnusableDownload,
     WallpaperError,
     ProposalError,
+    MediaError,
 )
 
 
@@ -300,6 +317,7 @@ def server(
     wallpapers: UserWallpapers,
     *,
     skins: SkinStore | None = None,
+    pictures: Pictures | None = None,
     auto_mode: bool = False,
     skill_taken: Callable[[str], bool] = lambda _name: False,
 ) -> MCPServer:
@@ -497,6 +515,7 @@ def server(
     _propose_tool(tools, logged, skill_taken)
     if skins is not None:
         _skin_tools(tools, skins, logged)
+    _picture_tool(tools, store, pictures, logged)
     return tools
 
 
@@ -530,6 +549,75 @@ def _propose_tool(
             f"Proposed the {name} skill. The person will read it and keep it or "
             "not; do not write it yourself."
         )
+
+
+def _picture_tool(
+    tools: MCPServer, store: ThemeStore, pictures: Pictures | None, logged: _Logged
+) -> None:
+    if pictures is None:
+        return
+
+    @tools.tool(annotations=ANNOTATIONS[TIERS["find_image_models"]])
+    @explained
+    def find_image_models(search: str = "") -> dict[str, object]:
+        """FAL's image models and the person's default one. The search matches
+        model names better than styles; leave it empty to see a selection.
+        """
+        return {
+            "default": pictures.default_image_model(),
+            "models": [asdict(model) for model in pictures.find(search)],
+        }
+
+    @tools.tool(annotations=ANNOTATIONS[TIERS["set_default_image_model"]])
+    @explained
+    def set_default_image_model(model: str = "") -> str:
+        """Make a model the person's default for pictures, when they ask to keep
+        using it.
+
+        model: its exact id from find_image_models; empty goes back to the
+            default Osiris ships.
+        """
+        previous = pictures.saved_choice()
+        pictures.choose(model)
+        model = model or pictures.default_image_model()
+        logged.write(
+            "changed",
+            summary=f"Made {model} the default image model",
+            undo={"action": "set_default_image_model", "model": previous},
+        )
+        return f"{model} now makes the person's pictures unless they name another."
+
+    @tools.tool(annotations=ANNOTATIONS[TIERS["make_picture_theme"]])
+    @explained
+    def make_picture_theme(label: str, picture: str, image_model: str = "") -> str:
+        """Generate a picture, make a theme from it and apply it to the desktop.
+        The picture is the wallpaper and Osiris takes the colours from it. Each
+        call can cost the person money, so make one unless they ask for more.
+
+        label: what the person will see it called, such as "Misty Forest".
+        picture: what the picture shows, in a sentence or two.
+        image_model: a model's exact id from find_image_models, only when the
+            person asked for that model; leave it out to use their default.
+        """
+        actions.unused_name(store, label)
+        used = image_model or pictures.default_image_model()
+        data = pictures.make(f"{picture}. {PICTURE_STYLE}", used)
+        name = actions.create_picture_theme(
+            store, label=label, picture=data, keep=pictures.keep
+        )
+        logged.write(
+            "changed",
+            summary=f"Made {label} with {used}",
+            undo={"action": "delete_theme", "name": name},
+        )
+        previous = actions.apply_theme(store, name)
+        logged.write(
+            "changed",
+            summary=f"Applied {label}",
+            undo={"action": "apply_theme", "name": previous} if previous else None,
+        )
+        kept = actions.find(store, name)["wallpaper"]
+        return f"Made {label} with {used} from a new picture at {kept} and applied it."
 
 
 def _skin_tools(tools: MCPServer, skins: SkinStore, logged: _Logged) -> None:
