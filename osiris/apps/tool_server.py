@@ -253,26 +253,12 @@ def _made_theme(logged: _Logged, store: ThemeStore, name: str) -> None:
     )
 
 
-def _wear_on_pair(
-    store: ThemeStore, logged: _Logged, theme: str, wallpaper: str, label: str
-) -> str:
-    before = actions.wear_wallpaper_style(store, theme, wallpaper)
-    worn = [actions.find(store, name)["label"] for name in before]
-    for name, previous in before.items():
-        logged.write(
-            "changed",
-            summary=f"Gave {actions.find(store, name)['label']} the {label} wallpaper",
-            undo={"action": "set_wallpaper", "name": name, **previous},
-        )
-    return f"Gave {' and '.join(worn)} the {label} wallpaper."
-
-
 def _wallpaper_tool(
     tools: MCPServer, store: ThemeStore, wallpapers: UserWallpapers, logged: _Logged
 ) -> None:
     @tools.tool(annotations=ANNOTATIONS[TIERS["make_wallpaper"]])
     @explained
-    def make_wallpaper(label: str, shader: str, theme: str = "") -> str:
+    def make_wallpaper(label: str, shader: str) -> str:
         """Make a moving wallpaper and put it on the desktop, worn by a copy of
         the theme in use, so the theme itself is untouched.
 
@@ -293,19 +279,13 @@ def _wallpaper_tool(
         give loops constant bounds. It runs every frame: keep it cheap, and the
         motion slow and calm. A shader that does not compile comes back with
         the errors by its own line numbers; fix it and call again.
-        theme: a theme's name from list_themes to give the wallpaper to, with
-        the other half of its pair, instead of a copy; nothing is applied.
         """
-        if theme:
-            actions.find(store, theme)
         name = wallpapers.write(label, shader)
         logged.write(
             "changed",
             summary=f"Made the {label} wallpaper",
             undo={"action": "delete_wallpaper", "name": name},
         )
-        if theme:
-            return _wear_on_pair(store, logged, theme, name, label)
         theme, previous = actions.use_wallpaper(store, name, label)
         theme_label = actions.find(store, theme)["label"]
         logged.write(

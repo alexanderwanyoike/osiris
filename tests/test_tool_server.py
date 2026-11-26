@@ -408,68 +408,6 @@ def test_making_a_wallpaper_wears_it_and_logs_each_step_to_undo() -> None:
     ]
 
 
-def test_a_wallpaper_made_for_a_theme_is_worn_by_its_pair_with_no_copy() -> None:
-    log = new_log()
-    store = FakeThemeStore(
-        themes=[
-            {"name": "van", "label": "Van", "dark": False, "pair": "van-night"},
-            {"name": "van-night", "label": "Van Night", "dark": True, "pair": "van"},
-        ],
-        current="nord",
-    )
-    call(
-        store,
-        "make_wallpaper",
-        {"label": "Rain", "shader": RAIN, "theme": "van"},
-        log,
-    )
-    assert store.current() == "nord"
-    assert {t["name"]: t.get("wallpaper_style") for t in store.themes()} == {
-        "van": "rain",
-        "van-night": "rain",
-    }
-    assert log.last_changes() == [
-        Change(
-            "Made the Rain wallpaper", {"action": "delete_wallpaper", "name": "rain"}
-        ),
-        Change(
-            "Gave Van the Rain wallpaper",
-            {
-                "action": "set_wallpaper",
-                "name": "van",
-                "wallpaper_style": "",
-                "wallpaper": "",
-            },
-        ),
-        Change(
-            "Gave Van Night the Rain wallpaper",
-            {
-                "action": "set_wallpaper",
-                "name": "van-night",
-                "wallpaper_style": "",
-                "wallpaper": "",
-            },
-        ),
-    ]
-
-
-def test_a_wallpaper_for_an_unknown_theme_is_refused_before_it_is_written() -> None:
-    """Review of #271: a label given for a name left a wallpaper behind, and
-    its name taken, for a change that did nothing."""
-    log, files = new_log(), FakeFileSystem()
-    store = FakeThemeStore(themes=[{"name": "van", "label": "Van", "dark": False}])
-    with pytest.raises(ToolError, match="no theme called Van"):
-        call(
-            store,
-            "make_wallpaper",
-            {"label": "Rain", "shader": RAIN, "theme": "Van"},
-            log,
-            wallpapers=new_wallpapers(files),
-        )
-    assert not files.exists(WALLPAPERS / "rain")
-    assert log.last_changes() == []
-
-
 def test_a_shader_that_does_not_compile_reaches_the_model_to_fix() -> None:
     runner = FakeRunner(
         results={

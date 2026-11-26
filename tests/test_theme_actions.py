@@ -24,7 +24,6 @@ from osiris.themes.actions import (
     unused_name,
     use_wallpaper,
     wear_painting,
-    wear_wallpaper_style,
 )
 from osiris.themes.derive import build
 from osiris.themes.intent import Harmony, Mood, ThemeIntent, seeds
@@ -210,59 +209,6 @@ def test_a_copy_that_would_replace_a_theme_is_refused() -> None:
     )
     with pytest.raises(ThemeActionError, match="already a theme called Nord Rain"):
         use_wallpaper(store, "rain", "Rain")
-
-
-def test_a_wallpaper_style_is_worn_by_a_theme_and_its_other_half() -> None:
-    """A whole look's wallpaper without an image model: one moving wallpaper
-    for the pair, coloured by each half."""
-    store = FakeThemeStore(
-        themes=[
-            {**stored("van", "Van", False), "pair": "van-night"},
-            {
-                **stored("van-night", "Van Night"),
-                "pair": "van",
-                "wallpaper_style": "dots",
-            },
-        ]
-    )
-    before = wear_wallpaper_style(store, "van-night", "haunted-van")
-    assert before == {
-        "van-night": {"wallpaper_style": "dots", "wallpaper": ""},
-        "van": {"wallpaper_style": "", "wallpaper": ""},
-    }
-    assert {t["name"]: t["wallpaper_style"] for t in store.themes()} == {
-        "van": "haunted-van",
-        "van-night": "haunted-van",
-    }
-
-
-def test_a_half_wearing_a_picture_gives_it_up_for_the_style() -> None:
-    """Review of #271: a picture wins over a style, so a half that kept one
-    would never show the wallpaper it was given."""
-    painted = "/home/tester/Pictures/Osiris/van.png"
-    store = FakeThemeStore(
-        themes=[
-            {**stored("van", "Van", False), "pair": "van-night", "wallpaper": painted},
-            {**stored("van-night", "Van Night"), "pair": "van"},
-        ]
-    )
-    before = wear_wallpaper_style(store, "van", "haunted-van")
-    assert before["van"] == {"wallpaper_style": "", "wallpaper": painted}
-    assert find(store, "van")["wallpaper"] == "generated"
-
-
-def test_a_theme_naming_a_partner_that_does_not_name_it_back_wears_alone() -> None:
-    """Review of #271: an undone other half leaves a stale name, which a later,
-    unrelated Theme may take."""
-    store = FakeThemeStore(
-        themes=[
-            {**stored("van", "Van", False), "pair": "van-night"},
-            stored("van-night", "Van Night"),
-        ]
-    )
-    before = wear_wallpaper_style(store, "van", "haunted-van")
-    assert list(before) == ["van"]
-    assert "wallpaper_style" not in find(store, "van-night")
 
 
 def test_a_theme_pair_is_a_light_and_a_dark_theme_made_from_one_idea() -> None:
