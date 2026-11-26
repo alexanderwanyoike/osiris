@@ -76,18 +76,16 @@ person what it said.
   Skin, never write to `/usr/share/osiris` or anywhere outside the person's
   home, and change no desktop settings directly: wearing the Skin sets them.
 - Icon sets, cursor sets and fonts are named in `skin.json`'s `look`. To add
-  one the person downloaded, use the install_icon_set and install_fonts tools
-  (or ask the person to use Add in the Skin editor), which put it under
-  `~/.local/share/icons` or `~/.local/share/fonts`. Their colours are their
-  own; only the style sheets and pictures here follow the Theme.
+  one the person downloaded, ask the person to use Add in the Skin editor,
+  which puts it under `~/.local/share/icons` or `~/.local/share/fonts`. Their
+  colours are their own; only the style sheets and pictures here follow the
+  Theme.
 - Another style for this Skin, or a new Skin, is a Skin of the person's in
-  `~/.local/share/osiris/skins`, made with the create_skin tool.
+  `~/.local/share/osiris/skins`, made with New Skin in Appearance.
 - Never write a colour from the Theme literally: use the gaps, so the Skin
-  works under every Theme, light and dark. check_skin names the fixed colours
-  this Skin was not made with.
-- After each change, check it with the check_skin tool and wear it with
-  wear_skin, and fix any problem check_skin reports. Without those tools, the
-  engine does the same:
+  works under every Theme, light and dark.
+- After each change, wear it with the engine, which checks it first and says
+  what is wrong:
 
       python3 /usr/share/osiris/themes/engine.py --skin SKIN_NAME
 
