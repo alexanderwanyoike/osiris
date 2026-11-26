@@ -378,7 +378,8 @@ def test_a_whole_look_is_a_theme_pair_whose_wallpaper_osiris_never_writes() -> N
     from osiris.apps.tool_server import INSTRUCTIONS
 
     whole = " ".join(INSTRUCTIONS.split())
-    text = whole[whole.index("asks for a whole look") :]
+    start = whole.index("asks for a whole look")
+    text = whole[start : whole.index("light or dark.", start)]
     assert "make_theme_pair" in text
     assert "make_wallpaper" not in text
     assert "never write one for the look" in text
