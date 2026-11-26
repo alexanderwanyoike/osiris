@@ -100,3 +100,18 @@ def test_a_theme_that_names_contour_boots_on_camo(wallpaper: ModuleType) -> None
         np.asarray(wallpaper.boot_background(contour, (320, 180))),
         np.asarray(wallpaper.boot_background(camo, (320, 180))),
     )
+
+
+def test_camos_four_tones_each_cover_about_a_quarter(wallpaper: ModuleType) -> None:
+    """The person, against woodland cloth: the first Camo left most of the frame
+    bare, and its deepest tone went black on dark Themes."""
+    fill, accent = wallpaper.camo((360, 640), np.random.default_rng(1))
+    patch = accent > 0.5
+    shares = [
+        (~patch & (fill < 0.25)).mean(),
+        (~patch & (fill >= 0.25) & (fill < 0.75)).mean(),
+        (~patch & (fill >= 0.75)).mean(),
+        patch.mean(),
+    ]
+    assert fill.min() >= 0
+    assert all(0.18 < share < 0.32 for share in shares), shares
