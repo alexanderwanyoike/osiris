@@ -73,3 +73,11 @@ def test_a_theme_that_names_contour_gets_camo(wallpaper: ModuleType) -> None:
         np.asarray(wallpaper.compose(contour, (320, 180), logo=False)),
         np.asarray(wallpaper.compose(camo, (320, 180), logo=False)),
     )
+
+
+def test_camo_blends_its_edges_over_about_a_pixel(wallpaper: ModuleType) -> None:
+    """Hard thresholds alias into stairs, plainest in the Theme creator's
+    small previews; found by hand."""
+    _, accent = wallpaper.camo((180, 320), np.random.default_rng(1))
+    edges = wallpaper._edges(accent > 0.5).sum()
+    assert ((accent > 0.05) & (accent < 0.95)).sum() > 0.5 * edges
