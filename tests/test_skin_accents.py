@@ -38,6 +38,7 @@ def test_jasper_fills_a_selected_file_with_the_accent(
 def test_graphite_keeps_the_files_sidebar_plain(tmp_path: Path) -> None:
     """Upstream's styled sidebar fills all of Files' sidebar with the accent."""
     css = compiled("graphite", THEME, tmp_path)
-    assert declared(css, ".nemo-window paned > .sidebar").get("background-color") != (
-        THEME["colors"]["accent"]
+    assert (
+        declared(css, ".nemo-window paned > .sidebar").get("background-color")
+        != (THEME["colors"]["accent"])
     )
