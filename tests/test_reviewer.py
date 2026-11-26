@@ -144,3 +144,8 @@ def test_the_skin_reviewer_and_its_skill_are_given_to_the_engine() -> None:
     write_reviewers(files, HOME)
     for name in ("agents/skin-reviewer.md", "skills/skin-review/SKILL.md"):
         assert files.read(ENGINE / name) == Resources().read(f"engine/{name}")
+
+
+def test_a_basic_skin_is_judged_on_the_parts_its_brief_names() -> None:
+    """A whole look makes a basic Skin; it passes on what its brief promised."""
+    assert "When the brief says the Skin is basic" in Resources().read(SKIN_SKILL)

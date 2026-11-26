@@ -435,6 +435,17 @@ def test_osiris_offers_a_theme_pair_with_a_skin_of_colour_and_asks_first() -> No
     assert "offer its other half with make_other_half" in text
 
 
+def test_a_whole_look_is_a_theme_pair_a_wallpaper_each_and_a_basic_skin() -> None:
+    """The person's own plan, after the redraw-everything Skins looked poor:
+    let the Themes and their pictures carry the look."""
+    from osiris.apps.tool_server import INSTRUCTIONS
+
+    text = " ".join(INSTRUCTIONS.split())
+    first = text.index("make_theme_pair")
+    assert first < text.index("set_theme_wallpaper") < text.index("a basic Skin")
+    assert "search free wallpaper sites" in text
+
+
 def test_making_a_wallpaper_wears_it_and_logs_each_step_to_undo() -> None:
     log = new_log()
     store = FakeThemeStore(
