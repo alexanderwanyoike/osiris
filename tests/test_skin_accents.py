@@ -42,6 +42,15 @@ def test_jasper_fills_a_selected_file_with_the_accent(
 
 
 @pytest.mark.skipif(shutil.which("sassc") is None, reason="needs sassc")
+def test_graphite_fills_a_selected_file_with_the_accent(tmp_path: Path) -> None:
+    """Upstream marks a selected row in a list with a grey wash, and that rule
+    outranks its accent tint for Files; found by hand on the VM."""
+    css = compiled("graphite", THEME, tmp_path)
+    selector = "treeview.view:selected:not(.progressbar):not(.trough)"
+    assert colour(css, selector) == ACCENT
+
+
+@pytest.mark.skipif(shutil.which("sassc") is None, reason="needs sassc")
 def test_graphite_keeps_the_files_sidebar_plain(tmp_path: Path) -> None:
     """Upstream's styled sidebar fills all of Files' sidebar with the accent."""
     css = compiled("graphite", THEME, tmp_path)
