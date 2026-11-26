@@ -16,9 +16,9 @@ Three rules drive everything here:
 the shapes; the accent appears only as line work, except in Camo. A wallpaper
 that uses the whole palette stops reading as a background.
 
-**The centre stays quiet.** Every style is attenuated by a radial mask so the
-pattern flattens towards the middle, leaving a calm field for the Osiris mark
-and for desktop icons. Without this the mark competes with the texture and both
+**The centre stays quiet.** Every style but Camo is attenuated by a radial mask
+so the pattern flattens towards the middle, leaving a calm field for the Osiris
+mark and for desktop icons. Without this the mark competes with the texture and both
 lose - which is why phyllotaxis and similar centre-seeking algorithms are not
 used here.
 
@@ -660,8 +660,9 @@ def style_for(name: str) -> str:
 
 
 def drawn_as(style: str) -> str:
-    """The style drawn for a name. Contour was replaced by Camo, and themes
-    made before then still name it, unless the name is a moving wallpaper's."""
+    """The style drawn for a name. Themes made before Camo replaced Contour
+    still name Contour, so it is drawn as Camo unless a moving wallpaper has
+    that name."""
     if style != "contour":
         return style
     found, _ = packages.discover(PACKAGE_DIRS)
