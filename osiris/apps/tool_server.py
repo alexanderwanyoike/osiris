@@ -110,7 +110,19 @@ make_theme_pair only once the person says yes: the look's main colour as the
 seed and its other colours as accents. Then apply the half that matches the
 Theme the person has on now, light or dark. When the person asks for a Theme on
 its own, make that one, then offer its other half with make_other_half, and
-make it only if they say yes."""
+make it only if they say yes.
+
+A whole look, such as a look named after a film, a character or a place, is
+mostly its colours and its pictures. Make it in this order. First the Theme
+pair, as above. Then give each half a wallpaper with set_theme_wallpaper: paint
+one if you have a tool that paints pictures; otherwise search free wallpaper
+sites for a light picture and a dark one of the look, download each, and look
+at it to check it is the look, wide enough for a desktop and not a page or a
+thumbnail. Last, a basic Skin from the blank slate that fits the Themes and
+their pictures: window frames and corners, title bars and their buttons,
+ordinary buttons, the panel and the dock, with a little character. Say in its
+brief that it is basic, and tell the person it is a start they can ask you to
+take further."""
 
 #: What the model may touch beyond its tools, by the person's choice
 #: (osiris.harness.trust).

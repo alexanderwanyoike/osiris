@@ -37,6 +37,8 @@ Go through each part the Skin's `AGENTS.md` lists under "The whole look",
 libadwaita apps, the panel, the dock and the launcher among them. For each, say
 whether the Skin redraws it or leaves it as the Skin it started from drew it.
 Recolouring alone is not a redraw, because the Theme already does that.
+When the brief says the Skin is basic, judge only the parts the brief names,
+and pass a basic Skin that does them well.
 
 ### Craft: does it look designed?
 
