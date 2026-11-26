@@ -244,7 +244,7 @@ def _edges(index: np.ndarray) -> np.ndarray:
 # shape, line is a 0-1 field of accent line work. Both are pre-attenuated by
 # the quiet mask by the caller.
 
-def _square_noise(shape: tuple[int, int], rng: np.random.Generator,
+def _blob_noise(shape: tuple[int, int], rng: np.random.Generator,
                   cells: int, octaves: int = 3) -> np.ndarray:
     """Value noise whose features lie about twice as wide as they are tall,
     as woodland cloth's do, in [0, 1].
@@ -273,7 +273,7 @@ def camo(shape, rng, phase: float = 0.0, drift=None):
     patches of its own (docs/THEMING.md says why).
     """
     def blobs(cover: float) -> np.ndarray:
-        field = _square_noise(shape, rng, 6)
+        field = _blob_noise(shape, rng, 6)
         level = field - np.quantile(field, 1 - cover)
         # Divided by the field's slope, the cut ramps over one pixel wherever
         # it falls, since a hard cut aliases into stairs.
