@@ -107,6 +107,8 @@ def instructions(*, auto_mode: bool) -> str:
 TIERS = {
     "list_themes": Tier.LOOK,
     "create_theme": Tier.UNDOABLE,
+    "make_theme_pair": Tier.UNDOABLE,
+    "make_other_half": Tier.UNDOABLE,
     "apply_theme": Tier.UNDOABLE,
     "list_programs": Tier.LOOK,
     "create_program": Tier.UNDOABLE,
@@ -206,6 +208,48 @@ class _Logged:
     def write(self, kind: str, **fields: object) -> None:
         session = _asking.get()
         self._log.write(kind, **({"session": session} if session else {}), **fields)
+
+
+def _made_theme(logged: _Logged, store: ThemeStore, name: str) -> None:
+    """A Theme made, logged as a change undone by deleting it."""
+    logged.write(
+        "changed",
+        summary=f"Made {actions.find(store, name)['label']}",
+        undo={"action": "delete_theme", "name": name},
+    )
+
+
+def _pair_tools(tools: MCPServer, store: ThemeStore, logged: _Logged) -> None:
+    @tools.tool(annotations=ANNOTATIONS[TIERS["make_theme_pair"]])
+    @explained
+    def make_theme_pair(label: str, seed: Seed, harmony: Harmony, mood: Mood) -> str:
+        """Make a light theme and a dark one from one idea, shown and chosen as
+        one in Appearance. Ask the person before making a pair.
+
+        label: the light theme's name; the dark one is called "<label> Night".
+        seed, harmony and mood: as for create_theme.
+
+        Returns both names, light first, which apply_theme takes.
+        """
+        light, dark = actions.make_theme_pair(
+            store, label=label, seed=seed, harmony=harmony.value, mood=mood.value
+        )
+        _made_theme(logged, store, light)
+        _made_theme(logged, store, dark)
+        return f"Made {light} and {dark}."
+
+    @tools.tool(annotations=ANNOTATIONS[TIERS["make_other_half"]])
+    @explained
+    def make_other_half(name: str) -> str:
+        """Make the dark theme to go with a light one, or the light to go with
+        a dark one, and pair them. Offer this after making a theme alone, and
+        ask before making it.
+
+        name: the theme's name from list_themes.
+        """
+        other = actions.make_other_half(store, name)
+        _made_theme(logged, store, other)
+        return f"Made {other}, paired with {name}."
 
 
 def server(
@@ -407,6 +451,7 @@ def server(
         )
         return f"Made the {label} wallpaper and applied it as {theme_label}."
 
+    _pair_tools(tools, store, logged)
     _propose_tool(tools, logged, skill_taken)
     if skins is not None:
         _skin_tools(tools, skins, logged)
