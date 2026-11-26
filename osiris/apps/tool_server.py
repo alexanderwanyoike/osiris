@@ -274,6 +274,8 @@ def _wallpaper_tool(
         theme: a theme's name from list_themes to give the wallpaper to, with
         the other half of its pair, instead of a copy; nothing is applied.
         """
+        if theme:
+            actions.find(store, theme)
         name = wallpapers.write(label, shader)
         logged.write(
             "changed",
