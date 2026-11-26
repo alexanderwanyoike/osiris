@@ -53,4 +53,6 @@ def test_camos_label_fits_the_pattern_row(creator: ModuleType) -> None:
         if isinstance(label, Gtk.Label) and label.get_text().startswith("Camo")
     ]
     assert settle(lambda: bool(shown) and shown[0].get_width() > 0)
-    assert not shown[0].get_layout().is_ellipsized()
+    ellipsized = shown[0].get_layout().is_ellipsized()
+    window.destroy()
+    assert not ellipsized
