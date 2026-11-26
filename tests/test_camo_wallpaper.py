@@ -115,3 +115,13 @@ def test_camos_four_tones_each_cover_about_a_quarter(wallpaper: ModuleType) -> N
     ]
     assert fill.min() >= 0
     assert all(0.18 < share < 0.32 for share in shares), shares
+
+
+def test_camo_runs_behind_the_mark(wallpaper: ModuleType) -> None:
+    """The person, against woodland cloth: the first Camo thinned out and faded
+    towards the middle, which cloth never does."""
+    _, accent = wallpaper.camo((360, 640), np.random.default_rng(1))
+    assert (accent[126:234, 266:374] > 0.5).mean() > 0.1
+    image = np.asarray(wallpaper.compose(THEME, (640, 360), "camo", logo=False))
+    _, counts = np.unique(image[180, 248:392], axis=0, return_counts=True)
+    assert np.sort(counts)[-4:].sum() >= 0.9 * 144
