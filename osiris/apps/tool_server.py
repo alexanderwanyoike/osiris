@@ -86,7 +86,22 @@ check_skin says what would stop a Skin from being worn; wear_skin puts it on. A
 Skin is data only: style sheets, pictures and settings. Never write scripts,
 programs or services for a Skin, never change settings outside its folder, and
 never write to /usr/share/osiris; if something cannot be done that way, tell
-the person."""
+the person.
+
+Themes come light or dark. When the person asks for a Theme on its own, make
+that one, then offer its other half with make_other_half, and make it only if
+they say yes. When the person asks for a whole look, such as a look named after
+a film, a character or a place, its colours and its pictures carry it, so make
+it in this order. First a Theme pair with make_theme_pair, asking first unless
+they already asked for one: the look's main colour as the seed. Then a
+wallpaper for each half, a light picture for the light Theme and a dark one for
+the dark, given with set_theme_wallpaper. If you have a tool that paints a
+picture with an image model, paint them; otherwise search free wallpaper sites
+for them, download each, and look at it to check it is the look, wide enough
+for a desktop and not a page or a thumbnail. Never draw a wallpaper yourself.
+Last, list_skins and wear_skin the shipped Skin whose shapes fit the look best,
+and say why you chose it. Apply the half that matches the Theme the person has
+on now, light or dark."""
 
 #: What the model may touch beyond its tools, by the person's choice
 #: (osiris.harness.trust).
