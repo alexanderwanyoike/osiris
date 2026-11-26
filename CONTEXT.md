@@ -41,9 +41,10 @@ _Avoid_: variant, mode, light/dark theme
 
 **Whole look**:
 A look asked for by name, such as a film, a character or a place: a **Theme
-pair**, a **Wallpaper** for each half painted by an image model, or without one
-a **Generated wallpaper** Osiris writes for the look and both halves wear. It
-leaves the person's **Skin** as it is, and takes no pictures from the web.
+pair**, and a **Wallpaper** for each half painted by an image model. When it
+cannot paint, Osiris says why and the halves keep their usual wallpaper until
+the person chooses; a model never draws one itself. A whole look leaves the
+person's **Skin** as it is, and takes no pictures from the web.
 _Avoid_: theme pack, full theme
 
 **Theme intent**:
