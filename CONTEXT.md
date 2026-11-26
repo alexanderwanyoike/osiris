@@ -26,32 +26,17 @@ pictures with named gaps for the **Theme**'s colours, and its fonts, icons and
 cursor. One file when shared; nothing in it runs.
 _Avoid_: skin file, preset
 
-**Blank slate**:
-Where a new **Skin** can start when no existing **Skin** is close to what is
-asked for: no look of its own, only what every surface needs to work. A
-starting point, never worn. Where the person says to start, Osiris starts
-there; otherwise it chooses, and says which it chose.
-_Avoid_: empty skin, base skin
-
 **Fixed colour**:
 A colour written into a **Skin** rather than taken from the **Theme**, so it
 stays the same whatever **Theme** is worn. Osiris names the ones a person's
 **Skin** was not made with; the ones it was made with are part of its look.
 _Avoid_: hard-coded colour, literal colour
 
-**Accent**:
-The colour in a **Theme** for what stands out. Every **Theme** has one, and
-names a second and a third only when its look has them; a **Skin** asking for
-one a **Theme** does not name gets the first.
-_Avoid_: highlight, primary, secondary
-
 **Theme pair**:
-A light **Theme** and a dark one made together from one idea and shown side by
-side; the person wears one of them. When a **Skin** is asked for whose look
-is mostly its colours, Osiris offers a pair to go with it and asks before
-making one; a **Theme** asked for on its own is made alone, and Osiris offers
-its other half. A pair is chosen as one, with a switch between its light and dark
-**Theme**.
+A light **Theme** and a dark one made together from one idea, chosen as one
+with a switch between them; the person wears one of them. A look asked for by
+name comes as a pair, each half with its own wallpaper; a **Theme** asked for on
+its own is made alone, and Osiris offers its other half.
 _Avoid_: variant, mode, light/dark theme
 
 **Theme intent**:
