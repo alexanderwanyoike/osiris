@@ -61,7 +61,7 @@ MOOD_LABELS = {
 DEBOUNCE_MS = 120
 
 STYLE_LABELS = {
-    "camo": "Camo - accent camouflage",
+    "camo": "Camo - accent blobs",
     "arcs": "Arcs - woven quarter circles",
     "strata": "Strata - warped horizontal layers",
     "aurora": "Aurora - soft light from the edges",
