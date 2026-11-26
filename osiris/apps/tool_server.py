@@ -608,7 +608,7 @@ def _picture_tool(
         logged.write(
             "changed",
             summary=f"Painted a wallpaper for {theme['label']} with {used}",
-            undo={"action": "set_theme_wallpaper", "name": name, "wallpaper": previous},
+            undo={"action": "set_wallpaper", "name": name, "wallpaper": previous or ""},
         )
         return f"Painted a wallpaper for {theme['label']} with {used}."
 
