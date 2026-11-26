@@ -206,9 +206,24 @@ def wear_picture(
 def wear_painting(
     store: ThemeStore, name: str, data: bytes, keep: Callable[[str, bytes], Path]
 ) -> str | None:
-    """Make a painted picture the Theme's wallpaper, kept by ``keep`` under the
-    Theme's name. Returns the wallpaper it replaced."""
-    return _wear(store, name, lambda: keep(name, data))
+    """Make a painted picture the Theme's wallpaper, kept by ``keep`` as a PNG
+    under the Theme's name. Returns the wallpaper it replaced."""
+    find(store, name)
+    try:
+        image = Image.open(io.BytesIO(data))
+        png = data if image.format == "PNG" else _as_png(image)
+    except (OSError, ValueError) as error:
+        raise ThemeActionError(f"The picture could not be read. {_CHARGED}") from error
+
+    def kept() -> Path:
+        try:
+            return keep(name, png)
+        except OSError as error:
+            raise ThemeActionError(
+                f"The picture could not be saved. {_CHARGED}"
+            ) from error
+
+    return _wear(store, name, kept)
 
 
 def _wear(store: ThemeStore, name: str, kept: Callable[[], Path]) -> str | None:
