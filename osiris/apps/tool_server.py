@@ -105,11 +105,11 @@ a film, a character or a place, its colours and its wallpaper carry it, so
 make it in this order. First a Theme pair with make_theme_pair, asking first
 unless they already asked for one: the look's main colour as the seed. Then
 its wallpaper: paint one for each half with paint_theme_wallpaper, a light
-picture for the light Theme and a dark one for the dark. If it cannot paint
-both, write one moving wallpaper for the look with make_wallpaper with theme
-set to the light half, so both halves wear it, each in its own colours, in
-place of any picture it did paint. Leave the person's Skin as it is. Apply the
-half that matches the Theme the person has on now, light or dark."""
+picture for the light Theme and a dark one for the dark. If it cannot paint,
+tell the person why and that the Themes keep their usual wallpaper until they
+choose; the wallpaper is theirs, so never write one for the look. Leave the
+person's Skin as it is. Apply the half that matches the Theme the person has
+on now, light or dark."""
 
 #: What the model may touch beyond its tools, by the person's choice
 #: (osiris.harness.trust).
