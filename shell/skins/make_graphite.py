@@ -107,10 +107,12 @@ THEME_TWEAK = ("$theme: 'default';", "$theme: 'osiris';")
 SIDEBAR_TWEAK = ("$sidebar: 'styled';", "$sidebar: 'normal';")
 # Upstream marks a selected row in a list with a grey wash, which outranks the
 # accent tint it gives Files, so Files' list view showed grey where its icon
-# view showed the tint; the list takes the tint too.
+# view showed the tint. The list takes the tint but keeps the Theme's text
+# colour: accent text on the tint falls below AA on light Themes.
 SELECTED = (
     "    @extend %selected_items;\n    background-image: image($overlay-checked);",
-    "    @extend %selected_items_color;\n    background-image: none;",
+    "    @extend %selected_items;\n    background-color: rgba($primary, 0.2);\n"
+    "    background-image: none;",
 )
 
 # Graphite ships one folder of pictures per accent instead of recolouring them;

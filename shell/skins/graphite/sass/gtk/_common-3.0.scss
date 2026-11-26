@@ -1491,7 +1491,8 @@ treeview.view {
 
   // FIXME: Avoid transparency background-color being slightly darker
   &:selected:not(.progressbar):not(.trough) {
-    @extend %selected_items_color;
+    @extend %selected_items;
+    background-color: rgba($primary, 0.2);
     background-image: none;
   }
 
