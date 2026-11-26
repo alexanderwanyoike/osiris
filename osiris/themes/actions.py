@@ -263,7 +263,13 @@ def use_wallpaper(store: ThemeStore, wallpaper: str, label: str) -> tuple[str, s
             f"There is already a theme called {copy_label}; choose another label"
         )
     store.save(
-        {**theme, "name": name, "label": copy_label, "wallpaper_style": wallpaper}
+        {
+            **theme,
+            "name": name,
+            "label": copy_label,
+            "wallpaper_style": wallpaper,
+            "wallpaper": "generated",
+        }
     )
     store.apply(name)
     return name, previous
