@@ -210,7 +210,13 @@ class UserWallpapers:
 
     def keep_picture(self, theme: str, picture: Path) -> Path:
         """A copy of ``picture`` for the Theme named ``theme``, kept beside the
-        person's wallpaper packages."""
-        kept = self._folder.parent / "pictures" / f"{theme}{picture.suffix.lower()}"
+        person's wallpapers as Appearance keeps one, so it goes with its Theme;
+        a new name each time, so the one it replaces is still there to undo to."""
+        suffix = picture.suffix.lower()
+        kept = self._folder / f"{theme}-picture{suffix}"
+        number = 2
+        while self._files.exists(kept):
+            kept = self._folder / f"{theme}-picture-{number}{suffix}"
+            number += 1
         self._files.copy(picture, kept)
         return kept

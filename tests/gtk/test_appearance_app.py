@@ -77,3 +77,16 @@ def test_a_pair_cards_switch_leaves_its_name_readable() -> None:
     name_box = name.compute_bounds(card)[1]
     window.destroy()
     assert not switch_box.intersection(name_box)[0]
+
+
+def test_the_dark_halfs_card_wears_the_dark_half_when_the_switch_says_dark() -> None:
+    """Review of #271: among dark Themes only the dark half shows, and its
+    card applied the light Theme."""
+    night = {"name": "van-night", "label": "Van Night", "dark": True, "pair": "van"}
+    van = {"name": "van", "label": "Van", "dark": False, "pair": "van-night"}
+    picked: list[dict[str, object]] = []
+    card = appearance().ThemeCard(
+        night, picked.append, False, lambda *_: None, partner=van, dark=True
+    )
+    card.button.emit("clicked")
+    assert [theme["name"] for theme in picked] == ["van-night"]

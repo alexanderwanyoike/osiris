@@ -362,3 +362,19 @@ def test_a_painting_in_another_format_is_kept_as_a_png() -> None:
 
     wear_painting(store, "van", data.getvalue(), keep)
     assert Image.open(io.BytesIO(kept[0])).format == "PNG"
+
+
+def test_a_theme_whose_other_half_was_undone_can_be_paired_again() -> None:
+    """Review of #271: undoing the other half left the Theme naming it."""
+    store = FakeThemeStore()
+    create_theme(
+        store,
+        label="Harbour",
+        seed="#3a6ea5",
+        harmony="analogous",
+        mood="muted",
+        dark=True,
+    )
+    make_other_half(store, "harbour")
+    delete_theme(store, "harbour-day")
+    assert make_other_half(store, "harbour") == "harbour-day"

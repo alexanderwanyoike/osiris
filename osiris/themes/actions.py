@@ -86,7 +86,7 @@ def make_other_half(store: ThemeStore, name: str) -> str:
     """Make the light or dark Theme a Theme made alone lacks, from its accent,
     and pair the two. Returns the new one's name."""
     theme = find(store, name)
-    if theme.get("pair"):
+    if any(other["name"] == theme.get("pair") for other in store.themes()):
         raise ThemeActionError(f"{theme['label']} already has its other half")
     dark = not theme["dark"]
     other = _document(
