@@ -283,3 +283,32 @@ def test_the_model_only_changes_the_image_model_when_asked() -> None:
     assert "find_image_models" in told
     assert "never pick a different model yourself" in told
     assert "set_default_image_model" in told
+
+
+def test_a_painted_picture_becomes_the_wallpaper_of_one_half_of_a_pair() -> None:
+    """A whole look paints a light picture for the light Theme and a dark one
+    for the dark, with the person's image model."""
+    store = FakeThemeStore(
+        themes=[
+            {"name": "van", "label": "Van", "dark": False, "wallpaper": "generated"}
+        ],
+        current="van",
+    )
+    maker, files = Maker(), FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+    sunny = {"name": "van", "picture": "The van on a sunny road"}
+
+    asyncio.run(
+        tool_server(store, maker, log, files).call_tool("paint_theme_wallpaper", sunny)
+    )
+
+    picture = HOME / "Pictures/Osiris/van.png"
+    assert store.themes()[0]["wallpaper"] == str(picture)
+    assert files.blobs[picture] == png()
+    assert maker.asked[0].startswith("The van on a sunny road. ")
+    assert log.last_changes() == [
+        Change(
+            f"Painted a wallpaper for Van with {DEFAULT_IMAGE_MODEL}",
+            {"action": "set_theme_wallpaper", "name": "van", "wallpaper": "generated"},
+        )
+    ]
