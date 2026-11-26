@@ -207,3 +207,10 @@ class UserWallpapers:
 
     def delete(self, name: str) -> None:
         self._files.remove_tree(self._folder / name)
+
+    def keep_picture(self, theme: str, picture: Path) -> Path:
+        """A copy of ``picture`` for the Theme named ``theme``, kept beside the
+        person's wallpaper packages."""
+        kept = self._folder.parent / "pictures" / f"{theme}{picture.suffix.lower()}"
+        self._files.copy(picture, kept)
+        return kept
