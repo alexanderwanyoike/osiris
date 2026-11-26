@@ -8,8 +8,9 @@ Appearance. Errors are worded for the model to read and correct itself.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 from osiris.model.colour import Colour, InvalidColour
@@ -147,6 +148,28 @@ def find(store: ThemeStore, name: str) -> Mapping[str, Any]:
         if theme["name"] == name:
             return theme
     raise ThemeActionError(f"There is no theme called {name}")
+
+
+#: What a desktop background can be drawn from.
+PICTURE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp")
+
+
+def wear_picture(
+    store: ThemeStore,
+    name: str,
+    picture: Path,
+    keep: Callable[[str, Path], Path],
+) -> str | None:
+    """Make ``picture`` the Theme's wallpaper, kept by ``keep`` under the
+    Theme's name. Returns the wallpaper it replaced."""
+    if picture.suffix.lower() not in PICTURE_SUFFIXES:
+        raise ThemeActionError(
+            f"{picture.name} is not a picture; give a PNG, JPEG or WebP file"
+        )
+    theme = find(store, name)
+    store.save({**theme, "wallpaper": str(keep(name, picture))})
+    previous = theme.get("wallpaper")
+    return str(previous) if previous else None
 
 
 def apply_theme(store: ThemeStore, name: str) -> str | None:
