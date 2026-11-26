@@ -667,6 +667,16 @@ def style_for(name: str) -> str:
     return FALLBACK_STYLES[zlib.crc32(name.encode()) % len(FALLBACK_STYLES)]
 
 
+def style_of(theme: dict) -> str:
+    """The style a theme is drawn in: the one it names, or its fallback.
+
+    Contour was replaced by Camo at the person's request, and themes made
+    before then still name it.
+    """
+    style = theme.get("wallpaper_style") or style_for(theme["name"])
+    return "camo" if style == "contour" else style
+
+
 def _rng(theme: dict, purpose: str = "") -> np.random.Generator:
     """The theme's composition: the same for the same name and variation.
 
@@ -707,7 +717,7 @@ def compose(theme: dict, size: tuple[int, int] = (WIDTH, HEIGHT),
     width, height = size
     shape = (height, width)
     palette = tones(theme)
-    style = style or theme.get("wallpaper_style") or style_for(theme["name"])
+    style = style or style_of(theme)
     if style not in RENDERERS:
         found, _ = packages.discover(PACKAGE_DIRS)
         if style not in found:
@@ -766,7 +776,7 @@ def boot_background(theme: dict,
     """
     width, height = size
     palette = tones(theme)
-    style = theme.get("wallpaper_style") or style_for(theme["name"])
+    style = style_of(theme)
     rng = _rng(theme)
     fill, line = RENDERERS[style]((height, width), rng)
 
