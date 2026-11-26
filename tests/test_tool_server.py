@@ -208,7 +208,7 @@ def test_a_theme_takes_a_wallpaper_osiris_found_and_logs_the_one_it_replaced() -
         log,
         wallpapers=wallpapers,
     )
-    kept = "/home/tester/.local/share/osiris/pictures/harbour.jpg"
+    kept = "/home/tester/.local/share/osiris/wallpapers/harbour-picture.jpg"
     assert store.themes()[0]["wallpaper"] == kept
     assert log.last_changes()[-1] == Change(
         "Gave Harbour a new wallpaper",
