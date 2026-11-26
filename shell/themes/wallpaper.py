@@ -13,8 +13,8 @@ commission and without competing with window content.
 Three rules drive everything here:
 
 **Two or three tones, no more.** The palette's background and secondary carry
-the shapes; the accent appears only as line work. A wallpaper that uses the
-whole palette stops reading as a background.
+the shapes; the accent appears only as line work, except in Camo. A wallpaper
+that uses the whole palette stops reading as a background.
 
 **The centre stays quiet.** Every style is attenuated by a radial mask so the
 pattern flattens towards the middle, leaving a calm field for the Osiris mark
@@ -267,8 +267,7 @@ def camo(shape, rng, phase: float = 0.0, drift=None):
     Each tone is its own noise field cut at a threshold, so the edges are
     crisp. The quiet mask would blur them into smudges, so the blobs thin out
     towards the middle instead and the mask is kept to the mark (QUIET_REACH).
-    The accent gets patches of its own, the one style where it is more than
-    line work, because a camouflage of near tones reads as a stain.
+    The accent gets patches of its own (docs/THEMING.md says why).
     """
     clear = 1 - quiet_mask(shape, 0.5)
 

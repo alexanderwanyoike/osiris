@@ -67,7 +67,7 @@ One JSON file per theme in `shell/themes/<name>.json`.
     ],
 
     "wallpaper": "generated",            // or a filename in branding/wallpapers/
-    "wallpaper_style": "contour",        // contour | arcs | strata
+    "wallpaper_style": "camo",           // camo | arcs | strata | ...
     "folder_colour": "blue"              // a Papirus folder colour
 }
 ```
@@ -463,7 +463,8 @@ Three rules make the output reliable rather than lucky:
 
 **Two or three tones.** Background and secondary carry the shapes; the accent
 appears only as line work. A wallpaper that spends the whole palette stops
-reading as a background.
+reading as a background. Camo is the one exception: it gives the accent patches
+of its own, because camouflage in near tones reads as a stain.
 
 **The centre stays quiet.** A radial mask flattens the pattern towards the
 middle, leaving a calm field for the Osiris mark and for desktop icons. This is
@@ -479,7 +480,7 @@ stable across regeneration and no two themes compose alike:
 
 | Style | Mathematics | Reads as |
 |---|---|---|
-| `contour` | iso-bands through fractional Brownian motion | topography |
+| `camo` | four noise fields cut at thresholds, the accent's among them; the blobs thin towards the middle rather than fade | woodland camouflage |
 | `arcs` | Truchet tiling of quarter circles | woven circuitry |
 | `strata` | horizontal bands warped by a slow noise field | sedimentary layers |
 | `aurora` | wide gaussian glows centred just beyond the frame, no line work | light from off screen |
@@ -493,8 +494,10 @@ stable across regeneration and no two themes compose alike:
 `wallpaper_variation` in a theme gives it a different composition in the same
 style; 0, the default, keeps the name alone as the seed, so wallpapers rendered
 before variations existed did not change. A theme that names no style falls
-back to one of the original three, chosen by hashing its name; hashing over all
-ten would move every such theme to a new wallpaper whenever a style is added.
+back to one of three, chosen by hashing its name; hashing over all ten would
+move every such theme to a new wallpaper whenever a style is added. Camo took
+the slot of Contour, which the person did not want, and a theme that still
+names `contour` is drawn in Camo.
 
 ### Drift
 
