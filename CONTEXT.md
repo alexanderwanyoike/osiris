@@ -35,14 +35,16 @@ _Avoid_: hard-coded colour, literal colour
 **Theme pair**:
 A light **Theme** and a dark one made together from one idea, chosen as one
 with a switch between them; the person wears one of them. A look asked for by
-name comes as a pair, each half with its own wallpaper; a **Theme** asked for on
+name comes as a pair, with a wallpaper for it; a **Theme** asked for on
 its own is made alone, and Osiris offers its other half.
 _Avoid_: variant, mode, light/dark theme
 
 **Whole look**:
 A look asked for by name, such as a film, a character or a place: a **Theme
-pair**, a wallpaper for each half found online or painted by an image model,
-and the shipped **Skin** whose shapes fit it. Osiris makes no **Skin** for one.
+pair**, a **Wallpaper** for each half painted by an image model, or without one
+a **Generated wallpaper** Osiris writes for the look and both halves wear, and
+the shipped **Skin** whose shapes fit it. Osiris makes no **Skin** for one and
+takes no pictures from the web.
 _Avoid_: theme pack, full theme
 
 **Theme intent**:
