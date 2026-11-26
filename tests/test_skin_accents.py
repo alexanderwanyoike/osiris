@@ -87,13 +87,13 @@ def test_graphite_keeps_the_files_sidebar_plain(tmp_path: Path) -> None:
     """Upstream's styled sidebar fills all of Files' sidebar with the accent.
     Review of #274: checking one selector passed once that rule was gone."""
     css = compiled("graphite", THEME, tmp_path)
-    fill = re.compile(rf"background(-color)?:\s*{THEME['colors']['accent']}")
+    accent_fill = re.compile(rf"background(-color)?:\s*{THEME['colors']['accent']}")
     painted = [
         selectors
         for selectors, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css)
         if ".nemo-window" in selectors
         and ".sidebar" in selectors
         and ":selected" not in selectors
-        and fill.search(body)
+        and accent_fill.search(body)
     ]
     assert painted == []
