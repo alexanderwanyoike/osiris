@@ -17,9 +17,13 @@ THEME = json.loads((ROOT / "shell" / "themes" / "osiris-obsidian.json").read_tex
 ACCENT = rgb(THEME["colors"]["accent"])
 
 
-def colour(css: str, selector: str) -> tuple[float, ...]:
+def fill(css: str, selector: str) -> tuple[tuple[float, ...], float]:
     named = dict(re.findall(r"@define-color\s+(\w+)\s+([^;]+);", css))
-    return parse(declared(css, selector)["background-color"], named)[0]
+    return parse(declared(css, selector)["background-color"], named)
+
+
+def colour(css: str, selector: str) -> tuple[float, ...]:
+    return fill(css, selector)[0]
 
 
 @pytest.mark.skipif(shutil.which("sassc") is None, reason="needs sassc")
@@ -42,12 +46,21 @@ def test_jasper_fills_a_selected_file_with_the_accent(
 
 
 @pytest.mark.skipif(shutil.which("sassc") is None, reason="needs sassc")
-def test_graphite_fills_a_selected_file_with_the_accent(tmp_path: Path) -> None:
-    """Upstream marks a selected row in a list with a grey wash, and that rule
-    outranks its accent tint for Files; found by hand on the VM."""
+@pytest.mark.parametrize(
+    "selector",
+    [
+        "treeview.view:selected:not(.progressbar):not(.trough)",
+        ".nemo-window .view:selected",
+    ],
+)
+def test_graphite_tints_a_selected_file_with_the_accent(
+    selector: str, tmp_path: Path
+) -> None:
+    """Upstream marks a selected row in a list with a grey wash, which outranks
+    the accent tint it gives Files; found by hand on the VM. Review of #274:
+    the tint, as in Files' icon view and in Orchis and Colloid, not a fill."""
     css = compiled("graphite", THEME, tmp_path)
-    selector = "treeview.view:selected:not(.progressbar):not(.trough)"
-    assert colour(css, selector) == ACCENT
+    assert fill(css, selector) == (ACCENT, 0.2)
 
 
 @pytest.mark.skipif(shutil.which("sassc") is None, reason="needs sassc")
