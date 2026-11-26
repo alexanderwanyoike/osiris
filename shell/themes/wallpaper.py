@@ -242,18 +242,6 @@ def _edges(index: np.ndarray) -> np.ndarray:
 # shape, line is a 0-1 field of accent line work. Both are pre-attenuated by
 # the quiet mask by the caller.
 
-def contour(shape, rng, bands: int = 11, phase: float = 0.0,
-            drift=None):
-    """Topographic iso-bands through a noise field.
-
-    The most forgiving of the three: any field produces bands that nest, so
-    there is no seed that composes badly.
-    """
-    field = fbm(shape, rng, cells=3, octaves=5, phase=phase, drift=drift)
-    index = np.floor(field * bands)
-    return index / (bands - 1), _edges(index)
-
-
 def _square_noise(shape: tuple[int, int], rng: np.random.Generator,
                   cells: int, octaves: int = 4) -> np.ndarray:
     """Value noise whose features are as wide as they are tall, in [0, 1].
@@ -624,7 +612,7 @@ def wave(shape, rng, ribbons: int = WAVE_RIBBONS, phase: float = 0.0,
     return np.clip(fill, 0, 1), np.clip(line, 0, 1)
 
 
-RENDERERS = {"camo": camo, "contour": contour, "arcs": arcs, "strata": strata, "aurora": aurora, "dots": dots,
+RENDERERS = {"camo": camo, "arcs": arcs, "strata": strata, "aurora": aurora, "dots": dots,
              "cells": cells, "bubbles": bubbles, "ridges": ridges,
              "facets": facets, "wave": wave}
 
