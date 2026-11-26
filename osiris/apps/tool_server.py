@@ -101,14 +101,13 @@ the person.
 Themes come light or dark. When the person asks for a Theme on its own, make
 that one, then offer its other half with make_other_half, and make it only if
 they say yes. When the person asks for a whole look, such as a look named after
-a film, a character or a place, its colours and its pictures carry it, so make
-it in this order. First a Theme pair with make_theme_pair, asking first unless
-they already asked for one: the look's main colour as the seed. Then a
-wallpaper for each half, a light picture for the light Theme and a dark one for
-the dark: paint them with paint_theme_wallpaper, and if it cannot paint, search
-free wallpaper sites instead. Look at each one you download to check it is the
-look, wide enough for a desktop and not a page or a thumbnail, and give each
-one you download with set_theme_wallpaper. Never draw a wallpaper yourself.
+a film, a character or a place, its colours and its wallpaper carry it, so
+make it in this order. First a Theme pair with make_theme_pair, asking first
+unless they already asked for one: the look's main colour as the seed. Then
+its wallpaper: paint one for each half with paint_theme_wallpaper, a light
+picture for the light Theme and a dark one for the dark. If it cannot paint,
+write one moving wallpaper for the look with make_wallpaper with theme set
+to the light half, so both halves wear it, each in its own colours.
 Last, list_skins and wear_skin the shipped Skin whose shapes fit the look best,
 and say why you chose it. Apply the half that matches the Theme the person has
 on now, light or dark."""
@@ -134,7 +133,6 @@ TIERS = {
     "create_theme": Tier.UNDOABLE,
     "make_theme_pair": Tier.UNDOABLE,
     "make_other_half": Tier.UNDOABLE,
-    "set_theme_wallpaper": Tier.UNDOABLE,
     "apply_theme": Tier.UNDOABLE,
     "list_programs": Tier.LOOK,
     "create_program": Tier.UNDOABLE,
@@ -256,33 +254,74 @@ def _made_theme(logged: _Logged, store: ThemeStore, name: str) -> None:
     )
 
 
-def _picture_wallpaper_tool(
-    tools: MCPServer, store: ThemeStore, wallpapers: UserWallpapers, logged: _Logged
-) -> None:
-    @tools.tool(annotations=ANNOTATIONS[TIERS["set_theme_wallpaper"]])
-    @explained
-    def set_theme_wallpaper(name: str, path: str) -> str:
-        """Give a theme a picture as its wallpaper: one an image model painted
-        for it, or one downloaded from a free wallpaper site. Never draw one
-        yourself.
-
-        name: the theme's name from list_themes.
-        path: the picture's file, PNG, JPEG or WebP; the theme keeps a copy.
-        """
-        previous = actions.wear_picture(
-            store, name, Path(path), wallpapers.keep_picture
-        )
-        theme = actions.find(store, name)
+def _wear_on_pair(
+    store: ThemeStore, logged: _Logged, theme: str, wallpaper: str, label: str
+) -> str:
+    before = actions.wear_wallpaper_style(store, theme, wallpaper)
+    worn = [actions.find(store, name)["label"] for name in before]
+    for name, previous in before.items():
         logged.write(
             "changed",
-            summary=f"Gave {theme['label']} a new wallpaper",
+            summary=f"Gave {actions.find(store, name)['label']} the {label} wallpaper",
             undo={
-                "action": "set_theme_wallpaper",
+                "action": "set_wallpaper_style",
                 "name": name,
-                "wallpaper": previous or "",
+                "style": previous or "",
             },
         )
-        return f"{theme['label']} now wears {theme['wallpaper']}."
+    return f"Gave {' and '.join(worn)} the {label} wallpaper."
+
+
+def _wallpaper_tool(
+    tools: MCPServer, store: ThemeStore, wallpapers: UserWallpapers, logged: _Logged
+) -> None:
+    @tools.tool(annotations=ANNOTATIONS[TIERS["make_wallpaper"]])
+    @explained
+    def make_wallpaper(label: str, shader: str, theme: str = "") -> str:
+        """Make a moving wallpaper and put it on the desktop, worn by a copy of
+        the theme in use, so the theme itself is untouched.
+
+        label: what the person will see it called, such as "Rain".
+        shader: GLSL 1.20 defining vec3 wallpaper(vec2 uv), which returns the
+        colour of each pixel, drawn on the GPU every frame. uv runs from (0, 0)
+        at the top left to (1, 1). Already declared for you: u_time, where the
+        loop is, from 0 to 1, coming round every 60 seconds, so animate with
+        sin(TURN * u_time) and the like, where the end meets the start (TURN is
+        two pi); u_size, the screen in pixels; the theme's colours as vec3:
+        u_background, u_surface, u_foreground, u_accent, u_accent_muted,
+        u_success, u_warning, u_danger, and the wallpaper's own tones u_base,
+        u_shape and u_line; u_dark, 1.0 on a dark theme. Use only these
+        colours, so the wallpaper follows the theme. End with
+        compose(uv, fill, line, 0.42): it lays a fill and a line strength,
+        each 0 to 1, over the theme's base and keeps the centre quiet for the
+        Osiris mark. GLSL 1.20 has no %, no bitwise operators and no textures;
+        give loops constant bounds. It runs every frame: keep it cheap, and the
+        motion slow and calm. A shader that does not compile comes back with
+        the errors by its own line numbers; fix it and call again.
+        theme: a theme's name from list_themes to give the wallpaper to, with
+        the other half of its pair, instead of a copy; nothing is applied.
+        """
+        name = wallpapers.write(label, shader)
+        logged.write(
+            "changed",
+            summary=f"Made the {label} wallpaper",
+            undo={"action": "delete_wallpaper", "name": name},
+        )
+        if theme:
+            return _wear_on_pair(store, logged, theme, name, label)
+        theme, previous = actions.use_wallpaper(store, name, label)
+        theme_label = actions.find(store, theme)["label"]
+        logged.write(
+            "changed",
+            summary=f"Made {theme_label}",
+            undo={"action": "delete_theme", "name": theme},
+        )
+        logged.write(
+            "changed",
+            summary=f"Applied {theme_label}",
+            undo={"action": "apply_theme", "name": previous},
+        )
+        return f"Made the {label} wallpaper and applied it as {theme_label}."
 
 
 def _pair_tools(tools: MCPServer, store: ThemeStore, logged: _Logged) -> None:
@@ -474,52 +513,8 @@ def server(
         problems = programs.check(name)
         return "\n".join(problems) if problems else "No problems found."
 
-    @tools.tool(annotations=ANNOTATIONS[TIERS["make_wallpaper"]])
-    @explained
-    def make_wallpaper(label: str, shader: str) -> str:
-        """Make a moving wallpaper and put it on the desktop, worn by a copy of
-        the theme in use, so the theme itself is untouched.
-
-        label: what the person will see it called, such as "Rain".
-        shader: GLSL 1.20 defining vec3 wallpaper(vec2 uv), which returns the
-        colour of each pixel, drawn on the GPU every frame. uv runs from (0, 0)
-        at the top left to (1, 1). Already declared for you: u_time, where the
-        loop is, from 0 to 1, coming round every 60 seconds, so animate with
-        sin(TURN * u_time) and the like, where the end meets the start (TURN is
-        two pi); u_size, the screen in pixels; the theme's colours as vec3:
-        u_background, u_surface, u_foreground, u_accent, u_accent_muted,
-        u_success, u_warning, u_danger, and the wallpaper's own tones u_base,
-        u_shape and u_line; u_dark, 1.0 on a dark theme. Use only these
-        colours, so the wallpaper follows the theme. End with
-        compose(uv, fill, line, 0.42): it lays a fill and a line strength,
-        each 0 to 1, over the theme's base and keeps the centre quiet for the
-        Osiris mark. GLSL 1.20 has no %, no bitwise operators and no textures;
-        give loops constant bounds. It runs every frame: keep it cheap, and the
-        motion slow and calm. A shader that does not compile comes back with
-        the errors by its own line numbers; fix it and call again.
-        """
-        name = wallpapers.write(label, shader)
-        logged.write(
-            "changed",
-            summary=f"Made the {label} wallpaper",
-            undo={"action": "delete_wallpaper", "name": name},
-        )
-        theme, previous = actions.use_wallpaper(store, name, label)
-        theme_label = actions.find(store, theme)["label"]
-        logged.write(
-            "changed",
-            summary=f"Made {theme_label}",
-            undo={"action": "delete_theme", "name": theme},
-        )
-        logged.write(
-            "changed",
-            summary=f"Applied {theme_label}",
-            undo={"action": "apply_theme", "name": previous},
-        )
-        return f"Made the {label} wallpaper and applied it as {theme_label}."
-
+    _wallpaper_tool(tools, store, wallpapers, logged)
     _pair_tools(tools, store, logged)
-    _picture_wallpaper_tool(tools, store, wallpapers, logged)
     _propose_tool(tools, logged, skill_taken)
     if skins is not None:
         _skin_tools(tools, skins, logged)

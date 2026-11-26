@@ -318,9 +318,8 @@ def test_a_whole_look_paints_its_wallpapers_when_an_image_model_is_there() -> No
     from osiris.apps.tool_server import INSTRUCTIONS
 
     text = " ".join(INSTRUCTIONS.split())
-    assert "paint them with paint_theme_wallpaper" in text
-    assert "if it cannot paint, search free wallpaper sites instead" in text
-    assert "give each one you download with set_theme_wallpaper" in text
+    painted = text.index("paint one for each half with paint_theme_wallpaper")
+    assert painted < text.index("If it cannot paint, write one moving wallpaper")
 
 
 @pytest.mark.parametrize(

@@ -184,25 +184,6 @@ def find(store: ThemeStore, name: str) -> Mapping[str, Any]:
     raise ThemeActionError(f"There is no theme called {name}")
 
 
-#: What a desktop background can be drawn from.
-PICTURE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp")
-
-
-def wear_picture(
-    store: ThemeStore,
-    name: str,
-    picture: Path,
-    keep: Callable[[str, Path], Path],
-) -> str | None:
-    """Make ``picture`` the Theme's wallpaper, kept by ``keep`` under the
-    Theme's name. Returns the wallpaper it replaced."""
-    if picture.suffix.lower() not in PICTURE_SUFFIXES:
-        raise ThemeActionError(
-            f"{picture.name} is not a picture; give a PNG, JPEG or WebP file"
-        )
-    return _wear(store, name, lambda: keep(name, picture))
-
-
 def wear_painting(
     store: ThemeStore, name: str, data: bytes, keep: Callable[[str, bytes], Path]
 ) -> str | None:
@@ -231,6 +212,20 @@ def _wear(store: ThemeStore, name: str, kept: Callable[[], Path]) -> str | None:
     store.save({**theme, "wallpaper": str(kept())})
     previous = theme.get("wallpaper")
     return str(previous) if previous else None
+
+
+def wear_wallpaper_style(
+    store: ThemeStore, name: str, style: str
+) -> dict[str, str | None]:
+    """Give the Theme, and the other half of its pair, the wallpaper ``style``.
+    Returns each one's style before, by name."""
+    theme = find(store, name)
+    halves = [theme, *(t for t in store.themes() if t["name"] == theme.get("pair"))]
+    before: dict[str, str | None] = {}
+    for half in halves:
+        before[half["name"]] = half.get("wallpaper_style")
+        store.save({**half, "wallpaper_style": style})
+    return before
 
 
 def apply_theme(store: ThemeStore, name: str) -> str | None:

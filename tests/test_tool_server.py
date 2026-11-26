@@ -87,7 +87,6 @@ def test_the_server_offers_the_theme_and_program_actions_and_nothing_else() -> N
         "create_theme",
         "make_theme_pair",
         "make_other_half",
-        "set_theme_wallpaper",
         "apply_theme",
         "list_programs",
         "create_program",
@@ -104,7 +103,6 @@ def test_listing_and_checking_are_looks_and_the_rest_undoable_changes() -> None:
         "create_theme": Tier.UNDOABLE,
         "make_theme_pair": Tier.UNDOABLE,
         "make_other_half": Tier.UNDOABLE,
-        "set_theme_wallpaper": Tier.UNDOABLE,
         "apply_theme": Tier.UNDOABLE,
         "list_programs": Tier.LOOK,
         "create_program": Tier.UNDOABLE,
@@ -195,50 +193,6 @@ def test_the_other_half_made_through_the_server_is_undone_by_deleting_it() -> No
     assert log.last_changes()[-1] == Change(
         "Made Harbour Day", {"action": "delete_theme", "name": "harbour-day"}
     )
-
-
-def test_a_theme_takes_a_wallpaper_osiris_found_and_logs_the_one_it_replaced() -> None:
-    log, store = new_log(), FakeThemeStore()
-    call(store, "create_theme", HARBOUR, log)
-    files = FakeFileSystem()
-    files.write(Path("/tmp/harbour.jpg"), "jpeg")
-    wallpapers = UserWallpapers(
-        files, FakeRunner(), Path("/home/tester/.local/share/osiris/wallpapers"), ""
-    )
-    call(
-        store,
-        "set_theme_wallpaper",
-        {"name": "harbour", "path": "/tmp/harbour.jpg"},
-        log,
-        wallpapers=wallpapers,
-    )
-    kept = "/home/tester/.local/share/osiris/wallpapers/harbour-picture.jpg"
-    assert store.themes()[0]["wallpaper"] == kept
-    assert log.last_changes()[-1] == Change(
-        "Gave Harbour a new wallpaper",
-        {"action": "set_theme_wallpaper", "name": "harbour", "wallpaper": "generated"},
-    )
-
-
-def test_a_theme_with_no_wallpaper_before_logs_an_empty_one_to_undo_to() -> None:
-    """Review of #271: an undo's values are text, never None."""
-    log = new_log()
-    store = FakeThemeStore(themes=[{"name": "plain", "label": "Plain", "dark": True}])
-    files = FakeFileSystem()
-    files.write(Path("/tmp/plain.png"), "png")
-    wallpapers = UserWallpapers(files, FakeRunner(), Path("/home/tester/w"), "")
-    call(
-        store,
-        "set_theme_wallpaper",
-        {"name": "plain", "path": "/tmp/plain.png"},
-        log,
-        wallpapers=wallpapers,
-    )
-    assert log.last_changes()[-1].undo == {
-        "action": "set_theme_wallpaper",
-        "name": "plain",
-        "wallpaper": "",
-    }
 
 
 def asked_by(session: str, subject: MCPServer) -> Context:
@@ -421,19 +375,18 @@ def test_the_model_checks_then_has_a_program_reviewed_before_calling_it_done() -
     assert "Never call a Program done on a partial or a fail" in text
 
 
-def test_a_whole_look_is_a_theme_pair_a_found_wallpaper_each_and_a_shipped_skin() -> (
-    None
-):
-    """#266, as the person settled it: Themes and their pictures carry a look,
-    a shipped Skin fits it, and Osiris never draws a wallpaper itself."""
+def test_a_whole_look_is_a_theme_pair_a_moving_wallpaper_and_a_shipped_skin() -> None:
+    """#266, as the person settled it: a Theme pair carries a look, with one
+    moving wallpaper written for it, and a shipped Skin fits it. Pictures from
+    wallpaper sites were dropped after testing."""
     from osiris.apps.tool_server import INSTRUCTIONS
 
     whole = " ".join(INSTRUCTIONS.split())
     text = whole[whole.index("asks for a whole look") :]
     first = text.index("make_theme_pair")
-    assert first < text.index("set_theme_wallpaper") < text.index("wear_skin")
-    assert "search free wallpaper sites" in text
-    assert "Never draw a wallpaper yourself" in text
+    assert first < text.index("make_wallpaper") < text.index("wear_skin")
+    assert "with theme set to the light half" in text
+    assert "wallpaper site" not in whole
     assert "make_other_half" in whole
 
 
@@ -450,6 +403,41 @@ def test_making_a_wallpaper_wears_it_and_logs_each_step_to_undo() -> None:
         ),
         Change("Made Nord Rain", {"action": "delete_theme", "name": "nord-rain"}),
         Change("Applied Nord Rain", {"action": "apply_theme", "name": "nord"}),
+    ]
+
+
+def test_a_wallpaper_made_for_a_theme_is_worn_by_its_pair_with_no_copy() -> None:
+    log = new_log()
+    store = FakeThemeStore(
+        themes=[
+            {"name": "van", "label": "Van", "dark": False, "pair": "van-night"},
+            {"name": "van-night", "label": "Van Night", "dark": True, "pair": "van"},
+        ],
+        current="nord",
+    )
+    call(
+        store,
+        "make_wallpaper",
+        {"label": "Rain", "shader": RAIN, "theme": "van"},
+        log,
+    )
+    assert store.current() == "nord"
+    assert {t["name"]: t.get("wallpaper_style") for t in store.themes()} == {
+        "van": "rain",
+        "van-night": "rain",
+    }
+    assert log.last_changes() == [
+        Change(
+            "Made the Rain wallpaper", {"action": "delete_wallpaper", "name": "rain"}
+        ),
+        Change(
+            "Gave Van the Rain wallpaper",
+            {"action": "set_wallpaper_style", "name": "van", "style": ""},
+        ),
+        Change(
+            "Gave Van Night the Rain wallpaper",
+            {"action": "set_wallpaper_style", "name": "van-night", "style": ""},
+        ),
     ]
 
 

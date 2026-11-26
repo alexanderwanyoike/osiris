@@ -17,14 +17,13 @@ from osiris.themes.actions import (
     create_picture_theme,
     create_theme,
     delete_theme,
-    find,
     list_themes,
     make_other_half,
     make_theme_pair,
     unused_name,
     use_wallpaper,
     wear_painting,
-    wear_picture,
+    wear_wallpaper_style,
 )
 from osiris.themes.derive import build
 from osiris.themes.intent import Harmony, Mood, ThemeIntent, seeds
@@ -200,6 +199,27 @@ def test_a_copy_that_would_replace_a_theme_is_refused() -> None:
         use_wallpaper(store, "rain", "Rain")
 
 
+def test_a_wallpaper_style_is_worn_by_a_theme_and_its_other_half() -> None:
+    """A whole look's wallpaper without an image model: one moving wallpaper
+    for the pair, coloured by each half."""
+    store = FakeThemeStore(
+        themes=[
+            {**stored("van", "Van", False), "pair": "van-night"},
+            {
+                **stored("van-night", "Van Night"),
+                "pair": "van",
+                "wallpaper_style": "dots",
+            },
+        ]
+    )
+    before = wear_wallpaper_style(store, "van-night", "haunted-van")
+    assert before == {"van-night": "dots", "van": None}
+    assert {t["name"]: t["wallpaper_style"] for t in store.themes()} == {
+        "van": "haunted-van",
+        "van-night": "haunted-van",
+    }
+
+
 def test_a_theme_pair_is_a_light_and_a_dark_theme_made_from_one_idea() -> None:
     """#266: two Themes, chosen as one, each naming the other."""
     store = FakeThemeStore()
@@ -237,32 +257,6 @@ def test_a_theme_already_in_a_pair_has_no_other_half_to_make() -> None:
     )
     with pytest.raises(ThemeActionError, match="already has"):
         make_other_half(store, "van")
-
-
-def test_a_theme_wears_a_picture_osiris_found_or_painted() -> None:
-    """A whole look: each half of a pair gets a real wallpaper."""
-    store = FakeThemeStore(
-        themes=[{**stored("van", "Van", False), "wallpaper": "generated"}]
-    )
-    kept: list[tuple[str, Path]] = []
-
-    def keep(name: str, picture: Path) -> Path:
-        kept.append((name, picture))
-        return Path(f"/home/tester/.local/share/osiris/pictures/{name}.jpg")
-
-    previous = wear_picture(store, "van", Path("/tmp/van-day.jpg"), keep)
-    assert previous == "generated"
-    assert kept == [("van", Path("/tmp/van-day.jpg"))]
-    assert (
-        find(store, "van")["wallpaper"]
-        == "/home/tester/.local/share/osiris/pictures/van.jpg"
-    )
-
-
-def test_a_file_that_is_not_a_picture_is_refused_as_a_wallpaper() -> None:
-    store = FakeThemeStore(themes=[stored("van", "Van", False)])
-    with pytest.raises(ThemeActionError, match="picture"):
-        wear_picture(store, "van", Path("/tmp/van.html"), lambda _n, p: p)
 
 
 def picture_bytes(colour: tuple[int, int, int]) -> bytes:
