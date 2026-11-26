@@ -106,12 +106,12 @@ THEME_TWEAK = ("$theme: 'default';", "$theme: 'osiris';")
 # Upstream's styled sidebar fills Files' whole sidebar with the accent, which
 # no other Skin does; its own `--tweaks normal` turns that off the same way.
 SIDEBAR_TWEAK = ("$sidebar: 'styled';", "$sidebar: 'normal';")
-# Upstream marks a selected row in a list with a grey wash, which outranks its
-# accent tint in Files; the other Skins fill it with the accent, so Graphite
-# does too, with its own accent fill.
+# Upstream marks a selected row in a list with a grey wash, which outranks the
+# accent tint it gives Files, so Files' list view showed grey where its icon
+# view showed the tint; the list takes the tint too.
 SELECTED = (
     "    @extend %selected_items;\n    background-image: image($overlay-checked);",
-    "    @extend %selected_items_primary;\n    background-image: none;",
+    "    @extend %selected_items_color;\n    background-image: none;",
 )
 
 # Graphite ships one folder of pictures per accent instead of recolouring them;
