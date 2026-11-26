@@ -12,7 +12,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from makers import Recolour, plank, replace, revision, rewrite
+from makers import Recolour, plank, replace, replace_once, revision, rewrite
 
 PACK = Path(__file__).resolve().parent / "jasper"
 
@@ -92,6 +92,19 @@ SVG_GAPS = Recolour(
         "#242424": "{{background}}",
     }
 )
+# In a window it decorates, which is every Osiris window, upstream marks a
+# selected view or row with a grey wash; the other Skins fill it with the
+# accent, so Jasper does too, with its own accent fill.
+SELECTED = (
+    (
+        "  .csd &:selected {\n    @extend %selected_items;",
+        "  .csd &:selected {\n    @extend %selected_items_primary;",
+    ),
+    (
+        "  .background.csd &:selected {\n    @extend %selected_items;",
+        "  .background.csd &:selected {\n    @extend %selected_items_primary;",
+    ),
+)
 # Jasper's on() switches to dark text at a fixed brightness.
 THRESHOLD = ("@if ($brightness >= 156) {", "@if ($brightness >= $osiris-midpoint) {")
 # The dock's fill takes the Theme's colour.
@@ -136,6 +149,11 @@ def make(upstream: Path, pack: Path) -> None:
     (pack / "sass" / "_color-palette-osiris.scss").write_text(PALETTE)
     colors = pack / "sass" / "_colors.scss"
     colors.write_text(replace(colors.read_text(), *THRESHOLD, "_colors.scss"))
+    common_sheet = pack / "sass" / "gtk" / "_common-3.0.scss"
+    text = common_sheet.read_text()
+    for old, new in SELECTED:
+        text = replace_once(text, old, new, "_common-3.0.scss")
+    common_sheet.write_text(text)
     for entry, source in ENTRIES.items():
         (pack / entry).parent.mkdir()
         for variant in ("Light", "Dark"):

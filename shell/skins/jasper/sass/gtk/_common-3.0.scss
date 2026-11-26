@@ -146,7 +146,7 @@
   }
 
   .background.csd &:selected {
-    @extend %selected_items;
+    @extend %selected_items_primary;
   }
 }
 
@@ -1522,7 +1522,7 @@ treeview.view {
   }
 
   .csd &:selected {
-    @extend %selected_items;
+    @extend %selected_items_primary;
     background-image: none;
   }
 
