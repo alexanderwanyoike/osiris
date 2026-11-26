@@ -146,3 +146,28 @@ def test_the_model_may_write_a_fixed_colour_the_person_asks_for() -> None:
     told = " ".join(instructions(auto_mode=True).split())
     assert "always come from the Theme" not in told
     assert "a fixed colour only when the person asks for one" in told
+
+
+def test_osiris_wears_skins_but_builds_none() -> None:
+    """Skins Osiris made looked poor in every test. A person can still work on
+    one with an agent of their own, but Osiris offers no tools for it."""
+    subject = server(
+        FakeThemeStore(),
+        Programs(FakeFileSystem(), FakeRunner(), HOME),
+        new_log(),
+        UserWallpapers(FakeFileSystem(), FakeRunner(), HOME / "w", ""),
+        skins=FakeSkinStore(),
+    )
+    offered = {tool.name for tool in asyncio.run(subject.list_tools())}
+    building = {
+        "create_skin",
+        "check_skin",
+        "import_gtk_theme",
+        "install_icon_set",
+        "install_fonts",
+    }
+    assert {"list_skins", "wear_skin"} <= offered
+    assert not offered & building
+    assert "You do not make or change Skins" in " ".join(
+        instructions(auto_mode=False).split()
+    )
