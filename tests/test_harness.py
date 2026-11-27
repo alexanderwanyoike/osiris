@@ -40,7 +40,7 @@ from osiris.harness.harness import (
 )
 from osiris.harness.log import LOG_FILE, HarnessLog
 from osiris.harness.picker import Entry, Reference
-from osiris.platform import FakeFileSystem
+from osiris.platform import FakeFileSystem, HttpError
 
 HOME = Path("/home/tester")
 NOON = datetime(2026, 10, 17, 12, 0, tzinfo=UTC)
@@ -58,6 +58,8 @@ class FakeEngine:
     forms_answered: list[tuple[str, str, dict[str, FormAnswer]]] = field(
         default_factory=list
     )
+    #: Why the Engine refuses a form's answer, if it does.
+    form_refused: HttpError | None = None
     stopped: list[str] = field(default_factory=list)
     cut: list[str] = field(default_factory=list)
     reverted: list[tuple[str, str]] = field(default_factory=list)
@@ -102,6 +104,8 @@ class FakeEngine:
     def answer_form(
         self, session: str, form: str, answers: Mapping[str, FormAnswer]
     ) -> None:
+        if self.form_refused is not None:
+            raise self.form_refused
         self.forms_answered.append((session, form, dict(answers)))
 
     def stop(self, session: str) -> None:
@@ -369,6 +373,17 @@ def test_a_form_the_person_answers_reaches_the_engine_and_is_logged() -> None:
         "form-answered",
         {"q0": "Deep dusk", "q1": ["Wallpaper"]},
     )
+
+
+def test_a_form_answer_the_engine_refuses_is_logged_and_says_why() -> None:
+    """The form still waits at the Engine; the card must not be lost."""
+    subject, engine, files = harness()
+    subject.ask("make it look like lavender at dusk")
+    engine.form_refused = HttpError(400, "Expected string array for form field: q1")
+    why = subject.answer_form("ses_1", "frm_1", {"q1": "Clock"})
+    assert why == "HTTP 400: Expected string array for form field: q1"
+    entry = entries(files)[-1]
+    assert (entry["kind"], entry["error"]) == ("form-answer-failed", why)
 
 
 def test_a_card_waiting_in_one_conversation_holds_up_no_other() -> None:
