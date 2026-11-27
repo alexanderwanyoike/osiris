@@ -19,11 +19,14 @@ from osiris.harness.connectors import State
 from osiris.harness.context import CHARACTERS, KINDS, ContextUse
 from osiris.harness.engine import (
     Answered,
+    Choice,
     Delivered,
     Event,
     Failed,
     FileChange,
     Finished,
+    FormAsked,
+    FormField,
     ModelRef,
     Past,
     PastTurn,
@@ -583,6 +586,30 @@ def _requested(session: str, data: dict[str, Any]) -> ToolRequested:
     )
 
 
+def _form(form: dict[str, Any]) -> FormAsked:
+    """A form opencode opens for the person, such as its question tool's."""
+    return FormAsked(
+        form["sessionID"],
+        form["id"],
+        tuple(
+            FormField(
+                field["key"],
+                field.get("title", ""),
+                field.get("description", ""),
+                tuple(
+                    Choice(
+                        option["value"], option["label"], option.get("description", "")
+                    )
+                    for option in field.get("options") or ()
+                ),
+                multiple=field["type"] == "multiselect",
+                custom=field.get("custom", False),
+            )
+            for field in form["fields"]
+        ),
+    )
+
+
 #: Events read whole from what opencode sends, each by its session and data.
 _MADE: dict[object, Callable[[str, dict[str, Any]], Event]] = {
     "session.text.delta": lambda session, data: Text(session, data["delta"]),
@@ -594,6 +621,7 @@ _MADE: dict[object, Callable[[str, dict[str, Any]], Event]] = {
     "session.execution.failed": lambda session, data: Failed(
         session, data.get("error", {}).get("message", "")
     ),
+    "form.created": lambda _session, data: _form(data["form"]),
 }
 
 

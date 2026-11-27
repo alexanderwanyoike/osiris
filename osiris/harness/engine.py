@@ -87,6 +87,39 @@ class ToolFinished:
 
 
 @dataclass(frozen=True)
+class Choice:
+    """One answer a form field offers."""
+
+    #: What the reply carries when it is chosen.
+    value: str
+    label: str
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class FormField:
+    """One thing a form asks: chosen from its choices or, if it allows, typed."""
+
+    key: str
+    title: str
+    text: str
+    choices: tuple[Choice, ...] = ()
+    #: Several choices may be picked at once.
+    multiple: bool = False
+    #: An answer of the person's own may be typed instead.
+    custom: bool = False
+
+
+@dataclass(frozen=True)
+class FormAsked:
+    """The model asks the person something and waits until the form is answered."""
+
+    session: str
+    form: str
+    fields: tuple[FormField, ...]
+
+
+@dataclass(frozen=True)
 class Delivered:
     """A message that waited while the model worked has reached it."""
 
@@ -125,6 +158,7 @@ Event = (
     | ToolCalled
     | ToolRequested
     | ToolFinished
+    | FormAsked
     | Delivered
     | Answered
     | Finished
