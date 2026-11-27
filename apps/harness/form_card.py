@@ -14,15 +14,18 @@ from osiris.harness.engine import (  # noqa: E402
     FormAsked,
     FormField,
 )
+from osiris.harness.forms import reply  # noqa: E402
 
 
 class FormCard(Gtk.Box):
     def __init__(self, form: FormAsked, *, on_answer: Callable[[dict[str, FormAnswer]], None]):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-approval")
+        self._form = form
         self._on_answer = on_answer
-        #: Each question's answer as it stands, by its key.
-        self._answers: dict[str, Callable[[], FormAnswer]] = {}
+        #: Each question's choices picked, and its answer typed, by its key.
+        self._picked: dict[str, Callable[[], tuple[str, ...]]] = {}
+        self._typed: dict[str, Gtk.Entry] = {}
         for field in form.fields:
             self._question(field)
         send = Gtk.Button(label="Send", halign=Gtk.Align.START)
@@ -35,16 +38,11 @@ class FormCard(Gtk.Box):
         heading.add_css_class("heading")
         self.append(heading)
         self.append(Gtk.Label(label=field.text, xalign=0, wrap=True))
-        picked = self._choices(field)
-        typed = self._entry() if field.custom else None
+        self._picked[field.key] = self._choices(field)
+        if field.custom:
+            self._typed[field.key] = self._entry()
 
-        def answer() -> FormAnswer:
-            text = typed.get_text().strip() if typed is not None else ""
-            return text or picked()
-
-        self._answers[field.key] = answer
-
-    def _choices(self, field: FormField) -> Callable[[], FormAnswer]:
+    def _choices(self, field: FormField) -> Callable[[], tuple[str, ...]]:
         """Radio buttons for one of the choices, ticks for any of them."""
         boxes: list[tuple[Gtk.CheckButton, str]] = []
         for choice in field.choices:
@@ -52,12 +50,7 @@ class FormCard(Gtk.Box):
             box = Gtk.CheckButton(child=_lines(choice), group=group)
             boxes.append((box, choice.value))
             self.append(box)
-
-        def picked() -> FormAnswer:
-            values = tuple(value for box, value in boxes if box.get_active())
-            return values if field.multiple else next(iter(values), "")
-
-        return picked
+        return lambda: tuple(value for box, value in boxes if box.get_active())
 
     def _entry(self) -> Gtk.Entry:
         entry = Gtk.Entry(placeholder_text="Or type your own answer", hexpand=True)
@@ -66,8 +59,9 @@ class FormCard(Gtk.Box):
         return entry
 
     def _send(self) -> None:
-        answers = {key: answer() for key, answer in self._answers.items()}
-        self._on_answer({key: value for key, value in answers.items() if value})
+        picked = {key: choices() for key, choices in self._picked.items()}
+        typed = {key: entry.get_text() for key, entry in self._typed.items()}
+        self._on_answer(reply(self._form, picked, typed))
 
 
 def _lines(choice: Choice) -> Gtk.Box:
