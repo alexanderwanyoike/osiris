@@ -271,6 +271,11 @@ class Conversation:
         for turn in self.turns:
             turn.admin = None
 
+    def form_answered(self) -> None:
+        if self.turns:
+            self.turns[-1].form = None
+            self.turns[-1].doing = THINKING
+
     def changed(self, changes: list[Change]) -> None:
         """Record what the latest question led to, as the Harness log has it."""
         if self.turns:
