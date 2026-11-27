@@ -9,7 +9,7 @@ from __future__ import annotations
 import base64
 import json
 import re
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -183,6 +183,19 @@ class OpencodeEngine:
             # can arrive after its request is gone.
             if error.status != 404:
                 raise
+
+    def answer_form(
+        self, session: str, form: str, answers: Mapping[str, str | tuple[str, ...]]
+    ) -> None:
+        self._post(
+            f"/api/session/{session}/form/{form}/reply",
+            {
+                "answer": {
+                    key: value if isinstance(value, str) else list(value)
+                    for key, value in answers.items()
+                }
+            },
+        )
 
     def revert(self, session: str, message: str) -> Revert:
         staged = self._post(

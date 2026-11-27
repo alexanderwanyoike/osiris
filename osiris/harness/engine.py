@@ -7,7 +7,7 @@ Engine has to fit it.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -237,6 +237,13 @@ class Engine(Protocol):
 
     def reply(self, session: str, request: str, answer: Reply, message: str) -> None:
         """Answer a ``ToolRequested``; ``message`` is passed to the model."""
+        ...
+
+    def answer_form(
+        self, session: str, form: str, answers: Mapping[str, str | tuple[str, ...]]
+    ) -> None:
+        """Answer a ``FormAsked``: a value for each field, several for a field
+        that takes several."""
         ...
 
     def revert(self, session: str, message: str) -> Revert:

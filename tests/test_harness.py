@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -54,6 +54,9 @@ class FakeEngine:
     sent: list[tuple[str, str]] = field(default_factory=list)
     withdrawn: list[tuple[str, str]] = field(default_factory=list)
     replies: list[tuple[str, str, Reply, str]] = field(default_factory=list)
+    forms_answered: list[tuple[str, str, dict[str, str | tuple[str, ...]]]] = field(
+        default_factory=list
+    )
     stopped: list[str] = field(default_factory=list)
     cut: list[str] = field(default_factory=list)
     reverted: list[tuple[str, str]] = field(default_factory=list)
@@ -94,6 +97,11 @@ class FakeEngine:
 
     def reply(self, session: str, request: str, answer: Reply, message: str) -> None:
         self.replies.append((session, request, answer, message))
+
+    def answer_form(
+        self, session: str, form: str, answers: Mapping[str, str | tuple[str, ...]]
+    ) -> None:
+        self.forms_answered.append((session, form, dict(answers)))
 
     def stop(self, session: str) -> None:
         self.stopped.append(session)
