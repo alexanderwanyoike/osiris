@@ -78,6 +78,10 @@ class UrllibClient:
             ) from error
         except urllib.error.URLError as error:
             raise HttpError(0, str(error.reason)) from error
+        except OSError as error:
+            # urllib wraps only connect and send failures; a timeout or hang-up
+            # while waiting for the reply comes through bare.
+            raise HttpError(0, str(error)) from error
         return json.loads(text) if text.strip() else None
 
     def lines(
