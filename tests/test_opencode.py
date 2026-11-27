@@ -323,6 +323,17 @@ class TestSessions:
             ("POST", path, {"decision": decision, "message": "why"})
         ]
 
+    def test_a_form_is_answered_with_a_value_for_each_field(self) -> None:
+        """A multiselect field takes a list; opencode's form reply."""
+        path = f"{URL}/api/session/{SESSION}/form/frm_1/reply"
+        http = FakeHttpClient(replies={("POST", path): None})
+        engine(http).answer_form(
+            SESSION, "frm_1", {"q0": "Deep dusk", "q1": ("Wallpaper",)}
+        )
+        assert http.requests == [
+            ("POST", path, {"answer": {"q0": "Deep dusk", "q1": ["Wallpaper"]}})
+        ]
+
 
 class TestGoingBack:
     STAGE = f"{URL}/api/session/{SESSION}/revert/stage"
