@@ -667,6 +667,7 @@ class Drawer(Gtk.ApplicationWindow):
                             program_card=self.app.program_card,
                             admin_card=self.app.admin_card,
                             approval_card=self.app.approval_card,
+                            form_card=self.app.form_card,
                             edit=self.app.ask_to_go_back,
                             try_again=lambda turn: self.app.ask_to_go_back(turn, True),
                             may_go_back=lambda turn: self.app.conversation.can_go_back(turn),
