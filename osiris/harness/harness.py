@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path
@@ -356,6 +356,18 @@ class Harness:
             return Allowed(session, asking.action, asking.resources, asking.call)
         reason = f"You replied: {reply}" if reply else DENIED
         return Refused(session, asking.action, asking.resources, asking.call, reason)
+
+    def answer_form(
+        self, session: str, form: str, answers: Mapping[str, str | tuple[str, ...]]
+    ) -> None:
+        """The person's answer to what the model asked, passed to the Engine."""
+        self._engine.answer_form(session, form, answers)
+        self._log.write(
+            "form-answered",
+            session=session,
+            form=form,
+            answers=dict(answers),
+        )
 
     def _called(self, event: ToolCalled) -> None:
         """Log a tool call; a command is noted even if the Engine's rules ran
