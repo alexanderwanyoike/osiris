@@ -9,7 +9,7 @@ from __future__ import annotations
 import base64
 import json
 import re
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -583,6 +583,20 @@ def _requested(session: str, data: dict[str, Any]) -> ToolRequested:
     )
 
 
+#: Events read whole from what opencode sends, each by its session and data.
+_MADE: dict[object, Callable[[str, dict[str, Any]], Event]] = {
+    "session.text.delta": lambda session, data: Text(session, data["delta"]),
+    "session.inbox.delivered": lambda session, data: Delivered(
+        session, data["inboxID"]
+    ),
+    "session.execution.succeeded": lambda session, _data: Finished(session),
+    "session.execution.interrupted": lambda session, _data: Stopped(session),
+    "session.execution.failed": lambda session, data: Failed(
+        session, data.get("error", {}).get("message", "")
+    ),
+}
+
+
 class _Reader:
     """Turns opencode's events into the Engine's.
 
@@ -598,14 +612,14 @@ class _Reader:
     def read(self, event: dict[str, Any]) -> Event | None:
         kind, data = event.get("type"), event.get("data", {})
         session = data.get("sessionID", "")
+        if (made := _MADE.get(kind)) is not None:
+            return made(session, data)
         match kind:
             case "session.step.started":
                 model = data["model"]
                 self._models[data["assistantMessageID"]] = ModelRef(
                     model["providerID"], model["id"]
                 )
-            case "session.text.delta":
-                return Text(session, data["delta"])
             case (
                 "session.tool.called"
                 | "permission.asked"
@@ -615,16 +629,8 @@ class _Reader:
                 return _tool(kind, session, data, self._names.pop(data.get("id"), ""))
             case "session.tool.input.started":
                 self._names[data["id"]] = data.get("name", "")
-            case "session.inbox.delivered":
-                return Delivered(session, data["inboxID"])
             case "session.step.ended":
                 return self._answered(session, data)
-            case "session.execution.succeeded":
-                return Finished(session)
-            case "session.execution.interrupted":
-                return Stopped(session)
-            case "session.execution.failed":
-                return Failed(session, data.get("error", {}).get("message", ""))
         return None
 
     def _answered(self, session: str, data: dict[str, Any]) -> Answered | None:
