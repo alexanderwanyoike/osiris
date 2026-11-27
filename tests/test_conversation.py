@@ -574,6 +574,16 @@ def test_what_the_model_asks_waits_on_its_turn_for_the_person() -> None:
     assert talk.waits_for_person
 
 
+def test_an_answered_form_leaves_the_turn_and_the_model_goes_on() -> None:
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.form_answered()
+    assert talk.turns[-1].form is None
+    assert talk.turns[-1].doing == "Thinking"
+    assert not talk.waits_for_person
+
+
 def test_a_question_can_be_gone_back_to_once_nothing_is_answering() -> None:
     """Its message names it to the Engine, which refuses while it runs."""
     talk = Conversation.restored([PastTurn("make x.txt", "Made it.", None, "msg_1")])
