@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import json
 import threading
-import time
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
 from osiris.platform import FakeHttpClient, HttpError, UrllibClient
+
+# Holds /silent's reply back until the test is over, however slow the machine.
+RELEASE = threading.Event()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -41,7 +43,7 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(b"b\r\ndata: one\n\r\n")
             return
         if self.path == "/silent":
-            time.sleep(0.5)
+            RELEASE.wait()
             return
         if self.path == "/hangup":
             return
@@ -73,10 +75,12 @@ class Handler(BaseHTTPRequestHandler):
 
 @pytest.fixture
 def server() -> Iterator[str]:
+    RELEASE.clear()
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
     yield f"http://127.0.0.1:{httpd.server_address[1]}"
+    RELEASE.set()
     httpd.shutdown()
     httpd.server_close()
 
