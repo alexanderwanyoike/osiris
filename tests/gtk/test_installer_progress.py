@@ -81,20 +81,15 @@ def test_the_slides_take_turns_and_start_again_after_the_last() -> None:
 
 
 class FakeTimer:
-    """GLib's repeating timeout, fired by hand.
-
-    A real 50 ms timer raced the test's wait: five turns of five slides
-    land back on the first, so how far the slides got depended on how many
-    ticks Xvfb let through.
-    """
+    """GLib's repeating timeout, fired by hand so the turns are counted exactly."""
 
     def __init__(self) -> None:
-        self.every_ms: dict[int, int] = {}
+        self.intervals: dict[int, int] = {}
         self.calls: dict[int, Callable[[], bool]] = {}
 
     def repeat(self, every_ms: int, call: Callable[[], bool]) -> int:
-        source = len(self.every_ms) + 1
-        self.every_ms[source] = every_ms
+        source = len(self.intervals) + 1
+        self.intervals[source] = every_ms
         self.calls[source] = call
         return source
 
@@ -117,7 +112,7 @@ def test_the_slides_move_on_by_themselves_while_they_are_on_screen() -> None:
     assert not timer.running()
     window.present()
     assert settle(timer.running)
-    assert list(timer.every_ms.values()) == [50]
+    assert list(timer.intervals.values()) == [50]
     timer.fire()
     timer.fire()
     assert CAPTIONS[2] in texts(slides.get_visible_child())
