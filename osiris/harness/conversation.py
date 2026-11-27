@@ -353,18 +353,21 @@ class Conversation:
                 )
                 turn.doing = THINKING
 
+    def _streamed(self, turn: Turn, delta: str) -> None:
+        if self._step_ended:
+            turn.answer = next_step(turn.answer)
+        self._step_ended = False
+        turn.answer += delta
+        turn.state = State.ANSWERING
+        turn.doing = WRITING
+
     def apply(self, event: Event | Decision) -> None:
         if not self.turns:
             return
         turn = self.turns[-1]
         match event:
             case Text(_, delta):
-                if self._step_ended:
-                    turn.answer = next_step(turn.answer)
-                self._step_ended = False
-                turn.answer += delta
-                turn.state = State.ANSWERING
-                turn.doing = WRITING
+                self._streamed(turn, delta)
             case Answered(_, model, tokens, _):
                 turn.model = self.model = model
                 turn.doing = THINKING
