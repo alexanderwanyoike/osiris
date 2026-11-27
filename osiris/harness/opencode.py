@@ -629,8 +629,9 @@ def _form(form: dict[str, Any]) -> FormAsked:
     )
 
 
-#: Events read whole from what opencode sends, each by its session and data.
-_MADE: dict[object, Callable[[str, dict[str, Any]], Event]] = {
+#: The events read whole from what opencode sends, by their kind; each is made
+#: from its session and data.
+_BY_KIND: dict[object, Callable[[str, dict[str, Any]], Event]] = {
     "session.text.delta": lambda session, data: Text(session, data["delta"]),
     "session.inbox.delivered": lambda session, data: Delivered(
         session, data["inboxID"]
@@ -659,7 +660,7 @@ class _Reader:
     def read(self, event: dict[str, Any]) -> Event | None:
         kind, data = event.get("type"), event.get("data", {})
         session = data.get("sessionID", "")
-        if (made := _MADE.get(kind)) is not None:
+        if (made := _BY_KIND.get(kind)) is not None:
             return made(session, data)
         match kind:
             case "session.step.started":
