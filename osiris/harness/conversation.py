@@ -16,6 +16,7 @@ from osiris.harness.engine import (
     Event,
     Failed,
     Finished,
+    FormAsked,
     ModelRef,
     PastTurn,
     Stopped,
@@ -64,6 +65,8 @@ class Turn:
     #: Actions asked about while a card was already open, each with its step,
     #: shown in turn as the one before is answered.
     queued: list[tuple[Asking, Step]] = field(default_factory=list)
+    #: What the model asked the person, waiting for their answer.
+    form: FormAsked | None = None
     #: The Engine's plan for this answer, as it last reported it.
     tasks: list[Task] = field(default_factory=list)
     #: The question's message at the Engine, once it has been sent.
@@ -161,11 +164,11 @@ class Conversation:
 
     @property
     def waits_for_person(self) -> bool:
-        """An approval or admin password card is open on its latest answer."""
+        """An approval, admin password or form card is open on its latest answer."""
         if not self.turns:
             return False
         turn = self.turns[-1]
-        return turn.asking is not None or turn.admin is not None
+        return any(w is not None for w in (turn.asking, turn.admin, turn.form))
 
     def model_label(self, default: ModelRef | None) -> str:
         """The model in play: the last that answered, else the one chosen."""
@@ -375,6 +378,9 @@ class Conversation:
                 self.tokens_spent += tokens.input + tokens.output + tokens.reasoning
             case Asking() | ToolCalled() | Allowed() | Refused() | ToolFinished():
                 self._step(turn, event)
+            case FormAsked():
+                turn.form = event
+                turn.doing = Status.WAITING.value
             case Delivered(_, message):
                 self._delivered(message)
             case Finished():
