@@ -360,15 +360,20 @@ class Harness:
 
     def answer_form(
         self, session: str, form: str, answers: Mapping[str, FormAnswer]
-    ) -> None:
-        """The person's answer to what the model asked, passed to the Engine."""
-        self._engine.answer_form(session, form, answers)
+    ) -> str | None:
+        """The person's answer to what the model asked, passed to the Engine.
+        Why the Engine would not take it, or None when it did."""
+        try:
+            self._engine.answer_form(session, form, answers)
+        except HttpError as error:
+            self._log.write(
+                "form-answer-failed", session=session, form=form, error=str(error)
+            )
+            return str(error)
         self._log.write(
-            "form-answered",
-            session=session,
-            form=form,
-            answers=dict(answers),
+            "form-answered", session=session, form=form, answers=dict(answers)
         )
+        return None
 
     def _called(self, event: ToolCalled) -> None:
         """Log a tool call; a command is noted even if the Engine's rules ran
