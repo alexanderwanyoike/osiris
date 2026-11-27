@@ -8,7 +8,7 @@ from gi.repository import Gtk
 
 from osiris.harness.engine import Choice, FormAsked, FormField
 
-from .conftest import texts, widgets
+from .conftest import find, texts, widgets
 
 MOOD = FormField(
     "q0",
@@ -53,3 +53,11 @@ def test_one_question_is_answered_by_clicking_a_choice() -> None:
     widget, answers = card(MOOD)
     choice(widget, "Deep dusk").emit("clicked")
     assert answers == [{"q0": "Deep dusk"}]
+
+
+def test_one_question_can_be_answered_in_the_persons_own_words() -> None:
+    widget, answers = card(MOOD)
+    entry = find(widget, Gtk.Entry, "Or type your own answer")
+    entry.set_text("Violet with a gold horizon")
+    entry.emit("activate")
+    assert answers == [{"q0": "Violet with a gold horizon"}]
