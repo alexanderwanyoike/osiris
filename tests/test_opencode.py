@@ -1232,3 +1232,39 @@ class TestWaiting:
         assert engine(http).waiting(SESSION) == [
             ToolRequested(SESSION, "per_1", "bash", ("ls /etc",), "call_1", ("ls *",))
         ]
+
+    def test_a_form_still_open_in_a_session_is_read_as_asked(self) -> None:
+        """As opencode 2.4.1 lists them: pending forms only, each as it was
+        opened."""
+        form = {
+            "id": "frm_1",
+            "sessionID": SESSION,
+            "title": "Questions",
+            "metadata": {"kind": "question"},
+            "fields": [
+                {
+                    "key": "q0",
+                    "title": "Mood",
+                    "description": "Which dusk should it be?",
+                    "type": "string",
+                    "options": [{"value": "Deep dusk", "label": "Deep dusk"}],
+                    "custom": True,
+                }
+            ],
+        }
+        http = waiting_in([], [form])
+        assert engine(http).waiting(SESSION) == [
+            FormAsked(
+                SESSION,
+                "frm_1",
+                (
+                    FormField(
+                        "q0",
+                        "Mood",
+                        "Which dusk should it be?",
+                        (Choice("Deep dusk", "Deep dusk"),),
+                        custom=True,
+                    ),
+                ),
+            )
+        ]
