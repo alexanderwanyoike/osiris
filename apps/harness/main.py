@@ -978,8 +978,8 @@ class Application(Adw.Application):
         return self.forms[form.form]
 
     def answer_form(self, form: FormAsked, answers: dict[str, FormAnswer]) -> None:
-        """The card goes at once; the Engine is answered off the main loop."""
-        self.forms.pop(form.form, None)
+        """The card goes at once and the Engine is answered off the main loop;
+        an answer it refuses brings the same card back, as it was left."""
         conversation = self._conversation_of(form.session)
         if conversation is not None:
             conversation.form_answered()
@@ -987,9 +987,17 @@ class Application(Adw.Application):
         harness = self.harness
         if harness is None:
             return
+
+        def sent(why: str | None) -> None:
+            if why is None:
+                self.forms.pop(form.form, None)
+            elif conversation is not None:
+                conversation.form_refused(form, why)
+                self.drawer.refresh()
+            self.load_history()
+
         self.background(
-            lambda: harness.answer_form(form.session, form.form, answers),
-            lambda _done: self.load_history())
+            lambda: harness.answer_form(form.session, form.form, answers), sent)
 
     def admin_answer(self, session: str, password: str | None) -> None:
         """Answer a waiting request once: with the password, or refused when
