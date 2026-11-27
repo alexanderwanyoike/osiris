@@ -3,7 +3,15 @@
 from __future__ import annotations
 
 from osiris.harness.conversation import Conversation
-from osiris.harness.engine import Event, Failed, Finished, Text
+from osiris.harness.engine import (
+    Choice,
+    Event,
+    Failed,
+    Finished,
+    FormAsked,
+    FormField,
+    Text,
+)
 from osiris.harness.notice import Notice, notice_of
 
 
@@ -89,4 +97,26 @@ def test_a_conversation_waiting_says_what_osiris_is_asking() -> None:
     talk = answered("List /etc", Asking("ses_1", "per_1", "shell", ("ls /etc",)))
     assert notice_of(talk) == Notice(
         "Osiris is waiting for you", "List /etc\nRun a command?"
+    )
+
+
+def test_a_form_says_osiris_is_waiting_and_what_it_asks() -> None:
+    talk = answered(
+        "Make it lavender at dusk",
+        FormAsked(
+            "ses_1",
+            "frm_1",
+            (
+                FormField(
+                    "q0",
+                    "Mood",
+                    "Which dusk should it be?",
+                    (Choice("Deep dusk", "Deep dusk"),),
+                ),
+            ),
+        ),
+    )
+    assert notice_of(talk) == Notice(
+        "Osiris is waiting for you",
+        "Make it lavender at dusk\nWhich dusk should it be?",
     )
