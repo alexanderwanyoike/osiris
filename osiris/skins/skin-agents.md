@@ -36,12 +36,15 @@ each is drawn by something else:
   window manager, Muffin, draws from the decoration
   (`window.ssd > decoration`, written `.ssd decoration` in most Skins) and
   `headerbar.titlebar.default-decoration`. Muffin makes the frame's visible
-  edge as wide as the decoration's border and padding, paints that border,
-  and rounds the frame with its `border-radius`. To outline these windows,
-  give `window.ssd > decoration` the same border and corners as the other
-  windows, and none when `.maximized` or `.fullscreen`. A background alone
-  shows nothing, since without a border the frame has no edge to paint.
-  Muffin adds its own soft shadow to them.
+  edge as wide as the decoration's border and padding and paints the
+  decoration, then paints the title bar across the frame's whole top, over
+  the decoration's top border and the sides beside it. To outline these
+  windows, give `window.ssd > decoration` the outline's border and the title
+  bar the same border on its top and sides. Muffin shapes the frame's corners
+  from the title bar's `border-radius`, not the decoration's, so give both the
+  same radius. Muffin adds `.maximized` or `.tiled` to these windows; give
+  them no border then. A background with no border or padding shows nothing,
+  since the frame then has no edge. Muffin adds its own soft shadow to them.
 - The panel is an edge of the screen. An outline belongs on the side facing
   the desktop (`.panel-top`, `.panel-bottom` and so on).
 - The dock can draw only a stroke (`LineWidth`, `OuterStrokeColor`), corner
