@@ -45,6 +45,7 @@ sys.path.insert(0, HERE)
 from admin_card import AdminCard  # noqa: E402
 from allowed_tab import AllowedTab  # noqa: E402
 from approval_card import ApprovalCard  # noqa: E402
+from form_card import Answers, FormCard  # noqa: E402
 from going_back import going_back_dialog  # noqa: E402
 from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
@@ -960,6 +961,26 @@ class Application(Adw.Application):
 
         self.background(lambda: harness.answer(asking.session, asking.request,
                                                 answer, reply), answered)
+
+    def form_card(self, turn: Turn) -> Gtk.Widget:
+        """The card for what the model asks the person."""
+        form = turn.form
+        if form is None:
+            return Gtk.Box()
+        return FormCard(form, on_answer=lambda answers: self.answer_form(form, answers))
+
+    def answer_form(self, form: FormAsked, answers: Answers) -> None:
+        """The card goes at once; the Engine is answered off the main loop."""
+        conversation = self._conversation_of(form.session)
+        if conversation is not None:
+            conversation.form_answered()
+            self.drawer.refresh()
+        harness = self.harness
+        if harness is None:
+            return
+        self.background(
+            lambda: harness.answer_form(form.session, form.form, answers),
+            lambda _done: self.load_history())
 
     def admin_answer(self, session: str, password: str | None) -> None:
         """Answer a waiting request once: with the password, or refused when
