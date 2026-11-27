@@ -101,6 +101,8 @@ class UrllibClient:
             ) from error
         except urllib.error.URLError as error:
             raise HttpError(0, str(error.reason)) from error
+        except (OSError, http.client.HTTPException) as error:
+            raise HttpError(0, str(error)) from error
 
 
 @dataclass
