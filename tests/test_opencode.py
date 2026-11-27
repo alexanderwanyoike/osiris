@@ -1205,6 +1205,19 @@ class TestSavedRules:
         assert http.requests == [("DELETE", path, None)]
 
 
+def waiting_in(
+    requests: list[dict[str, object]], forms: list[dict[str, object]]
+) -> FakeHttpClient:
+    """opencode's lists of a session's open permission requests and forms."""
+    session = f"{URL}/api/session/{SESSION}"
+    return FakeHttpClient(
+        replies={
+            ("GET", f"{session}/permission"): {"data": requests},
+            ("GET", f"{session}/form"): {"data": forms},
+        }
+    )
+
+
 class TestWaiting:
     def test_requests_still_waiting_in_a_session_are_read_as_asked(self) -> None:
         waiting = {
@@ -1215,8 +1228,7 @@ class TestWaiting:
             "save": ["ls *"],
             "source": {"type": "tool", "messageID": "msg_1", "id": "call_1"},
         }
-        path = f"{URL}/api/session/{SESSION}/permission"
-        http = FakeHttpClient(replies={("GET", path): {"data": [waiting]}})
+        http = waiting_in([waiting], [])
         assert engine(http).waiting(SESSION) == [
             ToolRequested(SESSION, "per_1", "bash", ("ls /etc",), "call_1", ("ls *",))
         ]
