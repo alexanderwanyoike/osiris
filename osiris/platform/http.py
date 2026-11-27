@@ -7,6 +7,7 @@ replies so the code above it is tested without a server running.
 
 from __future__ import annotations
 
+import http.client
 import json
 import urllib.error
 import urllib.request
@@ -78,9 +79,9 @@ class UrllibClient:
             ) from error
         except urllib.error.URLError as error:
             raise HttpError(0, str(error.reason)) from error
-        except OSError as error:
-            # urllib wraps only connect and send failures; a timeout or hang-up
-            # while waiting for the reply comes through bare.
+        except (OSError, http.client.HTTPException) as error:
+            # urllib wraps only connect and send failures; a timeout, hang-up or
+            # cut-off body while reading the reply comes through bare.
             raise HttpError(0, str(error)) from error
         return json.loads(text) if text.strip() else None
 
