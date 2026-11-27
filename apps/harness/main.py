@@ -808,6 +808,8 @@ class Application(Adw.Application):
         self.admin_pending: dict[str, AdminPending] = {}
         #: Each approval card waiting for the person, by session and request.
         self.approvals: dict[tuple[str, str], ApprovalCard] = {}
+        #: Each form card waiting for the person, by form.
+        self.forms: dict[str, FormCard] = {}
         self._admin_object = 0
         #: An Entry point's folder and draft, until it can be started.
         self.waiting: tuple[Path, str | None] | None = None
@@ -964,14 +966,19 @@ class Application(Adw.Application):
                                                 answer, reply), answered)
 
     def form_card(self, turn: Turn) -> Gtk.Widget:
-        """The card for what the model asks the person."""
+        """The card for what the model asks the person, the same one each time
+        it is drawn, so what is typed in it survives a redraw."""
         form = turn.form
         if form is None:
             return Gtk.Box()
-        return FormCard(form, on_answer=lambda answers: self.answer_form(form, answers))
+        if form.form not in self.forms:
+            self.forms[form.form] = FormCard(
+                form, on_answer=lambda answers: self.answer_form(form, answers))
+        return self.forms[form.form]
 
     def answer_form(self, form: FormAsked, answers: Answers) -> None:
         """The card goes at once; the Engine is answered off the main loop."""
+        self.forms.pop(form.form, None)
         conversation = self._conversation_of(form.session)
         if conversation is not None:
             conversation.form_answered()
