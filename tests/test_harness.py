@@ -356,6 +356,20 @@ def test_always_allowing_leaves_the_engine_to_keep_allowing_it() -> None:
     assert isinstance(again, Asking)
 
 
+def test_a_form_the_person_answers_reaches_the_engine_and_is_logged() -> None:
+    subject, engine, files = harness()
+    subject.ask("make it look like lavender at dusk")
+    subject.answer_form("ses_1", "frm_1", {"q0": "Deep dusk", "q1": ("Wallpaper",)})
+    assert engine.forms_answered == [
+        ("ses_1", "frm_1", {"q0": "Deep dusk", "q1": ("Wallpaper",)})
+    ]
+    entry = entries(files)[-1]
+    assert (entry["kind"], entry["answers"]) == (
+        "form-answered",
+        {"q0": "Deep dusk", "q1": ["Wallpaper"]},
+    )
+
+
 def test_a_card_waiting_in_one_conversation_holds_up_no_other() -> None:
     subject, engine, _ = asked_to_list_etc()
     subject.new_conversation()
