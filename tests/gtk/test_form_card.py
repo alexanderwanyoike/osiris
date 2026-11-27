@@ -4,10 +4,11 @@ and the person's answer."""
 from __future__ import annotations
 
 from form_card import FormCard
+from gi.repository import Gtk
 
 from osiris.harness.engine import Choice, FormAsked, FormField
 
-from .conftest import texts
+from .conftest import texts, widgets
 
 MOOD = FormField(
     "q0",
@@ -40,3 +41,15 @@ def test_the_card_shows_each_question_and_its_choices() -> None:
         "Indigo and amber",
     ):
         assert text in shown
+
+
+def choice(widget: FormCard, label: str) -> Gtk.Button:
+    return next(
+        w for w in widgets(widget) if isinstance(w, Gtk.Button) and label in texts(w)
+    )
+
+
+def test_one_question_is_answered_by_clicking_a_choice() -> None:
+    widget, answers = card(MOOD)
+    choice(widget, "Deep dusk").emit("clicked")
+    assert answers == [{"q0": "Deep dusk"}]
