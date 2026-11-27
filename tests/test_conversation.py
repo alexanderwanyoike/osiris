@@ -599,6 +599,16 @@ def test_a_refused_answer_puts_the_form_back_and_says_why() -> None:
     )
 
 
+def test_an_answer_sent_again_clears_why_the_first_was_not() -> None:
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.form_answered()
+    talk.form_refused(MOOD, "HTTP 500: busy")
+    talk.form_answered()
+    assert talk.turns[-1].note == ""
+
+
 def test_a_form_left_open_goes_when_the_answer_ends() -> None:
     """The Engine cancels it; answering it would only fail."""
     talk = Conversation()
