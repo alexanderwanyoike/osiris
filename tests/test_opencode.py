@@ -36,7 +36,13 @@ from osiris.harness.opencode import (
     locate,
 )
 from osiris.harness.picker import Entry, Reference
-from osiris.platform import FakeFileSystem, FakeHttpClient, FakeIdentity, FakeRunner
+from osiris.platform import (
+    FakeFileSystem,
+    FakeHttpClient,
+    FakeIdentity,
+    FakeRunner,
+    HttpError,
+)
 
 URL = "http://127.0.0.1:49374"
 SESSION = "ses_eb47d80feffe3d0JrczUcoVEMq"
@@ -333,6 +339,16 @@ class TestSessions:
         assert http.requests == [
             ("POST", path, {"answer": {"q0": "Deep dusk", "q1": ["Wallpaper"]}})
         ]
+
+    @pytest.mark.parametrize("status", [404, 409])
+    def test_answering_a_form_the_engine_already_closed_is_not_an_error(
+        self, status: int
+    ) -> None:
+        """A stop cancels the form, settling it (409), and a form long gone is
+        not found (404); either way nothing waits on the reply."""
+        path = f"{URL}/api/session/{SESSION}/form/frm_2/reply"
+        http = FakeHttpClient(replies={("POST", path): HttpError(status, "closed")})
+        engine(http).answer_form(SESSION, "frm_2", {"q0": "Deep dusk"})
 
 
 class TestGoingBack:
