@@ -188,15 +188,20 @@ class OpencodeEngine:
     def answer_form(
         self, session: str, form: str, answers: Mapping[str, FormAnswer]
     ) -> None:
-        self._post(
-            f"/api/session/{session}/form/{form}/reply",
-            {
-                "answer": {
-                    key: value if isinstance(value, str) else list(value)
-                    for key, value in answers.items()
-                }
-            },
-        )
+        try:
+            self._post(
+                f"/api/session/{session}/form/{form}/reply",
+                {
+                    "answer": {
+                        key: value if isinstance(value, str) else list(value)
+                        for key, value in answers.items()
+                    }
+                },
+            )
+        except HttpError as error:
+            # A stop cancels the form, settling it, before the reply lands.
+            if error.status not in (404, 409):
+                raise
 
     def revert(self, session: str, message: str) -> Revert:
         staged = self._post(
