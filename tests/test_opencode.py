@@ -10,10 +10,13 @@ import pytest
 
 from osiris.harness.engine import (
     Answered,
+    Choice,
     Delivered,
     Failed,
     FileChange,
     Finished,
+    FormAsked,
+    FormField,
     ModelRef,
     Past,
     PastTurn,
@@ -443,6 +446,70 @@ class TestEvents:
         }
         assert self.events(asked) == [
             ToolRequested(SESSION, "per_1", "read", ("/etc/hostname",), "call_d376")
+        ]
+
+    def test_the_question_tool_asks_the_person_through_a_form(self) -> None:
+        """As opencode 2.4.1 does: its question tool opens a form, a field for
+        each question, and waits until the form is answered."""
+        created = {
+            "type": "form.created",
+            "data": {
+                "form": {
+                    "id": "frm_1",
+                    "sessionID": SESSION,
+                    "title": "Questions",
+                    "metadata": {"kind": "question"},
+                    "fields": [
+                        {
+                            "key": "q0",
+                            "title": "Mood",
+                            "description": "Which dusk should it be?",
+                            "type": "string",
+                            "options": [
+                                {
+                                    "value": "Soft violet",
+                                    "label": "Soft violet",
+                                    "description": "Pale lilac and grey",
+                                },
+                                {"value": "Deep dusk", "label": "Deep dusk"},
+                            ],
+                            "custom": True,
+                        },
+                        {
+                            "key": "q1",
+                            "title": "Extras",
+                            "description": "What else should change?",
+                            "type": "multiselect",
+                            "options": [{"value": "Wallpaper", "label": "Wallpaper"}],
+                        },
+                    ],
+                }
+            },
+        }
+        assert self.events(created) == [
+            FormAsked(
+                SESSION,
+                "frm_1",
+                (
+                    FormField(
+                        "q0",
+                        "Mood",
+                        "Which dusk should it be?",
+                        (
+                            Choice("Soft violet", "Soft violet", "Pale lilac and grey"),
+                            Choice("Deep dusk", "Deep dusk"),
+                        ),
+                        custom=True,
+                    ),
+                    FormField(
+                        "q1",
+                        "Extras",
+                        "What else should change?",
+                        (Choice("Wallpaper", "Wallpaper"),),
+                        multiple=True,
+                    ),
+                ),
+            )
         ]
 
     def test_a_tool_that_ran_gives_back_its_output_and_exit_status(self) -> None:
