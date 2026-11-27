@@ -276,6 +276,11 @@ class Conversation:
             self.turns[-1].form = None
             self.turns[-1].doing = THINKING
 
+    def form_refused(self, form: FormAsked, why: str) -> None:
+        if self.turns:
+            self.apply(form)
+            self.turns[-1].note = f"Your answer was not sent: {why}"
+
     def changed(self, changes: list[Change]) -> None:
         """Record what the latest question led to, as the Harness log has it."""
         if self.turns:
