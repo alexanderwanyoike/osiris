@@ -112,12 +112,12 @@ class FakeTimer:
 
 def test_the_slides_move_on_by_themselves_while_they_are_on_screen() -> None:
     timer = FakeTimer()
-    slides = Slideshow(every_ms=7000, repeat=timer.repeat, cancel=timer.cancel)
+    slides = Slideshow(every_ms=50, repeat=timer.repeat, cancel=timer.cancel)
     window = Gtk.Window(child=slides)
     assert not timer.running()
     window.present()
     assert settle(timer.running)
-    assert list(timer.every_ms.values()) == [7000]
+    assert list(timer.every_ms.values()) == [50]
     timer.fire()
     timer.fire()
     assert CAPTIONS[2] in texts(slides.get_visible_child())
