@@ -275,6 +275,7 @@ class Conversation:
         if self.turns:
             self.turns[-1].form = None
             self.turns[-1].doing = THINKING
+            self.turns[-1].note = ""
 
     def form_refused(self, form: FormAsked, why: str) -> None:
         if self.turns:
