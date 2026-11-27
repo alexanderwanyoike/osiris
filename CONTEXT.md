@@ -117,13 +117,6 @@ _Avoid_: permission level
 The **Engine**'s rules, in its own config, that allow, ask about or deny each
 action the **Harness** takes; the last that matches wins, and they hold for
 every client of the **Engine**. What they ask about waits on a card in the
-**Form card**:
-Where the **Harness** asks the person what the model needs to know before it
-goes on, such as which way a look should lean: each question with its choices,
-a box for an answer of their own, and Send. The model waits until it is sent.
-The **Engine** calls it a form.
-_Avoid_: question card (a question is what the person asks the **Harness**)
-
 **Conversation**: Allow once, Always allow here (the **Engine** keeps allowing
 it in the **Project**), or Deny. A fresh install starts with careful ones; the
 person's own are never overwritten.
@@ -143,6 +136,13 @@ runs uses sudo: the exact command, in the **Conversation** that ran it, with
 Allow and Deny. Any other program's `sudo -A` gets a dialog of the same kind,
 naming that program.
 _Avoid_: sudo prompt, password popup
+
+**Form card**:
+Where the **Harness** asks the person what the model needs to know before it
+goes on, such as which way a look should lean: each question with its choices,
+a box for an answer of their own, and Send. The model waits until it is sent.
+The **Engine** calls it a form.
+_Avoid_: question card (a question is what the person asks the **Harness**)
 
 **Conversation**:
 A run of questions and answers with the **Harness**, held by the **Engine** as one of its sessions; it continues until the person starts a new one.
