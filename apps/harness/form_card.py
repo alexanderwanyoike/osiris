@@ -33,7 +33,7 @@ class FormCard(Gtk.Box):
         heading.add_css_class("heading")
         self.append(heading)
         self.append(Gtk.Label(label=field.text, xalign=0, wrap=True))
-        picked = self._ticks(field) if field.multiple else self._radios(field)
+        picked = self._choices(field)
         typed = self._entry() if field.custom else None
 
         def answer() -> Answer:
@@ -42,25 +42,20 @@ class FormCard(Gtk.Box):
 
         self._answers[field.key] = answer
 
-    def _radios(self, field: FormField) -> Callable[[], Answer]:
-        """One of the choices: the one picked."""
-        radios: list[tuple[Gtk.CheckButton, str]] = []
+    def _choices(self, field: FormField) -> Callable[[], Answer]:
+        """Radio buttons for one of the choices, ticks for any of them."""
+        boxes: list[tuple[Gtk.CheckButton, str]] = []
         for choice in field.choices:
-            group = radios[0][0] if radios else None
-            radios.append(
-                (Gtk.CheckButton(child=_lines(choice), group=group), choice.value)
-            )
-            self.append(radios[-1][0])
-        return lambda: next(
-            (value for radio, value in radios if radio.get_active()), ""
-        )
+            group = boxes[0][0] if boxes and not field.multiple else None
+            box = Gtk.CheckButton(child=_lines(choice), group=group)
+            boxes.append((box, choice.value))
+            self.append(box)
 
-    def _ticks(self, field: FormField) -> Callable[[], Answer]:
-        """Any of the choices: those ticked."""
-        ticks = [(Gtk.CheckButton(child=_lines(c)), c.value) for c in field.choices]
-        for tick, _value in ticks:
-            self.append(tick)
-        return lambda: tuple(value for tick, value in ticks if tick.get_active())
+        def picked() -> Answer:
+            values = tuple(value for box, value in boxes if box.get_active())
+            return values if field.multiple else next(iter(values), "")
+
+        return picked
 
     def _entry(self) -> Gtk.Entry:
         entry = Gtk.Entry(placeholder_text="Or type your own answer", hexpand=True)
