@@ -85,6 +85,8 @@ forbidden_modules =
     urllib
     http
 ignore_imports =
+    # The adapter is the one module that opens connections, and reads replies
+    # through http.client.
     osiris.platform.http -> urllib
     osiris.platform.http -> http
     # urllib.parse only builds the address line's search address; it opens nothing.
