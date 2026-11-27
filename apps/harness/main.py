@@ -1497,8 +1497,8 @@ class Application(Adw.Application):
         self.background(lambda: harness.resume(session), opened)
 
     def restore_waiting(self, session: str) -> None:
-        """Bring back the cards of requests the Engine still waits on, which a
-        restart of the drawer lost while the Engine kept them."""
+        """Bring back the cards of requests and forms the Engine still waits
+        on, which a restart of the drawer lost while the Engine kept them."""
         if self.requests is None or self.harness is None:
             return
         requests, harness = self.requests, self.harness
