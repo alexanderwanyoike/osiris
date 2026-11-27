@@ -45,7 +45,7 @@ sys.path.insert(0, HERE)
 from admin_card import AdminCard  # noqa: E402
 from allowed_tab import AllowedTab  # noqa: E402
 from approval_card import ApprovalCard  # noqa: E402
-from form_card import Answers, FormCard  # noqa: E402
+from form_card import FormCard  # noqa: E402
 from going_back import going_back_dialog  # noqa: E402
 from look import Look  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
@@ -105,6 +105,7 @@ from osiris.harness.picker import Entry, Reference, Skills, project_files  # noq
 from osiris.harness.engine import (  # noqa: E402
     Failed,
     Finished,
+    FormAnswer,
     FormAsked,
     ModelRef,
     Stopped,
@@ -976,7 +977,7 @@ class Application(Adw.Application):
                 form, on_answer=lambda answers: self.answer_form(form, answers))
         return self.forms[form.form]
 
-    def answer_form(self, form: FormAsked, answers: Answers) -> None:
+    def answer_form(self, form: FormAsked, answers: dict[str, FormAnswer]) -> None:
         """The card goes at once; the Engine is answered off the main loop."""
         self.forms.pop(form.form, None)
         conversation = self._conversation_of(form.session)

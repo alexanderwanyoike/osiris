@@ -110,6 +110,10 @@ class FormField:
     custom: bool = False
 
 
+#: A question's answer: a value, or several where several may be picked.
+FormAnswer = str | tuple[str, ...]
+
+
 @dataclass(frozen=True)
 class FormAsked:
     """The model asks the person something and waits until the form is answered."""
@@ -240,7 +244,7 @@ class Engine(Protocol):
         ...
 
     def answer_form(
-        self, session: str, form: str, answers: Mapping[str, str | tuple[str, ...]]
+        self, session: str, form: str, answers: Mapping[str, FormAnswer]
     ) -> None:
         """Answer a ``FormAsked``: a value for each field, several for a field
         that takes several."""

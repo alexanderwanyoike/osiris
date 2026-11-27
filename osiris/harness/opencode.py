@@ -25,6 +25,7 @@ from osiris.harness.engine import (
     Failed,
     FileChange,
     Finished,
+    FormAnswer,
     FormAsked,
     FormField,
     ModelRef,
@@ -185,7 +186,7 @@ class OpencodeEngine:
                 raise
 
     def answer_form(
-        self, session: str, form: str, answers: Mapping[str, str | tuple[str, ...]]
+        self, session: str, form: str, answers: Mapping[str, FormAnswer]
     ) -> None:
         self._post(
             f"/api/session/{session}/form/{form}/reply",

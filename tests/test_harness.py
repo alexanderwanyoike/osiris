@@ -17,6 +17,7 @@ from osiris.harness.engine import (
     Failed,
     FileChange,
     Finished,
+    FormAnswer,
     ModelRef,
     Past,
     PastTurn,
@@ -54,7 +55,7 @@ class FakeEngine:
     sent: list[tuple[str, str]] = field(default_factory=list)
     withdrawn: list[tuple[str, str]] = field(default_factory=list)
     replies: list[tuple[str, str, Reply, str]] = field(default_factory=list)
-    forms_answered: list[tuple[str, str, dict[str, str | tuple[str, ...]]]] = field(
+    forms_answered: list[tuple[str, str, dict[str, FormAnswer]]] = field(
         default_factory=list
     )
     stopped: list[str] = field(default_factory=list)
@@ -99,7 +100,7 @@ class FakeEngine:
         self.replies.append((session, request, answer, message))
 
     def answer_form(
-        self, session: str, form: str, answers: Mapping[str, str | tuple[str, ...]]
+        self, session: str, form: str, answers: Mapping[str, FormAnswer]
     ) -> None:
         self.forms_answered.append((session, form, dict(answers)))
 

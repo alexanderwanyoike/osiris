@@ -8,19 +8,21 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk  # noqa: E402
 
-from osiris.harness.engine import Choice, FormAsked, FormField  # noqa: E402
-
-Answer = str | tuple[str, ...]
-Answers = dict[str, Answer]
+from osiris.harness.engine import (  # noqa: E402
+    Choice,
+    FormAnswer,
+    FormAsked,
+    FormField,
+)
 
 
 class FormCard(Gtk.Box):
-    def __init__(self, form: FormAsked, *, on_answer: Callable[[Answers], None]):
+    def __init__(self, form: FormAsked, *, on_answer: Callable[[dict[str, FormAnswer]], None]):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-approval")
         self._on_answer = on_answer
         #: Each question's answer as it stands, by its key.
-        self._answers: dict[str, Callable[[], Answer]] = {}
+        self._answers: dict[str, Callable[[], FormAnswer]] = {}
         for field in form.fields:
             self._question(field)
         send = Gtk.Button(label="Send", halign=Gtk.Align.START)
@@ -36,13 +38,13 @@ class FormCard(Gtk.Box):
         picked = self._choices(field)
         typed = self._entry() if field.custom else None
 
-        def answer() -> Answer:
+        def answer() -> FormAnswer:
             text = typed.get_text().strip() if typed is not None else ""
             return text or picked()
 
         self._answers[field.key] = answer
 
-    def _choices(self, field: FormField) -> Callable[[], Answer]:
+    def _choices(self, field: FormField) -> Callable[[], FormAnswer]:
         """Radio buttons for one of the choices, ticks for any of them."""
         boxes: list[tuple[Gtk.CheckButton, str]] = []
         for choice in field.choices:
@@ -51,7 +53,7 @@ class FormCard(Gtk.Box):
             boxes.append((box, choice.value))
             self.append(box)
 
-        def picked() -> Answer:
+        def picked() -> FormAnswer:
             values = tuple(value for box, value in boxes if box.get_active())
             return values if field.multiple else next(iter(values), "")
 

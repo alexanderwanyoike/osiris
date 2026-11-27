@@ -16,6 +16,7 @@ from osiris.harness.engine import (
     Event,
     Failed,
     Finished,
+    FormAnswer,
     ModelRef,
     Past,
     PastTurn,
@@ -358,7 +359,7 @@ class Harness:
         return Refused(session, asking.action, asking.resources, asking.call, reason)
 
     def answer_form(
-        self, session: str, form: str, answers: Mapping[str, str | tuple[str, ...]]
+        self, session: str, form: str, answers: Mapping[str, FormAnswer]
     ) -> None:
         """The person's answer to what the model asked, passed to the Engine."""
         self._engine.answer_form(session, form, answers)

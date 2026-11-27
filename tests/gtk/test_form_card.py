@@ -6,7 +6,7 @@ from __future__ import annotations
 from form_card import FormCard
 from gi.repository import Gtk
 
-from osiris.harness.engine import Choice, FormAsked, FormField
+from osiris.harness.engine import Choice, FormAnswer, FormAsked, FormField
 
 from .conftest import find, texts, widgets
 
@@ -22,8 +22,8 @@ MOOD = FormField(
 )
 
 
-def card(*fields: FormField) -> tuple[FormCard, list[dict[str, str | tuple[str, ...]]]]:
-    answers: list[dict[str, str | tuple[str, ...]]] = []
+def card(*fields: FormField) -> tuple[FormCard, list[dict[str, FormAnswer]]]:
+    answers: list[dict[str, FormAnswer]] = []
     return FormCard(FormAsked("ses_1", "frm_1", fields), on_answer=answers.append), (
         answers
     )
