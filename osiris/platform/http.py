@@ -12,7 +12,7 @@ import json
 import urllib.error
 import urllib.request
 from collections.abc import Iterator, Mapping
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
@@ -53,7 +53,11 @@ def _as_http_error() -> Iterator[None]:
     try:
         yield
     except urllib.error.HTTPError as error:
-        raise HttpError(error.code, error.read().decode(errors="replace")) from error
+        body = ""
+        # The status arrived; a status of 0 would claim nothing answered.
+        with suppress(OSError, http.client.HTTPException):
+            body = error.read().decode(errors="replace")
+        raise HttpError(error.code, body) from error
     except urllib.error.URLError as error:
         raise HttpError(0, str(error.reason)) from error
     except (OSError, http.client.HTTPException) as error:
