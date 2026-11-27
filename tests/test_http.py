@@ -51,6 +51,12 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b'{"cut')
             return
+        if self.path == "/missing-cut":
+            self.send_response(404)
+            self.send_header("Content-Length", "100")
+            self.end_headers()
+            self.wfile.write(b'{"no')
+            return
         if self.path == "/missing":
             self._reply(404, {"message": "no such thing"})
             return
@@ -96,6 +102,13 @@ class TestUrllibClient:
             UrllibClient().request("GET", f"{server}/missing")
         assert raised.value.status == 404
         assert "no such thing" in raised.value.body
+
+    def test_an_error_status_with_its_body_cut_short_keeps_the_status(
+        self, server: str
+    ) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().request("GET", f"{server}/missing-cut")
+        assert raised.value.status == 404
 
     @pytest.mark.parametrize("path", ["/silent", "/hangup"])
     def test_no_answer_once_connected_is_status_0(self, server: str, path: str) -> None:
