@@ -609,6 +609,18 @@ def test_an_answer_sent_again_clears_why_the_first_was_not() -> None:
     assert talk.turns[-1].note == ""
 
 
+def test_a_refusal_after_the_answer_ended_brings_no_form_back() -> None:
+    """The Engine dropped the form with the answer; nothing waits on it."""
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.form_answered()
+    talk.apply(Failed(S, "The Engine stopped"))
+    talk.form_refused(MOOD, "HTTP 0: connection refused")
+    assert talk.turns[-1].form is None
+    assert not talk.waits_for_person
+
+
 def test_a_form_left_open_goes_when_the_answer_ends() -> None:
     """The Engine cancels it; answering it would only fail."""
     talk = Conversation()
