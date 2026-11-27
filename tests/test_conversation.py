@@ -584,6 +584,15 @@ def test_an_answered_form_leaves_the_turn_and_the_model_goes_on() -> None:
     assert not talk.waits_for_person
 
 
+def test_a_form_left_open_goes_when_the_answer_ends() -> None:
+    """The Engine cancels it; answering it would only fail."""
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.apply(Stopped(S))
+    assert talk.turns[-1].form is None
+
+
 def test_a_question_can_be_gone_back_to_once_nothing_is_answering() -> None:
     """Its message names it to the Engine, which refuses while it runs."""
     talk = Conversation.restored([PastTurn("make x.txt", "Made it.", None, "msg_1")])
