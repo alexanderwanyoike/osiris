@@ -1,5 +1,6 @@
 """The card for what the model asks the person: each question, its choices,
 and the person's answer, which the Harness passes to the Engine."""
+
 from collections.abc import Callable
 
 import gi
@@ -34,6 +35,13 @@ class FormCard(Gtk.Box):
                 ),
             )
             self.append(button)
+        if field.custom:
+            entry = Gtk.Entry(placeholder_text="Or type your own answer", hexpand=True)
+            entry.connect(
+                "activate",
+                lambda e, key=field.key: self._on_answer({key: e.get_text().strip()}),
+            )
+            self.append(entry)
 
 
 def _choice_button(choice: Choice) -> Gtk.Button:
