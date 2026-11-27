@@ -43,18 +43,26 @@ def test_the_card_shows_each_question_and_its_choices() -> None:
         assert text in shown
 
 
-def choice(widget: FormCard, label: str) -> Gtk.Widget:
-    """The button for a choice, whether pressed or ticked."""
+def choice(widget: FormCard, label: str) -> Gtk.CheckButton:
+    """A choice's radio button, or its tick where several may be picked."""
     return next(
         w
         for w in widgets(widget)
-        if isinstance(w, Gtk.Button | Gtk.CheckButton) and label in texts(w)
+        if isinstance(w, Gtk.CheckButton) and label in texts(w)
     )
 
 
-def test_one_question_is_answered_by_clicking_a_choice() -> None:
+def send(widget: FormCard) -> None:
+    find(widget, Gtk.Button, "Send").emit("clicked")
+
+
+def test_a_choice_waits_for_send_so_a_slip_can_be_changed() -> None:
+    """What the model does next rests on it: a Theme pair made, say."""
     widget, answers = card(MOOD)
-    choice(widget, "Deep dusk").emit("clicked")
+    choice(widget, "Soft violet").set_active(True)
+    choice(widget, "Deep dusk").set_active(True)
+    assert answers == []
+    send(widget)
     assert answers == [{"q0": "Deep dusk"}]
 
 
@@ -77,11 +85,11 @@ EXTRAS = FormField(
 
 def test_several_questions_are_answered_together() -> None:
     widget, answers = card(MOOD, EXTRAS)
-    choice(widget, "Deep dusk").emit("clicked")
+    choice(widget, "Deep dusk").set_active(True)
     choice(widget, "Wallpaper").set_active(True)
     choice(widget, "Icons").set_active(True)
     assert answers == []
-    find(widget, Gtk.Button, "Send").emit("clicked")
+    send(widget)
     assert answers == [{"q0": "Deep dusk", "q1": ("Wallpaper", "Icons")}]
 
 
@@ -90,5 +98,5 @@ def test_a_question_left_unanswered_is_left_out() -> None:
     read as one."""
     widget, answers = card(MOOD, EXTRAS)
     choice(widget, "Wallpaper").set_active(True)
-    find(widget, Gtk.Button, "Send").emit("clicked")
+    send(widget)
     assert answers == [{"q1": ("Wallpaper",)}]
