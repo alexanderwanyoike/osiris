@@ -83,3 +83,12 @@ def test_several_questions_are_answered_together() -> None:
     assert answers == []
     find(widget, Gtk.Button, "Send").emit("clicked")
     assert answers == [{"q0": "Deep dusk", "q1": ("Wallpaper", "Icons")}]
+
+
+def test_a_question_left_unanswered_is_left_out() -> None:
+    """opencode tells the model it went unanswered; an empty answer would
+    read as one."""
+    widget, answers = card(MOOD, EXTRAS)
+    choice(widget, "Wallpaper").set_active(True)
+    find(widget, Gtk.Button, "Send").emit("clicked")
+    assert answers == [{"q1": ("Wallpaper",)}]
