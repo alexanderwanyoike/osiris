@@ -1205,6 +1205,19 @@ class TestSavedRules:
         assert http.requests == [("DELETE", path, None)]
 
 
+def waiting_in(
+    requests: list[dict[str, object]], forms: list[dict[str, object]]
+) -> FakeHttpClient:
+    """opencode's lists of a session's open permission requests and forms."""
+    session = f"{URL}/api/session/{SESSION}"
+    return FakeHttpClient(
+        replies={
+            ("GET", f"{session}/permission"): {"data": requests},
+            ("GET", f"{session}/form"): {"data": forms},
+        }
+    )
+
+
 class TestWaiting:
     def test_requests_still_waiting_in_a_session_are_read_as_asked(self) -> None:
         waiting = {
@@ -1215,8 +1228,43 @@ class TestWaiting:
             "save": ["ls *"],
             "source": {"type": "tool", "messageID": "msg_1", "id": "call_1"},
         }
-        path = f"{URL}/api/session/{SESSION}/permission"
-        http = FakeHttpClient(replies={("GET", path): {"data": [waiting]}})
+        http = waiting_in([waiting], [])
         assert engine(http).waiting(SESSION) == [
             ToolRequested(SESSION, "per_1", "bash", ("ls /etc",), "call_1", ("ls *",))
+        ]
+
+    def test_a_form_still_open_in_a_session_is_read_as_asked(self) -> None:
+        """As opencode 2.4.1 lists them: pending forms only, each as it was
+        opened."""
+        form = {
+            "id": "frm_1",
+            "sessionID": SESSION,
+            "title": "Questions",
+            "metadata": {"kind": "question"},
+            "fields": [
+                {
+                    "key": "q0",
+                    "title": "Mood",
+                    "description": "Which dusk should it be?",
+                    "type": "string",
+                    "options": [{"value": "Deep dusk", "label": "Deep dusk"}],
+                    "custom": True,
+                }
+            ],
+        }
+        http = waiting_in([], [form])
+        assert engine(http).waiting(SESSION) == [
+            FormAsked(
+                SESSION,
+                "frm_1",
+                (
+                    FormField(
+                        "q0",
+                        "Mood",
+                        "Which dusk should it be?",
+                        (Choice("Deep dusk", "Deep dusk"),),
+                        custom=True,
+                    ),
+                ),
+            )
         ]

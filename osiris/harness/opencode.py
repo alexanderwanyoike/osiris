@@ -346,14 +346,22 @@ class OpencodeEngine:
             headers=self._service.headers(),
         )
 
-    def waiting(self, session: str) -> list[ToolRequested]:
-        """What the session still waits to be allowed, as it was asked."""
-        reply: Any = self._http.request(
+    def waiting(self, session: str) -> list[ToolRequested | FormAsked]:
+        """What the session still waits on the person for, as it was asked."""
+        requests: Any = self._http.request(
             "GET",
             f"{self._service.url}/api/session/{session}/permission",
             headers=self._service.headers(),
         )
-        return [_requested(session, request) for request in reply["data"]]
+        forms: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/session/{session}/form",
+            headers=self._service.headers(),
+        )
+        return [
+            *(_requested(session, request) for request in requests["data"]),
+            *(_form(form) for form in forms["data"]),
+        ]
 
     def skills(self, directory: Path) -> list[Entry]:
         reply: Any = self._http.request(
