@@ -43,9 +43,12 @@ def test_the_card_shows_each_question_and_its_choices() -> None:
         assert text in shown
 
 
-def choice(widget: FormCard, label: str) -> Gtk.Button:
+def choice(widget: FormCard, label: str) -> Gtk.Widget:
+    """The button for a choice, whether pressed or ticked."""
     return next(
-        w for w in widgets(widget) if isinstance(w, Gtk.Button) and label in texts(w)
+        w
+        for w in widgets(widget)
+        if isinstance(w, Gtk.Button | Gtk.CheckButton) and label in texts(w)
     )
 
 
@@ -61,3 +64,22 @@ def test_one_question_can_be_answered_in_the_persons_own_words() -> None:
     entry.set_text("Violet with a gold horizon")
     entry.emit("activate")
     assert answers == [{"q0": "Violet with a gold horizon"}]
+
+
+EXTRAS = FormField(
+    "q1",
+    "Extras",
+    "What else should change?",
+    (Choice("Wallpaper", "Wallpaper"), Choice("Icons", "Icons")),
+    multiple=True,
+)
+
+
+def test_several_questions_are_answered_together() -> None:
+    widget, answers = card(MOOD, EXTRAS)
+    choice(widget, "Deep dusk").emit("clicked")
+    choice(widget, "Wallpaper").set_active(True)
+    choice(widget, "Icons").set_active(True)
+    assert answers == []
+    find(widget, Gtk.Button, "Send").emit("clicked")
+    assert answers == [{"q0": "Deep dusk", "q1": ("Wallpaper", "Icons")}]
