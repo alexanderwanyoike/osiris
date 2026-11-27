@@ -104,6 +104,7 @@ from osiris.harness.picker import Entry, Reference, Skills, project_files  # noq
 from osiris.harness.engine import (  # noqa: E402
     Failed,
     Finished,
+    FormAsked,
     ModelRef,
     Stopped,
     ToolCalled,
@@ -1751,7 +1752,7 @@ class Application(Adw.Application):
         if isinstance(event, ToolFinished | Finished | Stopped | Failed) and self.log:
             ran = self.log.ran_by_question(event.session)
             conversation.ran(ran[-1] if ran else [])
-        if isinstance(event, Asking):
+        if isinstance(event, Asking | FormAsked):
             self._waiting(event.session, conversation)
         if (isinstance(event, ToolCalled) and event.name == "webfetch"
                 and conversation is self.conversation
