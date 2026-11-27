@@ -278,7 +278,7 @@ class Conversation:
             self.turns[-1].note = ""
 
     def form_refused(self, form: FormAsked, why: str) -> None:
-        if self.turns:
+        if self.busy:
             self.apply(form)
             self.turns[-1].note = f"Your answer was not sent: {why}"
 
