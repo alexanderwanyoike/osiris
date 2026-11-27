@@ -34,6 +34,12 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"data: one\n\n: heartbeat\n\ndata: two\n\n")
             return
+        if self.path == "/events-cut":
+            self.send_response(200)
+            self.send_header("Transfer-Encoding", "chunked")
+            self.end_headers()
+            self.wfile.write(b"b\r\ndata: one\n\r\n")
+            return
         if self.path == "/silent":
             time.sleep(0.5)
             return
@@ -109,6 +115,11 @@ class TestUrllibClient:
             ": heartbeat",
             "data: two",
         ]
+
+    def test_a_stream_cut_short_is_status_0(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            list(UrllibClient().lines(f"{server}/events-cut"))
+        assert raised.value.status == 0
 
 
 class TestFakeHttpClient:
