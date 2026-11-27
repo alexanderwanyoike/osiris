@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from osiris.harness.engine import Choice, FormAsked, FormField
 from osiris.harness.status import Status
+from osiris.platform import HttpError
 
 from .test_form_card import choice, send
 from .test_side_by_side import app, asked, heard
@@ -44,3 +45,18 @@ def test_the_card_is_the_same_one_each_time_it_is_drawn() -> None:
     heard(stand_in, MOOD)
     turn = stand_in.conversation.turns[-1]
     assert stand_in.form_card(turn) is stand_in.form_card(turn)
+
+
+def test_an_answer_the_engine_refuses_brings_the_same_card_back() -> None:
+    """What was picked and typed is still there to send again."""
+    stand_in, engine = app()
+    asked(stand_in, "make it lavender at dusk")
+    heard(stand_in, MOOD)
+    turn = stand_in.conversation.turns[-1]
+    card = stand_in.form_card(turn)
+    engine.form_refused = HttpError(500, "busy")
+    choice(card, "Deep dusk").set_active(True)
+    send(card)
+    assert turn.form == MOOD
+    assert turn.note == "Your answer was not sent: HTTP 500: busy"
+    assert stand_in.form_card(turn) is card
