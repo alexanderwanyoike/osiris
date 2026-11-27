@@ -349,6 +349,7 @@ class TurnView(Gtk.Box):
                  clock: Callable[[], float] = time.monotonic,
                  admin_card: Callable[[Request], Gtk.Widget] | None = None,
                  approval_card: Callable[[Turn], Gtk.Widget] | None = None,
+                 form_card: Callable[[Turn], Gtk.Widget] | None = None,
                  edit: Callable[[Turn], None] | None = None,
                  try_again: Callable[[Turn], None] | None = None,
                  may_go_back: Callable[[Turn], bool] = lambda _turn: False,
@@ -360,6 +361,7 @@ class TurnView(Gtk.Box):
         self._program_card = program_card
         self._admin_card = admin_card
         self._approval_card = approval_card
+        self._form_card = form_card
         self._edit = edit
         self._try_again = try_again
         self._may_go_back = may_go_back
@@ -465,6 +467,8 @@ class TurnView(Gtk.Box):
             self.extras.append(self._admin_card(turn.admin))
         if turn.held is not None and self._approval_card is not None:
             self.extras.append(self._approval_card(turn))
+        if turn.form is not None and self._form_card is not None:
+            self.extras.append(self._form_card(turn))
         if turn.state is State.FAILED:
             error = Gtk.Label(label=turn.error or "The answer failed.", xalign=0,
                               wrap=True, selectable=True)
