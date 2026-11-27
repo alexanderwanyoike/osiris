@@ -80,7 +80,8 @@ class FormCard(Gtk.Box):
         return entry
 
     def _send(self) -> None:
-        self._on_answer({key: answer() for key, answer in self._answers.items()})
+        answers = {key: answer() for key, answer in self._answers.items()}
+        self._on_answer({key: value for key, value in answers.items() if value})
 
 
 def _lines(choice: Choice) -> Gtk.Box:
