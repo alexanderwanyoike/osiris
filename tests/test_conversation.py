@@ -9,9 +9,12 @@ from osiris.harness.admin import Request
 from osiris.harness.conversation import Conversation, State, Turn
 from osiris.harness.engine import (
     Answered,
+    Choice,
     Delivered,
     Failed,
     Finished,
+    FormAsked,
+    FormField,
     ModelRef,
     PastTurn,
     Stopped,
@@ -27,6 +30,11 @@ from osiris.harness.tasks import Progress, Task
 
 S = "ses_1"
 GPT = ModelRef("openai", "gpt-5.5")
+MOOD = FormAsked(
+    S,
+    "frm_1",
+    (FormField("q0", "Mood", "Which dusk?", (Choice("Deep dusk", "Deep dusk"),)),),
+)
 
 
 def tokens(input: int, output: int, reasoning: int = 0) -> Tokens:
@@ -554,6 +562,15 @@ def test_a_conversation_with_a_card_open_waits_for_the_person() -> None:
     assert talk.waits_for_person
     talk.apply(Allowed(S, "shell", ("ls /etc",), "call_1"))
     talk.needs_password(Request(("pacman", "-S", "cowsay")))
+    assert talk.waits_for_person
+
+
+def test_what_the_model_asks_waits_on_its_turn_for_the_person() -> None:
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    assert talk.turns[-1].form == MOOD
+    assert talk.turns[-1].doing == "Waiting for you"
     assert talk.waits_for_person
 
 
