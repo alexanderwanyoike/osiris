@@ -629,8 +629,6 @@ def _form(form: dict[str, Any]) -> FormAsked:
     )
 
 
-#: The events read whole from what opencode sends, by their kind; each is made
-#: from its session and data.
 _BY_KIND: dict[object, Callable[[str, dict[str, Any]], Event]] = {
     "session.text.delta": lambda session, data: Text(session, data["delta"]),
     "session.inbox.delivered": lambda session, data: Delivered(
