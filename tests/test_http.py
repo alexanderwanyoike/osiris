@@ -39,6 +39,12 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self.path == "/hangup":
             return
+        if self.path == "/cut":
+            self.send_response(200)
+            self.send_header("Content-Length", "100")
+            self.end_headers()
+            self.wfile.write(b'{"cut')
+            return
         if self.path == "/missing":
             self._reply(404, {"message": "no such thing"})
             return
@@ -89,6 +95,11 @@ class TestUrllibClient:
     def test_no_answer_once_connected_is_status_0(self, server: str, path: str) -> None:
         with pytest.raises(HttpError) as raised:
             UrllibClient(timeout=0.1).request("GET", f"{server}{path}")
+        assert raised.value.status == 0
+
+    def test_a_reply_cut_short_is_status_0(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().request("GET", f"{server}/cut")
         assert raised.value.status == 0
 
     def test_a_stream_arrives_line_by_line(self, server: str) -> None:
