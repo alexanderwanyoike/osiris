@@ -19,25 +19,21 @@ class FormCard(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add_css_class("harness-approval")
         self._on_answer = on_answer
-        #: One question with one answer goes as soon as it is given; more wait
-        #: for Send, so each can be changed until then.
-        self._at_once = len(form.fields) == 1 and not form.fields[0].multiple
         #: Each question's answer as it stands, by its key.
         self._answers: dict[str, Callable[[], Answer]] = {}
         for field in form.fields:
             self._question(field)
-        if not self._at_once:
-            send = Gtk.Button(label="Send", halign=Gtk.Align.START)
-            send.add_css_class("suggested-action")
-            send.connect("clicked", lambda _b: self._send())
-            self.append(send)
+        send = Gtk.Button(label="Send", halign=Gtk.Align.START)
+        send.add_css_class("suggested-action")
+        send.connect("clicked", lambda _b: self._send())
+        self.append(send)
 
     def _question(self, field: FormField) -> None:
         heading = Gtk.Label(label=field.title, xalign=0, wrap=True)
         heading.add_css_class("heading")
         self.append(heading)
         self.append(Gtk.Label(label=field.text, xalign=0, wrap=True))
-        picked = self._ticks(field) if field.multiple else self._buttons(field)
+        picked = self._ticks(field) if field.multiple else self._radios(field)
         typed = self._entry() if field.custom else None
 
         def answer() -> Answer:
@@ -46,25 +42,18 @@ class FormCard(Gtk.Box):
 
         self._answers[field.key] = answer
 
-    def _buttons(self, field: FormField) -> Callable[[], Answer]:
-        """One of the choices: the one pressed."""
-        chosen: list[str] = []
-        group: Gtk.ToggleButton | None = None
+    def _radios(self, field: FormField) -> Callable[[], Answer]:
+        """One of the choices: the one picked."""
+        radios: list[tuple[Gtk.CheckButton, str]] = []
         for choice in field.choices:
-            button = Gtk.ToggleButton(child=_lines(choice), group=group)
-            group = group or button
-            button.connect(
-                "toggled", lambda b, value=choice.value: self._chose(b, chosen, value)
+            group = radios[0][0] if radios else None
+            radios.append(
+                (Gtk.CheckButton(child=_lines(choice), group=group), choice.value)
             )
-            self.append(button)
-        return lambda: chosen[-1] if chosen else ""
-
-    def _chose(self, button: Gtk.ToggleButton, chosen: list[str], value: str) -> None:
-        if not button.get_active():
-            return
-        chosen.append(value)
-        if self._at_once:
-            self._send()
+            self.append(radios[-1][0])
+        return lambda: next(
+            (value for radio, value in radios if radio.get_active()), ""
+        )
 
     def _ticks(self, field: FormField) -> Callable[[], Answer]:
         """Any of the choices: those ticked."""
