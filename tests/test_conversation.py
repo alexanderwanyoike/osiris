@@ -584,6 +584,21 @@ def test_an_answered_form_leaves_the_turn_and_the_model_goes_on() -> None:
     assert not talk.waits_for_person
 
 
+def test_a_refused_answer_puts_the_form_back_and_says_why() -> None:
+    """The form still waits at the Engine, so the person must answer again."""
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.form_answered()
+    talk.form_refused(MOOD, "HTTP 400: Expected string array for form field: q1")
+    turn = talk.turns[-1]
+    assert turn.form == MOOD
+    assert turn.doing == "Waiting for you"
+    assert turn.note == (
+        "Your answer was not sent: HTTP 400: Expected string array for form field: q1"
+    )
+
+
 def test_a_form_left_open_goes_when_the_answer_ends() -> None:
     """The Engine cancels it; answering it would only fail."""
     talk = Conversation()
