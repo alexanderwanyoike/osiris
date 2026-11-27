@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -32,6 +33,11 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "text/event-stream")
             self.end_headers()
             self.wfile.write(b"data: one\n\n: heartbeat\n\ndata: two\n\n")
+            return
+        if self.path == "/silent":
+            time.sleep(0.5)
+            return
+        if self.path == "/hangup":
             return
         if self.path == "/missing":
             self._reply(404, {"message": "no such thing"})
@@ -78,6 +84,12 @@ class TestUrllibClient:
             UrllibClient().request("GET", f"{server}/missing")
         assert raised.value.status == 404
         assert "no such thing" in raised.value.body
+
+    @pytest.mark.parametrize("path", ["/silent", "/hangup"])
+    def test_no_answer_once_connected_is_status_0(self, server: str, path: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient(timeout=0.1).request("GET", f"{server}{path}")
+        assert raised.value.status == 0
 
     def test_a_stream_arrives_line_by_line(self, server: str) -> None:
         lines = list(UrllibClient().lines(f"{server}/events"))
