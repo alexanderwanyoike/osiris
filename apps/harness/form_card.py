@@ -26,7 +26,14 @@ class FormCard(Gtk.Box):
         self.append(heading)
         self.append(Gtk.Label(label=field.text, xalign=0, wrap=True))
         for choice in field.choices:
-            self.append(_choice_button(choice))
+            button = _choice_button(choice)
+            button.connect(
+                "clicked",
+                lambda _b, key=field.key, value=choice.value: self._on_answer(
+                    {key: value}
+                ),
+            )
+            self.append(button)
 
 
 def _choice_button(choice: Choice) -> Gtk.Button:
