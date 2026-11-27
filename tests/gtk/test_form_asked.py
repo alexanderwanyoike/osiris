@@ -33,3 +33,12 @@ def test_answering_the_card_reaches_the_engine_and_the_card_goes() -> None:
     assert engine.forms_answered == [("ses_1", "frm_1", {"q0": "Deep dusk"})]
     assert turn.form is None
     assert stand_in.statuses == {"ses_1": Status.WORKING}
+
+
+def test_the_card_is_the_same_one_each_time_it_is_drawn() -> None:
+    """What is typed in it survives a redraw."""
+    stand_in, _ = app()
+    asked(stand_in, "make it lavender at dusk")
+    heard(stand_in, MOOD)
+    turn = stand_in.conversation.turns[-1]
+    assert stand_in.form_card(turn) is stand_in.form_card(turn)
