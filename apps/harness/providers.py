@@ -12,10 +12,10 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk  # noqa: E402
 
+from badge import badge  # noqa: E402
+from provider_parts import add_key, connected_chip  # noqa: E402
 
-#: Offered first: the accounts Osiris is built around (ADR 0015). Every other
-#: Provider the Engine reaches is still listed after them.
-FEATURED = ("openai", "opencode-go")
+from osiris.harness.accounts import FEATURED  # noqa: E402
 
 
 #: Logos Osiris ships (apps/harness/logos), as icon names.
@@ -27,13 +27,7 @@ LOGOS = {
 
 
 def _badge(provider) -> Gtk.Widget:
-    if provider.id in LOGOS:
-        logo = Gtk.Image(icon_name=LOGOS[provider.id], pixel_size=20)
-        logo.add_css_class("harness-logo")
-        return logo
-    monogram = Gtk.Label(label=provider.name[:1].upper())
-    monogram.add_css_class("harness-monogram")
-    return monogram
+    return badge(LOGOS.get(provider.id), provider.name, 20)
 
 
 def _featured_first(providers):
@@ -68,7 +62,7 @@ class ProvidersPage(Gtk.Box):
         model_line.append(self._picker)
         allow_line = Gtk.Box(spacing=8)
         allow_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
-        allow_text.append(Gtk.Label(label="Auto mode", xalign=0))
+        allow_text.append(Gtk.Label(label="Allow everything", xalign=0))
         warning = Gtk.Label(label="Allow everything Osiris asks for without a card, "
                                   "unless one of your rules denies it.",
                             xalign=0, wrap=True)
@@ -133,23 +127,15 @@ class ProvidersPage(Gtk.Box):
         row.append(Gtk.Label(label=provider.name, xalign=0, hexpand=True))
         section.append(row)
         if provider.connected:
-            chip = Gtk.Box(spacing=4, valign=Gtk.Align.CENTER)
-            chip.add_css_class("harness-connected")
-            chip.append(Gtk.Image(icon_name="object-select-symbolic"))
-            chip.append(Gtk.Label(label="Connected"))
-            row.append(chip)
+            row.append(connected_chip())
             return section
         for method in provider.methods:
             if method.kind == "oauth":
                 section.append(self._sign_in_button(provider.id, method))
         if any(m.kind == "key" for m in provider.methods):
-            form = self._key_form(provider.id)
-            form.set_visible(False)
-            add = Gtk.Button(label="Add key", halign=Gtk.Align.START)
-            add.add_css_class("flat")
-            add.connect("clicked", lambda _b: (form.set_visible(True), add.set_visible(False)))
-            section.append(add)
-            section.append(form)
+            add_key(section, lambda key: self._background(
+                lambda: self._accounts.connect_key(provider.id, key),
+                lambda _result: self.reload()))
         return section
 
     def _filter(self, *_args) -> None:
@@ -204,16 +190,3 @@ class ProvidersPage(Gtk.Box):
         self._problem.set_text(problems.get(state.status, ""))
         self._problem.set_visible(state.status in problems)
         self.reload()
-
-    def _key_form(self, provider: str) -> Gtk.Widget:
-        entry = Gtk.PasswordEntry(placeholder_text="API key", hexpand=True,
-                                  show_peek_icon=True)
-        save = Gtk.Button(label="Save")
-        save.connect("clicked", lambda _b: self._background(
-            lambda: self._accounts.connect_key(provider, entry.get_text().strip()),
-            lambda _result: self.reload()))
-        form = Gtk.Box(spacing=6)
-        form.add_css_class("harness-key-form")
-        form.append(entry)
-        form.append(save)
-        return form

@@ -32,6 +32,10 @@ class SkinStore(Protocol):
         """Why the Skin would not be worn: not data only, or not compiling."""
         ...
 
+    def fixed_colours(self, name: str) -> list[str]:
+        """Colours written into the Skin that what it was made from does not have."""
+        ...
+
     def wear(self, name: str) -> None: ...
 
     def delete(self, name: str) -> None: ...
@@ -49,11 +53,15 @@ class SkinStore(Protocol):
 
 class FakeSkinStore:
     def __init__(
-        self, problems: dict[str, list[str]] | None = None, worn: str = "osiris"
+        self,
+        problems: dict[str, list[str]] | None = None,
+        worn: str = "osiris",
+        colours: dict[str, list[str]] | None = None,
     ) -> None:
         self.labels = {"osiris": "Osiris", "colloid": "Colloid"}
         self.mine: set[str] = set()
         self.problems = problems or {}
+        self.colours = colours or {}
         self.current = worn
         self.icon_sets: list[str] = []
         self.fonts: list[str] = []
@@ -78,6 +86,9 @@ class FakeSkinStore:
 
     def check(self, name: str) -> list[str]:
         return list(self.problems.get(name, []))
+
+    def fixed_colours(self, name: str) -> list[str]:
+        return list(self.colours.get(name, []))
 
     def wear(self, name: str) -> None:
         if name not in self.labels:

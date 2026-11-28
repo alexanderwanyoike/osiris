@@ -26,6 +26,33 @@ pictures with named gaps for the **Theme**'s colours, and its fonts, icons and
 cursor. One file when shared; nothing in it runs.
 _Avoid_: skin file, preset
 
+**Blank slate**:
+The **Skinpack** a new **Skin** can start from when no **Skin** is close to the
+look asked for. It has no look of its own, only the **Theme**'s colours on
+plain GTK, and it is never worn.
+_Avoid_: empty Skin, base Skin
+
+**Fixed colour**:
+A colour written into a **Skin** rather than taken from the **Theme**, so it
+stays the same whatever **Theme** is worn. Osiris names the ones a person's
+**Skin** was not made with; the ones it was made with are part of its look.
+_Avoid_: hard-coded colour, literal colour
+
+**Theme pair**:
+A light **Theme** and a dark one made together from one idea, chosen as one
+with a switch between them; the person wears one of them. A look asked for by
+name comes as a pair, with a wallpaper for it; a **Theme** asked for on
+its own is made alone, and Osiris offers its other half.
+_Avoid_: variant, mode, light/dark theme
+
+**Whole look**:
+A look asked for by name, such as a film, a character or a place: a **Theme
+pair**, and a **Wallpaper** for each half painted by an image model. When it
+cannot paint, Osiris says why and the halves keep their usual wallpaper until
+the person chooses; a model never draws one itself. A whole look leaves the
+person's **Skin** as it is, and takes no pictures from the web.
+_Avoid_: theme pack, full theme
+
 **Theme intent**:
 What a **Theme** is asked to be - a seed colour or a **Wallpaper**, a harmony,
 light or dark, and a mood - from which its colours are derived.
@@ -80,6 +107,15 @@ person already has: ChatGPT, OpenCode Go, and whatever else the **Engine**
 supports.
 _Avoid_: subscription (for the company), backend
 
+**Media provider**:
+A service that makes pictures on the person's own account and key, apart from
+the **Engine**. FAL is the first, connected in the Media section of Settings.
+
+**Image model**:
+A model a **Media provider** offers for making pictures, read from its live
+catalog rather than listed in Osiris. One is the person's default; they can name
+another for a single picture or make it their default.
+
 **Default model** / **Fallback model**:
 The **Provider** and model the **Harness** uses unless told otherwise, and the
 one it moves to when the default cannot answer.
@@ -119,8 +155,10 @@ _Avoid_: permissions file, policy (for these)
 **Auto mode**:
 The person's choice to have the **Harness** allow whatever the
 **Permission rules** ask about, without a card. A deny rule still refuses, and
-sudo still asks for the password. Off until they turn it on.
-_Avoid_: allow everything, yolo
+sudo still asks for the password. Off until they turn it on. The person knows
+it as **Allow everything**: the switch beside the message box and in Settings
+says so, as everything they see calls the **Harness** Osiris.
+_Avoid_: yolo
 
 **Admin password card**:
 Where the **Harness** asks for the administrator password when a command it
@@ -128,6 +166,13 @@ runs uses sudo: the exact command, in the **Conversation** that ran it, with
 Allow and Deny. Any other program's `sudo -A` gets a dialog of the same kind,
 naming that program.
 _Avoid_: sudo prompt, password popup
+
+**Form card**:
+Where the **Harness** asks the person what the model needs to know before it
+goes on, such as which way a look should lean: each question with its choices,
+a box for an answer of their own, and Send. The model waits until it is sent.
+The **Engine** calls it a form.
+_Avoid_: question card (a question is what the person asks the **Harness**)
 
 **Conversation**:
 A run of questions and answers with the **Harness**, held by the **Engine** as one of its sessions; it continues until the person starts a new one.
@@ -189,9 +234,13 @@ _Avoid_: metadata
   home is upgraded once, at the next login, and what runs in a session restarts
   onto the new version by itself.
 - Every **Theme** has a **Generated wallpaper**.
-- A **Wallpaper** comes from a model only when the **Engine** itself can make
-  images; Osiris adds no image model of its own. Further providers may supply
-  that later.
+- A **Wallpaper** can come from a **Media provider** the person connects. Osiris
+  ships no image model of its own, and each picture is the person's file in
+  `~/Pictures/Osiris`, which outlives the **Theme** made from it.
+- Pictures from a **Media provider** have no limit unless the person sets a daily
+  one in Settings.
+- The **Harness** uses another **Image model** only when the person asks for it,
+  because prices differ, and only one its **Media provider** still offers.
 - When a **Theme** is created from a **Wallpaper**, its colours are derived from
   that **Wallpaper**; changing the **Wallpaper** of an existing **Theme** does not
   recolour it.
@@ -238,16 +287,15 @@ _Avoid_: metadata
 - The password typed in an **admin password card** goes to sudo and nowhere
   else: not to a model, the **Harness log** or any file. Nothing is
   remembered; every command that needs it asks again.
-- A look just happens; an undoable change happens with an Undo; a change that
-  cannot be undone, or is not the person's own, always asks first. Moving files
+- A look just happens; a change that can be reversed happens without asking; a
+  change that cannot be, or is not the person's own, always asks first. Moving files
   to the Trash is undoable; the **Harness** never empties or bypasses the Trash.
 - Every **Program** carries a **Program manifest**; installing one is a change
   that asks first, showing what the manifest allows.
 - A **Program** with a face is built from Osiris's own parts, so it follows the
   **Theme** and **Skin** like everything else.
 - A **Program**'s source is a **Project** of its own, in `~/Code`, kept in git.
-  Every change to it, by the **Harness** or the person, is one atomic commit;
-  undoing what an answer changed reverts its commits.
+  Every change to it, by the **Harness** or the person, is one atomic commit.
 - **Programs** are written in Python, C or C++, Rust, Go or JavaScript, whose
   toolchains Osiris ships, unless the person asks for another language. They look like the
   rest of Osiris unless the person asks otherwise.

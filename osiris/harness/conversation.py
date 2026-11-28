@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import time
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from enum import Enum
 
@@ -15,6 +16,7 @@ from osiris.harness.engine import (
     Event,
     Failed,
     Finished,
+    FormAsked,
     ModelRef,
     PastTurn,
     Stopped,
@@ -24,6 +26,7 @@ from osiris.harness.engine import (
 )
 from osiris.harness.harness import Allowed, Asking, Decision, Refused
 from osiris.harness.log import Change
+from osiris.harness.markdown import next_step
 from osiris.harness.proposals import Proposal
 from osiris.harness.status import Status
 from osiris.harness.tasks import TASK_TOOL, Task, tasks_of
@@ -53,24 +56,30 @@ class Turn:
     served: int = 0
     #: Skills proposed while answering, for the person to keep or not.
     proposals: list[Proposal] = field(default_factory=list)
-    undone: bool = False
     #: A command of this answer's waiting for the administrator password.
     admin: Request | None = None
     #: An action of this answer's waiting for the person to answer its card,
     #: and the step it would be, with the input the model gave it.
     asking: Asking | None = None
     held: Step | None = None
+    #: Actions asked about while a card was already open, each with its step,
+    #: shown in turn as the one before is answered.
+    queued: list[tuple[Asking, Step]] = field(default_factory=list)
+    #: What the model asked the person, waiting for their answer.
+    form: FormAsked | None = None
     #: The Engine's plan for this answer, as it last reported it.
     tasks: list[Task] = field(default_factory=list)
     #: The question's message at the Engine, once it has been sent.
     message: str = ""
     #: A word from Thoth about this question, such as why it could not go back.
     note: str = ""
+    #: When the answer ended or, past and unanswered, when it was asked, in
+    #: seconds since the epoch; None while it runs.
+    finished: float | None = None
 
     @property
     def commits(self) -> list[tuple[str, str]]:
-        """Each Program commit the question made, as (Program, commit): the
-        commit its Undo would revert."""
+        """Each Program commit the question made, as (Program, commit)."""
         return [
             (change.undo["name"], change.undo["commit"])
             for change in self.changes
@@ -83,18 +92,12 @@ class Turn:
         named = (change.program for change in self.changes if change.program)
         return list(dict.fromkeys(named))
 
-    def end(self, state: State) -> None:
+    def end(self, state: State, clock: Callable[[], float] = time.time) -> None:
         """An answer that ends leaves no card waiting: the Engine has moved on."""
         self.state = state
-        self.asking = self.held = None
-
-    @property
-    def undoable(self) -> bool:
-        return not self.undone and bool(self.undo_steps())
-
-    def undo_steps(self) -> list[Mapping[str, str]]:
-        """What reverses this turn's changes, the newest first."""
-        return [change.undo for change in reversed(self.changes) if change.undo]
+        self.finished = clock()
+        self.asking = self.held = self.form = None
+        self.queued = []
 
 
 @dataclass(frozen=True)
@@ -161,11 +164,11 @@ class Conversation:
 
     @property
     def waits_for_person(self) -> bool:
-        """An approval or admin password card is open on its latest answer."""
+        """An approval, admin password or form card is open on its latest answer."""
         if not self.turns:
             return False
         turn = self.turns[-1]
-        return turn.asking is not None or turn.admin is not None
+        return any(w is not None for w in (turn.asking, turn.admin, turn.form))
 
     def model_label(self, default: ModelRef | None) -> str:
         """The model in play: the last that answered, else the one chosen."""
@@ -208,7 +211,6 @@ class Conversation:
         past: list[PastTurn],
         tokens_spent: int = 0,
         changes: list[list[Change]] | None = None,
-        undone: list[tuple[str, ...]] | None = None,
         proposals: list[list[Proposal]] | None = None,
     ) -> Conversation:
         """A past Conversation as it ended, with what each answer changed.
@@ -226,15 +228,14 @@ class Conversation:
                     State.DONE,
                     turn.model,
                     message=turn.message,
+                    finished=turn.finished,
                 )
             )
             talk.model = turn.model or talk.model
-        undid = set(undone or [])
         for answer, made in zip(
             reversed(talk.turns), reversed(changes or []), strict=False
         ):
             answer.changes = made
-            answer.undone = bool(made) and tuple(c.summary for c in made) in undid
         for answer, proposed in zip(
             reversed(talk.turns), reversed(proposals or []), strict=False
         ):
@@ -269,6 +270,17 @@ class Conversation:
     def password_answered(self) -> None:
         for turn in self.turns:
             turn.admin = None
+
+    def form_answered(self) -> None:
+        if self.turns:
+            self.turns[-1].form = None
+            self.turns[-1].doing = THINKING
+            self.turns[-1].note = ""
+
+    def form_refused(self, form: FormAsked, why: str) -> None:
+        if self.busy:
+            self.apply(form)
+            self.turns[-1].note = f"Your answer was not sent: {why}"
 
     def changed(self, changes: list[Change]) -> None:
         """Record what the latest question led to, as the Harness log has it."""
@@ -311,16 +323,22 @@ class Conversation:
         turn: Turn,
         event: Asking | ToolCalled | Allowed | Refused | ToolFinished,
     ) -> None:
-        if isinstance(event, Allowed | Refused):
-            turn.asking, turn.held = None, None
+        if isinstance(event, Allowed | Refused) and (
+            turn.asking is None or turn.asking.call == event.call
+        ):
+            turn.asking, turn.held = turn.queued.pop(0) if turn.queued else (None, None)
         match event:
             case Asking(_, _, action, resources, call):
                 turn.steps = [step for step in turn.steps if step.call != call]
                 turn.doing = Status.WAITING.value
-                turn.asking = event
-                turn.held = Step(
-                    action, resources, call=call, input=self._inputs.get(call)
-                )
+                held = Step(action, resources, call=call, input=self._inputs.get(call))
+                waiting = [turn.asking, *(asked for asked, _ in turn.queued)]
+                if any(w is not None and w.request == event.request for w in waiting):
+                    return
+                if turn.asking is None:
+                    turn.asking, turn.held = event, held
+                else:
+                    turn.queued.append((event, held))
             case ToolFinished(_, call, output, error, exit_status):
                 turn.steps = [
                     replace(step, output=output, error=error, exit=exit_status)
@@ -349,18 +367,21 @@ class Conversation:
                 )
                 turn.doing = THINKING
 
+    def _streamed(self, turn: Turn, delta: str) -> None:
+        if self._step_ended:
+            turn.answer = next_step(turn.answer)
+        self._step_ended = False
+        turn.answer += delta
+        turn.state = State.ANSWERING
+        turn.doing = WRITING
+
     def apply(self, event: Event | Decision) -> None:
         if not self.turns:
             return
         turn = self.turns[-1]
         match event:
             case Text(_, delta):
-                if self._step_ended and turn.answer:
-                    turn.answer = turn.answer.rstrip("\n") + "\n\n"
-                self._step_ended = False
-                turn.answer += delta
-                turn.state = State.ANSWERING
-                turn.doing = WRITING
+                self._streamed(turn, delta)
             case Answered(_, model, tokens, _):
                 turn.model = self.model = model
                 turn.doing = THINKING
@@ -368,6 +389,9 @@ class Conversation:
                 self.tokens_spent += tokens.input + tokens.output + tokens.reasoning
             case Asking() | ToolCalled() | Allowed() | Refused() | ToolFinished():
                 self._step(turn, event)
+            case FormAsked():
+                turn.form = event
+                turn.doing = Status.WAITING.value
             case Delivered(_, message):
                 self._delivered(message)
             case Finished():

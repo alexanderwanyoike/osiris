@@ -7,7 +7,7 @@ Engine has to fit it.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -87,6 +87,43 @@ class ToolFinished:
 
 
 @dataclass(frozen=True)
+class Choice:
+    """One answer a form field offers."""
+
+    #: What the reply carries when it is chosen.
+    value: str
+    label: str
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class FormField:
+    """One thing a form asks: chosen from its choices or, if it allows, typed."""
+
+    key: str
+    title: str
+    text: str
+    choices: tuple[Choice, ...] = ()
+    #: Several choices may be picked at once.
+    multiple: bool = False
+    #: An answer of the person's own may be typed instead.
+    custom: bool = False
+
+
+#: A question's answer: a value, or several where several may be picked.
+FormAnswer = str | tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class FormAsked:
+    """The model asks the person something and waits until the form is answered."""
+
+    session: str
+    form: str
+    fields: tuple[FormField, ...]
+
+
+@dataclass(frozen=True)
 class Delivered:
     """A message that waited while the model worked has reached it."""
 
@@ -125,6 +162,7 @@ Event = (
     | ToolCalled
     | ToolRequested
     | ToolFinished
+    | FormAsked
     | Delivered
     | Answered
     | Finished
@@ -151,6 +189,9 @@ class PastTurn:
     model: ModelRef | None
     #: The question's message at the Engine.
     message: str = ""
+    #: When the answer's last step ended or, with no answer, when it was
+    #: asked, in seconds since the epoch.
+    finished: float | None = None
 
 
 @dataclass(frozen=True)
@@ -202,6 +243,13 @@ class Engine(Protocol):
         """Answer a ``ToolRequested``; ``message`` is passed to the model."""
         ...
 
+    def answer_form(
+        self, session: str, form: str, answers: Mapping[str, FormAnswer]
+    ) -> None:
+        """Answer a ``FormAsked``: a value for each field, several for a field
+        that takes several."""
+        ...
+
     def revert(self, session: str, message: str) -> Revert:
         """Stage going back to before ``message``, a question of the session's;
         the files are put back at once, the Conversation when it is kept."""
@@ -248,6 +296,11 @@ class Engine(Protocol):
     def attach_tools(self, name: str, command: list[str], directory: Path) -> None:
         """Run a tool server for every session; each of its tools still raises
         a ``ToolRequested`` before it runs."""
+        ...
+
+    def has_tools(self, name: str, directory: Path) -> bool:
+        """Whether the tool server attached there still runs, which the Engine
+        may forget when the folder goes idle."""
         ...
 
     def action(self, server: str, tool: str) -> str:

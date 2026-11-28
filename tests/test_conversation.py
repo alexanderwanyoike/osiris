@@ -9,9 +9,12 @@ from osiris.harness.admin import Request
 from osiris.harness.conversation import Conversation, State, Turn
 from osiris.harness.engine import (
     Answered,
+    Choice,
     Delivered,
     Failed,
     Finished,
+    FormAsked,
+    FormField,
     ModelRef,
     PastTurn,
     Stopped,
@@ -27,6 +30,11 @@ from osiris.harness.tasks import Progress, Task
 
 S = "ses_1"
 GPT = ModelRef("openai", "gpt-5.5")
+MOOD = FormAsked(
+    S,
+    "frm_1",
+    (FormField("q0", "Mood", "Which dusk?", (Choice("Deep dusk", "Deep dusk"),)),),
+)
 
 
 def tokens(input: int, output: int, reasoning: int = 0) -> Tokens:
@@ -238,6 +246,20 @@ def test_an_action_held_for_the_person_waits_on_its_turn_until_answered() -> Non
     assert talk.turns[-1].asking is None
 
 
+def test_two_actions_asked_at_once_each_get_their_card_in_turn() -> None:
+    """The model may call two commands in parallel; the second waits behind
+    the first and comes up when the first is answered (#229)."""
+    talk = Conversation()
+    talk.asked("set up the tests")
+    first = Asking(S, "per_1", "shell", ("command -v xvfb-run",), "call_1")
+    second = Asking(S, "per_2", "shell", ("git status --short",), "call_2")
+    talk.apply(first)
+    talk.apply(second)
+    assert talk.turns[-1].asking == first
+    talk.apply(Allowed(S, "shell", ("command -v xvfb-run",), "call_1"))
+    assert talk.turns[-1].asking == second
+
+
 def test_an_action_held_for_the_person_shows_as_the_step_it_would_be() -> None:
     talk = Conversation()
     talk.asked("list /etc")
@@ -254,6 +276,28 @@ def test_a_held_actions_card_goes_when_the_answer_ends() -> None:
     talk.apply(Asking(S, "per_1", "shell", ("ls /etc",), "call_1"))
     talk.apply(Stopped(S))
     assert (talk.turns[-1].asking, talk.turns[-1].held) == (None, None)
+
+
+def test_a_card_asked_for_again_is_not_queued_behind_itself() -> None:
+    """Cards are brought back from what the Engine still waits on, as when
+    a Conversation is opened again; one already showing stays one card."""
+    talk = Conversation()
+    talk.asked("set up the tests")
+    asking = Asking(S, "per_1", "shell", ("command -v xvfb-run",), "call_1")
+    talk.apply(asking)
+    talk.apply(asking)
+    talk.apply(Allowed(S, "shell", ("command -v xvfb-run",), "call_1"))
+    assert talk.turns[-1].asking is None
+
+
+def test_queued_cards_go_when_the_answer_ends() -> None:
+    talk = Conversation()
+    talk.asked("set up the tests")
+    talk.apply(Asking(S, "per_1", "shell", ("command -v xvfb-run",), "call_1"))
+    talk.apply(Asking(S, "per_2", "shell", ("git status --short",), "call_2"))
+    talk.apply(Stopped(S))
+    talk.apply(Allowed(S, "shell", ("command -v xvfb-run",), "call_1"))
+    assert talk.turns[-1].asking is None
 
 
 def test_an_allowed_action_is_not_shown_as_refused() -> None:
@@ -360,36 +404,6 @@ def test_a_turn_keeps_the_changes_it_led_to() -> None:
     talk.asked("make it calm")
     talk.changed([MADE, APPLIED])
     assert talk.turns[-1].changes == [MADE, APPLIED]
-    assert talk.turns[-1].undoable
-
-
-def test_undoing_a_turn_reverses_its_changes_newest_first() -> None:
-    talk = Conversation()
-    talk.asked("make it calm")
-    talk.changed([MADE, APPLIED])
-    assert talk.turns[-1].undo_steps() == [APPLIED.undo, MADE.undo]
-
-
-def test_a_change_with_nothing_to_return_to_is_skipped_by_undo() -> None:
-    talk = Conversation()
-    talk.asked("make it calm")
-    talk.changed([MADE, Change("Applied Harbour", None)])
-    assert talk.turns[-1].undo_steps() == [MADE.undo]
-
-
-def test_an_undone_turn_cannot_be_undone_again() -> None:
-    talk = Conversation()
-    talk.asked("make it calm")
-    talk.changed([MADE])
-    talk.turns[-1].undone = True
-    assert not talk.turns[-1].undoable
-
-
-def test_a_turn_that_changed_nothing_offers_no_undo() -> None:
-    talk = Conversation()
-    talk.asked("hello")
-    talk.changed([])
-    assert not talk.turns[-1].undoable
 
 
 def test_a_turn_knows_the_programs_it_changed_once_each_in_order() -> None:
@@ -457,6 +471,19 @@ def test_a_restored_conversation_shows_the_tokens_it_had_spent() -> None:
     assert talk.tokens_spent == 2048
 
 
+def test_a_restored_answer_keeps_when_it_finished() -> None:
+    talk = Conversation.restored(
+        [PastTurn("make a timer", "Made it.", GPT, finished=1795284321.0)]
+    )
+    assert talk.turns[0].finished == 1795284321.0
+
+
+def test_an_answer_that_ends_keeps_when_it_ended() -> None:
+    turn = Turn("make a timer")
+    turn.end(State.DONE, clock=lambda: 42.0)
+    assert turn.finished == 42.0
+
+
 MADE = Change(
     "Made Pomodoro", {"action": "trash_program", "name": "pomodoro"}, "pomodoro"
 )
@@ -464,14 +491,13 @@ THEME = Change("Made Harbour", {"action": "delete_theme", "name": "harbour"})
 
 
 def test_a_restored_conversation_keeps_what_each_answer_changed() -> None:
-    """Its Program cards and Undo come back with it."""
+    """Its Program cards come back with it."""
     talk = Conversation.restored(
         [PastTurn("make a timer", "Made it.", GPT), PastTurn("a theme", "Done.", GPT)],
         changes=[[MADE], [THEME]],
     )
     assert [turn.changes for turn in talk.turns] == [[MADE], [THEME]]
     assert talk.turns[0].programs == ["pomodoro"]
-    assert talk.turns[1].undoable
 
 
 def test_changes_are_matched_to_the_latest_answers_when_history_is_longer() -> None:
@@ -481,16 +507,6 @@ def test_changes_are_matched_to_the_latest_answers_when_history_is_longer() -> N
         changes=[[MADE]],
     )
     assert [turn.changes for turn in talk.turns] == [[], [MADE]]
-
-
-def test_an_answer_whose_changes_were_undone_stays_undone() -> None:
-    talk = Conversation.restored(
-        [PastTurn("a theme", "Done.", GPT)],
-        changes=[[THEME]],
-        undone=[("Made Harbour",)],
-    )
-    assert talk.turns[0].undone
-    assert not talk.turns[0].undoable
 
 
 PACMAN = Request(("pacman", "-S", "cowsay"))
@@ -547,6 +563,71 @@ def test_a_conversation_with_a_card_open_waits_for_the_person() -> None:
     talk.apply(Allowed(S, "shell", ("ls /etc",), "call_1"))
     talk.needs_password(Request(("pacman", "-S", "cowsay")))
     assert talk.waits_for_person
+
+
+def test_what_the_model_asks_waits_on_its_turn_for_the_person() -> None:
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    assert talk.turns[-1].form == MOOD
+    assert talk.turns[-1].doing == "Waiting for you"
+    assert talk.waits_for_person
+
+
+def test_an_answered_form_leaves_the_turn_and_the_model_goes_on() -> None:
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.form_answered()
+    assert talk.turns[-1].form is None
+    assert talk.turns[-1].doing == "Thinking"
+    assert not talk.waits_for_person
+
+
+def test_a_refused_answer_puts_the_form_back_and_says_why() -> None:
+    """The form still waits at the Engine, so the person must answer again."""
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.form_answered()
+    talk.form_refused(MOOD, "HTTP 400: Expected string array for form field: q1")
+    turn = talk.turns[-1]
+    assert turn.form == MOOD
+    assert turn.doing == "Waiting for you"
+    assert turn.note == (
+        "Your answer was not sent: HTTP 400: Expected string array for form field: q1"
+    )
+
+
+def test_an_answer_sent_again_clears_why_the_first_was_not() -> None:
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.form_answered()
+    talk.form_refused(MOOD, "HTTP 500: busy")
+    talk.form_answered()
+    assert talk.turns[-1].note == ""
+
+
+def test_a_refusal_after_the_answer_ended_brings_no_form_back() -> None:
+    """The Engine dropped the form with the answer; nothing waits on it."""
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.form_answered()
+    talk.apply(Failed(S, "The Engine stopped"))
+    talk.form_refused(MOOD, "HTTP 0: connection refused")
+    assert talk.turns[-1].form is None
+    assert not talk.waits_for_person
+
+
+def test_a_form_left_open_goes_when_the_answer_ends() -> None:
+    """The Engine cancels it; answering it would only fail."""
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.apply(Stopped(S))
+    assert talk.turns[-1].form is None
 
 
 def test_a_question_can_be_gone_back_to_once_nothing_is_answering() -> None:

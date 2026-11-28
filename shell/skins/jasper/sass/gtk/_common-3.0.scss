@@ -146,7 +146,7 @@
   }
 
   .background.csd &:selected {
-    @extend %selected_items;
+    @extend %selected_items_primary;
   }
 }
 
@@ -1515,14 +1515,10 @@ treeview.view {
   border-top-color: $divider; // while this is the grid lines color, better then nothing
 
   // FIXME: Avoid transparency background-color being slightly darker
-  &:selected {
-    background-image: image($overlay-checked);
-    background-color: $base;
-    color: $text;
-  }
+  &:selected { @extend %selected_items_primary; }
 
   .csd &:selected {
-    @extend %selected_items;
+    @extend %selected_items_primary;
     background-image: none;
   }
 

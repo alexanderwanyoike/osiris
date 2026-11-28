@@ -1,5 +1,4 @@
-"""The real ThemeStore: the theme engine in shell/themes, for the tool server
-that acts and the drawer that undoes."""
+"""The real ThemeStore: the theme engine in shell/themes, for the tool server."""
 import os
 import sys
 from collections.abc import Mapping

@@ -1,0 +1,228 @@
+"""FAL's catalog of image models, as Osiris searches it."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+
+import pytest
+
+from osiris.harness.media.catalog import CATALOG, FalCatalog
+from osiris.harness.media.error import MediaError
+from osiris.harness.media.image_model import ImageModel
+from osiris.platform import FakeHttpClient, HttpError
+from osiris.platform.http import Body
+
+SEARCH = f"{CATALOG}?category=text-to-image&status=active&limit=12&q=flat+anime"
+DETAILS = f"{CATALOG}?endpoint_id=fal-ai%2Fone&expand=openapi-3.0"
+
+
+def catalog(http: FakeHttpClient) -> FalCatalog:
+    return FalCatalog(http, lambda: None)
+
+
+def listed(endpoint: str, name: str, about: str) -> dict[str, object]:
+    return {
+        "endpoint_id": endpoint,
+        "metadata": {"display_name": name, "description": about},
+    }
+
+
+def test_a_search_finds_active_text_to_image_models() -> None:
+    reply = {"models": [listed("fal-ai/one", "One", "Draws flat anime")]}
+    http = FakeHttpClient(replies={("GET", SEARCH): reply})
+
+    assert catalog(http).search("flat anime") == [
+        ImageModel("fal-ai/one", "One", "Draws flat anime")
+    ]
+
+
+def test_an_empty_search_lists_what_fal_offers() -> None:
+    every = f"{CATALOG}?category=text-to-image&status=active&limit=12"
+    reply = {"models": [listed("fal-ai/one", "One", "Draws")]}
+    http = FakeHttpClient(replies={("GET", every): reply})
+
+    assert [model.id for model in catalog(http).search("")] == ["fal-ai/one"]
+
+
+def described(
+    category: str = "text-to-image",
+    status: str = "active",
+    required: tuple[str, ...] = ("prompt",),
+    path: str = "/fal-ai/one",
+    properties: dict[str, object] | None = None,
+) -> dict[str, object]:
+    return {
+        "models": [
+            {
+                "endpoint_id": "fal-ai/one",
+                "metadata": {"category": category, "status": status},
+                "openapi": {
+                    "paths": {
+                        f"{path}/requests/{{request_id}}/cancel": {"put": {}},
+                        path: {
+                            "post": {
+                                "requestBody": {
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/OneInput"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    },
+                    "components": {
+                        "schemas": {
+                            "OneInput": {
+                                "required": list(required),
+                                "properties": properties
+                                or {"prompt": {}, "image_size": {}},
+                            }
+                        }
+                    },
+                },
+            }
+        ]
+    }
+
+
+def test_a_models_inputs_come_from_its_published_schema() -> None:
+    http = FakeHttpClient(replies={("GET", DETAILS): described()})
+
+    assert catalog(http).spec("fal-ai/one").inputs == {"prompt", "image_size"}
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        described(category="text-to-video"),
+        described(status="deprecated"),
+        {"models": []},
+        HttpError(404, "Endpoint(s) not found"),
+    ],
+)
+def test_anything_but_an_active_image_model_is_refused(answer: object) -> None:
+    http = FakeHttpClient(replies={("GET", DETAILS): answer})
+
+    with pytest.raises(
+        MediaError, match=r"not an image model FAL offers.*ask the person which model"
+    ):
+        catalog(http).spec("fal-ai/one")
+
+
+def test_a_catalog_that_cannot_be_read_is_given_a_plain_reason() -> None:
+    http = FakeHttpClient(replies={("GET", SEARCH): HttpError(0, "no route")})
+
+    with pytest.raises(MediaError, match="FAL's list of image models"):
+        catalog(http).search("flat anime")
+
+
+def test_vector_models_are_not_offered_because_they_cannot_be_a_wallpaper() -> None:
+    vector = "fal-ai/one/text-to-vector"
+    details = f"{CATALOG}?endpoint_id=fal-ai%2Fone%2Ftext-to-vector&expand=openapi-3.0"
+    entry = {
+        "endpoint_id": vector,
+        "metadata": {"category": "text-to-image", "status": "active"},
+    }
+    reply = {"models": [listed("fal-ai/one", "One", "Draws"), listed(vector, "V", "")]}
+    http = FakeHttpClient(
+        replies={("GET", SEARCH): reply, ("GET", details): {"models": [entry]}}
+    )
+
+    assert [model.id for model in catalog(http).search("flat anime")] == ["fal-ai/one"]
+    with pytest.raises(MediaError, match="not an image model"):
+        catalog(http).spec(vector)
+
+
+def test_a_model_that_needs_more_than_a_description_is_refused() -> None:
+    answer = described(required=("prompt", "image_url"))
+    http = FakeHttpClient(replies={("GET", DETAILS): answer})
+
+    with pytest.raises(
+        MediaError, match=r"needs more than a description.*ask the person which model"
+    ):
+        catalog(http).spec("fal-ai/one")
+
+
+@pytest.mark.parametrize(
+    ("key", "sent"), [("a-key", {"Authorization": "Key a-key"}), (None, {})]
+)
+def test_the_persons_key_raises_the_catalogs_rate_limit(
+    key: str | None, sent: dict[str, str]
+) -> None:
+    seen: list[Mapping[str, str] | None] = []
+
+    class Recording(FakeHttpClient):
+        def request(
+            self,
+            method: str,
+            url: str,
+            *,
+            body: Body = None,
+            headers: Mapping[str, str] | None = None,
+        ) -> Body:
+            seen.append(headers)
+            return super().request(method, url, body=body, headers=headers)
+
+    http = Recording(replies={("GET", SEARCH): {"models": []}})
+
+    FalCatalog(http, lambda: key).search("flat anime")
+
+    assert seen == [sent]
+
+
+def test_a_rate_limit_is_not_mistaken_for_a_lost_connection() -> None:
+    http = FakeHttpClient(replies={("GET", SEARCH): HttpError(429, "slow down")})
+
+    with pytest.raises(MediaError, match="try again in a minute"):
+        catalog(http).search("flat anime")
+
+
+def test_a_model_runs_where_its_schema_says() -> None:
+    answer = described(path="/fal-ai/runs-here")
+    http = FakeHttpClient(replies={("GET", DETAILS): answer})
+
+    assert catalog(http).spec("fal-ai/one").path == "fal-ai/runs-here"
+
+
+def test_a_model_is_given_a_wide_size_from_its_schema() -> None:
+    size = {"enum": ["1024x1024", "1536x1024"]}
+    answer = described(properties={"prompt": {}, "image_size": size})
+    http = FakeHttpClient(replies={("GET", DETAILS): answer})
+
+    assert catalog(http).spec("fal-ai/one").size == "1536x1024"
+
+
+def test_a_key_fal_rejects_is_not_mistaken_for_a_lost_connection() -> None:
+    http = FakeHttpClient(replies={("GET", SEARCH): HttpError(401, "no")})
+
+    with pytest.raises(MediaError, match="did not accept the key"):
+        catalog(http).search("flat anime")
+
+
+def test_a_key_that_cannot_be_sent_is_reported_as_the_key() -> None:
+    class Unsendable(FakeHttpClient):
+        def request(
+            self,
+            method: str,
+            url: str,
+            *,
+            body: Body = None,
+            headers: Mapping[str, str] | None = None,
+        ) -> Body:
+            raise UnicodeEncodeError("latin-1", "key", 0, 1, "no")
+
+    with pytest.raises(MediaError, match="did not accept the key"):
+        catalog(Unsendable()).search("flat anime")
+
+
+def test_a_model_that_takes_no_description_is_refused() -> None:
+    answer = described(required=(), properties={"image_url": {}})
+    http = FakeHttpClient(replies={("GET", DETAILS): answer})
+
+    with pytest.raises(
+        MediaError, match=r"needs more than a description.*ask the person which model"
+    ):
+        catalog(http).spec("fal-ai/one")

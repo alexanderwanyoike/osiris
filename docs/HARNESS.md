@@ -22,9 +22,7 @@ The first slice of ROADMAP P3.5:
   the model describes a **Theme intent** (a seed colour, a **Harmony**, a mood,
   light or dark) through the Osiris tools, Osiris's own rules derive the
   palette, and the theme is kept with the person's own and applied. The answer
-  ends with what changed and an **Undo**, which reverses it without the model:
-  the previous theme comes back and the new one is deleted. See
-  [The Osiris tools](#the-osiris-tools).
+  ends with what changed. See [The Osiris tools](#the-osiris-tools).
 - **The Engine's rules decide what asks** (ADR 0020). opencode's permission
   rules, in its own config where the person can read and change them, allow,
   ask about or deny each action; the last matching rule wins, and they hold for
@@ -40,12 +38,13 @@ The first slice of ROADMAP P3.5:
   not to try it another way unasked. A card waits without holding up any other
   Conversation, goes when its answer ends, and every answer is logged
   (`replied`).
-- **Unless the person turns on auto mode.** A switch on the Providers page
-  (`osiris.harness.trust`) has the Harness answer every request once without a
-  card, logged as `allowed` by `auto mode`, and restarts the tool server so the
-  model is told. A deny rule still refuses, since the Engine never asks about
-  it, and a command using sudo still asks for the password. It is off until
-  the person turns it on; a person who had allow everything on is in auto mode.
+- **Unless the person allows everything.** A switch beside the message box,
+  the same one as in Settings, turns on auto mode (`osiris.harness.trust`):
+  the Harness answers every request once without a card, logged as `allowed`
+  by `auto mode`, and restarts the tool server so the model is told. A deny
+  rule still refuses, since the Engine never asks about it, and a command
+  using sudo still asks for the password. It is off until the person turns it
+  on.
 - **It asks for the administrator password in the Conversation.** When a
   command it runs uses `sudo`, an admin password card appears under the
   answer: "Osiris needs your password to run:" and the exact command, a shell
@@ -139,10 +138,10 @@ The first slice of ROADMAP P3.5:
   (`GET /api/permission/saved`), with what it allows and its Project (from
   `GET /api/project`); taking one back (`DELETE /api/permission/saved/{id}`)
   makes the Engine ask about it again, and is logged (`rule-removed`).
-- **A card outlives a restart.** When a Conversation opens, the requests its
-  session still waits on (`GET /api/session/{id}/permission`) are read as
-  they were asked and their cards come back, so a restart of the drawer no
-  longer leaves an answer hanging.
+- **A card outlives a restart.** When a Conversation opens, the requests and
+  forms its session still waits on (`GET /api/session/{id}/permission` and
+  `GET /api/session/{id}/form`) are read as they were asked and their cards
+  come back, so a restart of the drawer no longer leaves an answer hanging.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
@@ -183,7 +182,7 @@ The first slice of ROADMAP P3.5:
   plus-minus icon, Osiris's own) opens the Changes group with a tab for each
   question that made commits to Programs, in the order asked with the newest
   on screen (#195): the commits the Harness log
-  records with the question (the ones its Undo would revert), each read with
+  records with the question, each read with
   `git show` (`Programs.patch`) and split into files named under their Program
   (`osiris/harness/changes.py`), each with its lines added and removed, opening
   to its diff, coloured by the Theme's code scheme. Because the log outlives
@@ -196,7 +195,7 @@ The first slice of ROADMAP P3.5:
 - **The Harness log** keeps everything: each question before it is sent, each
   answer with the model that gave it and its tokens, every tool call whether or
   not it asked, every answer to a card, everything auto mode allowed, every change with
-  the step that undoes it, every Undo, every rejection and every failure. It is append-only JSON lines,
+  the step that would reverse it, every rejection and every failure. It is append-only JSON lines,
   readable with any tool:
 
   ```
@@ -254,7 +253,7 @@ osiris/platform/http          the HTTP port the adapter talks through
 osiris/apps/tool_server       the Osiris tools as an MCP server, each with its tier
 osiris/themes/actions         what the tools do with Themes, behind osiris/themes/store
 apps/harness/tool_server.py   runs the tool server on stdio over the theme engine
-apps/harness/theme_store.py   the theme engine as a ThemeStore, for acting and undoing
+apps/harness/theme_store.py   the theme engine as a ThemeStore, for acting
 provision/harness.py          installs the drawer, extension, applet, D-Bus activation, autostart,
                               the askpass helper and the agent's sudo
 ```
@@ -268,25 +267,35 @@ on first use. Super+A and the panel button both run
 What the model may do on this machine is offered by Osiris as an MCP server
 (`osiris`), built on the official SDK (Arch's `python-mcp`). The drawer attaches
 it to the Engine when it connects, with opencode's runtime MCP API, so nothing
-is written into the person's own opencode configuration.
+is written into the person's own opencode configuration. opencode forgets a
+runtime server when it unloads a folder left idle
+(`experimental.location_idle_timeout`, an hour by default), so before each
+question the Harness asks whether `osiris` still runs there and attaches it
+again if not. The timeout is left as it is, since turning it off would keep
+every folder's servers running until the Engine restarts.
 
-| Tool | Action tier | What it does | Undo |
+| Tool | Action tier | What it does | Logged step to reverse it |
 |---|---|---|---|
 | `list_themes` | a look | the themes, light or dark, and which is applied | |
 | `create_theme` | an undoable change | a User theme from a Theme intent; never replaces one | deletes it |
 | `apply_theme` | an undoable change | applies a theme to the whole desktop | applies the one it replaced |
+| `make_picture_theme` | an undoable change that costs money | generates a picture through FAL, makes a theme from it and applies it | deletes the theme and applies the one it replaced; the picture stays in `~/Pictures/Osiris` and its cost is spent |
+| `find_image_models` | a look | lists image models from FAL's live catalog and the person's default | nothing to undo |
+| `set_default_image_model` | an undoable change | makes a model FAL offers the person's default for pictures, or goes back to the shipped one | restores the choice it replaced |
 
 opencode runs MCP tools from its code mode (`tools.osiris.apply_theme(...)`),
 and checks each call as the action `osiris_<tool>`. The starting rules allow
-`osiris_*`, since every tool only looks or has an Undo, so they run without a
-card; the tier is a hint to the model, not a decision. The model never writes a
+`osiris_*`, so they run without a card, because each tool only looks or makes a
+reversible change. The exception is the money `make_picture_theme` spends from
+the person's FAL account, which cannot be returned and has no limit unless they
+set a daily one in Settings. The tier is a hint to the model, not a decision.
+The model never writes a
 colour: the seed is a hex colour whose hue alone counts, and harmony and mood
 are fixed choices.
 
 Each change the tool server makes is written to the Harness log with the step
-that reverses it. When an answer finishes, the drawer reads the changes logged
-since the question and shows them with one Undo, which runs those steps newest
-first; the theme that is applied is never deleted.
+that would reverse it. When an answer finishes, the drawer reads the changes
+logged since the question and shows them.
 
 ### Admin passwords
 
@@ -454,8 +463,8 @@ Conversation. Checked against opencode 2.2.4:
 - Snapshots live in opencode's own object store under its data folder; it
   documents no rule for pruning them (opencode.ai/v2/docs/snapshots), and
   `"snapshots": false` in its config stops new ones.
-- Osiris's own changes, a Theme or a Skin, are not in the snapshot; each keeps
-  its own Undo.
+- Osiris's own changes, a Theme or a Skin, are not in the snapshot, so going
+  back leaves them as they are.
 
 Each go back is logged as `went-back` with the message, the files put back and
 how many questions were dropped, so a reopened Conversation matches the log's

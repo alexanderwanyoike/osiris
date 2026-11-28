@@ -11,9 +11,15 @@ import pytest
 
 from osiris.platform import FakeHttpClient, HttpError, UrllibClient
 
+PICTURE = b"\x89PNG a picture"
+# Holds /silent's reply back until the test is over, however slow the machine.
+RELEASE = threading.Event()
+
 
 class Handler(BaseHTTPRequestHandler):
     """Echoes what it was sent, and serves the fixed routes the tests use."""
+
+    redirect_to = ""
 
     def log_message(self, *_args: object) -> None:
         pass
@@ -33,8 +39,43 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"data: one\n\n: heartbeat\n\ndata: two\n\n")
             return
+        if self.path == "/events-cut":
+            self.send_response(200)
+            self.send_header("Transfer-Encoding", "chunked")
+            self.end_headers()
+            self.wfile.write(b"b\r\ndata: one\n\r\n")
+            return
+        if self.path == "/silent":
+            RELEASE.wait()
+            return
+        if self.path == "/hangup":
+            return
+        if self.path == "/cut":
+            self.send_response(200)
+            self.send_header("Content-Length", "100")
+            self.end_headers()
+            self.wfile.write(b'{"cut')
+            return
+        if self.path == "/missing-cut":
+            self.send_response(404)
+            self.send_header("Content-Length", "100")
+            self.end_headers()
+            self.wfile.write(b'{"no')
+            return
         if self.path == "/missing":
             self._reply(404, {"message": "no such thing"})
+            return
+        if self.path == "/moved":
+            self.send_response(302)
+            self.send_header("Location", self.redirect_to)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        if self.path == "/picture":
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(PICTURE)))
+            self.end_headers()
+            self.wfile.write(PICTURE)
             return
         self._reply(200, {"auth": self.headers.get("Authorization")})
 
@@ -49,10 +90,12 @@ class Handler(BaseHTTPRequestHandler):
 
 @pytest.fixture
 def server() -> Iterator[str]:
+    RELEASE.clear()
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
     yield f"http://127.0.0.1:{httpd.server_address[1]}"
+    RELEASE.set()
     httpd.shutdown()
     httpd.server_close()
 
@@ -79,6 +122,93 @@ class TestUrllibClient:
         assert raised.value.status == 404
         assert "no such thing" in raised.value.body
 
+    def test_an_error_status_with_its_body_cut_short_keeps_the_status(
+        self, server: str
+    ) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().request("GET", f"{server}/missing-cut")
+        assert raised.value.status == 404
+
+    @pytest.mark.parametrize("path", ["/silent", "/hangup"])
+    def test_no_answer_once_connected_is_status_0(self, server: str, path: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient(timeout=0.1).request("GET", f"{server}{path}")
+        assert raised.value.status == 0
+
+    def test_a_reply_cut_short_is_status_0(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().request("GET", f"{server}/cut")
+        assert raised.value.status == 0
+
+    def test_a_redirect_to_another_host_does_not_carry_the_credentials(
+        self, server: str
+    ) -> None:
+        port = server.rsplit(":", 1)[1]
+        Handler.redirect_to = f"http://localhost:{port}/"
+
+        reply = UrllibClient().request(
+            "GET", f"{server}/moved", headers={"Authorization": "Key secret"}
+        )
+
+        assert reply == {"auth": None}
+
+    def test_a_redirect_on_the_same_host_keeps_the_credentials(
+        self, server: str
+    ) -> None:
+        Handler.redirect_to = f"{server}/"
+
+        reply = UrllibClient().request(
+            "GET", f"{server}/moved", headers={"Authorization": "Key secret"}
+        )
+
+        assert reply == {"auth": "Key secret"}
+
+    def test_a_redirected_stream_does_not_carry_the_credentials(
+        self, server: str
+    ) -> None:
+        port = server.rsplit(":", 1)[1]
+        Handler.redirect_to = f"http://localhost:{port}/"
+
+        lines = UrllibClient().lines(
+            f"{server}/moved", headers={"Authorization": "Key secret"}
+        )
+
+        assert "secret" not in "".join(lines)
+
+    def test_a_download_comes_back_as_bytes(self, server: str) -> None:
+        assert UrllibClient().download(f"{server}/picture", limit=100) == PICTURE
+
+    def test_a_download_over_its_limit_is_refused(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().download(f"{server}/picture", limit=4)
+        assert raised.value.status == 0
+
+    def test_a_download_does_not_follow_a_redirect(self, server: str) -> None:
+        Handler.redirect_to = f"{server}/picture"
+
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().download(f"{server}/moved", limit=100)
+
+        assert raised.value.status == 302
+
+    def test_a_download_cut_off_midway_is_refused(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().download(f"{server}/cut", limit=100)
+
+        assert raised.value.status == 0
+
+    def test_a_download_keeps_the_status_it_failed_with(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().download(f"{server}/missing", limit=100)
+
+        assert raised.value.status == 404
+
+    def test_a_link_that_is_not_a_valid_address_is_no_answer(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().download(f"{server}/pict\u00fcre", limit=100)
+
+        assert raised.value.status == 0
+
     def test_a_stream_arrives_line_by_line(self, server: str) -> None:
         lines = list(UrllibClient().lines(f"{server}/events"))
         assert [line for line in lines if line] == [
@@ -87,8 +217,17 @@ class TestUrllibClient:
             "data: two",
         ]
 
+    def test_a_stream_cut_short_is_status_0(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            list(UrllibClient().lines(f"{server}/events-cut"))
+        assert raised.value.status == 0
+
 
 class TestFakeHttpClient:
+    def test_downloads_are_served_from_what_it_was_given(self) -> None:
+        client = FakeHttpClient(downloads={"http://x/p": PICTURE})
+        assert client.download("http://x/p", limit=100) == PICTURE
+
     def test_replies_are_served_and_requests_recorded(self) -> None:
         client = FakeHttpClient(replies={("POST", "http://x/a"): {"ok": True}})
         assert client.request("POST", "http://x/a", body={"n": 1}) == {"ok": True}

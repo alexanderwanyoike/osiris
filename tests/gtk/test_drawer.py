@@ -6,7 +6,7 @@ from __future__ import annotations
 import gi
 
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gtk  # noqa: E402
+from gi.repository import Adw, GLib, Gtk  # noqa: E402
 
 from osiris.harness.conversation import Conversation  # noqa: E402
 from osiris.harness.settings import Models  # noqa: E402
@@ -93,9 +93,6 @@ class FakeApp(Adw.Application):
     def update_panel(self) -> None:
         self.panel_updates += 1
 
-    def undo(self, _turn: object) -> None:
-        pass
-
     def ask_to_go_back(self, turn: object, _again: bool = False) -> None:
         self.gone_back.append(turn)
 
@@ -121,6 +118,11 @@ class FakeApp(Adw.Application):
 
         return Gtk.Label(label="approval card")
 
+    def form_card(self, _turn: object) -> object:
+        from gi.repository import Gtk
+
+        return Gtk.Label(label="form card")
+
     def stop(self) -> None:
         self.stopped += 1
 
@@ -135,6 +137,21 @@ class FakeApp(Adw.Application):
     def footer_line(self) -> str:
         return ""
 
+    def fal_connected(self) -> bool:
+        return False
+
+    def save_fal_key(self, _key: str) -> None:
+        pass
+
+    def remove_fal_key(self) -> None:
+        pass
+
+    def picture_limit(self) -> int | None:
+        return None
+
+    def set_picture_limit(self, _images: int | None) -> None:
+        pass
+
 
 def drawer():
     import main
@@ -144,6 +161,16 @@ def drawer():
     window.maximize = lambda: calls.append("maximize")  # type: ignore[method-assign]
     window.unmaximize = lambda: calls.append("unmaximize")  # type: ignore[method-assign]
     return window, calls
+
+
+def test_an_earlier_answer_can_be_redrawn_on_its_own() -> None:
+    window, _ = drawer()
+    first = window.app.conversation.asked("one")
+    window.app.conversation.asked("two")
+    window.refresh()
+    first.note = "This answer cannot be undone."
+    window.redraw(first)
+    assert "This answer cannot be undone." in texts(window)
 
 
 def test_the_expand_button_asks_to_fill_the_screen_and_to_come_back() -> None:
@@ -262,6 +289,16 @@ def test_a_held_action_is_drawn_with_the_apps_approval_card() -> None:
     turn.held = Step("shell", ("ls /etc",))
     window.refresh()
     assert "approval card" in texts(window)
+
+
+def test_what_the_model_asks_is_drawn_with_the_apps_form_card() -> None:
+    from osiris.harness.engine import FormAsked, FormField
+
+    window, _ = drawer()
+    turn = window.app.conversation.asked("make it lavender at dusk")
+    turn.form = FormAsked("ses_1", "frm_1", (FormField("q0", "Mood", "Which?"),))
+    window.refresh()
+    assert "form card" in texts(window)
 
 
 def test_enter_sends_even_while_osiris_is_busy() -> None:
@@ -873,3 +910,125 @@ def test_settings_hold_the_skills_beside_the_connectors() -> None:
     shown = texts(window)
     assert "Skills" in shown
     assert "Review" in shown
+
+
+def test_opening_the_model_menu_lists_the_models_the_accounts_reach() -> None:
+    """With its search focused, the model in use first, and each model's
+    Provider named (#222)."""
+    from types import SimpleNamespace
+
+    from osiris.harness.accounts import ModelInfo, Provider
+    from osiris.harness.engine import ModelRef
+    from tests.gtk.conftest import now
+
+    sol = ModelInfo(ModelRef("openai", "gpt-6-sol"), "GPT-6 Sol", family="gpt-6")
+    pickle = ModelInfo(ModelRef("opencode", "big-pickle"), "Big Pickle")
+    window, _ = drawer()
+    app = window.app
+    app.background = now
+    app.models = Models(sol.ref, None)
+    app.accounts = SimpleNamespace(
+        models=lambda: [pickle, sol],
+        providers=lambda: [Provider("openai", "OpenAI", (), True)],
+    )
+    window.present()
+    window.model_menu.set_active(True)
+    rows = [row.model.name for row in window.model_list.list]
+    assert rows == ["GPT-6 Sol", "Big Pickle"]
+    assert "OpenAI" in texts(window.model_list)
+    # The popover maps on the main loop; with no window manager under Xvfb
+    # no window is active, so ask the popover which widget it focuses.
+    context = GLib.MainContext.default()
+    while context.pending():
+        context.iteration(False)
+    search = window.model_list.search
+    focused = search.get_root().get_focus()
+    assert focused is not None and (focused is search or focused.is_ancestor(search))
+
+
+def test_hiding_the_drawer_closes_the_model_menu() -> None:
+    """Left open, the menu floated on the desktop on its own (#227)."""
+    window, _ = drawer()
+    window.present()
+    window.model_menu.set_active(True)
+    window.hidden()
+    assert not window.model_menu.get_active()
+
+
+def test_allow_everything_sits_beside_the_message_box_and_turns_auto_mode() -> None:
+    """Where the person works, saying plainly what it does (#228)."""
+    window, _ = drawer()
+    turned: list[bool] = []
+    window.app.set_auto_mode = turned.append
+    switch = window.allow_everything
+    assert not switch.get_active()
+    assert "Allow everything" in texts(window.allow_line)
+    assert "sudo" in window.allow_line.get_tooltip_text()
+    switch.set_active(True)
+    assert turned == [True]
+
+
+def test_allow_everything_follows_a_change_made_in_settings() -> None:
+    """Without turning it again, which would restart the tool server."""
+    window, _ = drawer()
+    turned: list[bool] = []
+    window.app.set_auto_mode = turned.append
+    window.app.in_auto_mode = True
+    window.refresh()
+    assert window.allow_everything.get_active()
+    assert turned == []
+
+
+def test_a_drawer_minimised_by_the_desktop_closes_the_model_menu() -> None:
+    """Show desktop and the like minimise it without Thoth's own close
+    (review of #227)."""
+    from types import SimpleNamespace
+
+    from gi.repository import Gdk
+
+    window, _ = drawer()
+    window.present()
+    window.model_menu.set_active(True)
+    minimised = SimpleNamespace(get_state=lambda: Gdk.ToplevelState.MINIMIZED)
+    window._surface_state(minimised, None)
+    assert not window.model_menu.get_active()
+
+
+def test_a_drawer_shown_again_leaves_the_model_menu_alone() -> None:
+    from types import SimpleNamespace
+
+    from gi.repository import Gdk
+
+    window, _ = drawer()
+    window.present()
+    window.model_menu.set_active(True)
+    window._surface_state(SimpleNamespace(get_state=lambda: Gdk.ToplevelState(0)), None)
+    assert window.model_menu.get_active()
+
+
+def test_allow_everything_sits_next_to_the_model_menu() -> None:
+    """As decided on #228: beside the model menu, under the message box."""
+    window, _ = drawer()
+    assert window.allow_line.get_next_sibling() is window.model_menu
+
+
+def test_the_model_menu_stays_inside_the_drawer_with_a_long_provider() -> None:
+    """Centred on its button and as wide as a long Provider makes it, the menu
+    ran past the drawer's edge."""
+    from osiris.harness.accounts import ModelInfo
+    from osiris.harness.engine import ModelRef
+
+    pickle = ModelInfo(ModelRef("opencode", "big-pickle"), "Big Pickle")
+    window, _ = drawer()
+    window.present()
+    window.model_list.show_models(
+        [pickle], pickle.ref, {"opencode": "OpenCode Console"}
+    )
+    context = GLib.MainContext.default()
+    while context.pending():
+        context.iteration(False)
+    popover = window.model_menu.get_popover()
+    composer = window.model_menu.get_parent().get_parent()
+    assert popover.get_halign() == Gtk.Align.END
+    width = window.model_list.measure(Gtk.Orientation.HORIZONTAL, -1)[0]
+    assert 0 < width <= composer.get_width()

@@ -60,3 +60,20 @@ def test_a_typed_reply_is_sent_in_the_actions_place() -> None:
     entry.set_text("Look in /etc/osiris only")
     entry.emit("activate")
     assert answers == [(Answer.DENY, "Look in /etc/osiris only")]
+
+
+def test_a_long_unbroken_line_never_widens_the_card() -> None:
+    """The code a tool is called with can be one long line; it wraps inside
+    the card instead of pushing the sidebar past the screen (#226)."""
+    unbroken = (
+        "tools.osiris.create_theme({label:'Midnight',seed:'#ffaa00',"
+        "harmony:'analogous',mood:'calm'})"
+    )
+    short = Step("osiris_create_theme", ("x",), call="c", input={"code": "x"})
+    long = Step("osiris_create_theme", ("x",), call="c", input={"code": unbroken})
+
+    def narrowest(held: Step) -> int:
+        widget = ApprovalCard(held, on_answer=lambda *_: None)
+        return widget.measure(Gtk.Orientation.HORIZONTAL, -1)[0]
+
+    assert narrowest(long) == narrowest(short)

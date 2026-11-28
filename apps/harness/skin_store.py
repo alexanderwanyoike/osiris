@@ -1,5 +1,4 @@
-"""The real SkinStore: the theme engine's Skins, for the tool server that acts
-and the drawer that undoes."""
+"""The real SkinStore: the theme engine's Skins, for the tool server."""
 import os
 import sys
 from collections.abc import Sequence
@@ -30,6 +29,9 @@ class EngineSkinStore:
 
     def check(self, name: str) -> list[str]:
         return engine.check_skin(name)
+
+    def fixed_colours(self, name: str) -> list[str]:
+        return engine.fixed_colours(name)
 
     def wear(self, name: str) -> None:
         engine.set_skin(name)

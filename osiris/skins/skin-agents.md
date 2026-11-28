@@ -1,14 +1,15 @@
 # This folder is an Osiris Skin
 
 It is the person's own copy of a Skin: the shape of their desktop (windows,
-panel, dock, launcher), whose colours always come from their current Theme.
+panel, dock, launcher), whose colours come from their current Theme unless
+they ask for a fixed colour.
 Change it when they ask; never touch Skins outside this folder.
 
 ## How it is made
 
 - `skin.json` is its label. An optional `look` block names an icon set
   (`icons`, one name or `{"light": ..., "dark": ...}`), a `cursor` and a `font`.
-- `sass/` holds the Sass partials. Colours come only from these variables,
+- `sass/` holds the Sass partials. Colours come from these variables,
   which Osiris writes into `sass/_gaps.scss` (never edit or ship that file):
   `$gap-variant` ('light' or 'dark'), `$gap-background`, `$gap-surface`,
   `$gap-foreground`, `$gap-accent`, `$gap-success`, `$gap-warning`,
@@ -22,6 +23,37 @@ Change it when they ask; never touch Skins outside this folder.
 - `plank/dock-<variant>.theme` is the dock; colours there are gaps like
   `{{background_plank}}`.
 - `rofi/launcher.rasi`, if present, is the launcher, with `{{gap}}` markers.
+
+## Every surface alike
+
+The same outline or shadow comes out differently on each surface, because
+each is drawn by something else:
+
+- libadwaita and GTK 4 windows draw their own edge and shadow
+  (`window.background.csd`). libadwaita takes its shape only from
+  `libadwaita/libadwaita-<variant>.scss`; add one if this Skin has none.
+- Many GTK 3 windows, such as Files and the text editor, have frames the
+  window manager, Muffin, draws from the decoration
+  (`window.ssd > decoration`, written `.ssd decoration` in most Skins) and
+  `headerbar.titlebar.default-decoration`. Muffin makes the frame's visible
+  edge as wide as the decoration's border and padding and paints the
+  decoration, then paints the title bar across the frame's whole top, over
+  the decoration's top border and the sides beside it. To outline these
+  windows, give `window.ssd > decoration` the outline's border and the title
+  bar the same border on its top and sides. Muffin shapes the frame's corners
+  from the title bar's `border-radius`, not the decoration's, so give both the
+  same radius. Muffin adds `.maximized` or `.tiled` to these windows; give
+  them no border then. A background with no border or padding shows nothing,
+  since the frame then has no edge. Muffin adds its own soft shadow to them.
+- The panel is an edge of the screen. An outline belongs on the side facing
+  the desktop (`.panel-top`, `.panel-bottom` and so on).
+- The dock can draw only a stroke (`LineWidth`, `OuterStrokeColor`), corner
+  roundness and padding; it has no shadow.
+
+So decide each part once: its width, colour and corners, kept in one Sass
+partial that every style sheet imports. Set the same width and roundness in
+the dock theme, with the same gap for its colour. Where a surface cannot draw
+part of it, give that surface what makes it look like the rest.
 
 ## An imported theme
 
@@ -57,13 +89,23 @@ person what it said.
 - Another style for this Skin, or a new Skin, is a Skin of the person's in
   `~/.local/share/osiris/skins`, made with the create_skin tool.
 - Never write a colour from the Theme literally: use the gaps, so the Skin
-  works under every Theme, light and dark. Fixed colours are only for things
-  that are part of the look whatever the Theme, and only if asked.
+  works under every Theme, light and dark. check_skin names the fixed colours
+  this Skin was not made with.
 - After each change, check it with the check_skin tool and wear it with
-  wear_skin, and fix whatever check_skin reports. Without those tools, the
+  wear_skin, and fix any problem check_skin reports. Without those tools, the
   engine does the same:
 
       python3 /usr/share/osiris/themes/engine.py --skin SKIN_NAME
 
+- Then look at it before saying it is done. Open a GTK 3 window (Files:
+  `setsid -f nemo`) and a libadwaita window (Appearance:
+  `setsid -f osiris-appearance`) if none is open, take a screenshot with
+  `gnome-screenshot -f .look.png` and read it. Compare the two windows, the
+  panel and the dock, fix what does not look like one Skin, and look again.
+  If you cannot see images, tell the person and ask them to look instead.
+- Delete `.look.png` before committing, and check that `git status` does not
+  list it. A screenshot can show the person's private windows, and anything
+  committed is shared with the Skin.
+
 - Commit each change in this folder with a message saying what changed and
-  why, so the person can undo it with `git revert`.
+  why, so the person can read the Skin's history.

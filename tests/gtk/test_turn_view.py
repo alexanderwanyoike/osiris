@@ -1,10 +1,11 @@
-"""A turn in the drawer: what its answer changed, and the Undo for it."""
+"""A turn in the drawer: its answer and what it changed."""
 
 from __future__ import annotations
 
 import time
 from collections.abc import Callable
 from dataclasses import replace
+from datetime import datetime
 
 from gi.repository import GLib, Gtk
 from render import TurnView
@@ -13,6 +14,7 @@ from osiris.harness.activity import Step
 from osiris.harness.admin import Request
 from osiris.harness.conversation import State, Turn
 from osiris.harness.detail import FOLD
+from osiris.harness.engine import FormAsked, FormField
 from osiris.harness.harness import Asking
 from osiris.harness.log import Change
 from osiris.harness.markdown import InlineStyle
@@ -26,7 +28,6 @@ APPLIED = Change("Applied Harbour", {"action": "apply_theme", "name": "nord"})
 
 def drawn(
     turn: Turn,
-    undone: list[Turn] | None = None,
     cards: list[str] | None = None,
     clock: Callable[[], float] = lambda: 0.0,
 ) -> TurnView:
@@ -36,7 +37,6 @@ def drawn(
 
     view = TurnView(
         turn,
-        on_undo=(undone if undone is not None else []).append,
         program_card=card,
         clock=clock,
     )
@@ -48,20 +48,9 @@ def finished(*changes: Change) -> Turn:
     return Turn("make it calm", "Done.", State.DONE, changes=list(changes))
 
 
-def test_a_turn_that_changed_something_says_what_and_offers_undo() -> None:
-    undone: list[Turn] = []
-    turn = finished(MADE, APPLIED)
-    view = drawn(turn, undone)
+def test_a_turn_that_changed_something_says_what_with_no_undo() -> None:
+    view = drawn(finished(MADE, APPLIED))
     assert "Made Harbour  ·  Applied Harbour" in texts(view)
-    find(view, Gtk.Button, "Undo").emit("clicked")
-    assert undone == [turn]
-
-
-def test_an_undone_turn_says_so_and_offers_no_undo() -> None:
-    turn = finished(MADE)
-    turn.undone = True
-    view = drawn(turn)
-    assert "Undone" in texts(view)
     assert not any(
         isinstance(w, Gtk.Button) and w.get_label() == "Undo" for w in widgets(view)
     )
@@ -69,7 +58,7 @@ def test_an_undone_turn_says_so_and_offers_no_undo() -> None:
 
 def test_a_turn_that_changed_nothing_shows_no_changes() -> None:
     view = drawn(finished())
-    assert not any("Undo" in text for text in texts(view))
+    assert not any(w.has_css_class("harness-chip") for w in widgets(view))
 
 
 def test_a_turn_that_changed_programs_shows_a_card_for_each() -> None:
@@ -230,13 +219,27 @@ def test_an_action_held_for_the_person_shows_its_card_under_the_answer() -> None
 
     view = TurnView(
         turn,
-        on_undo=lambda _t: None,
         program_card=lambda _n: Gtk.Box(),
         approval_card=approval_card,
     )
     view.update(turn, STYLE, None)
     assert asked == [turn]
     assert "approval card" in texts(view)
+
+
+def test_what_the_model_asks_shows_its_card_under_the_answer() -> None:
+    turn = Turn("make it lavender", "One thing first.", State.ANSWERING)
+    turn.form = FormAsked("ses_1", "frm_1", (FormField("q0", "Mood", "Which?"),))
+    asked: list[Turn] = []
+
+    def form_card(waiting: Turn) -> Gtk.Widget:
+        asked.append(waiting)
+        return Gtk.Label(label="form card")
+
+    view = TurnView(turn, program_card=lambda _n: Gtk.Box(), form_card=form_card)
+    view.update(turn, STYLE, None)
+    assert asked == [turn]
+    assert "form card" in texts(view)
 
 
 def test_an_answer_that_took_no_steps_keeps_no_record() -> None:
@@ -254,9 +257,7 @@ def test_a_command_waiting_for_the_password_shows_its_card_under_the_answer() ->
 
     turn = Turn("install cowsay", "Installing.", State.ANSWERING)
     turn.admin = Request(("pacman", "-S", "cowsay"))
-    view = TurnView(
-        turn, on_undo=lambda _t: None, program_card=Gtk.Label, admin_card=admin_card
-    )
+    view = TurnView(turn, program_card=Gtk.Label, admin_card=admin_card)
     view.update(turn, STYLE, None)
     view.update(turn, STYLE, None)
     assert asked[-1] == turn.admin
@@ -331,7 +332,6 @@ def going_back(may: bool, state: State = State.DONE) -> tuple[TurnView, Turn, li
     turn = Turn("make y.txt", "Made it.", state, message="msg_2")
     view = TurnView(
         turn,
-        on_undo=lambda _t: None,
         program_card=lambda _n: Gtk.Label(),
         edit=lambda t: asked.append(("edit", t)),
         try_again=lambda t: asked.append(("again", t)),
@@ -364,7 +364,6 @@ def tried(may: bool) -> tuple[TurnView, Turn, list[Turn]]:
     turn = Turn("make y.txt", "Made it.", State.DONE, message="msg_2")
     view = TurnView(
         turn,
-        on_undo=lambda _t: None,
         program_card=lambda _n: Gtk.Label(),
         try_again=again.append,
         may_try_again=lambda _t: may,
@@ -395,12 +394,34 @@ def test_an_answer_that_may_not_be_tried_again_has_no_arrow() -> None:
     )
 
 
+def test_a_reopened_answer_shows_when_it_finished_not_when_it_was_opened() -> None:
+    finished = datetime(2026, 11, 21, 3, 7).timestamp()
+    view = drawn(Turn("make a theme", "Done.", State.DONE, finished=finished))
+    assert any(
+        isinstance(w, Gtk.Label) and "03:07" in w.get_text() for w in widgets(view)
+    )
+
+
+def test_an_answer_draws_the_time_its_turn_holds_now() -> None:
+    turn = Turn(
+        "make a theme",
+        "Done.",
+        State.DONE,
+        finished=datetime(2026, 11, 21, 3, 7).timestamp(),
+    )
+    view = drawn(turn)
+    turn.finished = datetime(2026, 11, 21, 4, 9).timestamp()
+    view.update(turn, STYLE, None)
+    assert any(
+        isinstance(w, Gtk.Label) and "04:09" in w.get_text() for w in widgets(view)
+    )
+
+
 def test_an_answer_has_no_row_of_text_buttons_for_going_back_or_changes() -> None:
     """Only quiet icons: the words made every answer look busy."""
     turn = edited(State.DONE)
     view = TurnView(
         turn,
-        on_undo=lambda _t: None,
         program_card=lambda _n: Gtk.Label(),
         edit=lambda _t: None,
         try_again=lambda _t: None,
@@ -419,9 +440,36 @@ def test_a_skill_proposed_while_answering_has_its_card_under_the_answer() -> Non
     turn = Turn("tidy my imports", "Done.", State.DONE, proposals=[tidy])
     view = TurnView(
         turn,
-        on_undo=lambda _t: None,
         program_card=lambda name: Gtk.Label(label=name),
         proposal_card=lambda p: Gtk.Label(label=f"card for {p.name}"),
     )
     view.update(turn, STYLE, None)
     assert "card for tidy-imports" in texts(view)
+
+
+def test_an_opened_step_with_a_long_unbroken_line_never_widens_the_answer() -> None:
+    """Like the approval card, a step's detail wraps a long line inside
+    itself (#226)."""
+    from render import ActivityRecord
+
+    unbroken = (
+        "tools.osiris.create_theme({label:'Midnight',seed:'#ffaa00',"
+        "harmony:'analogous',mood:'calm'})"
+    )
+
+    def narrowest(step: Step) -> int:
+        record = ActivityRecord()
+        record.show([step])
+        # A collapsed expander holds its child outside the widget tree.
+        record.set_expanded(True)
+        for expander in widgets(record):
+            if isinstance(expander, Gtk.Expander):
+                expander.set_expanded(True)
+        return record.measure(Gtk.Orientation.HORIZONTAL, -1)[0]
+
+    tool = Step("osiris_create_theme", ("x",), call="c", input={"code": "x"})
+    command = Step("shell", ("ls",), call="c", input={"command": "ls"})
+    assert narrowest(replace(tool, input={"code": unbroken})) == narrowest(tool)
+    assert narrowest(
+        replace(command, input={"command": unbroken}, resources=(unbroken,))
+    ) == narrowest(command)

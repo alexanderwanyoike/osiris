@@ -35,7 +35,7 @@ def wear_choice(
         raise failed
 
 
-def available(folders: Sequence[Path]) -> list[Skinpack]:
+def _packs(folders: Sequence[Path]) -> list[Skinpack]:
     """Every skinpack in `folders`; an earlier folder wins a name."""
     found: dict[str, Skinpack] = {}
     for folder in folders:
@@ -49,6 +49,20 @@ def available(folders: Sequence[Path]) -> list[Skinpack]:
             except SkinpackError:
                 continue
     return list(found.values())
+
+
+def available(folders: Sequence[Path]) -> list[Skinpack]:
+    """Every Skin there is to wear in `folders`; an earlier folder wins a name."""
+    return [pack for pack in _packs(folders) if not pack.start]
+
+
+def starts(folders: Sequence[Path]) -> list[Skinpack]:
+    """Where a new Skin can start: the blank slate first, then every Skin."""
+    return [pack for pack in _packs(folders) if pack.start] + available(folders)
+
+
+def find_start(folders: Sequence[Path], name: str) -> Skinpack | None:
+    return next((pack for pack in starts(folders) if pack.name == name), None)
 
 
 def find(folders: Sequence[Path], name: str) -> Skinpack | None:

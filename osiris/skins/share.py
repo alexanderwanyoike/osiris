@@ -176,6 +176,7 @@ def duplicate(
         label_of = json.loads((copy / LABEL_FILE).read_text())
         label_of["label"] = label or f"{pack.label.removesuffix(' (copy)')} (copy)"
         label_of["style"] = pack.style or pack.name
+        label_of.pop("start", None)
         (copy / LABEL_FILE).write_text(json.dumps(label_of, indent=2) + "\n")
         start_history(copy, f"Copy {pack.label}", runner)
     return read(mine / name)

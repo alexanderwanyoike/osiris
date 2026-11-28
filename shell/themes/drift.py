@@ -73,7 +73,7 @@ def style_of(theme: dict) -> str | None:
     named = theme.get("wallpaper")
     if named and named != "generated":
         return None
-    return theme.get("wallpaper_style") or wallpaper.style_for(theme["name"])
+    return wallpaper.style_of(theme)
 
 
 def package(theme: dict) -> packages.Wallpaper | None:

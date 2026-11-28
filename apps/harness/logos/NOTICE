@@ -1,7 +1,7 @@
-Provider logos, redrawn as single-colour symbolic icons so they follow the
-Theme. osiris-ask-symbolic.svg, osiris-changes-symbolic.svg and
-osiris-branch-symbolic.svg are Osiris's own, drawn for Thoth where no packaged icon set has one. They identify the Provider a person signs in to, and remain the
-trademarks of their owners.
+Provider and model maker logos, redrawn as single-colour symbolic icons so
+they follow the Theme. osiris-ask-symbolic.svg, osiris-changes-symbolic.svg and
+osiris-branch-symbolic.svg are Osiris's own, drawn for Thoth where no packaged icon set has one. They identify the Provider a person signs in to, or the maker of a model, and
+remain the trademarks of their owners.
 
 osiris-provider-openai-symbolic.svg
     From lobe-icons (https://github.com/lobehub/lobe-icons),
@@ -13,8 +13,15 @@ osiris-provider-opencode-symbolic.svg
     packages/console/app/src/asset/brand/opencode-logo-light-square.svg,
     MIT License, Copyright (c) 2025 opencode.
 
-Both are under the MIT License, whose permission notice and disclaimer
-follow:
+osiris-maker-nvidia-symbolic.svg
+osiris-maker-deepseek-symbolic.svg
+osiris-maker-zhipu-symbolic.svg
+    From lobe-icons (https://github.com/lobehub/lobe-icons),
+    packages/static-svg/icons/nvidia.svg, deepseek.svg and zhipu.svg,
+    MIT License, Copyright (c) 2023 LobeHub.
+
+All of these are under the MIT License, whose permission notice and
+disclaimer follow:
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
