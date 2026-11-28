@@ -94,15 +94,26 @@ $error: $gap-danger;
 $destructive: $gap-danger;
 $success: $gap-success;
 $link: $gap-accent;
-
-// Graphite's styled sidebar keeps its shape; the Theme's surface colours it.
-$sidebg: $gap-surface;
 """
 
 COLORS_ANCHOR = "//\n// Basic colors\n"
 # Upstream treats a theme colour of 'default' as grey and swaps in grey-only
 # pictures and paths; ours is the Theme's accent, so it must read as a colour.
 THEME_TWEAK = ("$theme: 'default';", "$theme: 'osiris';")
+# Upstream's styled sidebar fills Files' whole sidebar with the accent, which
+# no other Skin does; its own `--tweaks normal` turns that off the same way. It
+# also makes the GTK 4 sidebars (Osiris's, Appearance's) plain panes rather
+# than floating cards.
+SIDEBAR_TWEAK = ("$sidebar: 'styled';", "$sidebar: 'normal';")
+# Upstream marks a selected row in a list with a grey wash, which outranks the
+# accent tint it gives Files, so Files' list view showed grey where its icon
+# view showed the tint. The list takes the tint but keeps the Theme's text
+# colour: accent text on the tint falls below AA on light Themes.
+SELECTED = (
+    "    @extend %selected_items;\n    background-image: image($overlay-checked);",
+    "    @extend %selected_items;\n    background-color: rgba($primary, 0.2);\n"
+    "    background-image: none;",
+)
 
 # Graphite ships one folder of pictures per accent instead of recolouring them;
 # the blue one's accent and the off-state ink become gaps.
@@ -140,8 +151,9 @@ def make(upstream: Path, pack: Path) -> None:
     sass = pack / "sass"
     shutil.copytree(src / "sass", sass, ignore=shutil.ignore_patterns("gnome-shell"))
     tweaks = (src / "sass" / "_tweaks.scss").read_text()
+    tweaks = replace_once(tweaks, *THEME_TWEAK, "_tweaks.scss")
     (sass / "_tweaks-temp.scss").write_text(
-        replace_once(tweaks, *THEME_TWEAK, "_tweaks.scss")
+        replace_once(tweaks, *SIDEBAR_TWEAK, "_tweaks.scss")
     )
     colors = replace_once(
         (sass / "_colors.scss").read_text(),
@@ -152,6 +164,10 @@ def make(upstream: Path, pack: Path) -> None:
     (sass / "_colors.scss").write_text(colors + "\n@import 'colors-osiris';\n")
     (sass / "_color-palette-osiris.scss").write_text(PALETTE)
     (sass / "_colors-osiris.scss").write_text(COLORS)
+    common_sheet = sass / "gtk" / "_common-3.0.scss"
+    common_sheet.write_text(
+        replace_once(common_sheet.read_text(), *SELECTED, "_common-3.0.scss")
+    )
     for entry, source in ENTRIES.items():
         (pack / entry).parent.mkdir(exist_ok=True)
         for variant in ("Light", "Dark"):

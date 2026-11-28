@@ -11,6 +11,9 @@ import pytest
 
 from osiris.platform import FakeHttpClient, HttpError, UrllibClient
 
+# Holds /silent's reply back until the test is over, however slow the machine.
+RELEASE = threading.Event()
+
 
 class Handler(BaseHTTPRequestHandler):
     """Echoes what it was sent, and serves the fixed routes the tests use."""
@@ -33,6 +36,29 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"data: one\n\n: heartbeat\n\ndata: two\n\n")
             return
+        if self.path == "/events-cut":
+            self.send_response(200)
+            self.send_header("Transfer-Encoding", "chunked")
+            self.end_headers()
+            self.wfile.write(b"b\r\ndata: one\n\r\n")
+            return
+        if self.path == "/silent":
+            RELEASE.wait()
+            return
+        if self.path == "/hangup":
+            return
+        if self.path == "/cut":
+            self.send_response(200)
+            self.send_header("Content-Length", "100")
+            self.end_headers()
+            self.wfile.write(b'{"cut')
+            return
+        if self.path == "/missing-cut":
+            self.send_response(404)
+            self.send_header("Content-Length", "100")
+            self.end_headers()
+            self.wfile.write(b'{"no')
+            return
         if self.path == "/missing":
             self._reply(404, {"message": "no such thing"})
             return
@@ -49,10 +75,12 @@ class Handler(BaseHTTPRequestHandler):
 
 @pytest.fixture
 def server() -> Iterator[str]:
+    RELEASE.clear()
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
     yield f"http://127.0.0.1:{httpd.server_address[1]}"
+    RELEASE.set()
     httpd.shutdown()
     httpd.server_close()
 
@@ -79,6 +107,24 @@ class TestUrllibClient:
         assert raised.value.status == 404
         assert "no such thing" in raised.value.body
 
+    def test_an_error_status_with_its_body_cut_short_keeps_the_status(
+        self, server: str
+    ) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().request("GET", f"{server}/missing-cut")
+        assert raised.value.status == 404
+
+    @pytest.mark.parametrize("path", ["/silent", "/hangup"])
+    def test_no_answer_once_connected_is_status_0(self, server: str, path: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient(timeout=0.1).request("GET", f"{server}{path}")
+        assert raised.value.status == 0
+
+    def test_a_reply_cut_short_is_status_0(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            UrllibClient().request("GET", f"{server}/cut")
+        assert raised.value.status == 0
+
     def test_a_stream_arrives_line_by_line(self, server: str) -> None:
         lines = list(UrllibClient().lines(f"{server}/events"))
         assert [line for line in lines if line] == [
@@ -86,6 +132,11 @@ class TestUrllibClient:
             ": heartbeat",
             "data: two",
         ]
+
+    def test_a_stream_cut_short_is_status_0(self, server: str) -> None:
+        with pytest.raises(HttpError) as raised:
+            list(UrllibClient().lines(f"{server}/events-cut"))
+        assert raised.value.status == 0
 
 
 class TestFakeHttpClient:

@@ -10,10 +10,13 @@ import pytest
 
 from osiris.harness.engine import (
     Answered,
+    Choice,
     Delivered,
     Failed,
     FileChange,
     Finished,
+    FormAsked,
+    FormField,
     ModelRef,
     Past,
     PastTurn,
@@ -33,7 +36,13 @@ from osiris.harness.opencode import (
     locate,
 )
 from osiris.harness.picker import Entry, Reference
-from osiris.platform import FakeFileSystem, FakeHttpClient, FakeIdentity, FakeRunner
+from osiris.platform import (
+    FakeFileSystem,
+    FakeHttpClient,
+    FakeIdentity,
+    FakeRunner,
+    HttpError,
+)
 
 URL = "http://127.0.0.1:49374"
 SESSION = "ses_eb47d80feffe3d0JrczUcoVEMq"
@@ -320,6 +329,27 @@ class TestSessions:
             ("POST", path, {"decision": decision, "message": "why"})
         ]
 
+    def test_a_form_is_answered_with_a_value_for_each_field(self) -> None:
+        """A multiselect field takes a list; opencode's form reply."""
+        path = f"{URL}/api/session/{SESSION}/form/frm_1/reply"
+        http = FakeHttpClient(replies={("POST", path): None})
+        engine(http).answer_form(
+            SESSION, "frm_1", {"q0": "Deep dusk", "q1": ("Wallpaper",)}
+        )
+        assert http.requests == [
+            ("POST", path, {"answer": {"q0": "Deep dusk", "q1": ["Wallpaper"]}})
+        ]
+
+    @pytest.mark.parametrize("status", [404, 409])
+    def test_answering_a_form_the_engine_already_closed_is_not_an_error(
+        self, status: int
+    ) -> None:
+        """A stop cancels the form, settling it (409), and a form long gone is
+        not found (404); either way nothing waits on the reply."""
+        path = f"{URL}/api/session/{SESSION}/form/frm_2/reply"
+        http = FakeHttpClient(replies={("POST", path): HttpError(status, "closed")})
+        engine(http).answer_form(SESSION, "frm_2", {"q0": "Deep dusk"})
+
 
 class TestGoingBack:
     STAGE = f"{URL}/api/session/{SESSION}/revert/stage"
@@ -443,6 +473,70 @@ class TestEvents:
         }
         assert self.events(asked) == [
             ToolRequested(SESSION, "per_1", "read", ("/etc/hostname",), "call_d376")
+        ]
+
+    def test_the_question_tool_asks_the_person_through_a_form(self) -> None:
+        """As opencode 2.4.1 does: its question tool opens a form, a field for
+        each question, and waits until the form is answered."""
+        created = {
+            "type": "form.created",
+            "data": {
+                "form": {
+                    "id": "frm_1",
+                    "sessionID": SESSION,
+                    "title": "Questions",
+                    "metadata": {"kind": "question"},
+                    "fields": [
+                        {
+                            "key": "q0",
+                            "title": "Mood",
+                            "description": "Which dusk should it be?",
+                            "type": "string",
+                            "options": [
+                                {
+                                    "value": "Soft violet",
+                                    "label": "Soft violet",
+                                    "description": "Pale lilac and grey",
+                                },
+                                {"value": "Deep dusk", "label": "Deep dusk"},
+                            ],
+                            "custom": True,
+                        },
+                        {
+                            "key": "q1",
+                            "title": "Extras",
+                            "description": "What else should change?",
+                            "type": "multiselect",
+                            "options": [{"value": "Wallpaper", "label": "Wallpaper"}],
+                        },
+                    ],
+                }
+            },
+        }
+        assert self.events(created) == [
+            FormAsked(
+                SESSION,
+                "frm_1",
+                (
+                    FormField(
+                        "q0",
+                        "Mood",
+                        "Which dusk should it be?",
+                        (
+                            Choice("Soft violet", "Soft violet", "Pale lilac and grey"),
+                            Choice("Deep dusk", "Deep dusk"),
+                        ),
+                        custom=True,
+                    ),
+                    FormField(
+                        "q1",
+                        "Extras",
+                        "What else should change?",
+                        (Choice("Wallpaper", "Wallpaper"),),
+                        multiple=True,
+                    ),
+                ),
+            )
         ]
 
     def test_a_tool_that_ran_gives_back_its_output_and_exit_status(self) -> None:
@@ -1111,6 +1205,19 @@ class TestSavedRules:
         assert http.requests == [("DELETE", path, None)]
 
 
+def waiting_in(
+    requests: list[dict[str, object]], forms: list[dict[str, object]]
+) -> FakeHttpClient:
+    """opencode's lists of a session's open permission requests and forms."""
+    session = f"{URL}/api/session/{SESSION}"
+    return FakeHttpClient(
+        replies={
+            ("GET", f"{session}/permission"): {"data": requests},
+            ("GET", f"{session}/form"): {"data": forms},
+        }
+    )
+
+
 class TestWaiting:
     def test_requests_still_waiting_in_a_session_are_read_as_asked(self) -> None:
         waiting = {
@@ -1121,8 +1228,43 @@ class TestWaiting:
             "save": ["ls *"],
             "source": {"type": "tool", "messageID": "msg_1", "id": "call_1"},
         }
-        path = f"{URL}/api/session/{SESSION}/permission"
-        http = FakeHttpClient(replies={("GET", path): {"data": [waiting]}})
+        http = waiting_in([waiting], [])
         assert engine(http).waiting(SESSION) == [
             ToolRequested(SESSION, "per_1", "bash", ("ls /etc",), "call_1", ("ls *",))
+        ]
+
+    def test_a_form_still_open_in_a_session_is_read_as_asked(self) -> None:
+        """As opencode 2.4.1 lists them: pending forms only, each as it was
+        opened."""
+        form = {
+            "id": "frm_1",
+            "sessionID": SESSION,
+            "title": "Questions",
+            "metadata": {"kind": "question"},
+            "fields": [
+                {
+                    "key": "q0",
+                    "title": "Mood",
+                    "description": "Which dusk should it be?",
+                    "type": "string",
+                    "options": [{"value": "Deep dusk", "label": "Deep dusk"}],
+                    "custom": True,
+                }
+            ],
+        }
+        http = waiting_in([], [form])
+        assert engine(http).waiting(SESSION) == [
+            FormAsked(
+                SESSION,
+                "frm_1",
+                (
+                    FormField(
+                        "q0",
+                        "Mood",
+                        "Which dusk should it be?",
+                        (Choice("Deep dusk", "Deep dusk"),),
+                        custom=True,
+                    ),
+                ),
+            )
         ]

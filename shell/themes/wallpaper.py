@@ -13,12 +13,12 @@ commission and without competing with window content.
 Three rules drive everything here:
 
 **Two or three tones, no more.** The palette's background and secondary carry
-the shapes; the accent appears only as line work. A wallpaper that uses the
-whole palette stops reading as a background.
+the shapes; the accent appears only as line work, except in Camo. A wallpaper
+that uses the whole palette stops reading as a background.
 
-**The centre stays quiet.** Every style is attenuated by a radial mask so the
-pattern flattens towards the middle, leaving a calm field for the Osiris mark
-and for desktop icons. Without this the mark competes with the texture and both
+**The centre stays quiet.** Every style but Camo is attenuated by a radial mask
+so the pattern flattens towards the middle, leaving a calm field for the Osiris
+mark and for desktop icons. Without this the mark competes with the texture and both
 lose - which is why phyllotaxis and similar centre-seeking algorithms are not
 used here.
 
@@ -72,12 +72,12 @@ MASK_PATHS = (
     "/usr/share/osiris/logo-mask.png",
 )
 
-STYLES = ("contour", "arcs", "strata", "aurora", "dots", "cells", "bubbles",
+STYLES = ("camo", "arcs", "strata", "aurora", "dots", "cells", "bubbles",
           "ridges", "facets", "wave")
 # What a theme naming no style falls back to, chosen by hashing its name. Fixed
 # at the original three: hashing over STYLES would move every such theme to a
 # different wallpaper whenever a style is added.
-FALLBACK_STYLES = ("contour", "arcs", "strata")
+FALLBACK_STYLES = ("camo", "arcs", "strata")
 
 # Moving wallpapers as packages (osiris/themes/wallpapers.py): the user's own
 # first, so one there replaces a shipped one of the same name.
@@ -89,7 +89,8 @@ LOGO_ALPHA = 0.30        # a watermark, not a sticker
 QUIET_RADIUS = 0.70      # of the image height; pattern fades inside this
 # The wave runs beneath the mark rather than around it, and the full radius
 # would put most of its length in the faded zone; this still clears the mark.
-QUIET_REACH = {"wave": 0.40}
+# Camo is cloth, which has no quiet middle; fading it only blurs its edges.
+QUIET_REACH = {"wave": 0.40, "camo": 0.0}
 
 
 # --------------------------------------------------------------------------- #
@@ -216,6 +217,8 @@ def quiet_mask(shape: tuple[int, int],
     Smoothstep rather than a linear ramp - a linear falloff leaves a visible
     circular seam where the gradient changes.
     """
+    if not reach:
+        return np.ones(shape, dtype=np.float32)
     height, width = shape
     y, x = np.mgrid[0:height, 0:width].astype(np.float32)
     radius = np.hypot((x - width / 2) / height, (y - height / 2) / height)
@@ -241,16 +244,48 @@ def _edges(index: np.ndarray) -> np.ndarray:
 # shape, line is a 0-1 field of accent line work. Both are pre-attenuated by
 # the quiet mask by the caller.
 
-def contour(shape, rng, bands: int = 11, phase: float = 0.0,
-            drift=None):
-    """Topographic iso-bands through a noise field.
+def _blob_noise(shape: tuple[int, int], rng: np.random.Generator,
+                  cells: int, octaves: int = 3) -> np.ndarray:
+    """Value noise whose features lie about twice as wide as they are tall,
+    as woodland cloth's do, in [0, 1].
 
-    The most forgiving of the three: any field produces bands that nest, so
-    there is no seed that composes badly.
+    fbm's lattices stretch with the frame, so the stretch would change with
+    the screen's shape. Three octaves at a gain under a half keep the edges
+    wavy without fraying; both were set by eye against the cloth.
     """
-    field = fbm(shape, rng, cells=3, octaves=5, phase=phase, drift=drift)
-    index = np.floor(field * bands)
-    return index / (bands - 1), _edges(index)
+    height, width = shape
+    total = np.zeros(shape, dtype=np.float32)
+    amplitude = 1.0
+    for octave in range(octaves):
+        rows = cells * 2 ** octave
+        columns = max(2, round(rows * width / height / 2.2))
+        total += amplitude * _smooth(rng.random((rows + 1, columns + 1)), shape)
+        amplitude *= 0.45
+    total -= total.min()
+    return total / max(total.max(), 1e-6)
+
+
+def camo(shape, rng, phase: float = 0.0, drift=None):
+    """Woodland camouflage: blobs of four tones, each layer over the last.
+
+    Each tone is its own noise field cut at a threshold, so the edges are
+    crisp, and the pattern runs behind the mark (QUIET_REACH). The accent gets
+    patches of its own (docs/THEMING.md says why).
+    """
+    def blobs(cover: float) -> np.ndarray:
+        field = _blob_noise(shape, rng, 6)
+        level = field - np.quantile(field, 1 - cover)
+        # Divided by the field's slope, the cut ramps over one pixel wherever
+        # it falls, since a hard cut aliases into stairs.
+        slope = np.hypot(*np.gradient(level)) + 1e-6
+        return np.clip(level / slope + 0.5, 0, 1).astype(np.float32)
+
+    # Each layer over the last, covering a half, a third and a quarter, leaves
+    # the base, the middle tone, the shape tone and the accent a quarter each.
+    middle, shade, accent = blobs(1 / 2), blobs(1 / 3), blobs(1 / 4)
+    fill = middle * 0.5
+    fill += (1.0 - fill) * shade
+    return fill * (1 - accent), accent
 
 
 def arcs(shape, rng, grid: int = 9, phase: float = 0.0,
@@ -581,7 +616,7 @@ def wave(shape, rng, ribbons: int = WAVE_RIBBONS, phase: float = 0.0,
     return np.clip(fill, 0, 1), np.clip(line, 0, 1)
 
 
-RENDERERS = {"contour": contour, "arcs": arcs, "strata": strata, "aurora": aurora, "dots": dots,
+RENDERERS = {"camo": camo, "arcs": arcs, "strata": strata, "aurora": aurora, "dots": dots,
              "cells": cells, "bubbles": bubbles, "ridges": ridges,
              "facets": facets, "wave": wave}
 
@@ -624,6 +659,21 @@ def style_for(name: str) -> str:
     return FALLBACK_STYLES[zlib.crc32(name.encode()) % len(FALLBACK_STYLES)]
 
 
+def drawn_as(style: str) -> str:
+    """The style drawn for a name. Themes made before Camo replaced Contour
+    still name Contour, so it is drawn as Camo unless a moving wallpaper has
+    that name."""
+    if style != "contour":
+        return style
+    found, _ = packages.discover(PACKAGE_DIRS)
+    return style if style in found else "camo"
+
+
+def style_of(theme: dict) -> str:
+    """The style a theme is drawn in: the one it names, or its fallback."""
+    return drawn_as(theme.get("wallpaper_style") or style_for(theme["name"]))
+
+
 def _rng(theme: dict, purpose: str = "") -> np.random.Generator:
     """The theme's composition: the same for the same name and variation.
 
@@ -664,7 +714,7 @@ def compose(theme: dict, size: tuple[int, int] = (WIDTH, HEIGHT),
     width, height = size
     shape = (height, width)
     palette = tones(theme)
-    style = style or theme.get("wallpaper_style") or style_for(theme["name"])
+    style = drawn_as(style) if style else style_of(theme)
     if style not in RENDERERS:
         found, _ = packages.discover(PACKAGE_DIRS)
         if style not in found:
@@ -723,7 +773,7 @@ def boot_background(theme: dict,
     """
     width, height = size
     palette = tones(theme)
-    style = theme.get("wallpaper_style") or style_for(theme["name"])
+    style = style_of(theme)
     rng = _rng(theme)
     fill, line = RENDERERS[style]((height, width), rng)
 

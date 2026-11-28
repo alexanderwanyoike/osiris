@@ -1,0 +1,150 @@
+"""Camo, the still wallpaper style that replaced Contour, draws blobs of the
+Theme's tones with the accent laid down in patches of its own."""
+
+from __future__ import annotations
+
+import importlib.util
+import sys
+from collections.abc import Iterator
+from pathlib import Path
+from types import ModuleType
+
+import numpy as np
+import pytest
+
+SCRIPT = Path(__file__).resolve().parent.parent / "shell" / "themes" / "wallpaper.py"
+
+
+@pytest.fixture
+def wallpaper(monkeypatch: pytest.MonkeyPatch) -> Iterator[ModuleType]:
+    # The script puts shell/themes/ on the path and imports `paths` by its bare
+    # name, which would shadow names other tests use.
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    before = set(sys.modules)
+    spec = importlib.util.spec_from_file_location("wallpaper", SCRIPT)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    yield module
+    for name in set(sys.modules) - before:
+        del sys.modules[name]
+
+
+def test_camo_lays_the_accent_down_in_patches(wallpaper: ModuleType) -> None:
+    """Every other still style keeps the accent to hairlines."""
+    _, accent = wallpaper.camo((180, 320), np.random.default_rng(1))
+    patches = accent > 0.5
+    assert ((accent > 0) & (accent < 1)).mean() < 0.05
+    assert 0.05 < patches.mean() < 0.4
+    assert wallpaper._edges(patches).sum() < 0.2 * patches.sum()
+
+
+def test_camo_is_offered_where_contour_was(wallpaper: ModuleType) -> None:
+    """The person never wants Contour again. Camo takes its place first in the
+    list and among the styles a Theme naming none falls back to."""
+    assert wallpaper.STYLES[0] == "camo"
+    assert "contour" not in wallpaper.styles()
+    assert wallpaper.FALLBACK_STYLES == ("camo", "arcs", "strata")
+
+
+THEME = {
+    "name": "camo-test",
+    "dark": True,
+    "colors": {"background": "#15151c", "accent": "#7aa2f7", "foreground": "#c0caf5"},
+}
+
+
+def test_camo_keeps_its_edges_crisp(wallpaper: ModuleType) -> None:
+    """Fading Camo towards the middle, as every other style is, blurred its
+    blobs into smudges when tried. A row of crisp camo is almost all its four
+    tones, with only the edges between them."""
+    image = np.asarray(wallpaper.compose(THEME, (640, 360), "camo", logo=False))
+    _, counts = np.unique(image[108].reshape(-1, 3), axis=0, return_counts=True)
+    assert np.sort(counts)[-4:].sum() >= 0.95 * 640
+
+
+def test_a_theme_that_names_contour_gets_camo(wallpaper: ModuleType) -> None:
+    """Themes made before Camo name Contour, the Theme creator's old default."""
+    contour = {**THEME, "wallpaper_style": "contour"}
+    camo = {**THEME, "wallpaper_style": "camo"}
+    assert np.array_equal(
+        np.asarray(wallpaper.compose(contour, (320, 180), logo=False)),
+        np.asarray(wallpaper.compose(camo, (320, 180), logo=False)),
+    )
+
+
+def test_camo_blends_its_edges_over_about_a_pixel(wallpaper: ModuleType) -> None:
+    """Hard thresholds alias into stairs, plainest in the Theme creator's
+    small previews; found by hand."""
+    _, accent = wallpaper.camo((180, 320), np.random.default_rng(1))
+    edges = wallpaper._edges(accent > 0.5).sum()
+    assert ((accent > 0.05) & (accent < 0.95)).sum() > 0.5 * edges
+
+
+def test_contour_asked_for_by_name_is_camo(wallpaper: ModuleType) -> None:
+    """Review of #275: a style passed in directly skipped the theme's lookup and
+    raised for Contour."""
+    assert np.array_equal(
+        np.asarray(wallpaper.compose(THEME, (320, 180), "contour", logo=False)),
+        np.asarray(wallpaper.compose(THEME, (320, 180), "camo", logo=False)),
+    )
+
+
+def test_a_theme_that_names_contour_boots_on_camo(wallpaper: ModuleType) -> None:
+    """Review of #275: the boot menu's own lookup had no test."""
+    contour = {**THEME, "wallpaper_style": "contour"}
+    camo = {**THEME, "wallpaper_style": "camo"}
+    assert np.array_equal(
+        np.asarray(wallpaper.boot_background(contour, (320, 180))),
+        np.asarray(wallpaper.boot_background(camo, (320, 180))),
+    )
+
+
+def test_camos_four_tones_each_cover_about_a_quarter(wallpaper: ModuleType) -> None:
+    """The person, against woodland cloth: the first Camo left most of the frame
+    bare, and its deepest tone went black on dark Themes."""
+    fill, accent = wallpaper.camo((360, 640), np.random.default_rng(1))
+    patch = accent > 0.5
+    shares = [
+        (~patch & (fill < 0.25)).mean(),
+        (~patch & (fill >= 0.25) & (fill < 0.75)).mean(),
+        (~patch & (fill >= 0.75)).mean(),
+        patch.mean(),
+    ]
+    assert fill.min() >= 0
+    assert all(0.18 < share < 0.32 for share in shares), shares
+
+
+def test_camo_runs_behind_the_mark(wallpaper: ModuleType) -> None:
+    """The person, against woodland cloth: the first Camo thinned out and faded
+    towards the middle, which cloth never does."""
+    _, accent = wallpaper.camo((360, 640), np.random.default_rng(1))
+    assert (accent[126:234, 266:374] > 0.5).mean() > 0.1
+    image = np.asarray(wallpaper.compose(THEME, (640, 360), "camo", logo=False))
+    _, counts = np.unique(image[180, 248:392], axis=0, return_counts=True)
+    assert np.sort(counts)[-4:].sum() >= 0.9 * 144
+
+
+def test_camos_blobs_lie_wider_than_tall(wallpaper: ModuleType) -> None:
+    """The person, against woodland cloth: the first Camo's blobs were round."""
+    _, accent = wallpaper.camo((360, 640), np.random.default_rng(1))
+    patch = accent > 0.5
+    across = (patch[:, 1:] != patch[:, :-1]).mean()
+    down = (patch[1:, :] != patch[:-1, :]).mean()
+    assert across < 0.7 * down
+
+
+def test_a_moving_wallpaper_named_contour_keeps_its_name(
+    wallpaper: ModuleType, tmp_path: Path
+) -> None:
+    """Review of #275: a wallpaper the person asked Osiris for, labelled
+    Contour, was drawn as Camo and its shader never ran."""
+    package = tmp_path / "contour"
+    package.mkdir()
+    (package / "wallpaper.json").write_text(
+        '{"name": "contour", "label": "Contour", "loop": 60}'
+    )
+    (package / "shader.glsl").write_text("")
+    (package / "still.py").write_text("")
+    wallpaper.PACKAGE_DIRS = (tmp_path,)
+    assert wallpaper.style_of({**THEME, "wallpaper_style": "contour"}) == "contour"
