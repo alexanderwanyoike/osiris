@@ -1,1 +1,1 @@
-"""Pictures made by a media Provider (CONTEXT.md)."""
+"""Pictures made by a Media provider (CONTEXT.md)."""

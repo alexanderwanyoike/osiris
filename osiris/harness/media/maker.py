@@ -1,4 +1,4 @@
-"""The port every media Provider's pictures come through."""
+"""The port every Media provider's pictures come through."""
 
 from __future__ import annotations
 

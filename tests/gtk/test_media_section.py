@@ -1,4 +1,4 @@
-"""Connecting FAL, the media Provider, in Settings."""
+"""Connecting FAL, the Media provider, in Settings."""
 
 from __future__ import annotations
 

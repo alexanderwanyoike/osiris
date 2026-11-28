@@ -4,18 +4,24 @@ Osiris's (CONTEXT.md)."""
 
 from __future__ import annotations
 
+import io
+from pathlib import Path
+
 import pytest
+from PIL import Image
 
 from osiris.model.colour import Colour
 from osiris.themes.actions import (
     ThemeActionError,
     apply_theme,
+    create_picture_theme,
     create_theme,
     delete_theme,
     find,
     list_themes,
     make_other_half,
     make_theme_pair,
+    unused_name,
     use_wallpaper,
 )
 from osiris.themes.derive import build
@@ -75,6 +81,11 @@ def test_making_a_theme_never_replaces_one_that_exists() -> None:
             dark=True,
         )
     assert store.saved == []
+
+
+def test_a_label_too_long_for_a_file_name_is_refused() -> None:
+    with pytest.raises(ThemeActionError, match="too long"):
+        unused_name(FakeThemeStore(), "A very long name " * 20)
 
 
 def test_a_seed_that_is_not_a_colour_is_refused() -> None:
@@ -197,6 +208,48 @@ def test_a_copy_that_would_replace_a_theme_is_refused() -> None:
     )
     with pytest.raises(ThemeActionError, match="already a theme called Nord Rain"):
         use_wallpaper(store, "rain", "Rain")
+
+
+def picture_bytes(colour: tuple[int, int, int]) -> bytes:
+    data = io.BytesIO()
+    Image.new("RGB", (64, 36), colour).save(data, "PNG")
+    return data.getvalue()
+
+
+def test_a_picture_theme_wears_the_picture_and_takes_its_colours_from_it() -> None:
+    store = FakeThemeStore()
+    picture = picture_bytes((20, 40, 90))
+    kept: list[str] = []
+
+    def keep(name: str) -> Path:
+        kept.append(name)
+        return Path(f"/home/tester/Pictures/Osiris/{name}.png")
+
+    name = create_picture_theme(store, label="Night Sea", picture=picture, keep=keep)
+
+    assert name == "night-sea"
+    assert kept == ["night-sea"]
+    theme = store.saved[0]
+    assert theme["label"] == "Night Sea"
+    assert theme["wallpaper"] == "/home/tester/Pictures/Osiris/night-sea.png"
+    assert theme["dark"] is True
+    assert theme["intent"]["harmony"] == "analogous"
+    assert store.applied == []
+
+
+def test_a_picture_that_cannot_be_read_keeps_nothing() -> None:
+    store = FakeThemeStore()
+    kept: list[str] = []
+
+    def keep(name: str) -> Path:
+        kept.append(name)
+        return Path(f"/home/tester/Pictures/Osiris/{name}.png")
+
+    with pytest.raises(ThemeActionError, match="could not be read"):
+        create_picture_theme(store, label="Broken", picture=b"not a picture", keep=keep)
+
+    assert kept == []
+    assert store.saved == []
 
 
 def test_a_theme_pair_is_a_light_and_a_dark_theme_made_from_one_idea() -> None:

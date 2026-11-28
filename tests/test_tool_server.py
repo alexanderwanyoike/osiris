@@ -109,6 +109,7 @@ def test_listing_and_checking_are_looks_and_the_rest_undoable_changes() -> None:
         "commit_program": Tier.UNDOABLE,
         "check_program": Tier.LOOK,
         "make_wallpaper": Tier.UNDOABLE,
+        "make_picture_theme": Tier.UNDOABLE,
         "list_skins": Tier.LOOK,
         "create_skin": Tier.UNDOABLE,
         "check_skin": Tier.LOOK,

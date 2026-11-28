@@ -101,6 +101,10 @@ person already has: ChatGPT, OpenCode Go, and whatever else the **Engine**
 supports.
 _Avoid_: subscription (for the company), backend
 
+**Media provider**:
+A service that makes pictures on the person's own account and key, apart from
+the **Engine**. FAL is the first, connected in the Media section of Settings.
+
 **Default model** / **Fallback model**:
 The **Provider** and model the **Harness** uses unless told otherwise, and the
 one it moves to when the default cannot answer.
@@ -219,9 +223,11 @@ _Avoid_: metadata
   home is upgraded once, at the next login, and what runs in a session restarts
   onto the new version by itself.
 - Every **Theme** has a **Generated wallpaper**.
-- A **Wallpaper** comes from a model only when the **Engine** itself can make
-  images; Osiris adds no image model of its own. Further providers may supply
-  that later.
+- A **Wallpaper** can come from a **Media provider** the person connects. Osiris
+  ships no image model of its own, and each picture is the person's file in
+  `~/Pictures/Osiris`, which outlives the **Theme** made from it.
+- Pictures from a **Media provider** have no limit unless the person sets a daily
+  one in Settings.
 - When a **Theme** is created from a **Wallpaper**, its colours are derived from
   that **Wallpaper**; changing the **Wallpaper** of an existing **Theme** does not
   recolour it.

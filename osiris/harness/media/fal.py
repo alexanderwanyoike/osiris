@@ -1,4 +1,4 @@
-"""FAL, the first media Provider."""
+"""FAL, the first Media provider."""
 
 from __future__ import annotations
 

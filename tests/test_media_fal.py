@@ -1,4 +1,4 @@
-"""FAL as the media Provider: one picture from a description."""
+"""FAL as the Media provider: one picture from a description."""
 
 from __future__ import annotations
 

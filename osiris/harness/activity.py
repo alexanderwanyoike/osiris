@@ -84,6 +84,9 @@ PHRASES = {
     "osiris_commit_program": Phrase("Saving", "Saved", "save", what="a change"),
     "osiris_check_program": Phrase("Checking", "Checked", "check", what="the program"),
     "osiris_make_wallpaper": Phrase("Making", "Made", "make", what="a wallpaper"),
+    "osiris_make_picture_theme": Phrase(
+        "Making", "Made", "make", what="a theme from a picture"
+    ),
 }
 
 

@@ -1,4 +1,4 @@
-"""Why a media Provider could not make something."""
+"""Why a Media provider could not make something."""
 
 from __future__ import annotations
 
