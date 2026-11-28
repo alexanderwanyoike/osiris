@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -61,8 +63,8 @@ def build_rose_pine(tmp_path: Path, runner: FakeRunner) -> Built:
 
 def test_each_surface_is_compiled_for_the_themes_variant(tmp_path: Path) -> None:
     runner = FakeRunner()
-    build_rose_pine(tmp_path, runner)
-    theme = tmp_path / "themes" / "Osiris-colloid-rose-pine"
+    built = build_rose_pine(tmp_path, runner)
+    theme = tmp_path / "themes" / built.theme
     work = tmp_path / "work" / "colloid"
     for entry, out in [
         ("gtk-3.0/gtk-dark.scss", "gtk-3.0/gtk.css"),
@@ -84,8 +86,8 @@ def test_the_sass_reads_the_themes_colours(tmp_path: Path) -> None:
 def test_pictures_for_every_variant_and_this_one_are_installed_filled(
     tmp_path: Path,
 ) -> None:
-    build_rose_pine(tmp_path, FakeRunner())
-    theme = tmp_path / "themes" / "Osiris-colloid-rose-pine"
+    built = build_rose_pine(tmp_path, FakeRunner())
+    theme = tmp_path / "themes" / built.theme
     check = theme / "gtk-3.0" / "assets" / "check.svg"
     assert check.read_text() == '<svg fill="#c4a7e7"/>'
     panel = theme / "cinnamon" / "assets" / "panel.svg"
@@ -94,11 +96,62 @@ def test_pictures_for_every_variant_and_this_one_are_installed_filled(
 
 def test_the_result_names_the_theme_and_carries_the_dock(tmp_path: Path) -> None:
     built = build_rose_pine(tmp_path, FakeRunner())
-    theme = tmp_path / "themes" / "Osiris-colloid-rose-pine"
-    assert built.theme == "Osiris-colloid-rose-pine"
+    theme = tmp_path / "themes" / built.theme
+    assert re.fullmatch(r"Osiris-colloid-rose-pine-[0-9a-f]{12}", built.theme)
     assert built.dock == "FillStartColor=25;;23;;36;;255\n"
     assert built.adwaita == theme / "libadwaita.css"
-    assert "GtkTheme=Osiris-colloid-rose-pine" in (theme / "index.theme").read_text()
+    assert f"GtkTheme={built.theme}\n" in (theme / "index.theme").read_text()
+
+
+def name_of(root: Path, theme: dict[str, Any], tmp_path: Path) -> str:
+    """The name a Skin's folder is built under in a Theme."""
+    work = tmp_path / "work"
+    return build(read(root), theme, tmp_path / "themes", work, FakeRunner()).theme
+
+
+def test_a_skin_built_again_unchanged_keeps_its_name(tmp_path: Path) -> None:
+    root = make_pack(tmp_path / "colloid")
+    first = name_of(root, ROSE_PINE, tmp_path)
+    assert name_of(root, ROSE_PINE, tmp_path) == first
+
+
+def test_an_edited_skin_is_built_under_a_new_name(tmp_path: Path) -> None:
+    root = make_pack(tmp_path / "colloid")
+    first = name_of(root, ROSE_PINE, tmp_path)
+    (root / "files" / "common" / "gtk-3.0" / "assets" / "check.svg").write_text(
+        "<svg/>"
+    )
+    assert name_of(root, ROSE_PINE, tmp_path) != first
+
+
+def test_a_skin_in_an_edited_theme_is_built_under_a_new_name(tmp_path: Path) -> None:
+    root = make_pack(tmp_path / "colloid")
+    first = name_of(root, ROSE_PINE, tmp_path)
+    recoloured = json.loads(json.dumps(ROSE_PINE))
+    recoloured["colors"]["accent"] = "#ff0000"
+    assert name_of(root, recoloured, tmp_path) != first
+
+
+def test_a_skin_in_a_theme_with_a_new_border_is_built_under_a_new_name(
+    tmp_path: Path,
+) -> None:
+    """Osiris's own panel, worn when a Skin has none, reads Theme colours a
+    Skin's gaps leave out."""
+    root = make_gtk_only_pack(tmp_path / "neon")
+    bordered = json.loads(json.dumps(ROSE_PINE))
+    bordered["colors"]["border"] = "#26233a"
+    first = name_of(root, bordered, tmp_path)
+    bordered["colors"]["border"] = "#ff0000"
+    assert name_of(root, bordered, tmp_path) != first
+
+
+def test_a_commit_in_a_skins_history_keeps_its_name(tmp_path: Path) -> None:
+    root = make_pack(tmp_path / "colloid")
+    (root / ".git").mkdir()
+    (root / ".git" / "HEAD").write_text("ref: refs/heads/main\n")
+    first = name_of(root, ROSE_PINE, tmp_path)
+    (root / ".git" / "HEAD").write_text("0123abcd\n")
+    assert name_of(root, ROSE_PINE, tmp_path) == first
 
 
 def test_building_prints_nothing_of_its_own(tmp_path: Path) -> None:
@@ -205,9 +258,11 @@ def test_a_skins_css_files_take_gaps_like_its_pictures(tmp_path: Path) -> None:
     sheet = root / "files" / "dark" / "gtk-3.0" / "gtk.css"
     sheet.parent.mkdir(parents=True)
     sheet.write_text("window { background: {{background}}; }")
-    build(read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner())
-    built = tmp_path / "themes" / "Osiris-neon-rose-pine" / "gtk-3.0" / "gtk.css"
-    assert built.read_text() == "window { background: #191724; }"
+    built = build(
+        read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
+    )
+    compiled = tmp_path / "themes" / built.theme / "gtk-3.0" / "gtk.css"
+    assert compiled.read_text() == "window { background: #191724; }"
 
 
 def test_a_pack_without_sass_still_builds(tmp_path: Path) -> None:
@@ -216,7 +271,7 @@ def test_a_pack_without_sass_still_builds(tmp_path: Path) -> None:
     built = build(
         read(root), ROSE_PINE, tmp_path / "themes", tmp_path / "work", FakeRunner()
     )
-    assert built.theme == "Osiris-neon-rose-pine"
+    assert re.fullmatch(r"Osiris-neon-rose-pine-[0-9a-f]{12}", built.theme)
 
 
 def test_a_skin_holding_a_program_is_not_built(tmp_path: Path) -> None:

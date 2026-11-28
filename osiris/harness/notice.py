@@ -24,6 +24,11 @@ def notice_of(conversation: Conversation) -> Notice:
         return Notice(
             "Osiris is waiting for you", f"{conversation.title}\n{turn.held.question}"
         )
+    if turn.form is not None:
+        return Notice(
+            "Osiris is waiting for you",
+            f"{conversation.title}\n{turn.form.fields[0].text}",
+        )
     if turn.state is State.FAILED:
         return Notice(
             "Osiris could not finish", f"{conversation.title}\n{_start(turn.error)}"

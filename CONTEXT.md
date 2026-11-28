@@ -26,6 +26,27 @@ pictures with named gaps for the **Theme**'s colours, and its fonts, icons and
 cursor. One file when shared; nothing in it runs.
 _Avoid_: skin file, preset
 
+**Fixed colour**:
+A colour written into a **Skin** rather than taken from the **Theme**, so it
+stays the same whatever **Theme** is worn. Osiris names the ones a person's
+**Skin** was not made with; the ones it was made with are part of its look.
+_Avoid_: hard-coded colour, literal colour
+
+**Theme pair**:
+A light **Theme** and a dark one made together from one idea, chosen as one
+with a switch between them; the person wears one of them. A look asked for by
+name comes as a pair, with a wallpaper for it; a **Theme** asked for on
+its own is made alone, and Osiris offers its other half.
+_Avoid_: variant, mode, light/dark theme
+
+**Whole look**:
+A look asked for by name, such as a film, a character or a place: a **Theme
+pair**, and a **Wallpaper** for each half painted by an image model. When it
+cannot paint, Osiris says why and the halves keep their usual wallpaper until
+the person chooses; a model never draws one itself. A whole look leaves the
+person's **Skin** as it is, and takes no pictures from the web.
+_Avoid_: theme pack, full theme
+
 **Theme intent**:
 What a **Theme** is asked to be - a seed colour or a **Wallpaper**, a harmony,
 light or dark, and a mood - from which its colours are derived.
@@ -139,6 +160,13 @@ runs uses sudo: the exact command, in the **Conversation** that ran it, with
 Allow and Deny. Any other program's `sudo -A` gets a dialog of the same kind,
 naming that program.
 _Avoid_: sudo prompt, password popup
+
+**Form card**:
+Where the **Harness** asks the person what the model needs to know before it
+goes on, such as which way a look should lean: each question with its choices,
+a box for an answer of their own, and Send. The model waits until it is sent.
+The **Engine** calls it a form.
+_Avoid_: question card (a question is what the person asks the **Harness**)
 
 **Conversation**:
 A run of questions and answers with the **Harness**, held by the **Engine** as one of its sessions; it continues until the person starts a new one.

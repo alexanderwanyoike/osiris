@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -17,6 +17,7 @@ from osiris.harness.engine import (
     Failed,
     FileChange,
     Finished,
+    FormAnswer,
     ModelRef,
     Past,
     PastTurn,
@@ -39,7 +40,7 @@ from osiris.harness.harness import (
 )
 from osiris.harness.log import LOG_FILE, HarnessLog
 from osiris.harness.picker import Entry, Reference
-from osiris.platform import FakeFileSystem
+from osiris.platform import FakeFileSystem, HttpError
 
 HOME = Path("/home/tester")
 NOON = datetime(2026, 10, 17, 12, 0, tzinfo=UTC)
@@ -54,6 +55,11 @@ class FakeEngine:
     sent: list[tuple[str, str]] = field(default_factory=list)
     withdrawn: list[tuple[str, str]] = field(default_factory=list)
     replies: list[tuple[str, str, Reply, str]] = field(default_factory=list)
+    forms_answered: list[tuple[str, str, dict[str, FormAnswer]]] = field(
+        default_factory=list
+    )
+    #: Why the Engine refuses a form's answer, if it does.
+    form_refused: HttpError | None = None
     stopped: list[str] = field(default_factory=list)
     cut: list[str] = field(default_factory=list)
     reverted: list[tuple[str, str]] = field(default_factory=list)
@@ -66,6 +72,8 @@ class FakeEngine:
     archived: list[str] = field(default_factory=list)
     deleted: list[str] = field(default_factory=list)
     attached: list[tuple[str, Path]] = field(default_factory=list)
+    #: Folders the Engine let go of while idle, forgetting the tools there.
+    unloaded: set[Path] = field(default_factory=set)
     past: list[PastTurn] = field(default_factory=list)
     referenced: list[tuple[str, tuple[Reference, ...]]] = field(default_factory=list)
 
@@ -92,6 +100,13 @@ class FakeEngine:
 
     def reply(self, session: str, request: str, answer: Reply, message: str) -> None:
         self.replies.append((session, request, answer, message))
+
+    def answer_form(
+        self, session: str, form: str, answers: Mapping[str, FormAnswer]
+    ) -> None:
+        if self.form_refused is not None:
+            raise self.form_refused
+        self.forms_answered.append((session, form, dict(answers)))
 
     def stop(self, session: str) -> None:
         self.stopped.append(session)
@@ -126,6 +141,10 @@ class FakeEngine:
 
     def attach_tools(self, name: str, command: list[str], directory: Path) -> None:
         self.attached.append((name, directory))
+        self.unloaded.discard(directory)
+
+    def has_tools(self, name: str, directory: Path) -> bool:
+        return (name, directory) in self.attached and directory not in self.unloaded
 
     def where(self, session: str) -> Path:
         return POMODORO
@@ -340,6 +359,31 @@ def test_always_allowing_leaves_the_engine_to_keep_allowing_it() -> None:
     assert entries(files)[-1]["answer"] == "always"
     again = subject.handle(ToolRequested("ses_1", "per_2", "shell", ("ls /usr",)))
     assert isinstance(again, Asking)
+
+
+def test_a_form_the_person_answers_reaches_the_engine_and_is_logged() -> None:
+    subject, engine, files = harness()
+    subject.ask("make it look like lavender at dusk")
+    subject.answer_form("ses_1", "frm_1", {"q0": "Deep dusk", "q1": ("Wallpaper",)})
+    assert engine.forms_answered == [
+        ("ses_1", "frm_1", {"q0": "Deep dusk", "q1": ("Wallpaper",)})
+    ]
+    entry = entries(files)[-1]
+    assert (entry["kind"], entry["answers"]) == (
+        "form-answered",
+        {"q0": "Deep dusk", "q1": ["Wallpaper"]},
+    )
+
+
+def test_a_form_answer_the_engine_refuses_is_logged_and_says_why() -> None:
+    """The form still waits at the Engine; the card must not be lost."""
+    subject, engine, files = harness()
+    subject.ask("make it look like lavender at dusk")
+    engine.form_refused = HttpError(400, "Expected string array for form field: q1")
+    why = subject.answer_form("ses_1", "frm_1", {"q1": "Clock"})
+    assert why == "HTTP 400: Expected string array for form field: q1"
+    entry = entries(files)[-1]
+    assert (entry["kind"], entry["error"]) == ("form-answer-failed", why)
 
 
 def test_a_card_waiting_in_one_conversation_holds_up_no_other() -> None:
@@ -737,6 +781,17 @@ def test_the_tools_are_attached_where_the_session_runs_once_each() -> None:
     subject.ask("again")
     subject.worked_on("ses_1", POMODORO)
     assert engine.attached == [("osiris", HOME), ("osiris", POMODORO)]
+
+
+def test_a_question_after_the_engine_forgot_the_tools_attaches_them_again() -> None:
+    """The Engine unloads a folder left idle and forgets what was attached
+    there; a running server is left alone, so no tool call is cut off."""
+    subject, engine, _ = harness()
+    subject.ask("hello")
+    engine.unloaded.add(HOME)
+    subject.ask("an hour later")
+    subject.ask("and again")
+    assert engine.attached == [("osiris", HOME), ("osiris", HOME)]
 
 
 def test_a_resumed_conversation_runs_in_its_own_folder() -> None:

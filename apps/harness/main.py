@@ -45,6 +45,7 @@ sys.path.insert(0, HERE)
 from admin_card import AdminCard  # noqa: E402
 from allowed_tab import AllowedTab  # noqa: E402
 from approval_card import ApprovalCard  # noqa: E402
+from form_card import FormCard  # noqa: E402
 from going_back import going_back_dialog  # noqa: E402
 from look import Look  # noqa: E402
 from media_section import MediaSection  # noqa: E402
@@ -107,6 +108,8 @@ from osiris.harness.picker import Entry, Reference, Skills, project_files  # noq
 from osiris.harness.engine import (  # noqa: E402
     Failed,
     Finished,
+    FormAnswer,
+    FormAsked,
     ModelRef,
     Stopped,
     ToolCalled,
@@ -671,6 +674,7 @@ class Drawer(Gtk.ApplicationWindow):
                             program_card=self.app.program_card,
                             admin_card=self.app.admin_card,
                             approval_card=self.app.approval_card,
+                            form_card=self.app.form_card,
                             edit=self.app.ask_to_go_back,
                             try_again=lambda turn: self.app.ask_to_go_back(turn, True),
                             may_go_back=lambda turn: self.app.conversation.can_go_back(turn),
@@ -811,6 +815,8 @@ class Application(Adw.Application):
         self.admin_pending: dict[str, AdminPending] = {}
         #: Each approval card waiting for the person, by session and request.
         self.approvals: dict[tuple[str, str], ApprovalCard] = {}
+        #: Each form card waiting for the person, by form.
+        self.forms: dict[str, FormCard] = {}
         self._admin_object = 0
         #: An Entry point's folder and draft, until it can be started.
         self.waiting: tuple[Path, str | None] | None = None
@@ -965,6 +971,39 @@ class Application(Adw.Application):
 
         self.background(lambda: harness.answer(asking.session, asking.request,
                                                 answer, reply), answered)
+
+    def form_card(self, turn: Turn) -> Gtk.Widget:
+        """The card for what the model asks the person, the same one each time
+        it is drawn, so what is typed in it survives a redraw."""
+        form = turn.form
+        if form is None:
+            return Gtk.Box()
+        if form.form not in self.forms:
+            self.forms[form.form] = FormCard(
+                form, on_answer=lambda answers: self.answer_form(form, answers))
+        return self.forms[form.form]
+
+    def answer_form(self, form: FormAsked, answers: dict[str, FormAnswer]) -> None:
+        """The card goes at once and the Engine is answered off the main loop;
+        an answer it refuses brings the same card back, as it was left."""
+        conversation = self._conversation_of(form.session)
+        if conversation is not None:
+            conversation.form_answered()
+            self.drawer.refresh()
+        harness = self.harness
+        if harness is None:
+            return
+
+        def sent(why: str | None) -> None:
+            if why is None:
+                self.forms.pop(form.form, None)
+            elif conversation is not None:
+                conversation.form_refused(form, why)
+                self.drawer.refresh()
+            self.load_history()
+
+        self.background(
+            lambda: harness.answer_form(form.session, form.form, answers), sent)
 
     def admin_answer(self, session: str, password: str | None) -> None:
         """Answer a waiting request once: with the password, or refused when
@@ -1464,8 +1503,8 @@ class Application(Adw.Application):
         self.background(lambda: harness.resume(session), opened)
 
     def restore_waiting(self, session: str) -> None:
-        """Bring back the cards of requests the Engine still waits on, which a
-        restart of the drawer lost while the Engine kept them."""
+        """Bring back the cards of requests and forms the Engine still waits
+        on, which a restart of the drawer lost while the Engine kept them."""
         if self.requests is None or self.harness is None:
             return
         requests, harness = self.requests, self.harness
@@ -1772,7 +1811,7 @@ class Application(Adw.Application):
         if isinstance(event, ToolFinished | Finished | Stopped | Failed) and self.log:
             ran = self.log.ran_by_question(event.session)
             conversation.ran(ran[-1] if ran else [])
-        if isinstance(event, Asking):
+        if isinstance(event, Asking | FormAsked):
             self._waiting(event.session, conversation)
         if (isinstance(event, ToolCalled) and event.name == "webfetch"
                 and conversation is self.conversation
