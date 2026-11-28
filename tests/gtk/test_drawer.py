@@ -118,6 +118,11 @@ class FakeApp(Adw.Application):
 
         return Gtk.Label(label="approval card")
 
+    def form_card(self, _turn: object) -> object:
+        from gi.repository import Gtk
+
+        return Gtk.Label(label="form card")
+
     def stop(self) -> None:
         self.stopped += 1
 
@@ -131,6 +136,21 @@ class FakeApp(Adw.Application):
 
     def footer_line(self) -> str:
         return ""
+
+    def fal_connected(self) -> bool:
+        return False
+
+    def save_fal_key(self, _key: str) -> None:
+        pass
+
+    def remove_fal_key(self) -> None:
+        pass
+
+    def picture_limit(self) -> int | None:
+        return None
+
+    def set_picture_limit(self, _images: int | None) -> None:
+        pass
 
 
 def drawer():
@@ -269,6 +289,16 @@ def test_a_held_action_is_drawn_with_the_apps_approval_card() -> None:
     turn.held = Step("shell", ("ls /etc",))
     window.refresh()
     assert "approval card" in texts(window)
+
+
+def test_what_the_model_asks_is_drawn_with_the_apps_form_card() -> None:
+    from osiris.harness.engine import FormAsked, FormField
+
+    window, _ = drawer()
+    turn = window.app.conversation.asked("make it lavender at dusk")
+    turn.form = FormAsked("ses_1", "frm_1", (FormField("q0", "Mood", "Which?"),))
+    window.refresh()
+    assert "form card" in texts(window)
 
 
 def test_enter_sends_even_while_osiris_is_busy() -> None:

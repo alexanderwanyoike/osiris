@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +13,7 @@ from slideshow import Slideshow
 
 from osiris.provision.install_progress import Status
 
-from .conftest import find, now, shown, texts
+from .conftest import find, now, settle, shown, texts
 from .test_installer_network import FakeNetwork, installer
 
 SLIDES = Path(__file__).resolve().parents[2] / "apps" / "installer" / "slides"
@@ -80,30 +80,44 @@ def test_the_slides_take_turns_and_start_again_after_the_last() -> None:
     assert seen == [*CAPTIONS, CAPTIONS[0]]
 
 
-def spin(seconds: float) -> None:
-    context = GLib.MainContext.default()
-    end = time.monotonic() + seconds
-    while time.monotonic() < end:
-        context.iteration(False)
-        # Each iteration costs a DeprecationWarning from gi; a busy loop
-        # turns that into tens of thousands of them.
-        time.sleep(0.005)
+class FakeTimer:
+    """GLib's repeating timeout, fired by hand so the turns are counted exactly."""
+
+    def __init__(self) -> None:
+        self.intervals: dict[int, int] = {}
+        self.calls: dict[int, Callable[[], bool]] = {}
+
+    def repeat(self, every_ms: int, call: Callable[[], bool]) -> int:
+        source = len(self.intervals) + 1
+        self.intervals[source] = every_ms
+        self.calls[source] = call
+        return source
+
+    def cancel(self, source: int) -> None:
+        del self.calls[source]
+
+    def running(self) -> bool:
+        return bool(self.calls)
+
+    def fire(self) -> None:
+        for source, call in list(self.calls.items()):
+            if call() == GLib.SOURCE_REMOVE:
+                del self.calls[source]
 
 
 def test_the_slides_move_on_by_themselves_while_they_are_on_screen() -> None:
-    slides = Slideshow(every_ms=50)
+    timer = FakeTimer()
+    slides = Slideshow(every_ms=50, repeat=timer.repeat, cancel=timer.cancel)
     window = Gtk.Window(child=slides)
-    first = slides.get_visible_child()
-    spin(0.3)
-    assert slides.get_visible_child() is first
+    assert not timer.running()
     window.present()
-    spin(0.3)
-    assert slides.get_visible_child() is not first
+    assert settle(timer.running)
+    assert list(timer.intervals.values()) == [50]
+    timer.fire()
+    timer.fire()
+    assert CAPTIONS[2] in texts(slides.get_visible_child())
     window.close()
-    spin(0.1)
-    hidden = slides.get_visible_child()
-    spin(0.3)
-    assert slides.get_visible_child() is hidden
+    assert settle(lambda: not timer.running())
 
 
 def test_a_failed_install_puts_the_slides_away() -> None:

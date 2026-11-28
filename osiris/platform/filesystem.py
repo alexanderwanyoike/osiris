@@ -36,6 +36,8 @@ class FileSystem(Protocol):
         mode: int | None = None,
     ) -> None: ...
 
+    def write_bytes(self, path: Path, data: bytes) -> None: ...
+
     def append(self, path: Path, text: str) -> None: ...
 
     def make_directory(self, path: Path, *, owner: Identity | None = None) -> None: ...
@@ -69,10 +71,19 @@ class RealFileSystem:
         mode: int | None = None,
     ) -> None:
         self.make_directory(path.parent, owner=owner)
-        path.write_text(text)
-        if mode is not None:
-            path.chmod(mode)
+        if mode is None:
+            path.write_text(text)
+        else:
+            # Locked before any text exists, so a secret is never readable.
+            descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
+            with os.fdopen(descriptor, "w") as handle:
+                os.fchmod(descriptor, mode)
+                handle.write(text)
         self._give(path, owner)
+
+    def write_bytes(self, path: Path, data: bytes) -> None:
+        self.make_directory(path.parent)
+        path.write_bytes(data)
 
     def append(self, path: Path, text: str) -> None:
         self.make_directory(path.parent)
@@ -142,6 +153,7 @@ class FakeFileSystem:
     directories: set[Path] = field(default_factory=set)
     owners: dict[Path, int] = field(default_factory=dict)
     modes: dict[Path, int] = field(default_factory=dict)
+    blobs: dict[Path, bytes] = field(default_factory=dict)
 
     def read(self, path: Path) -> str:
         if path not in self.files:
@@ -149,7 +161,7 @@ class FakeFileSystem:
         return self.files[path]
 
     def exists(self, path: Path) -> bool:
-        return path in self.files or path in self.directories
+        return path in self.files or path in self.blobs or path in self.directories
 
     def write(
         self,
@@ -166,6 +178,10 @@ class FakeFileSystem:
         if owner is not None:
             self.owners[path] = owner.uid
 
+    def write_bytes(self, path: Path, data: bytes) -> None:
+        self.make_directory(path.parent)
+        self.blobs[path] = data
+
     def append(self, path: Path, text: str) -> None:
         self.make_directory(path.parent)
         self.files[path] = self.files.get(path, "") + text
@@ -181,23 +197,32 @@ class FakeFileSystem:
     def copy(
         self, source: Path, destination: Path, *, owner: Identity | None = None
     ) -> None:
+        if source in self.blobs:
+            self.make_directory(destination.parent, owner=owner)
+            self.blobs[destination] = self.blobs[source]
+            if owner is not None:
+                self.owners[destination] = owner.uid
+            return
         self.write(destination, self.files.get(source, ""), owner=owner)
 
     def remove(self, path: Path) -> None:
         self.files.pop(path, None)
+        self.blobs.pop(path, None)
 
     def remove_tree(self, path: Path) -> None:
         self.files = {p: t for p, t in self.files.items() if path not in p.parents}
+        self.blobs = {p: b for p, b in self.blobs.items() if path not in p.parents}
         self.directories = {d for d in self.directories if path not in d.parents}
         self.directories.discard(path)
 
     def list_directory(self, path: Path) -> list[Path]:
         return sorted(
             {p for p in self.files if p.parent == path}
+            | {p for p in self.blobs if p.parent == path}
             | {d for d in self.directories if d.parent == path}
         )
 
     def give_tree(self, path: Path, owner: Identity) -> None:
-        for known in (*self.files, *self.directories):
+        for known in (*self.files, *self.blobs, *self.directories):
             if known == path or path in known.parents:
                 self.owners[known] = owner.uid

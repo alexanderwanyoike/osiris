@@ -138,10 +138,10 @@ The first slice of ROADMAP P3.5:
   (`GET /api/permission/saved`), with what it allows and its Project (from
   `GET /api/project`); taking one back (`DELETE /api/permission/saved/{id}`)
   makes the Engine ask about it again, and is logged (`rule-removed`).
-- **A card outlives a restart.** When a Conversation opens, the requests its
-  session still waits on (`GET /api/session/{id}/permission`) are read as
-  they were asked and their cards come back, so a restart of the drawer no
-  longer leaves an answer hanging.
+- **A card outlives a restart.** When a Conversation opens, the requests and
+  forms its session still waits on (`GET /api/session/{id}/permission` and
+  `GET /api/session/{id}/form`) are read as they were asked and their cards
+  come back, so a restart of the drawer no longer leaves an answer hanging.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
@@ -279,11 +279,17 @@ every folder's servers running until the Engine restarts.
 | `list_themes` | a look | the themes, light or dark, and which is applied | |
 | `create_theme` | an undoable change | a User theme from a Theme intent; never replaces one | deletes it |
 | `apply_theme` | an undoable change | applies a theme to the whole desktop | applies the one it replaced |
+| `make_picture_theme` | an undoable change that costs money | generates a picture through FAL, makes a theme from it and applies it | deletes the theme and applies the one it replaced; the picture stays in `~/Pictures/Osiris` and its cost is spent |
+| `find_image_models` | a look | lists image models from FAL's live catalog and the person's default | nothing to undo |
+| `set_default_image_model` | an undoable change | makes a model FAL offers the person's default for pictures, or goes back to the shipped one | restores the choice it replaced |
 
 opencode runs MCP tools from its code mode (`tools.osiris.apply_theme(...)`),
 and checks each call as the action `osiris_<tool>`. The starting rules allow
-`osiris_*`, since every tool only looks or makes a reversible change, so they run without a
-card; the tier is a hint to the model, not a decision. The model never writes a
+`osiris_*`, so they run without a card, because each tool only looks or makes a
+reversible change. The exception is the money `make_picture_theme` spends from
+the person's FAL account, which cannot be returned and has no limit unless they
+set a daily one in Settings. The tier is a hint to the model, not a decision.
+The model never writes a
 colour: the seed is a hex colour whose hue alone counts, and harmony and mood
 are fixed choices.
 

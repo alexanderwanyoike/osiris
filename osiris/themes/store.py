@@ -43,8 +43,10 @@ class FakeThemeStore:
         return self.current_name
 
     def save(self, theme: Mapping[str, Any]) -> None:
+        """Like the engine, saving under a name replaces what was there."""
         self.saved.append(theme)
-        self.themes_kept.append(theme)
+        kept = [t for t in self.themes_kept if t["name"] != theme["name"]]
+        self.themes_kept = [*kept, theme]
 
     def apply(self, name: str) -> None:
         self.applied.append(name)

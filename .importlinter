@@ -85,9 +85,19 @@ forbidden_modules =
     urllib
     http
 ignore_imports =
+    # The adapter is the one module that opens connections, and reads replies
+    # through http.client.
     osiris.platform.http -> urllib
+    osiris.platform.http -> http
+    osiris.platform.redirects -> urllib
+    osiris.platform.redirects -> http
+    osiris.platform.no_redirects -> urllib
     # urllib.parse only builds the address line's search address; it opens nothing.
     osiris.harness.web -> urllib
+    # urllib.parse only builds a catalog search address; it opens nothing.
+    osiris.harness.media.catalog -> urllib
+    # urllib.parse only checks where a picture's link points; it opens nothing.
+    osiris.harness.media.fal -> urllib
 
 [importlinter:contract:mcp-is-confined]
 name = Only the tool server speaks MCP

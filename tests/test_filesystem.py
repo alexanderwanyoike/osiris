@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import stat
 from pathlib import Path
 
 import pytest
@@ -68,6 +70,22 @@ class TestFileSystem:
         filesystem.remove_tree(root / "gone")
         assert not filesystem.exists(root / "gone" / "child")
 
+    def test_bytes_are_listed_copied_and_removed_like_any_file(
+        self, filesystem: FileSystem, root: Path
+    ) -> None:
+        picture = root / "pictures" / "a.png"
+        copied = root / "pictures" / "b.png"
+        filesystem.write_bytes(picture, b"picture")
+
+        filesystem.copy(picture, copied)
+        assert filesystem.list_directory(root / "pictures") == [picture, copied]
+
+        filesystem.remove(picture)
+        assert not filesystem.exists(picture)
+
+        filesystem.remove_tree(root / "pictures")
+        assert not filesystem.exists(copied)
+
 
 class TestOwnership:
     """The bug this port was built to make impossible.
@@ -117,3 +135,49 @@ class TestOwnership:
         assert filesystem.owners[plank] == 1000
         assert filesystem.owners[plank / "dock1"] == 1000
         assert filesystem.owners[plank / "dock1" / "item"] == 1000
+
+
+def test_bytes_are_written_with_the_parent_directories(tmp_path: Path) -> None:
+    path = tmp_path / "deep" / "picture.png"
+
+    RealFileSystem().write_bytes(path, b"\x89PNG")
+
+    assert path.read_bytes() == b"\x89PNG"
+
+
+def test_the_fake_keeps_bytes_and_says_they_exist() -> None:
+    files = FakeFileSystem()
+    path = Path("/home/tester/deep/picture.png")
+
+    files.write_bytes(path, b"\x89PNG")
+
+    assert files.blobs[path] == b"\x89PNG"
+    assert files.exists(path)
+
+
+def test_the_fake_hands_bytes_over_with_the_rest_of_a_tree() -> None:
+    files = FakeFileSystem()
+    folder = Path("/home/tester/pictures")
+    files.write_bytes(folder / "picture.png", b"\x89PNG")
+
+    files.give_tree(folder, FakeIdentity(uid=1000))
+
+    assert files.owners[folder / "picture.png"] == 1000
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_a_private_file_is_never_open_to_others_even_when_writing_fails(
+    tmp_path: Path, existing: bool
+) -> None:
+    path = tmp_path / "key"
+    if existing:
+        path.write_text("old")
+        path.chmod(0o644)
+    previous = os.umask(0o022)
+    try:
+        with pytest.raises(UnicodeEncodeError):
+            RealFileSystem().write(path, "\ud800", mode=0o600)
+    finally:
+        os.umask(previous)
+
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600

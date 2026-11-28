@@ -46,11 +46,13 @@ from skin_editor import CSS as EDITOR_CSS, SkinEditor  # noqa: E402
 from skins_page import CSS as SKINS_CSS, SkinsPage, new_skin  # noqa: E402
 
 # creator has put the osiris package on sys.path.
+from osiris.apps.theme_folder import ThemeFolder  # noqa: E402
+from osiris.apps.theme_record import ThemeRecord  # noqa: E402
 from osiris.apps.theme_scheme import ThemeScheme  # noqa: E402
 from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.model.names import slug  # noqa: E402
 from osiris.skins.imports import ARCHIVE_SUFFIXES, FONT_SUFFIXES  # noqa: E402
-from osiris.themes.library import Filter, arrange  # noqa: E402
+from osiris.themes.library import Filter, arrange, half_to_wear  # noqa: E402
 
 ARCHIVES = ARCHIVE_SUFFIXES
 FONTS = tuple(sorted(FONT_SUFFIXES))
@@ -154,14 +156,21 @@ class ThemeCard(Gtk.Overlay):
     the card one large hit target and its small buttons their own.
     """
 
-    def __init__(self, theme: dict, on_pick, starred: bool, on_star):
+    def __init__(self, theme: dict, on_pick, starred: bool, on_star,
+                 partner: dict | None = None, dark: bool = False):
         super().__init__()
         self.theme = theme
+        self.partner = partner
+        self.dark = Gtk.Switch(active=dark, tooltip_text="Dark",
+                               halign=Gtk.Align.START, valign=Gtk.Align.START,
+                               margin_start=14, margin_top=14,
+                               visible=partner is not None)
 
         self.button = Gtk.Button()
         self.button.add_css_class("theme-card")
         self.button.add_css_class("flat")
-        self.button.connect("clicked", lambda _b: on_pick(theme))
+        self.button.connect("clicked", lambda _b: on_pick(self.half()))
+        self.dark.connect("notify::active", lambda _s, _p: on_pick(self.half()))
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         for side in ("top", "bottom", "start", "end"):
@@ -175,7 +184,8 @@ class ThemeCard(Gtk.Overlay):
         name.add_css_class("theme-name")
         name.set_hexpand(True)
         row.append(name)
-        badge = Gtk.Label(label="Dark" if theme.get("dark", True) else "Light")
+        badge = Gtk.Label(label="Light and dark" if partner else
+                          "Dark" if theme.get("dark", True) else "Light")
         badge.add_css_class("variant-badge")
         row.append(badge)
         # Room for the overlaid menu button, which would otherwise cover this.
@@ -186,6 +196,16 @@ class ThemeCard(Gtk.Overlay):
         self.set_child(self.button)
         self.add_overlay(self._star(theme, starred, on_star))
         self.add_overlay(self._menu(theme))
+        self.add_overlay(self.dark)
+
+    def half(self) -> dict:
+        """The Theme the card wears: the half that is dark or light as the
+        switch says, whichever half the card shows."""
+        partners = [self.partner] if self.partner else []
+        return dict(half_to_wear(self.theme, partners, self.dark.get_active()))
+
+    def wears(self, name: str) -> bool:
+        return name in (self.theme["name"], (self.partner or {}).get("name"))
 
     def _star(self, theme: dict, starred: bool, on_star) -> Gtk.ToggleButton:
         star = Gtk.ToggleButton(active=starred,
@@ -358,6 +378,10 @@ class Window(Adw.ApplicationWindow):
         toolbar.set_content(self.toasts)
         self.set_content(toolbar)
         self.reload()
+        # Only the person's own folder; shipped Themes change with a package.
+        self._folder_watch = ThemeFolder(Path(engine.SEARCH[0]), self.reload)
+        # After the folder, which makes the record's folder on a new account.
+        self._record_watch = ThemeRecord(Path(engine.STATE), self.show_applied)
         self._explain_drift()
         GLib.timeout_add_seconds(5, self._explain_drift)
 
@@ -385,6 +409,8 @@ class Window(Adw.ApplicationWindow):
         active = engine.current()
         starred = engine.favourites()
         mine = {t["name"] for t in self.themes if engine.is_user_theme(t["name"])}
+        by_name = {t["name"]: t for t in self.themes}
+        wearing_dark = bool(by_name.get(active, {}).get("dark", True))
         arranged = arrange(self.themes, query=self.search.get_text(),
                            chosen=self.chosen, favourites=starred, mine=mine)
         shown = sum(len(members) for _title, members in arranged)
@@ -406,12 +432,17 @@ class Window(Adw.ApplicationWindow):
                                row_spacing=8, column_spacing=8)
             for theme in members:
                 card = ThemeCard(theme, self.pick, theme["name"] in starred,
-                                 self._starred)
-                card.set_selected(theme["name"] == active)
+                                 self._starred, partner=by_name.get(theme.get("pair")),
+                                 dark=wearing_dark)
                 self.cards.append(card)
                 flow.append(card)
             section.append(flow)
             self.sections.append(section)
+        self.show_applied(active)
+
+    def show_applied(self, name: str | None) -> None:
+        for card in self.cards:
+            card.set_selected(name is not None and card.wears(name))
 
     # --------------------------------------------------------------- actions
 
@@ -857,8 +888,7 @@ class Window(Adw.ApplicationWindow):
         self.get_application().theme_scheme.follow()
         self.get_application().reload_user_css()
         self._show_skins()
-        for card in self.cards:
-            card.set_selected(card.theme["name"] == theme["name"])
+        self.show_applied(theme["name"])
         note = f"{theme['label']} applied"
         if restart:
             note += (f" - reopen {' and '.join(restart).lower()}"
