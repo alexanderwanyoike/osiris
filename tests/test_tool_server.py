@@ -85,6 +85,8 @@ def test_the_server_offers_the_theme_and_program_actions_and_nothing_else() -> N
     assert set(tools(FakeThemeStore())) == {
         "list_themes",
         "create_theme",
+        "make_theme_pair",
+        "make_other_half",
         "apply_theme",
         "list_programs",
         "create_program",
@@ -99,6 +101,8 @@ def test_listing_and_checking_are_looks_and_the_rest_undoable_changes() -> None:
     assert TIERS == {
         "list_themes": Tier.LOOK,
         "create_theme": Tier.UNDOABLE,
+        "make_theme_pair": Tier.UNDOABLE,
+        "make_other_half": Tier.UNDOABLE,
         "apply_theme": Tier.UNDOABLE,
         "list_programs": Tier.LOOK,
         "create_program": Tier.UNDOABLE,
@@ -167,6 +171,27 @@ def test_making_a_theme_is_logged_as_a_change_undone_by_deleting_it() -> None:
     assert log.last_changes() == [
         Change("Made Harbour", {"action": "delete_theme", "name": "harbour"})
     ]
+
+
+def test_a_theme_pair_made_through_the_server_is_undone_half_by_half() -> None:
+    """#266: the van's light and dark Themes, each deleted on its own undo."""
+    log, store = new_log(), FakeThemeStore()
+    van = {k: v for k, v in HARBOUR.items() if k != "dark"} | {"label": "Van"}
+    call(store, "make_theme_pair", van, log)
+    assert [theme["name"] for theme in store.themes()] == ["van", "van-night"]
+    assert log.last_changes() == [
+        Change("Made Van", {"action": "delete_theme", "name": "van"}),
+        Change("Made Van Night", {"action": "delete_theme", "name": "van-night"}),
+    ]
+
+
+def test_the_other_half_made_through_the_server_is_undone_by_deleting_it() -> None:
+    log, store = new_log(), FakeThemeStore()
+    call(store, "create_theme", HARBOUR, log)
+    call(store, "make_other_half", {"name": "harbour"}, log)
+    assert log.last_changes()[-1] == Change(
+        "Made Harbour Day", {"action": "delete_theme", "name": "harbour-day"}
+    )
 
 
 def asked_by(session: str, subject: MCPServer) -> Context:
@@ -347,6 +372,25 @@ def test_the_model_checks_then_has_a_program_reviewed_before_calling_it_done() -
     assert "the commit the change started from" in text
     assert "pass, partial or fail" in text
     assert "Never call a Program done on a partial or a fail" in text
+
+
+def test_a_whole_look_is_a_theme_pair_whose_wallpaper_osiris_never_writes() -> None:
+    """#266, as the person settled it: a Theme pair carries a look. Pictures
+    from wallpaper sites were dropped after testing, a model never draws a
+    wallpaper itself, and the person's Skin is theirs: a look leaves it alone."""
+    from osiris.apps.tool_server import INSTRUCTIONS
+
+    whole = " ".join(INSTRUCTIONS.split())
+    start = whole.index("asks for a whole look")
+    text = whole[start : whole.index("light or dark.", start)]
+    assert "make_theme_pair" in text
+    assert "make_wallpaper" not in text
+    # Review of #271: the person said draw, which covers more than writing.
+    assert "never write or draw one yourself" in text
+    assert "Leave the person's Skin as it is" in text
+    assert "wear_skin" not in text
+    assert "wallpaper site" not in whole
+    assert "make_other_half" in whole
 
 
 def test_making_a_wallpaper_wears_it_and_logs_each_step_to_undo() -> None:
