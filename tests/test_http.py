@@ -18,6 +18,8 @@ RELEASE = threading.Event()
 class Handler(BaseHTTPRequestHandler):
     """Echoes what it was sent, and serves the fixed routes the tests use."""
 
+    redirect_to = ""
+
     def log_message(self, *_args: object) -> None:
         pass
 
@@ -61,6 +63,12 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self.path == "/missing":
             self._reply(404, {"message": "no such thing"})
+            return
+        if self.path == "/moved":
+            self.send_response(302)
+            self.send_header("Location", self.redirect_to)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
             return
         self._reply(200, {"auth": self.headers.get("Authorization")})
 
@@ -124,6 +132,41 @@ class TestUrllibClient:
         with pytest.raises(HttpError) as raised:
             UrllibClient().request("GET", f"{server}/cut")
         assert raised.value.status == 0
+
+    def test_a_redirect_to_another_host_does_not_carry_the_credentials(
+        self, server: str
+    ) -> None:
+        port = server.rsplit(":", 1)[1]
+        Handler.redirect_to = f"http://localhost:{port}/"
+
+        reply = UrllibClient().request(
+            "GET", f"{server}/moved", headers={"Authorization": "Key secret"}
+        )
+
+        assert reply == {"auth": None}
+
+    def test_a_redirect_on_the_same_host_keeps_the_credentials(
+        self, server: str
+    ) -> None:
+        Handler.redirect_to = f"{server}/"
+
+        reply = UrllibClient().request(
+            "GET", f"{server}/moved", headers={"Authorization": "Key secret"}
+        )
+
+        assert reply == {"auth": "Key secret"}
+
+    def test_a_redirected_stream_does_not_carry_the_credentials(
+        self, server: str
+    ) -> None:
+        port = server.rsplit(":", 1)[1]
+        Handler.redirect_to = f"http://localhost:{port}/"
+
+        lines = UrllibClient().lines(
+            f"{server}/moved", headers={"Authorization": "Key secret"}
+        )
+
+        assert "secret" not in "".join(lines)
 
     def test_a_stream_arrives_line_by_line(self, server: str) -> None:
         lines = list(UrllibClient().lines(f"{server}/events"))

@@ -16,7 +16,10 @@ from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
+from osiris.platform.redirects import SameOriginCredentials
+
 Body = object | None
+_OPENER = urllib.request.build_opener(SameOriginCredentials)
 
 
 class HttpError(RuntimeError):
@@ -91,7 +94,7 @@ class UrllibClient:
         )
         with (
             _as_http_error(),
-            urllib.request.urlopen(request, timeout=self._timeout) as response,
+            _OPENER.open(request, timeout=self._timeout) as response,
         ):
             text = response.read().decode()
         return json.loads(text) if text.strip() else None
@@ -102,7 +105,7 @@ class UrllibClient:
         request = urllib.request.Request(url, headers=dict(headers or {}))
         # No read timeout: an event stream is quiet for as long as nothing
         # happens, and its heartbeats are the server's business.
-        with _as_http_error(), urllib.request.urlopen(request) as response:
+        with _as_http_error(), _OPENER.open(request) as response:
             for raw in response:
                 yield raw.decode().rstrip("\r\n")
 

@@ -89,6 +89,8 @@ ignore_imports =
     # through http.client.
     osiris.platform.http -> urllib
     osiris.platform.http -> http
+    osiris.platform.redirects -> urllib
+    osiris.platform.redirects -> http
     # urllib.parse only builds the address line's search address; it opens nothing.
     osiris.harness.web -> urllib
 
