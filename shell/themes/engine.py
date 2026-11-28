@@ -48,8 +48,8 @@ from osiris.model.names import is_slug  # noqa: E402
 from osiris.platform.process import CommandError, SubprocessRunner  # noqa: E402
 from osiris.provision.seeding import may_write  # noqa: E402
 from osiris.skins import (  # noqa: E402
-    carried, edit, imports, library as skins, looks, pictures, share, wear,
-    xcursor)
+    carried, colours, edit, imports, library as skins, looks, pictures, share,
+    wear, xcursor)
 from osiris.skins.build import Built, build as build_skin_pack  # noqa: E402
 from osiris.skins.check import problems as check_programs  # noqa: E402
 from osiris.skins.pack import Look, SkinpackError, refuse_programs  # noqa: E402
@@ -1064,6 +1064,18 @@ def check_skin(name: str) -> list[str]:
         except (SkinpackError, OSError) as error:
             return [str(error)]
     return []
+
+
+def fixed_colours(name: str) -> list[str]:
+    """Colours written into one of the person's Skins that what it was made
+    from does not have; shipped Skins keep their own."""
+    if name not in own_skins():
+        return []
+    pack = _pack(name)
+    with tempfile.TemporaryDirectory() as scratch:
+        made_from = colours.originals(pack, [Path(folder) for folder in SKIN_DIRS],
+                                      SubprocessRunner(), Path(scratch))
+        return colours.fixed_colours(pack.root, made_from)
 
 
 def remove_icon_sets(names: list[str]) -> None:

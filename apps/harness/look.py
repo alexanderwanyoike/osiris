@@ -1,4 +1,5 @@
-"""How the drawer looks: the Theme's colours and the chosen Skin, kept current.
+"""How the drawer looks: the Theme's colours, its light or dark, and the chosen
+Skin, kept current.
 
 The colours, the code scheme and the choice of Skin are decided in
 osiris/harness/style.py, where they are tested. This loads them into GTK and
@@ -15,8 +16,10 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("GtkSource", "5")
 from gi.repository import Gdk, Gio, Gtk, GtkSource  # noqa: E402
 
+from osiris.apps.theme_scheme import ThemeScheme  # noqa: E402
 from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.harness.style import (  # noqa: E402
+    HELD_CSS,
     SCHEME_FILE,
     SCHEME_ID,
     SKIN_FILE,
@@ -55,6 +58,9 @@ class Look:
         self.scheme: GtkSource.StyleScheme | None = None
         self._monitors = [self._watch(Path(engine.STATE)),
                           self._watch(home / SKIN_FILE)]
+        # libadwaita draws what the drawer's colours leave alone, such as a
+        # message box's text, in its own light or dark.
+        self._light_or_dark = ThemeScheme(Path(engine.STATE), engine.load)
         self.reload()
 
     def _watch(self, path: Path) -> Gio.FileMonitor:
@@ -94,7 +100,7 @@ class Look:
         self.theme = theme
         self.style = inline_style(theme)
         self._provider.load_from_string(
-            colours_css(theme) + code_font_css(theme) + self._skin())
+            colours_css(theme) + HELD_CSS + code_font_css(theme) + self._skin())
         scheme_path = self._home / SCHEME_FILE
         scheme_path.parent.mkdir(parents=True, exist_ok=True)
         scheme_path.write_text(source_scheme(theme))

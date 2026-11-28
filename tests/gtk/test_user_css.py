@@ -3,25 +3,13 @@ Theme or Skin reaches them without a restart."""
 
 from __future__ import annotations
 
-import time
-from collections.abc import Callable
 from pathlib import Path
 
-from gi.repository import Gdk, Gio, GLib, Gtk
+from gi.repository import Gdk, Gio, Gtk
 
 from osiris.apps.user_css import UserCss
 
-
-def settle(until: Callable[[], bool], seconds: float = 3.0) -> bool:
-    deadline = time.monotonic() + seconds
-    context = GLib.MainContext.default()
-    while time.monotonic() < deadline:
-        while context.pending():
-            context.iteration(False)
-        if until():
-            return True
-        time.sleep(0.02)
-    return False
+from .conftest import settle
 
 
 def test_the_sheet_is_loaded_when_followed(tmp_path: Path) -> None:

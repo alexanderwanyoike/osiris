@@ -138,10 +138,10 @@ The first slice of ROADMAP P3.5:
   (`GET /api/permission/saved`), with what it allows and its Project (from
   `GET /api/project`); taking one back (`DELETE /api/permission/saved/{id}`)
   makes the Engine ask about it again, and is logged (`rule-removed`).
-- **A card outlives a restart.** When a Conversation opens, the requests its
-  session still waits on (`GET /api/session/{id}/permission`) are read as
-  they were asked and their cards come back, so a restart of the drawer no
-  longer leaves an answer hanging.
+- **A card outlives a restart.** When a Conversation opens, the requests and
+  forms its session still waits on (`GET /api/session/{id}/permission` and
+  `GET /api/session/{id}/form`) are read as they were asked and their cards
+  come back, so a restart of the drawer no longer leaves an answer hanging.
 - **It shows its work.** While Osiris answers, a row under the answer pulses
   in the Theme's accent, says in plain words what it is doing ("Thinking",
   "Editing pomodoro/main.py", "Making a theme") and counts the time since the
@@ -267,7 +267,12 @@ on first use. Super+A and the panel button both run
 What the model may do on this machine is offered by Osiris as an MCP server
 (`osiris`), built on the official SDK (Arch's `python-mcp`). The drawer attaches
 it to the Engine when it connects, with opencode's runtime MCP API, so nothing
-is written into the person's own opencode configuration.
+is written into the person's own opencode configuration. opencode forgets a
+runtime server when it unloads a folder left idle
+(`experimental.location_idle_timeout`, an hour by default), so before each
+question the Harness asks whether `osiris` still runs there and attaches it
+again if not. The timeout is left as it is, since turning it off would keep
+every folder's servers running until the Engine restarts.
 
 | Tool | Action tier | What it does | Logged step to reverse it |
 |---|---|---|---|
