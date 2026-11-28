@@ -23,6 +23,7 @@ from osiris.themes.actions import (
     make_theme_pair,
     unused_name,
     use_wallpaper,
+    wear_painting,
 )
 from osiris.themes.derive import build
 from osiris.themes.intent import Harmony, Mood, ThemeIntent, seeds
@@ -210,6 +211,45 @@ def test_a_copy_that_would_replace_a_theme_is_refused() -> None:
         use_wallpaper(store, "rain", "Rain")
 
 
+def test_a_theme_pair_is_a_light_and_a_dark_theme_made_from_one_idea() -> None:
+    """#266: two Themes, chosen as one, each naming the other."""
+    store = FakeThemeStore()
+    names = make_theme_pair(
+        store, label="Van", seed="#3f9a4a", harmony="analogous", mood="vivid"
+    )
+    light, dark = store.saved
+    assert names == ("van", "van-night")
+    assert (light["dark"], dark["dark"], dark["label"]) == (False, True, "Van Night")
+    assert (light["pair"], dark["pair"]) == ("van-night", "van")
+
+
+def test_the_other_half_of_a_theme_made_alone_completes_its_pair() -> None:
+    """#266: Osiris makes the Theme asked for, then offers its other half."""
+    store = FakeThemeStore()
+    create_theme(
+        store,
+        label="Harbour",
+        seed="#3a6ea5",
+        harmony="analogous",
+        mood="muted",
+        dark=True,
+    )
+    assert make_other_half(store, "harbour") == "harbour-day"
+    halves = {theme["name"]: theme for theme in store.themes()}
+    assert halves["harbour"]["pair"] == "harbour-day"
+    assert halves["harbour-day"]["pair"] == "harbour"
+    assert halves["harbour-day"]["dark"] is False
+
+
+def test_a_theme_already_in_a_pair_has_no_other_half_to_make() -> None:
+    store = FakeThemeStore()
+    make_theme_pair(
+        store, label="Van", seed="#3f9a4a", harmony="analogous", mood="vivid"
+    )
+    with pytest.raises(ThemeActionError, match="already has"):
+        make_other_half(store, "van")
+
+
 def picture_bytes(colour: tuple[int, int, int]) -> bytes:
     data = io.BytesIO()
     Image.new("RGB", (64, 36), colour).save(data, "PNG")
@@ -281,43 +321,32 @@ def test_a_picture_that_cannot_be_read_keeps_nothing() -> None:
     assert store.saved == []
 
 
-def test_a_theme_pair_is_a_light_and_a_dark_theme_made_from_one_idea() -> None:
-    """#266: two Themes, chosen as one, each naming the other."""
-    store = FakeThemeStore()
-    names = make_theme_pair(
-        store, label="Van", seed="#3f9a4a", harmony="analogous", mood="vivid"
-    )
-    light, dark = store.saved
-    assert names == ("van", "van-night")
-    assert (light["dark"], dark["dark"], dark["label"]) == (False, True, "Van Night")
-    assert (light["pair"], dark["pair"]) == ("van-night", "van")
+def test_a_painting_that_cannot_be_read_keeps_nothing_and_may_have_cost() -> None:
+    """Review of #272: a paid picture gets the same guards as a picture Theme."""
+    store = FakeThemeStore(themes=[stored("van", "Van", False)])
+    kept: list[bytes] = []
+
+    def keep(name: str, data: bytes) -> Path:
+        kept.append(data)
+        return Path(f"/home/tester/Pictures/Osiris/{name}.png")
+
+    with pytest.raises(ThemeActionError, match=r"could not be read.*charged"):
+        wear_painting(store, "van", b"not a picture", keep)
+    assert kept == []
 
 
-def test_the_other_half_of_a_theme_made_alone_completes_its_pair() -> None:
-    """#266: Osiris makes the Theme asked for, then offers its other half."""
-    store = FakeThemeStore()
-    create_theme(
-        store,
-        label="Harbour",
-        seed="#3a6ea5",
-        harmony="analogous",
-        mood="muted",
-        dark=True,
-    )
-    assert make_other_half(store, "harbour") == "harbour-day"
-    halves = {theme["name"]: theme for theme in store.themes()}
-    assert halves["harbour"]["pair"] == "harbour-day"
-    assert halves["harbour-day"]["pair"] == "harbour"
-    assert halves["harbour-day"]["dark"] is False
+def test_a_painting_in_another_format_is_kept_as_a_png() -> None:
+    store = FakeThemeStore(themes=[stored("van", "Van", False)])
+    data = io.BytesIO()
+    Image.new("RGB", (8, 8), (10, 120, 110)).save(data, "JPEG")
+    kept: list[bytes] = []
 
+    def keep(name: str, picture: bytes) -> Path:
+        kept.append(picture)
+        return Path(f"/home/tester/Pictures/Osiris/{name}.png")
 
-def test_a_theme_already_in_a_pair_has_no_other_half_to_make() -> None:
-    store = FakeThemeStore()
-    make_theme_pair(
-        store, label="Van", seed="#3f9a4a", harmony="analogous", mood="vivid"
-    )
-    with pytest.raises(ThemeActionError, match="already has"):
-        make_other_half(store, "van")
+    wear_painting(store, "van", data.getvalue(), keep)
+    assert Image.open(io.BytesIO(kept[0])).format == "PNG"
 
 
 def test_a_theme_whose_other_half_was_undone_can_be_paired_again() -> None:

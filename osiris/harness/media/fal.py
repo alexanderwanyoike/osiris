@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import json
 from collections.abc import Callable
 from urllib.parse import urlsplit
 
@@ -50,16 +51,30 @@ class FalImages:
             )
         except HttpError as error:
             # Not chained: the error's body could echo the request and its key.
-            reason = _REASONS.get(
-                error.status,
-                f"FAL could not make the picture ({error.status}). {_CHARGED}",
-            )
-            raise MediaError(reason) from None
+            raise MediaError(_reason(error)) from None
         except UnicodeEncodeError:
             raise MediaError(_REASONS[401]) from None
         except ValueError:
             raise MediaError(_NO_PICTURE) from None
         return _picture(answer, self._http)
+
+
+def _reason(error: HttpError) -> str:
+    if error.status == 422 and "content_policy_violation" in _error_types(error.body):
+        return f"FAL's content checker refused the description. {_CHARGED}"
+    return _REASONS.get(
+        error.status, f"FAL could not make the picture ({error.status}). {_CHARGED}"
+    )
+
+
+def _error_types(body: str) -> set[str]:
+    try:
+        details = json.loads(body).get("detail")
+    except ValueError, AttributeError:
+        return set()
+    if not isinstance(details, list):
+        return set()
+    return {str(d.get("type")) for d in details if isinstance(d, dict)}
 
 
 def _request(description: str, spec: ModelSpec) -> dict[str, object]:

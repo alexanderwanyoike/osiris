@@ -101,12 +101,16 @@ the person.
 Themes come light or dark. When the person asks for a Theme on its own, make
 that one, then offer its other half with make_other_half, and make it only if
 they say yes. When the person asks for a whole look, such as a look named after
-a film, a character or a place, its colours carry it: make a Theme pair with
-make_theme_pair, asking first unless they already asked for one, with the
-look's main colour as the seed. Its wallpaper is the person's to choose, so
-never write or draw one yourself; tell them the Themes keep their usual one
-until they pick a picture. Leave the person's Skin as it is. Apply the half that
-matches the Theme the person has on now, light or dark."""
+a film, a character or a place, its colours and its wallpaper carry it, so
+make it in this order. First a Theme pair with make_theme_pair, asking first
+unless they already asked for one: the look's main colour as the seed. Then
+its wallpaper: paint one for each half with paint_theme_wallpaper, a light
+picture for the light Theme and a dark one for the dark. If it cannot paint,
+tell the person why and that the Themes keep their usual wallpaper until they
+choose a picture. If it paints only one half, say which and why the other
+failed, and leave the person to keep or undo it. The wallpaper is theirs, so
+never write or draw one yourself. Leave the person's Skin as it is. Apply the
+half that matches the Theme the person has on now, light or dark."""
 
 #: What the model may touch beyond its tools, by the person's choice
 #: (osiris.harness.trust).
@@ -136,6 +140,7 @@ TIERS = {
     "check_program": Tier.LOOK,
     "make_wallpaper": Tier.UNDOABLE,
     "make_picture_theme": Tier.UNDOABLE,
+    "paint_theme_wallpaper": Tier.UNDOABLE,
     "find_image_models": Tier.LOOK,
     "set_default_image_model": Tier.UNDOABLE,
     "list_skins": Tier.LOOK,
@@ -149,6 +154,9 @@ TIERS = {
     "propose_skill": Tier.LOOK,
 }
 
+#: Added to a half's description, so a pair's pictures suit their Themes.
+LIGHT_PICTURE = "A light picture, bright enough to sit behind a light desktop"
+DARK_PICTURE = "A dark picture, deep enough to sit behind a dark desktop"
 #: Added to each description, so the picture works behind a desktop.
 PICTURE_STYLE = "wide desktop wallpaper, no text"
 
@@ -559,6 +567,30 @@ def _picture_tool(
             undo={"action": "set_default_image_model", "model": previous},
         )
         return f"{model} now makes the person's pictures unless they name another."
+
+    @tools.tool(annotations=ANNOTATIONS[TIERS["paint_theme_wallpaper"]])
+    @explained
+    def paint_theme_wallpaper(name: str, picture: str, image_model: str = "") -> str:
+        """Paint a wallpaper for a theme with the person's image model and give
+        it to the theme: a light picture for a light theme, a dark one for a
+        dark theme. Each call can cost the person money.
+
+        name: the theme's name from list_themes.
+        picture: what the picture shows, in a sentence or two.
+        image_model: a model's exact id from find_image_models, only when the
+            person asked for that model; leave it out to use their default.
+        """
+        theme = actions.find(store, name)
+        used = image_model or pictures.default_image_model()
+        tone = DARK_PICTURE if theme["dark"] else LIGHT_PICTURE
+        data = pictures.make(f"{picture}. {tone}. {PICTURE_STYLE}", used)
+        previous = actions.wear_painting(store, name, data, pictures.keep)
+        logged.write(
+            "changed",
+            summary=f"Painted a wallpaper for {theme['label']} with {used}",
+            undo={"action": "set_wallpaper", "name": name, "wallpaper": previous or ""},
+        )
+        return f"Painted a wallpaper for {theme['label']} with {used}."
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["make_picture_theme"]])
     @explained

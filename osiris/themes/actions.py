@@ -184,6 +184,26 @@ def find(store: ThemeStore, name: str) -> Mapping[str, Any]:
     raise ThemeActionError(f"There is no theme called {name}")
 
 
+def wear_painting(
+    store: ThemeStore, name: str, data: bytes, keep: Callable[[str, bytes], Path]
+) -> str | None:
+    """Make a painted picture the Theme's wallpaper, kept by ``keep`` as a PNG
+    under the Theme's name. Returns the wallpaper it replaced."""
+    theme = find(store, name)
+    try:
+        image = Image.open(io.BytesIO(data))
+        png = data if image.format == "PNG" else _as_png(image)
+    except (OSError, ValueError) as error:
+        raise ThemeActionError(f"The picture could not be read. {_CHARGED}") from error
+    try:
+        kept = keep(name, png)
+    except OSError as error:
+        raise ThemeActionError(f"The picture could not be saved. {_CHARGED}") from error
+    store.save({**theme, "wallpaper": str(kept)})
+    previous = theme.get("wallpaper")
+    return str(previous) if previous else None
+
+
 def apply_theme(store: ThemeStore, name: str) -> str | None:
     """Apply a Theme. Returns the one it replaced."""
     find(store, name)

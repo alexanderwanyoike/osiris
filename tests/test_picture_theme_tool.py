@@ -283,3 +283,97 @@ def test_the_model_only_changes_the_image_model_when_asked() -> None:
     assert "find_image_models" in told
     assert "never pick a different model yourself" in told
     assert "set_default_image_model" in told
+
+
+def test_a_painted_picture_becomes_the_wallpaper_of_one_half_of_a_pair() -> None:
+    """A whole look paints a light picture for the light Theme and a dark one
+    for the dark, with the person's image model."""
+    store = FakeThemeStore(
+        themes=[
+            {"name": "van", "label": "Van", "dark": False, "wallpaper": "generated"}
+        ],
+        current="van",
+    )
+    maker, files = Maker(), FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+    sunny = {"name": "van", "picture": "The van on a sunny road"}
+
+    asyncio.run(
+        tool_server(store, maker, log, files).call_tool("paint_theme_wallpaper", sunny)
+    )
+
+    picture = HOME / "Pictures/Osiris/van.png"
+    assert store.themes()[0]["wallpaper"] == str(picture)
+    assert files.blobs[picture] == png()
+    assert maker.asked[0].startswith("The van on a sunny road. ")
+    assert log.last_changes() == [
+        Change(
+            f"Painted a wallpaper for Van with {DEFAULT_IMAGE_MODEL}",
+            {"action": "set_wallpaper", "name": "van", "wallpaper": "generated"},
+        )
+    ]
+
+
+def test_a_painting_for_a_theme_with_no_wallpaper_logs_an_empty_one() -> None:
+    """Review of #272: the merge dropped the tool whose undo the painting
+    named, and an undo's values are text, never None."""
+    store = FakeThemeStore(themes=[{"name": "van", "label": "Van", "dark": False}])
+    maker, files = Maker(), FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+    sunny = {"name": "van", "picture": "The van on a sunny road"}
+
+    asyncio.run(
+        tool_server(store, maker, log, files).call_tool("paint_theme_wallpaper", sunny)
+    )
+
+    assert log.last_changes()[-1].undo == {
+        "action": "set_wallpaper",
+        "name": "van",
+        "wallpaper": "",
+    }
+
+
+def test_a_whole_look_paints_its_wallpapers_when_an_image_model_is_there() -> None:
+    from osiris.apps.tool_server import INSTRUCTIONS
+
+    text = " ".join(INSTRUCTIONS.split())
+    start = text.index("asks for a whole look")
+    look = text[start : text.index("light or dark.", start)]
+    painted = look.index("paint one for each half with paint_theme_wallpaper")
+    # The person never wants a model to draw a wallpaper: without a painting,
+    # Osiris says why and the person decides. test_tool_server checks that
+    # Osiris never writes one.
+    assert painted < look.index("If it cannot paint, tell the person why")
+    assert "until they choose a picture" in look
+    # Review of #272: one half painted and the other not would not match.
+    assert "If it paints only one half, say which" in look
+
+
+@pytest.mark.parametrize(
+    ("dark", "asked"), [(False, "A light picture"), (True, "A dark picture")]
+)
+def test_a_half_is_painted_light_or_dark_as_the_theme_is(
+    dark: bool, asked: str
+) -> None:
+    """Review of #272: the light half must not get a night scene."""
+    store = FakeThemeStore(themes=[{"name": "van", "label": "Van", "dark": dark}])
+    maker, files = Maker(), FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+    asyncio.run(
+        tool_server(store, maker, log, files).call_tool(
+            "paint_theme_wallpaper", {"name": "van", "picture": "The van"}
+        )
+    )
+    assert asked in maker.asked[0]
+
+
+def test_a_theme_that_does_not_exist_is_refused_before_anything_is_painted() -> None:
+    store, maker, files = nord(), Maker(), FakeFileSystem()
+    log = HarnessLog(files, HOME / LOG_FILE)
+    with pytest.raises(ToolError, match="no theme called van"):
+        asyncio.run(
+            tool_server(store, maker, log, files).call_tool(
+                "paint_theme_wallpaper", {"name": "van", "picture": "The van"}
+            )
+        )
+    assert maker.asked == []

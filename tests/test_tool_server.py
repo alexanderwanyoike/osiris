@@ -110,6 +110,7 @@ def test_listing_and_checking_are_looks_and_the_rest_undoable_changes() -> None:
         "check_program": Tier.LOOK,
         "make_wallpaper": Tier.UNDOABLE,
         "make_picture_theme": Tier.UNDOABLE,
+        "paint_theme_wallpaper": Tier.UNDOABLE,
         "find_image_models": Tier.LOOK,
         "set_default_image_model": Tier.UNDOABLE,
         "list_skins": Tier.LOOK,
