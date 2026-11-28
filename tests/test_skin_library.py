@@ -14,16 +14,18 @@ from osiris.skins.library import (
     chosen,
     credit,
     find,
+    find_start,
+    starts,
     styles,
     wear_choice,
 )
 from osiris.skins.pack import SkinpackError, read
 
 
-def make_pack(root: Path, label: str) -> None:
+def make_pack(root: Path, label: str, **extra: object) -> None:
     root.mkdir(parents=True)
     fields = {"author": "a", "version": "1", "licence": "GPL-3.0", "source": "s"}
-    (root / "skin.json").write_text(json.dumps({"label": label, **fields}))
+    (root / "skin.json").write_text(json.dumps({"label": label, **fields, **extra}))
 
 
 def test_nothing_chosen_means_the_osiris_skin(tmp_path: Path) -> None:
@@ -44,6 +46,47 @@ def test_a_persons_skin_overrides_a_shipped_one_of_the_same_name(
     make_pack(shipped / "graphite", "Graphite")
     labels = [pack.label for pack in available([mine, shipped])]
     assert labels == ["My Colloid", "Graphite"]
+
+
+def test_the_blank_slate_is_never_offered_to_wear(tmp_path: Path) -> None:
+    """It is where a new Skin can start, with no look of its own."""
+    make_pack(tmp_path / "shipped" / "blank", "Blank", start=True)
+    make_pack(tmp_path / "shipped" / "colloid", "Colloid")
+    assert [pack.name for pack in available([tmp_path / "shipped"])] == ["colloid"]
+    assert find([tmp_path / "shipped"], "blank") is None
+
+
+def test_a_persons_own_skin_called_blank_is_still_theirs_to_wear(
+    tmp_path: Path,
+) -> None:
+    """Review of #268: one made before the blank slate shipped vanished."""
+    make_pack(tmp_path / "mine" / "blank", "Blank")
+    make_pack(tmp_path / "shipped" / "colloid", "Colloid")
+    folders = [tmp_path / "mine", tmp_path / "shipped"]
+    assert [pack.name for pack in available(folders)] == ["blank", "colloid"]
+
+
+def test_a_new_skin_can_start_from_the_blank_slate_first_or_any_skin(
+    tmp_path: Path,
+) -> None:
+    make_pack(tmp_path / "shipped" / "colloid", "Colloid")
+    make_pack(tmp_path / "shipped" / "blank", "Blank", start=True)
+    names = [pack.name for pack in starts([tmp_path / "shipped"])]
+    assert names == ["blank", "colloid"]
+
+
+def test_a_new_skin_starts_from_the_blank_slate_or_a_skin_by_name(
+    tmp_path: Path,
+) -> None:
+    make_pack(tmp_path / "shipped" / "blank", "Blank", start=True)
+    make_pack(tmp_path / "shipped" / "colloid", "Colloid")
+    shipped = [tmp_path / "shipped"]
+    found = [find_start(shipped, name) for name in ("blank", "colloid", "nothing")]
+    assert [pack.label if pack else None for pack in found] == [
+        "Blank",
+        "Colloid",
+        None,
+    ]
 
 
 def test_folders_that_are_not_skinpacks_are_skipped(tmp_path: Path) -> None:

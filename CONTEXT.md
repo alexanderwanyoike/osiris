@@ -26,6 +26,12 @@ pictures with named gaps for the **Theme**'s colours, and its fonts, icons and
 cursor. One file when shared; nothing in it runs.
 _Avoid_: skin file, preset
 
+**Blank slate**:
+The **Skinpack** a new **Skin** can start from when no **Skin** is close to the
+look asked for. It has no look of its own, only the **Theme**'s colours on
+plain GTK, and it is never worn.
+_Avoid_: empty Skin, base Skin
+
 **Fixed colour**:
 A colour written into a **Skin** rather than taken from the **Theme**, so it
 stays the same whatever **Theme** is worn. Osiris names the ones a person's

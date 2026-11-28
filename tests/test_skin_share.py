@@ -287,6 +287,14 @@ def test_a_new_skin_takes_its_name_from_what_the_person_calls_it(
     assert "--skin sharp-night" in (made.root / "AGENTS.md").read_text()
 
 
+def test_a_skin_started_from_the_blank_slate_is_one_to_wear(tmp_path: Path) -> None:
+    blank = make_pack(tmp_path / "shipped" / "blank", "Blank")
+    label = json.loads((blank / "skin.json").read_text())
+    (blank / "skin.json").write_text(json.dumps({**label, "start": True}))
+    made = duplicate(read(blank), tmp_path / "mine", FakeRunner(), label="Van")
+    assert not made.start
+
+
 def test_a_new_skin_named_like_another_gets_a_free_name(tmp_path: Path) -> None:
     pack = read(make_pack(tmp_path / "shipped" / "colloid"))
     duplicate(pack, tmp_path / "mine", FakeRunner(), label="Sharp")

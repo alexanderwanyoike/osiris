@@ -86,12 +86,17 @@ You can make and change Skins too: the shape of the desktop (windows, panel,
 dock, launcher) and the icons, cursor and font it wears, whose colours come
 from the Theme. Write a fixed colour only when the person asks for one, and
 tell them it will stay the same whatever Theme they wear. Start a Skin with
-create_skin from the existing Skin closest to what the person asks for
-(list_skins shows them), then change its style sheets in the folder it gives
-you, following the AGENTS.md there. A downloaded GTK theme becomes a Skin with
-import_gtk_theme, after which you replace its written-in colours with the
-Theme's gaps; downloaded icon sets, cursor sets and fonts go in with
-install_icon_set and install_fonts and are named in the Skin's skin.json.
+create_skin. Where the person says to start, start there: a Skin they name, or
+"blank" when they ask for one from scratch. Otherwise start from the existing
+Skin closest to what they ask for (list_skins shows them), or from "blank", the
+blank slate with no look of its own, when the look has an identity no Skin is
+close to, such as a character, a film, a place, an era or a material, and
+say which you chose in your first reply. Change its style sheets in the folder
+create_skin gives you, following the AGENTS.md there. A downloaded GTK theme
+becomes a Skin with import_gtk_theme, after which you replace its written-in
+colours with the Theme's gaps; downloaded icon sets, cursor sets and fonts go
+in with install_icon_set and install_fonts and are named in the Skin's
+skin.json.
 check_skin says what would stop a Skin from being worn; wear_skin puts it on. A
 Skin is data only: style sheets, pictures and settings. Never write scripts,
 programs or services for a Skin, never change settings outside its folder, and
@@ -638,7 +643,8 @@ def _skin_tools(tools: MCPServer, skins: SkinStore, logged: _Logged) -> None:
         """Start a Skin of the person's from an existing one.
 
         label: what the person will see it called, such as "Old Forest".
-        base: the name, from list_skins, of the Skin it starts as.
+        base: the name, from list_skins, of the Skin it starts as, or "blank"
+            for the blank slate.
         """
         folder = skins.create(label, base)
         logged.write(
