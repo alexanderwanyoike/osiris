@@ -32,6 +32,21 @@ stays the same whatever **Theme** is worn. Osiris names the ones a person's
 **Skin** was not made with; the ones it was made with are part of its look.
 _Avoid_: hard-coded colour, literal colour
 
+**Theme pair**:
+A light **Theme** and a dark one made together from one idea, chosen as one
+with a switch between them; the person wears one of them. A look asked for by
+name comes as a pair, with a wallpaper for it; a **Theme** asked for on
+its own is made alone, and Osiris offers its other half.
+_Avoid_: variant, mode, light/dark theme
+
+**Whole look**:
+A look asked for by name, such as a film, a character or a place: a **Theme
+pair**, and a **Wallpaper** for each half painted by an image model. When it
+cannot paint, Osiris says why and the halves keep their usual wallpaper until
+the person chooses; a model never draws one itself. A whole look leaves the
+person's **Skin** as it is, and takes no pictures from the web.
+_Avoid_: theme pack, full theme
+
 **Theme intent**:
 What a **Theme** is asked to be - a seed colour or a **Wallpaper**, a harmony,
 light or dark, and a mood - from which its colours are derived.
