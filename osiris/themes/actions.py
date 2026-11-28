@@ -64,6 +64,46 @@ def create_theme(
     dark: bool,
 ) -> str:
     """Make and keep a User theme from a Theme intent. Returns its name."""
+    theme = _document(store, label, seed, harmony, mood, dark)
+    store.save(theme)
+    return str(theme["name"])
+
+
+def make_theme_pair(
+    store: ThemeStore, *, label: str, seed: str, harmony: str, mood: str
+) -> tuple[str, str]:
+    """Make a light Theme and a dark one from one idea, each naming the other.
+    Returns their names, light first."""
+    light = _document(store, label, seed, harmony, mood, False)
+    dark = _document(store, f"{label} Night", seed, harmony, mood, True)
+    store.save({**light, "pair": dark["name"]})
+    store.save({**dark, "pair": light["name"]})
+    return str(light["name"]), str(dark["name"])
+
+
+def make_other_half(store: ThemeStore, name: str) -> str:
+    """Make the light or dark Theme a Theme made alone lacks, from its accent,
+    and pair the two. Returns the new one's name."""
+    theme = find(store, name)
+    if any(other["name"] == theme.get("pair") for other in store.themes()):
+        raise ThemeActionError(f"{theme['label']} already has its other half")
+    dark = not theme["dark"]
+    other = _document(
+        store,
+        f"{theme['label']} {'Night' if dark else 'Day'}",
+        theme["colors"]["accent"],
+        "analogous",
+        "balanced",
+        dark,
+    )
+    store.save({**theme, "pair": other["name"]})
+    store.save({**other, "pair": name})
+    return str(other["name"])
+
+
+def _document(
+    store: ThemeStore, label: str, seed: str, harmony: str, mood: str, dark: bool
+) -> dict[str, object]:
     try:
         colour = Colour(seed)
     except InvalidColour as error:
@@ -77,8 +117,7 @@ def create_theme(
         dark=dark,
     )
     name = unused_name(store, label)
-    store.save(build(name, label, seeds(intent)))
-    return name
+    return build(name, label, seeds(intent))
 
 
 def unused_name(store: ThemeStore, label: str) -> str:
@@ -166,7 +205,13 @@ def use_wallpaper(store: ThemeStore, wallpaper: str, label: str) -> tuple[str, s
             f"There is already a theme called {copy_label}; choose another label"
         )
     store.save(
-        {**theme, "name": name, "label": copy_label, "wallpaper_style": wallpaper}
+        {
+            **theme,
+            "name": name,
+            "label": copy_label,
+            "wallpaper_style": wallpaper,
+            "wallpaper": "generated",
+        }
     )
     store.apply(name)
     return name, previous

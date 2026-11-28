@@ -84,6 +84,13 @@ def _shown(
     return needle in haystack
 
 
+def _one_per_pair(shown: list[Theme]) -> list[Theme]:
+    """A pair is chosen as one, so where both halves are shown only the light
+    one is; its card switches to the dark one."""
+    light = {t["name"] for t in shown if not t.get("dark", True)}
+    return [t for t in shown if not (t.get("dark", True) and t.get("pair") in light)]
+
+
 def arrange(
     themes: Iterable[Theme],
     query: str = "",
@@ -97,7 +104,7 @@ def arrange(
     sections are left out, so a search with no match gives none.
     """
     shown = sorted(
-        (t for t in themes if _shown(t, query, chosen, mine)),
+        _one_per_pair([t for t in themes if _shown(t, query, chosen, mine)]),
         key=lambda t: _label(t).lower(),
     )
     sections: list[tuple[str, list[Theme]]] = []
@@ -111,3 +118,12 @@ def arrange(
         if members:
             sections.append((family.value, members))
     return sections
+
+
+def half_to_wear(theme: Theme, themes: Iterable[Theme], dark: bool) -> Theme:
+    """The half of ``theme``'s pair that is dark or light as asked, or the
+    Theme itself when it has no such other half."""
+    partner = next((t for t in themes if t["name"] == theme.get("pair")), None)
+    if partner is not None and bool(partner.get("dark", True)) == dark:
+        return partner
+    return theme
