@@ -280,6 +280,8 @@ every folder's servers running until the Engine restarts.
 | `create_theme` | an undoable change | a User theme from a Theme intent; never replaces one | deletes it |
 | `apply_theme` | an undoable change | applies a theme to the whole desktop | applies the one it replaced |
 | `make_picture_theme` | an undoable change that costs money | generates a picture through FAL, makes a theme from it and applies it | deletes the theme and applies the one it replaced; the picture stays in `~/Pictures/Osiris` and its cost is spent |
+| `find_image_models` | a look | lists image models from FAL's live catalog and the person's default | nothing to undo |
+| `set_default_image_model` | an undoable change | makes a model FAL offers the person's default for pictures, or goes back to the shipped one | restores the choice it replaced |
 
 opencode runs MCP tools from its code mode (`tools.osiris.apply_theme(...)`),
 and checks each call as the action `osiris_<tool>`. The starting rules allow

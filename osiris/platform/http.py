@@ -16,10 +16,12 @@ from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
+from osiris.platform.no_redirects import NoRedirects
 from osiris.platform.redirects import SameOriginCredentials
 
 Body = object | None
 _OPENER = urllib.request.build_opener(SameOriginCredentials)
+_DIRECT = urllib.request.build_opener(NoRedirects)
 
 
 class HttpError(RuntimeError):
@@ -48,6 +50,10 @@ class HttpClient(Protocol):
         self, url: str, *, headers: Mapping[str, str] | None = None
     ) -> Iterator[str]:
         """Each line of a long-lived response, as it arrives."""
+        ...
+
+    def download(self, url: str, *, limit: int) -> bytes:
+        """The file at ``url``, refused if redirected, cut off or over ``limit``."""
         ...
 
 
@@ -109,12 +115,37 @@ class UrllibClient:
             for raw in response:
                 yield raw.decode().rstrip("\r\n")
 
+    def download(self, url: str, *, limit: int) -> bytes:
+        try:
+            with (
+                _as_http_error(),
+                _DIRECT.open(url, timeout=self._timeout) as response,
+            ):
+                data: bytes = response.read(limit + 1)
+                promised = response.headers.get("Content-Length", "")
+        except ValueError as error:
+            raise HttpError(0, str(error)) from error
+        if len(data) > limit:
+            raise HttpError(0, f"larger than {limit} bytes")
+        if promised.isdigit() and len(data) != int(promised):
+            raise HttpError(0, "the download was cut off")
+        return data
+
 
 @dataclass
 class FakeHttpClient:
     replies: dict[tuple[str, str], Body] = field(default_factory=dict)
     streams: dict[str, list[str]] = field(default_factory=dict)
     requests: list[tuple[str, str, Body]] = field(default_factory=list)
+    downloads: dict[str, bytes] = field(default_factory=dict)
+
+    def download(self, url: str, *, limit: int) -> bytes:
+        data = self.downloads.get(url)
+        if data is None:
+            raise HttpError(404, f"no canned download for {url}")
+        if len(data) > limit:
+            raise HttpError(0, f"larger than {limit} bytes")
+        return data
 
     def request(
         self,

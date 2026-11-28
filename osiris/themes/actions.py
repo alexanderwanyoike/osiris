@@ -25,6 +25,7 @@ from osiris.themes.store import ThemeStore
 
 # A Theme's name becomes file and folder names, with prefixes and suffixes.
 _LONGEST_NAME = 64
+_CHARGED = "It may still have been charged, so ask the person before trying again."
 
 
 class ThemeActionError(ValueError):
@@ -139,17 +140,23 @@ def create_picture_theme(
     *,
     label: str,
     picture: bytes,
-    keep: Callable[[str], Path],
+    keep: Callable[[str, bytes], Path],
 ) -> str:
     """Make a User theme wearing ``picture``, its colours proposed by it.
 
-    ``keep`` stores the picture under the Theme's name and says where.
+    ``keep`` stores the picture, as a PNG, under the Theme's name and says where.
     """
     name = unused_name(store, label)
     try:
-        intent = intent_from(Image.open(io.BytesIO(picture)))
+        image = Image.open(io.BytesIO(picture))
+        intent = intent_from(image)
+        png = picture if image.format == "PNG" else _as_png(image)
     except (OSError, ValueError) as error:
-        raise ThemeActionError("The picture could not be read") from error
+        raise ThemeActionError(f"The picture could not be read. {_CHARGED}") from error
+    try:
+        kept = keep(name, png)
+    except OSError as error:
+        raise ThemeActionError(f"The picture could not be saved. {_CHARGED}") from error
     store.save(
         {
             **build(name, label, seeds(intent)),
@@ -158,10 +165,16 @@ def create_picture_theme(
                 "harmony": intent.harmony.value,
                 "mood": intent.mood.value,
             },
-            "wallpaper": str(keep(name)),
+            "wallpaper": str(kept),
         }
     )
     return name
+
+
+def _as_png(image: Image.Image) -> bytes:
+    data = io.BytesIO()
+    image.convert("RGB").save(data, "PNG")
+    return data.getvalue()
 
 
 def find(store: ThemeStore, name: str) -> Mapping[str, Any]:
