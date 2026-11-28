@@ -9,9 +9,12 @@ from osiris.harness.admin import Request
 from osiris.harness.conversation import Conversation, State, Turn
 from osiris.harness.engine import (
     Answered,
+    Choice,
     Delivered,
     Failed,
     Finished,
+    FormAsked,
+    FormField,
     ModelRef,
     PastTurn,
     Stopped,
@@ -27,6 +30,11 @@ from osiris.harness.tasks import Progress, Task
 
 S = "ses_1"
 GPT = ModelRef("openai", "gpt-5.5")
+MOOD = FormAsked(
+    S,
+    "frm_1",
+    (FormField("q0", "Mood", "Which dusk?", (Choice("Deep dusk", "Deep dusk"),)),),
+)
 
 
 def tokens(input: int, output: int, reasoning: int = 0) -> Tokens:
@@ -555,6 +563,71 @@ def test_a_conversation_with_a_card_open_waits_for_the_person() -> None:
     talk.apply(Allowed(S, "shell", ("ls /etc",), "call_1"))
     talk.needs_password(Request(("pacman", "-S", "cowsay")))
     assert talk.waits_for_person
+
+
+def test_what_the_model_asks_waits_on_its_turn_for_the_person() -> None:
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    assert talk.turns[-1].form == MOOD
+    assert talk.turns[-1].doing == "Waiting for you"
+    assert talk.waits_for_person
+
+
+def test_an_answered_form_leaves_the_turn_and_the_model_goes_on() -> None:
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.form_answered()
+    assert talk.turns[-1].form is None
+    assert talk.turns[-1].doing == "Thinking"
+    assert not talk.waits_for_person
+
+
+def test_a_refused_answer_puts_the_form_back_and_says_why() -> None:
+    """The form still waits at the Engine, so the person must answer again."""
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.form_answered()
+    talk.form_refused(MOOD, "HTTP 400: Expected string array for form field: q1")
+    turn = talk.turns[-1]
+    assert turn.form == MOOD
+    assert turn.doing == "Waiting for you"
+    assert turn.note == (
+        "Your answer was not sent: HTTP 400: Expected string array for form field: q1"
+    )
+
+
+def test_an_answer_sent_again_clears_why_the_first_was_not() -> None:
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.form_answered()
+    talk.form_refused(MOOD, "HTTP 500: busy")
+    talk.form_answered()
+    assert talk.turns[-1].note == ""
+
+
+def test_a_refusal_after_the_answer_ended_brings_no_form_back() -> None:
+    """The Engine dropped the form with the answer; nothing waits on it."""
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.form_answered()
+    talk.apply(Failed(S, "The Engine stopped"))
+    talk.form_refused(MOOD, "HTTP 0: connection refused")
+    assert talk.turns[-1].form is None
+    assert not talk.waits_for_person
+
+
+def test_a_form_left_open_goes_when_the_answer_ends() -> None:
+    """The Engine cancels it; answering it would only fail."""
+    talk = Conversation()
+    talk.asked("make it look like lavender at dusk")
+    talk.apply(MOOD)
+    talk.apply(Stopped(S))
+    assert talk.turns[-1].form is None
 
 
 def test_a_question_can_be_gone_back_to_once_nothing_is_answering() -> None:

@@ -61,7 +61,7 @@ MOOD_LABELS = {
 DEBOUNCE_MS = 120
 
 STYLE_LABELS = {
-    "contour": "Contour - topographic bands",
+    "camo": "Camo - accent blobs",
     "arcs": "Arcs - woven quarter circles",
     "strata": "Strata - warped horizontal layers",
     "aurora": "Aurora - soft light from the edges",
@@ -366,7 +366,7 @@ class Creator(Adw.Dialog):
         """
         values = {"label": "My Theme", "dark": True, "background": "#15151c",
                   "accent": "#7aa2f7", "secondary": "#bb9af7",
-                  "has_secondary": False, "style": "contour", "start": "colour",
+                  "has_secondary": False, "style": "camo", "start": "colour",
                   "custom": False, "seed": "#7aa2f7",
                   "harmony": Harmony.ANALOGOUS, "mood": Mood.BALANCED,
                   "picture": None, "picture_seed": None}
@@ -383,8 +383,7 @@ class Creator(Adw.Dialog):
             "accent": derived.get("accent") or colors.get("accent", "#7aa2f7"),
             "secondary": secondary or colors.get("accent", "#bb9af7"),
             "has_secondary": secondary is not None,
-            "style": source.get("wallpaper_style") or wallpaper.style_for(
-                source["name"]),
+            "style": wallpaper.style_of(source),
             "custom": True,
         })
         intent = source.get("intent")

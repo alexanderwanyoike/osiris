@@ -19,6 +19,7 @@ from gi.repository import Gdk, Gio, Gtk, GtkSource  # noqa: E402
 from osiris.apps.theme_scheme import ThemeScheme  # noqa: E402
 from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.harness.style import (  # noqa: E402
+    HELD_CSS,
     SCHEME_FILE,
     SCHEME_ID,
     SKIN_FILE,
@@ -99,7 +100,7 @@ class Look:
         self.theme = theme
         self.style = inline_style(theme)
         self._provider.load_from_string(
-            colours_css(theme) + code_font_css(theme) + self._skin())
+            colours_css(theme) + HELD_CSS + code_font_css(theme) + self._skin())
         scheme_path = self._home / SCHEME_FILE
         scheme_path.parent.mkdir(parents=True, exist_ok=True)
         scheme_path.write_text(source_scheme(theme))

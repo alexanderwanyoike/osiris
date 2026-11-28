@@ -7,12 +7,13 @@ replies so the code above it is tested without a server running.
 
 from __future__ import annotations
 
+import http.client
 import json
 import urllib.error
 import urllib.request
 from collections.abc import Iterator, Mapping
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
-from http.client import HTTPException
 from typing import Protocol, runtime_checkable
 
 from osiris.platform.no_redirects import NoRedirects
@@ -56,6 +57,24 @@ class HttpClient(Protocol):
         ...
 
 
+@contextmanager
+def _as_http_error() -> Iterator[None]:
+    try:
+        yield
+    except urllib.error.HTTPError as error:
+        body = ""
+        # The status arrived; a status of 0 would claim nothing answered.
+        with suppress(OSError, http.client.HTTPException):
+            body = error.read().decode(errors="replace")
+        raise HttpError(error.code, body) from error
+    except urllib.error.URLError as error:
+        raise HttpError(0, str(error.reason)) from error
+    except (OSError, http.client.HTTPException) as error:
+        # urllib wraps only connect and send failures; a timeout, hang-up or
+        # cut-off body while reading the reply comes through bare.
+        raise HttpError(0, str(error)) from error
+
+
 class UrllibClient:
     def __init__(self, timeout: float = 30.0) -> None:
         self._timeout = timeout
@@ -79,55 +98,38 @@ class UrllibClient:
                 **(headers or {}),
             },
         )
-        try:
-            with _OPENER.open(request, timeout=self._timeout) as response:
-                text = response.read().decode()
-        except urllib.error.HTTPError as error:
-            raise HttpError(error.code, _error_body(error)) from error
-        except urllib.error.URLError as error:
-            raise HttpError(0, str(error.reason)) from error
-        except (OSError, HTTPException) as error:
-            raise HttpError(0, str(error)) from error
+        with (
+            _as_http_error(),
+            _OPENER.open(request, timeout=self._timeout) as response,
+        ):
+            text = response.read().decode()
         return json.loads(text) if text.strip() else None
 
     def lines(
         self, url: str, *, headers: Mapping[str, str] | None = None
     ) -> Iterator[str]:
         request = urllib.request.Request(url, headers=dict(headers or {}))
-        try:
-            # No read timeout: an event stream is quiet for as long as nothing
-            # happens, and its heartbeats are the server's business.
-            with _OPENER.open(request) as response:
-                for raw in response:
-                    yield raw.decode().rstrip("\r\n")
-        except urllib.error.HTTPError as error:
-            raise HttpError(error.code, _error_body(error)) from error
-        except urllib.error.URLError as error:
-            raise HttpError(0, str(error.reason)) from error
+        # No read timeout: an event stream is quiet for as long as nothing
+        # happens, and its heartbeats are the server's business.
+        with _as_http_error(), _OPENER.open(request) as response:
+            for raw in response:
+                yield raw.decode().rstrip("\r\n")
 
     def download(self, url: str, *, limit: int) -> bytes:
         try:
-            with _DIRECT.open(url, timeout=self._timeout) as response:
+            with (
+                _as_http_error(),
+                _DIRECT.open(url, timeout=self._timeout) as response,
+            ):
                 data: bytes = response.read(limit + 1)
                 promised = response.headers.get("Content-Length", "")
-        except urllib.error.HTTPError as error:
-            raise HttpError(error.code, _error_body(error)) from error
-        except urllib.error.URLError as error:
-            raise HttpError(0, str(error.reason)) from error
-        except (OSError, HTTPException, ValueError) as error:
+        except ValueError as error:
             raise HttpError(0, str(error)) from error
         if len(data) > limit:
             raise HttpError(0, f"larger than {limit} bytes")
         if promised.isdigit() and len(data) != int(promised):
             raise HttpError(0, "the download was cut off")
         return data
-
-
-def _error_body(error: urllib.error.HTTPError) -> str:
-    try:
-        return error.read().decode(errors="replace")
-    except OSError, HTTPException:
-        return ""
 
 
 @dataclass
