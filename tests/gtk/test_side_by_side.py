@@ -79,6 +79,7 @@ def app() -> tuple[App, FakeEngine]:
         backgrounded={},
         admin_pending={},
         approvals={},
+        forms={},
         drawer=FakeDrawer(),
         background=now,
         histories=0,

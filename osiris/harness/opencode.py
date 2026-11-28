@@ -9,7 +9,7 @@ from __future__ import annotations
 import base64
 import json
 import re
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -19,11 +19,15 @@ from osiris.harness.connectors import State
 from osiris.harness.context import CHARACTERS, KINDS, ContextUse
 from osiris.harness.engine import (
     Answered,
+    Choice,
     Delivered,
     Event,
     Failed,
     FileChange,
     Finished,
+    FormAnswer,
+    FormAsked,
+    FormField,
     ModelRef,
     Past,
     PastTurn,
@@ -181,6 +185,24 @@ class OpencodeEngine:
             if error.status != 404:
                 raise
 
+    def answer_form(
+        self, session: str, form: str, answers: Mapping[str, FormAnswer]
+    ) -> None:
+        try:
+            self._post(
+                f"/api/session/{session}/form/{form}/reply",
+                {
+                    "answer": {
+                        key: value if isinstance(value, str) else list(value)
+                        for key, value in answers.items()
+                    }
+                },
+            )
+        except HttpError as error:
+            # A stop cancels the form, settling it, before the reply lands.
+            if error.status not in (404, 409):
+                raise
+
     def revert(self, session: str, message: str) -> Revert:
         staged = self._post(
             f"/api/session/{session}/revert/stage",
@@ -260,6 +282,10 @@ class OpencodeEngine:
             for server in reply["data"]
         }
 
+    def has_tools(self, name: str, directory: Path) -> bool:
+        state = self.connector_states(directory).get(name)
+        return state is not None and state.running
+
     def resources(self, directory: Path) -> list[Entry]:
         reply: Any = self._http.request(
             "GET",
@@ -320,14 +346,22 @@ class OpencodeEngine:
             headers=self._service.headers(),
         )
 
-    def waiting(self, session: str) -> list[ToolRequested]:
-        """What the session still waits to be allowed, as it was asked."""
-        reply: Any = self._http.request(
+    def waiting(self, session: str) -> list[ToolRequested | FormAsked]:
+        """What the session still waits on the person for, as it was asked."""
+        requests: Any = self._http.request(
             "GET",
             f"{self._service.url}/api/session/{session}/permission",
             headers=self._service.headers(),
         )
-        return [_requested(session, request) for request in reply["data"]]
+        forms: Any = self._http.request(
+            "GET",
+            f"{self._service.url}/api/session/{session}/form",
+            headers=self._service.headers(),
+        )
+        return [
+            *(_requested(session, request) for request in requests["data"]),
+            *(_form(form) for form in forms["data"]),
+        ]
 
     def skills(self, directory: Path) -> list[Entry]:
         reply: Any = self._http.request(
@@ -579,6 +613,44 @@ def _requested(session: str, data: dict[str, Any]) -> ToolRequested:
     )
 
 
+def _form(form: dict[str, Any]) -> FormAsked:
+    """A form opencode opens for the person, such as its question tool's."""
+    return FormAsked(
+        form["sessionID"],
+        form["id"],
+        tuple(
+            FormField(
+                field["key"],
+                field.get("title", ""),
+                field.get("description", ""),
+                tuple(
+                    Choice(
+                        option["value"], option["label"], option.get("description", "")
+                    )
+                    for option in field.get("options") or ()
+                ),
+                multiple=field["type"] == "multiselect",
+                custom=field.get("custom", False),
+            )
+            for field in form["fields"]
+        ),
+    )
+
+
+_BY_KIND: dict[object, Callable[[str, dict[str, Any]], Event]] = {
+    "session.text.delta": lambda session, data: Text(session, data["delta"]),
+    "session.inbox.delivered": lambda session, data: Delivered(
+        session, data["inboxID"]
+    ),
+    "session.execution.succeeded": lambda session, _data: Finished(session),
+    "session.execution.interrupted": lambda session, _data: Stopped(session),
+    "session.execution.failed": lambda session, data: Failed(
+        session, data.get("error", {}).get("message", "")
+    ),
+    "form.created": lambda _session, data: _form(data["form"]),
+}
+
+
 class _Reader:
     """Turns opencode's events into the Engine's.
 
@@ -594,14 +666,14 @@ class _Reader:
     def read(self, event: dict[str, Any]) -> Event | None:
         kind, data = event.get("type"), event.get("data", {})
         session = data.get("sessionID", "")
+        if (made := _BY_KIND.get(kind)) is not None:
+            return made(session, data)
         match kind:
             case "session.step.started":
                 model = data["model"]
                 self._models[data["assistantMessageID"]] = ModelRef(
                     model["providerID"], model["id"]
                 )
-            case "session.text.delta":
-                return Text(session, data["delta"])
             case (
                 "session.tool.called"
                 | "permission.asked"
@@ -611,16 +683,8 @@ class _Reader:
                 return _tool(kind, session, data, self._names.pop(data.get("id"), ""))
             case "session.tool.input.started":
                 self._names[data["id"]] = data.get("name", "")
-            case "session.inbox.delivered":
-                return Delivered(session, data["inboxID"])
             case "session.step.ended":
                 return self._answered(session, data)
-            case "session.execution.succeeded":
-                return Finished(session)
-            case "session.execution.interrupted":
-                return Stopped(session)
-            case "session.execution.failed":
-                return Failed(session, data.get("error", {}).get("message", ""))
         return None
 
     def _answered(self, session: str, data: dict[str, Any]) -> Answered | None:

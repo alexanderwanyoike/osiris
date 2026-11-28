@@ -14,6 +14,7 @@ from osiris.harness.activity import Step
 from osiris.harness.admin import Request
 from osiris.harness.conversation import State, Turn
 from osiris.harness.detail import FOLD
+from osiris.harness.engine import FormAsked, FormField
 from osiris.harness.harness import Asking
 from osiris.harness.log import Change
 from osiris.harness.markdown import InlineStyle
@@ -224,6 +225,21 @@ def test_an_action_held_for_the_person_shows_its_card_under_the_answer() -> None
     view.update(turn, STYLE, None)
     assert asked == [turn]
     assert "approval card" in texts(view)
+
+
+def test_what_the_model_asks_shows_its_card_under_the_answer() -> None:
+    turn = Turn("make it lavender", "One thing first.", State.ANSWERING)
+    turn.form = FormAsked("ses_1", "frm_1", (FormField("q0", "Mood", "Which?"),))
+    asked: list[Turn] = []
+
+    def form_card(waiting: Turn) -> Gtk.Widget:
+        asked.append(waiting)
+        return Gtk.Label(label="form card")
+
+    view = TurnView(turn, program_card=lambda _n: Gtk.Box(), form_card=form_card)
+    view.update(turn, STYLE, None)
+    assert asked == [turn]
+    assert "form card" in texts(view)
 
 
 def test_an_answer_that_took_no_steps_keeps_no_record() -> None:

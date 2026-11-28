@@ -25,9 +25,11 @@ followed Rose Pine, Rose Pine Dawn and Nord.
 A **Skin** is a **skinpack**: a folder (one file when shared) holding a label,
 style sheets and SVGs with named gaps for the Theme's colours, and the Plank
 theme. Osiris fills the gaps from the Theme, compiles the Sass with sassc and
-installs the result as a GTK theme named for the Skin and the Theme, so every
-Theme switch is an ordinary theme-name change (ADR 0006). Nothing in a
-skinpack runs: it is data that Osiris's own code turns into a theme.
+installs the result as a GTK theme named for the Skin, the Theme and a short
+hash of what it was built from, so every Theme switch, and wearing a Skin
+again after editing it or its Theme, is an ordinary theme-name change (ADR
+0006). Nothing in a skinpack runs: it is data that Osiris's own code turns
+into a theme.
 
 The gaps are the Theme's own roles (`background`, `surface`, `foreground`,
 `accent`, `success`, `warning`, `danger`, and whether it is dark). A skinpack

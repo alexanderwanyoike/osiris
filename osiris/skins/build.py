@@ -16,6 +16,7 @@ A skinpack is laid out by surface, one Sass entry per variant:
 
 from __future__ import annotations
 
+import hashlib
 import shutil
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -32,6 +33,7 @@ from osiris.skins.pack import (
     refuse_programs,
     sass_gaps,
 )
+from osiris.skins.pictures import signature
 
 SURFACES = (
     ("gtk-3.0/gtk", "gtk-3.0/gtk.css"),
@@ -70,7 +72,9 @@ def build(
     (work / "sass").mkdir(exist_ok=True)
     (work / "sass" / "_gaps.scss").write_text(sass_gaps(filled))
 
-    name = f"Osiris-{pack.name}-{theme['name']}"
+    # An edit must be a new name to reach open apps (ADR 0006).
+    drawn = _fingerprint(pack.root, variant, theme["colors"])
+    name = f"Osiris-{pack.name}-{theme['name']}-{drawn}"
     target = themes_dir / name
     shutil.rmtree(target, ignore_errors=True)
     target.mkdir(parents=True)
@@ -106,6 +110,11 @@ def build(
         or (target / "cinnamon" / "cinnamon.css").is_file(),
         launcher=launcher,
     )
+
+
+def _fingerprint(root: Path, variant: str, colours: Mapping[str, str]) -> str:
+    drawn = f"{signature([root])}{variant}{sorted(colours.items())}"
+    return hashlib.sha256(drawn.encode()).hexdigest()[:12]
 
 
 def _compile(

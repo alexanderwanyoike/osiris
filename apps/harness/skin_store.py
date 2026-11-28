@@ -30,6 +30,9 @@ class EngineSkinStore:
     def check(self, name: str) -> list[str]:
         return engine.check_skin(name)
 
+    def fixed_colours(self, name: str) -> list[str]:
+        return engine.fixed_colours(name)
+
     def wear(self, name: str) -> None:
         engine.set_skin(name)
 
