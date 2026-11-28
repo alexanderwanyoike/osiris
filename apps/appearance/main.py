@@ -46,6 +46,8 @@ from skin_editor import CSS as EDITOR_CSS, SkinEditor  # noqa: E402
 from skins_page import CSS as SKINS_CSS, SkinsPage, new_skin  # noqa: E402
 
 # creator has put the osiris package on sys.path.
+from osiris.apps.theme_folder import ThemeFolder  # noqa: E402
+from osiris.apps.theme_record import ThemeRecord  # noqa: E402
 from osiris.apps.theme_scheme import ThemeScheme  # noqa: E402
 from osiris.apps.user_css import UserCss  # noqa: E402
 from osiris.model.names import slug  # noqa: E402
@@ -358,6 +360,10 @@ class Window(Adw.ApplicationWindow):
         toolbar.set_content(self.toasts)
         self.set_content(toolbar)
         self.reload()
+        # Only the person's own folder; shipped Themes change with a package.
+        self._folder_watch = ThemeFolder(Path(engine.SEARCH[0]), self.reload)
+        # After the folder, which makes the record's folder on a new account.
+        self._record_watch = ThemeRecord(Path(engine.STATE), self.show_applied)
         self._explain_drift()
         GLib.timeout_add_seconds(5, self._explain_drift)
 
@@ -382,7 +388,6 @@ class Window(Adw.ApplicationWindow):
         while (child := self.sections.get_first_child()) is not None:
             self.sections.remove(child)
         self.cards = []
-        active = engine.current()
         starred = engine.favourites()
         mine = {t["name"] for t in self.themes if engine.is_user_theme(t["name"])}
         arranged = arrange(self.themes, query=self.search.get_text(),
@@ -407,11 +412,15 @@ class Window(Adw.ApplicationWindow):
             for theme in members:
                 card = ThemeCard(theme, self.pick, theme["name"] in starred,
                                  self._starred)
-                card.set_selected(theme["name"] == active)
                 self.cards.append(card)
                 flow.append(card)
             section.append(flow)
             self.sections.append(section)
+        self.show_applied(engine.current())
+
+    def show_applied(self, name: str | None) -> None:
+        for card in self.cards:
+            card.set_selected(card.theme["name"] == name)
 
     # --------------------------------------------------------------- actions
 
@@ -857,8 +866,7 @@ class Window(Adw.ApplicationWindow):
         self.get_application().theme_scheme.follow()
         self.get_application().reload_user_css()
         self._show_skins()
-        for card in self.cards:
-            card.set_selected(card.theme["name"] == theme["name"])
+        self.show_applied(theme["name"])
         note = f"{theme['label']} applied"
         if restart:
             note += (f" - reopen {' and '.join(restart).lower()}"
@@ -890,7 +898,7 @@ class Application(Adw.Application):
                 display, provider, UserCss.PRIORITY + 1)
 
     def do_activate(self):
-        Window(self).present()
+        (self.get_active_window() or Window(self)).present()
 
 
 if __name__ == "__main__":

@@ -73,18 +73,20 @@ The person tries and installs a Program themselves, from the card
 under your answer; a failed build comes back to you to fix.
 
 You can make and change Skins too: the shape of the desktop (windows, panel,
-dock, launcher) and the icons, cursor and font it wears, whose colours always
-come from the Theme. Start a Skin with create_skin from the existing Skin
-closest to what the person asks for (list_skins shows them), then change its
-style sheets in the folder it gives you, following the AGENTS.md there. A
-downloaded GTK theme becomes a Skin with import_gtk_theme, after which you
-replace its written-in colours with the Theme's gaps; downloaded icon sets,
-cursor sets and fonts go in with install_icon_set and install_fonts and are
-named in the Skin's skin.json. check_skin says what would stop a Skin from
-being worn; wear_skin puts it on. A Skin is data only: style sheets, pictures
-and settings. Never write scripts, programs or services for a Skin, never
-change settings outside its folder, and never write to /usr/share/osiris; if
-something cannot be done that way, tell the person."""
+dock, launcher) and the icons, cursor and font it wears, whose colours come
+from the Theme. Write a fixed colour only when the person asks for one, and
+tell them it will stay the same whatever Theme they wear. Start a Skin with
+create_skin from the existing Skin closest to what the person asks for
+(list_skins shows them), then change its style sheets in the folder it gives
+you, following the AGENTS.md there. A downloaded GTK theme becomes a Skin with
+import_gtk_theme, after which you replace its written-in colours with the
+Theme's gaps; downloaded icon sets, cursor sets and fonts go in with
+install_icon_set and install_fonts and are named in the Skin's skin.json.
+check_skin says what would stop a Skin from being worn; wear_skin puts it on. A
+Skin is data only: style sheets, pictures and settings. Never write scripts,
+programs or services for a Skin, never change settings outside its folder, and
+never write to /usr/share/osiris; if something cannot be done that way, tell
+the person."""
 
 #: What the model may touch beyond its tools, by the person's choice
 #: (osiris.harness.trust).
@@ -473,9 +475,19 @@ def _skin_tools(tools: MCPServer, skins: SkinStore, logged: _Logged) -> None:
     @explained
     def check_skin(name: str) -> str:
         """What would stop a Skin from being worn: anything in it that is not
-        data, and Sass that does not compile, with the compiler's errors."""
+        data, and Sass that does not compile, with the compiler's errors. Also
+        names fixed colours, which do not follow the Theme."""
         problems = skins.check(name)
-        return "\n".join(problems) if problems else "No problems found."
+        found = "\n".join(problems) if problems else "No problems found."
+        colours = skins.fixed_colours(name)
+        if colours:
+            found += (
+                "\nFixed colours, the same under every Theme. Replace with a gap "
+                "only those you wrote in this conversation that the person did not "
+                "ask for, and ask the person before changing any other:\n"
+                + "\n".join(colours)
+            )
+        return found
 
     @tools.tool(annotations=ANNOTATIONS[TIERS["wear_skin"]])
     @explained

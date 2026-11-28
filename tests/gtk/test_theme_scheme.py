@@ -3,27 +3,15 @@ changes the Theme: the switcher, the Harness, or the app itself."""
 
 from __future__ import annotations
 
-import time
-from collections.abc import Callable
 from pathlib import Path
 
-from gi.repository import Adw, Gio, GLib
+from gi.repository import Adw, Gio
 
 from osiris.apps.theme_scheme import ThemeScheme
 
+from .conftest import settle
+
 THEMES = {"rose-pine": {"dark": True}, "rose-pine-dawn": {"dark": False}}
-
-
-def settle(until: Callable[[], bool], seconds: float = 3.0) -> bool:
-    deadline = time.monotonic() + seconds
-    context = GLib.MainContext.default()
-    while time.monotonic() < deadline:
-        while context.pending():
-            context.iteration(False)
-        if until():
-            return True
-        time.sleep(0.02)
-    return False
 
 
 def scheme() -> Adw.ColorScheme:

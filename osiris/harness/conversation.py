@@ -16,6 +16,7 @@ from osiris.harness.engine import (
     Event,
     Failed,
     Finished,
+    FormAsked,
     ModelRef,
     PastTurn,
     Stopped,
@@ -64,6 +65,8 @@ class Turn:
     #: Actions asked about while a card was already open, each with its step,
     #: shown in turn as the one before is answered.
     queued: list[tuple[Asking, Step]] = field(default_factory=list)
+    #: What the model asked the person, waiting for their answer.
+    form: FormAsked | None = None
     #: The Engine's plan for this answer, as it last reported it.
     tasks: list[Task] = field(default_factory=list)
     #: The question's message at the Engine, once it has been sent.
@@ -93,7 +96,7 @@ class Turn:
         """An answer that ends leaves no card waiting: the Engine has moved on."""
         self.state = state
         self.finished = clock()
-        self.asking = self.held = None
+        self.asking = self.held = self.form = None
         self.queued = []
 
 
@@ -161,11 +164,11 @@ class Conversation:
 
     @property
     def waits_for_person(self) -> bool:
-        """An approval or admin password card is open on its latest answer."""
+        """An approval, admin password or form card is open on its latest answer."""
         if not self.turns:
             return False
         turn = self.turns[-1]
-        return turn.asking is not None or turn.admin is not None
+        return any(w is not None for w in (turn.asking, turn.admin, turn.form))
 
     def model_label(self, default: ModelRef | None) -> str:
         """The model in play: the last that answered, else the one chosen."""
@@ -268,6 +271,17 @@ class Conversation:
         for turn in self.turns:
             turn.admin = None
 
+    def form_answered(self) -> None:
+        if self.turns:
+            self.turns[-1].form = None
+            self.turns[-1].doing = THINKING
+            self.turns[-1].note = ""
+
+    def form_refused(self, form: FormAsked, why: str) -> None:
+        if self.busy:
+            self.apply(form)
+            self.turns[-1].note = f"Your answer was not sent: {why}"
+
     def changed(self, changes: list[Change]) -> None:
         """Record what the latest question led to, as the Harness log has it."""
         if self.turns:
@@ -353,18 +367,21 @@ class Conversation:
                 )
                 turn.doing = THINKING
 
+    def _streamed(self, turn: Turn, delta: str) -> None:
+        if self._step_ended:
+            turn.answer = next_step(turn.answer)
+        self._step_ended = False
+        turn.answer += delta
+        turn.state = State.ANSWERING
+        turn.doing = WRITING
+
     def apply(self, event: Event | Decision) -> None:
         if not self.turns:
             return
         turn = self.turns[-1]
         match event:
             case Text(_, delta):
-                if self._step_ended:
-                    turn.answer = next_step(turn.answer)
-                self._step_ended = False
-                turn.answer += delta
-                turn.state = State.ANSWERING
-                turn.doing = WRITING
+                self._streamed(turn, delta)
             case Answered(_, model, tokens, _):
                 turn.model = self.model = model
                 turn.doing = THINKING
@@ -372,6 +389,9 @@ class Conversation:
                 self.tokens_spent += tokens.input + tokens.output + tokens.reasoning
             case Asking() | ToolCalled() | Allowed() | Refused() | ToolFinished():
                 self._step(turn, event)
+            case FormAsked():
+                turn.form = event
+                turn.doing = Status.WAITING.value
             case Delivered(_, message):
                 self._delivered(message)
             case Finished():

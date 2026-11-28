@@ -6,7 +6,7 @@ from __future__ import annotations
 import importlib.util
 from types import ModuleType
 
-from gi.repository import Gio
+from gi.repository import Gio, Gtk
 
 from .conftest import APPS
 
@@ -28,3 +28,15 @@ def test_the_user_sheet_is_followed_from_startup_not_each_activation() -> None:
     app.set_flags(Gio.ApplicationFlags.NON_UNIQUE)
     app.register(None)
     assert app.user_css is not None
+
+
+def test_launching_again_brings_back_the_open_window() -> None:
+    """A second launch made a second window over the person's desktop."""
+    module = appearance()
+    module.Window = lambda app: Gtk.ApplicationWindow(application=app)
+    app = module.Application()
+    app.set_flags(Gio.ApplicationFlags.NON_UNIQUE)
+    app.register(None)
+    app.activate()
+    app.activate()
+    assert len(app.get_windows()) == 1

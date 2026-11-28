@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path
@@ -16,6 +16,7 @@ from osiris.harness.engine import (
     Event,
     Failed,
     Finished,
+    FormAnswer,
     ModelRef,
     Past,
     PastTurn,
@@ -135,8 +136,8 @@ class Harness:
         """Send a question; while the session works it waits and steers the
         model at its next step. Answers where it waits."""
         directory, session = self._directory, self._session
+        self._ready(directory)
         if session is None:
-            self._ready(directory)
             session = self._session = self._engine.start(self._model, directory)
             self._engine.rename(session, title_of(text))
         self._running[session] = directory
@@ -184,9 +185,13 @@ class Harness:
 
     def _ready(self, directory: Path) -> None:
         with self._attaching:
-            if self._tools is not None and directory not in self._tools_in:
-                self._engine.attach_tools(*self._tools, directory)
-                self._tools_in.add(directory)
+            if self._tools is None:
+                return
+            name, command = self._tools
+            if directory in self._tools_in and self._engine.has_tools(name, directory):
+                return
+            self._engine.attach_tools(name, command, directory)
+            self._tools_in.add(directory)
 
     def restart_tools(self) -> None:
         """Attach the tool server again where it runs now; other folders get a
@@ -352,6 +357,23 @@ class Harness:
             return Allowed(session, asking.action, asking.resources, asking.call)
         reason = f"You replied: {reply}" if reply else DENIED
         return Refused(session, asking.action, asking.resources, asking.call, reason)
+
+    def answer_form(
+        self, session: str, form: str, answers: Mapping[str, FormAnswer]
+    ) -> str | None:
+        """The person's answer to what the model asked, passed to the Engine.
+        Why the Engine would not take it, or None when it did."""
+        try:
+            self._engine.answer_form(session, form, answers)
+        except HttpError as error:
+            self._log.write(
+                "form-answer-failed", session=session, form=form, error=str(error)
+            )
+            return str(error)
+        self._log.write(
+            "form-answered", session=session, form=form, answers=dict(answers)
+        )
+        return None
 
     def _called(self, event: ToolCalled) -> None:
         """Log a tool call; a command is noted even if the Engine's rules ran

@@ -97,6 +97,19 @@ def test_checking_names_every_problem_or_none() -> None:
     ) == ("No problems found.")
 
 
+def test_checking_names_fixed_colours_without_refusing_the_skin() -> None:
+    skins = FakeSkinStore(colours={"colloid": ["gtk-3.0/gtk-dark.scss: #2f7d4a"]})
+    assert text(call(skins, "check_skin", {"name": "colloid"}, new_log())) == (
+        "No problems found.\n"
+        "Fixed colours, the same under every Theme. Replace with a gap only "
+        "those you wrote in this conversation that the person did not ask for, "
+        "and ask the person before changing any other:\n"
+        "gtk-3.0/gtk-dark.scss: #2f7d4a"
+    )
+    call(skins, "wear_skin", {"name": "colloid"}, new_log())
+    assert skins.worn() == "colloid"
+
+
 def test_downloads_come_in_through_osiris_and_can_be_undone() -> None:
     skins, log = FakeSkinStore(), new_log()
     call(skins, "import_gtk_theme", {"path": "/tmp/Yaru-Green.tar.xz"}, log)
@@ -126,3 +139,10 @@ def test_the_model_is_told_a_skin_is_data_and_never_a_program() -> None:
     assert "create_skin" in told and "wear_skin" in told
     assert "never write scripts" in told.lower()
     assert "/usr/share/osiris" in told
+
+
+def test_the_model_may_write_a_fixed_colour_the_person_asks_for() -> None:
+    """A Skin follows the Theme, but the person may want a colour that stays."""
+    told = " ".join(instructions(auto_mode=True).split())
+    assert "always come from the Theme" not in told
+    assert "a fixed colour only when the person asks for one" in told
