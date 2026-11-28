@@ -69,9 +69,14 @@ class RealFileSystem:
         mode: int | None = None,
     ) -> None:
         self.make_directory(path.parent, owner=owner)
-        path.write_text(text)
-        if mode is not None:
-            path.chmod(mode)
+        if mode is None:
+            path.write_text(text)
+        else:
+            # Locked before any text exists, so a secret is never readable.
+            descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
+            with os.fdopen(descriptor, "w") as handle:
+                os.fchmod(descriptor, mode)
+                handle.write(text)
         self._give(path, owner)
 
     def append(self, path: Path, text: str) -> None:

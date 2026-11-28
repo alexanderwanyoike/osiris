@@ -1,4 +1,4 @@
-"""A hard daily limit on paid pictures.
+"""The daily limit a person has chosen for paid pictures.
 
 The usage file is plain text with one line per request, holding its date.
 """
@@ -13,8 +13,6 @@ from osiris.harness.media.error import MediaError
 from osiris.harness.media.maker import ImageMaker
 from osiris.platform import FileSystem
 
-DAILY_IMAGES = 20
-
 
 class DailyLimit:
     def __init__(
@@ -24,7 +22,7 @@ class DailyLimit:
         usage: Path,
         today: Callable[[], date],
         *,
-        images: int = DAILY_IMAGES,
+        images: int,
     ) -> None:
         self._maker = maker
         self._files = files

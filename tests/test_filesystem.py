@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import stat
 from pathlib import Path
 
 import pytest
@@ -117,3 +119,21 @@ class TestOwnership:
         assert filesystem.owners[plank] == 1000
         assert filesystem.owners[plank / "dock1"] == 1000
         assert filesystem.owners[plank / "dock1" / "item"] == 1000
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_a_private_file_is_never_open_to_others_even_when_writing_fails(
+    tmp_path: Path, existing: bool
+) -> None:
+    path = tmp_path / "key"
+    if existing:
+        path.write_text("old")
+        path.chmod(0o644)
+    previous = os.umask(0o022)
+    try:
+        with pytest.raises(UnicodeEncodeError):
+            RealFileSystem().write(path, "\ud800", mode=0o600)
+    finally:
+        os.umask(previous)
+
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600

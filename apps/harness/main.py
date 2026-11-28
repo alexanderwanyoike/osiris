@@ -48,6 +48,7 @@ from approval_card import ApprovalCard  # noqa: E402
 from form_card import FormCard  # noqa: E402
 from going_back import going_back_dialog  # noqa: E402
 from look import Look  # noqa: E402
+from media_section import MediaSection  # noqa: E402
 from providers import ProvidersPage  # noqa: E402
 from browser import Page  # noqa: E402
 from canvas import Canvas, open_in_code  # noqa: E402
@@ -87,6 +88,8 @@ from osiris.harness.history import (  # noqa: E402
     project_program,
 )
 from osiris.harness.log import LOG_FILE, HarnessLog  # noqa: E402
+from osiris.harness.media.key import fal_key, remove_fal_key, save_fal_key  # noqa: E402
+from osiris.harness.media.limit_setting import daily_limit, set_daily_limit  # noqa: E402
 from osiris.harness.notice import notice_of  # noqa: E402
 from osiris.harness.proposals import Proposal, skill_file, skill_path  # noqa: E402
 from osiris.harness.rail import ticks  # noqa: E402
@@ -546,6 +549,9 @@ class Drawer(Gtk.ApplicationWindow):
             auto_mode_on=self.app.in_auto_mode,
             on_auto_mode=self.app.set_auto_mode,
         )
+        page.append(MediaSection(self.app.fal_connected, self.app.save_fal_key,
+                                 self.app.remove_fal_key, self.app.picture_limit,
+                                 self.app.set_picture_limit))
         connectors = ConnectorsPage(
             read=self.app.read_connectors, save=self.app.save_connector,
             remove=self.app.remove_connector, states=self.app.connector_states,
@@ -1610,6 +1616,21 @@ class Application(Adw.Application):
     @property
     def in_auto_mode(self) -> bool:
         return auto_mode_on(self.files, self.home)
+
+    def fal_connected(self) -> bool:
+        return fal_key(self.files, self.home) is not None
+
+    def save_fal_key(self, key: str) -> None:
+        save_fal_key(self.files, self.home, key)
+
+    def remove_fal_key(self) -> None:
+        remove_fal_key(self.files, self.home)
+
+    def picture_limit(self) -> int | None:
+        return daily_limit(self.files, self.home)
+
+    def set_picture_limit(self, images: int | None) -> None:
+        set_daily_limit(self.files, self.home, images)
 
     def set_auto_mode(self, on: bool) -> None:
         """Keep the person's choice; the tool server tells the model when it
